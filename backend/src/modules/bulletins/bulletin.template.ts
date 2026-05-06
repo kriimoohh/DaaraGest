@@ -15,12 +15,14 @@ interface NoteRow {
   nom_ar: string;
   coeff: number;
   valeur: number | null;
+  note_max?: number;
 }
 
 interface TrimestreRow {
   nom_fr: string;
   nom_ar: string;
   coeff: number;
+  note_max?: number;
   valeurs: (number | null)[];
   moyenne_annuelle: number | null;
 }
@@ -184,8 +186,8 @@ function tableFR(notes: NoteRow[]): string {
     <tr>
       <td style="font-weight:500">${escapeHtml(n.nom_fr)}</td>
       <td class="center">${n.coeff}</td>
-      <td class="center grade ${n.valeur !== null && n.valeur < 10 ? 'fail' : 'pass'}">
-        ${n.valeur !== null ? Number(n.valeur).toFixed(2) : '—'}
+      <td class="center grade ${n.valeur !== null && n.valeur < (n.note_max ?? 20) / 2 ? 'fail' : 'pass'}">
+        ${n.valeur !== null ? Number(n.valeur).toFixed(2) : '—'}<span style="font-size:9px;color:#9ca3af">/${n.note_max ?? 20}</span>
       </td>
       <td class="center">${n.valeur !== null ? (Number(n.valeur) * n.coeff).toFixed(2) : '—'}</td>
     </tr>`).join('');
@@ -208,8 +210,8 @@ function tableAR(notes: NoteRow[]): string {
     <tr>
       <td class="ar-td" style="font-weight:500">${escapeHtml(n.nom_ar)}</td>
       <td class="center">${n.coeff}</td>
-      <td class="center grade ${n.valeur !== null && n.valeur < 10 ? 'fail' : 'pass'}">
-        ${n.valeur !== null ? Number(n.valeur).toFixed(2) : '—'}
+      <td class="center grade ${n.valeur !== null && n.valeur < (n.note_max ?? 20) / 2 ? 'fail' : 'pass'}">
+        ${n.valeur !== null ? Number(n.valeur).toFixed(2) : '—'}<span style="font-size:9px;color:#9ca3af">/${n.note_max ?? 20}</span>
       </td>
       <td class="center">${n.valeur !== null ? (Number(n.valeur) * n.coeff).toFixed(2) : '—'}</td>
     </tr>`).join('');

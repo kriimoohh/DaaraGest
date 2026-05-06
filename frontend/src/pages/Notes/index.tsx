@@ -8,7 +8,7 @@ import { toast } from '../../store/toastStore';
 
 interface AnneeScolaire { id: string; libelle: string; active: boolean; }
 interface Classe { id: string; nom_fr: string; nom_ar: string; filiere: string; }
-interface Matiere { id: string; nom_fr: string; nom_ar: string; filiere: string; }
+interface Matiere { id: string; nom_fr: string; nom_ar: string; filiere: string; note_max: number; note_min: number; }
 interface Eleve { id: string; nom_fr: string; prenom_fr: string; matricule: string; }
 interface Note { id: string; eleve_id: string; valeur: number; commentaire?: string; }
 
@@ -58,6 +58,10 @@ export function NotesPage() {
       .catch(() => null)
       .finally(() => setLoading(false));
   }, [classeId, matiereId, periode, anneeId]);
+
+  const selectedMat = matieres.find(m => m.id === matiereId);
+  const matMax = selectedMat?.note_max ?? 20;
+  const matMin = selectedMat?.note_min ?? 0;
 
   const handleSave = async () => {
     if (!matiereId || !anneeId || eleves.length === 0) return;
@@ -152,7 +156,7 @@ export function NotesPage() {
                 <tr>
                   <th className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Matricule</th>
                   <th className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Élève</th>
-                  <th className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase w-32">Note /20</th>
+                  <th className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase w-32">Note /{matMax}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
@@ -165,8 +169,8 @@ export function NotesPage() {
                     <td className="px-4 py-3">
                       <input
                         type="number"
-                        min="0"
-                        max="20"
+                        min={matMin}
+                        max={matMax}
                         step="0.25"
                         value={notes[eleve.id] ?? ''}
                         onChange={(e) => setNotes((prev) => ({ ...prev, [eleve.id]: e.target.value }))}

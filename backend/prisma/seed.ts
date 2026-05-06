@@ -24,17 +24,17 @@ async function main() {
   const etab = await prisma.etablissement.upsert({
     where: { id: 'etablissement-default' },
     update: {
-      nom_fr: 'École Franco-Arabe El-Hadj Malick Sy',
-      nom_ar: 'مدرسة الحاج مالك سي الفرنسية العربية',
-      adresse: 'Avenue Cheikh Anta Diop, Dakar, Sénégal',
+      nom_fr: 'École Franco Arabe Cheikh Abdoul Ahad Mbacké',
+      nom_ar: 'مدرسة الشيخ عبد الأحد مبكي الفرنسية العربية',
+      adresse: 'Guédiawaye, Dakar, Sénégal',
       telephone: '+221 33 820 12 34',
       devise: 'FCFA',
     },
     create: {
       id: 'etablissement-default',
-      nom_fr: 'École Franco-Arabe El-Hadj Malick Sy',
-      nom_ar: 'مدرسة الحاج مالك سي الفرنسية العربية',
-      adresse: 'Avenue Cheikh Anta Diop, Dakar, Sénégal',
+      nom_fr: 'École Franco Arabe Cheikh Abdoul Ahad Mbacké',
+      nom_ar: 'مدرسة الشيخ عبد الأحد مبكي الفرنسية العربية',
+      adresse: 'Guédiawaye, Dakar, Sénégal',
       telephone: '+221 33 820 12 34',
       devise: 'FCFA',
     },
@@ -120,20 +120,21 @@ async function main() {
   // ── 7. Matières ─────────────────────────────────────────────────────────────
   const matieres = [
     // FR
-    { id: 'mat-francais',   nom_fr: 'Français',              nom_ar: 'اللغة الفرنسية',   filiere: 'FR', coeff_defaut: new Prisma.Decimal(3), ordre_bulletin: 1 },
-    { id: 'mat-maths',      nom_fr: 'Mathématiques',         nom_ar: 'الرياضيات',         filiere: 'FR', coeff_defaut: new Prisma.Decimal(3), ordre_bulletin: 2 },
-    { id: 'mat-sciences',   nom_fr: 'Sciences',              nom_ar: 'علوم الحياة',       filiere: 'FR', coeff_defaut: new Prisma.Decimal(2), ordre_bulletin: 3 },
-    { id: 'mat-histgeo',    nom_fr: 'Histoire-Géographie',   nom_ar: 'التاريخ والجغرافيا', filiere: 'FR', coeff_defaut: new Prisma.Decimal(2), ordre_bulletin: 4 },
-    { id: 'mat-edcivique',  nom_fr: 'Éducation Civique',     nom_ar: 'التربية المدنية',   filiere: 'FR', coeff_defaut: new Prisma.Decimal(1), ordre_bulletin: 5 },
+    { id: 'mat-francais',   nom_fr: 'Français',              nom_ar: 'اللغة الفرنسية',   filiere: 'FR', coeff_defaut: new Prisma.Decimal(3), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 1 },
+    { id: 'mat-maths',      nom_fr: 'Mathématiques',         nom_ar: 'الرياضيات',         filiere: 'FR', coeff_defaut: new Prisma.Decimal(3), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 2 },
+    { id: 'mat-sciences',   nom_fr: 'Sciences',              nom_ar: 'علوم الحياة',       filiere: 'FR', coeff_defaut: new Prisma.Decimal(2), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 3 },
+    { id: 'mat-histgeo',    nom_fr: 'Histoire-Géographie',   nom_ar: 'التاريخ والجغرافيا', filiere: 'FR', coeff_defaut: new Prisma.Decimal(2), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 4 },
+    { id: 'mat-edcivique',  nom_fr: 'Éducation Civique',     nom_ar: 'التربية المدنية',   filiere: 'FR', coeff_defaut: new Prisma.Decimal(1), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 5 },
     // AR
-    { id: 'mat-coran',      nom_fr: 'Coran',                 nom_ar: 'القرآن الكريم',     filiere: 'AR', coeff_defaut: new Prisma.Decimal(4), ordre_bulletin: 1 },
-    { id: 'mat-fiqh',       nom_fr: 'Fiqh',                  nom_ar: 'الفقه',             filiere: 'AR', coeff_defaut: new Prisma.Decimal(2), ordre_bulletin: 2 },
-    { id: 'mat-nahw',       nom_fr: 'Nahw',                  nom_ar: 'النحو',             filiere: 'AR', coeff_defaut: new Prisma.Decimal(2), ordre_bulletin: 3 },
-    { id: 'mat-adab',       nom_fr: 'Adab (Littérature)',    nom_ar: 'الأدب العربي',      filiere: 'AR', coeff_defaut: new Prisma.Decimal(2), ordre_bulletin: 4 },
-    { id: 'mat-histislam',  nom_fr: 'Histoire Islamique',    nom_ar: 'التاريخ الإسلامي',  filiere: 'AR', coeff_defaut: new Prisma.Decimal(1), ordre_bulletin: 5 },
+    { id: 'mat-coran',      nom_fr: 'Coran',                 nom_ar: 'القرآن الكريم',     filiere: 'AR', coeff_defaut: new Prisma.Decimal(4), note_max: new Prisma.Decimal(30), note_min: new Prisma.Decimal(0), ordre_bulletin: 1 },
+    { id: 'mat-fiqh',       nom_fr: 'Fiqh',                  nom_ar: 'الفقه',             filiere: 'AR', coeff_defaut: new Prisma.Decimal(2), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 2 },
+    { id: 'mat-nahw',       nom_fr: 'Nahw',                  nom_ar: 'النحو',             filiere: 'AR', coeff_defaut: new Prisma.Decimal(2), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 3 },
+    { id: 'mat-adab',       nom_fr: 'Adab (Littérature)',    nom_ar: 'الأدب العربي',      filiere: 'AR', coeff_defaut: new Prisma.Decimal(2), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 4 },
+    { id: 'mat-histislam',  nom_fr: 'Histoire Islamique',    nom_ar: 'التاريخ الإسلامي',  filiere: 'AR', coeff_defaut: new Prisma.Decimal(1), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 5 },
   ];
   for (const m of matieres) {
-    await prisma.matiere.upsert({ where: { id: m.id }, update: {}, create: { ...m, etablissement_id: 'etablissement-default' } });
+    const { id: _id, ...rest } = m;
+    await prisma.matiere.upsert({ where: { id: m.id }, update: { ...rest }, create: { ...m, etablissement_id: 'etablissement-default' } });
   }
   console.log('✅ Matières créées (5 FR + 5 AR)');
 

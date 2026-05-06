@@ -166,7 +166,9 @@ model Matiere {
   nom_fr           String
   nom_ar           String
   filiere          String
-  coeff_defaut     Decimal @default(1) @db.Decimal(4, 2)
+  coeff_defaut     Decimal @default(1)  @db.Decimal(4, 2)
+  note_max         Decimal @default(20) @db.Decimal(5, 2)
+  note_min         Decimal @default(0)  @db.Decimal(5, 2)
   ordre_bulletin   Int     @default(0)
   active           Boolean @default(true)
 

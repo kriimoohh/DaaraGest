@@ -266,6 +266,7 @@ export async function genererPdfClasse(
       ((notesByFiliere[f] ?? []) as NoteRaw[]).map(n => ({
         nom_fr: n.matiere.nom_fr, nom_ar: n.matiere.nom_ar,
         coeff: Number(n.matiere.coeff_defaut), valeur: n.valeur !== null ? Number(n.valeur) : null,
+        note_max: Number((n.matiere as {note_max?: unknown}).note_max ?? 20),
       }));
 
     pages.push(generateBulletinHtml({

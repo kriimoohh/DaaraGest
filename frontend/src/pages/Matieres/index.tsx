@@ -16,11 +16,13 @@ interface Matiere {
   nom_ar: string;
   filiere: 'FR' | 'AR';
   coeff_defaut: number;
+  note_max: number;
+  note_min: number;
   ordre_bulletin: number;
   active: boolean;
 }
 
-const EMPTY = { nom_fr: '', nom_ar: '', filiere: 'FR', coeff_defaut: '1', ordre_bulletin: '0' };
+const EMPTY = { nom_fr: '', nom_ar: '', filiere: 'FR', coeff_defaut: '1', note_max: '20', note_min: '0', ordre_bulletin: '0' };
 
 export function MatieresPage() {
   const { t } = useTranslation();
@@ -58,6 +60,8 @@ export function MatieresPage() {
       nom_ar: m.nom_ar,
       filiere: m.filiere,
       coeff_defaut: String(m.coeff_defaut),
+      note_max: String(m.note_max),
+      note_min: String(m.note_min),
       ordre_bulletin: String(m.ordre_bulletin),
     });
     setModal(true);
@@ -75,6 +79,8 @@ export function MatieresPage() {
         nom_ar: form.nom_ar,
         filiere: form.filiere,
         coeff_defaut: parseFloat(form.coeff_defaut) || 1,
+        note_max: parseFloat(form.note_max) || 20,
+        note_min: parseFloat(form.note_min) || 0,
         ordre_bulletin: parseInt(form.ordre_bulletin) || 0,
       };
       if (edit) {
@@ -140,7 +146,7 @@ export function MatieresPage() {
           <table className="w-full">
             <thead className="bg-slate-50 dark:bg-slate-700/50">
               <tr>
-                {['Nom FR', 'Nom AR', 'Filière', 'Coefficient', 'Ordre', 'Actions'].map((h) => (
+                {['Nom FR', 'Nom AR', 'Filière', 'Coefficient', 'Note Max', 'Note Min', 'Actions'].map((h) => (
                   <th key={h} className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">{h}</th>
                 ))}
               </tr>
@@ -154,7 +160,8 @@ export function MatieresPage() {
                     <Badge label={m.filiere} variant={m.filiere === 'FR' ? 'info' : 'warning'} />
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{m.coeff_defaut}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{m.ordre_bulletin}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-300">{m.note_max}</td>
+                  <td className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400">{m.note_min}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <Button size="sm" variant="ghost" onClick={() => openEdit(m)}>{t('actions.modifier')}</Button>
@@ -185,7 +192,7 @@ export function MatieresPage() {
               dir="rtl"
             />
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Select
               label={t('classe.filiere')}
               value={form.filiere}
@@ -199,6 +206,23 @@ export function MatieresPage() {
               min="0.25"
               value={form.coeff_defaut}
               onChange={(e) => setForm((f) => ({ ...f, coeff_defaut: e.target.value }))}
+            />
+            <Input
+              label={t('parametre.note_max')}
+              type="number"
+              step="1"
+              min="1"
+              max="100"
+              value={form.note_max}
+              onChange={(e) => setForm((f) => ({ ...f, note_max: e.target.value }))}
+            />
+            <Input
+              label={t('parametre.note_min')}
+              type="number"
+              step="1"
+              min="0"
+              value={form.note_min}
+              onChange={(e) => setForm((f) => ({ ...f, note_min: e.target.value }))}
             />
             <Input
               label={t('matiere.ordre_bulletin')}
