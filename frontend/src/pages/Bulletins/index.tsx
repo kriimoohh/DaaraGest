@@ -7,6 +7,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
+import { useAuthStore } from '../../store/authStore';
 
 interface AnneeScolaire { id: string; libelle: string; }
 interface Classe { id: string; nom_fr: string; filiere: string; }
@@ -37,6 +38,7 @@ export function BulletinsPage() {
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [detail, setDetail] = useState<Bulletin | null>(null);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   useEffect(() => {
     api.get<AnneeScolaire[]>('/api/v1/annees-scolaires').then(setAnnees).catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
@@ -87,6 +89,29 @@ export function BulletinsPage() {
     if (m >= 10) return 'info';
     if (m >= 8) return 'warning';
     return 'error';
+  };
+
+  const downloadPdf = async (b: Bulletin) => {
+    setDownloading(b.id);
+    try {
+      const token = useAuthStore.getState().token;
+      const resp = await fetch(`${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/api/v1/bulletins/${b.id}/pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!resp.ok) throw new Error('Erreur génération PDF');
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bulletin-${b.eleve.matricule}-T${b.periode}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('PDF téléchargé');
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur lors du téléchargement');
+    } finally {
+      setDownloading(null);
+    }
   };
 
   return (
@@ -171,6 +196,14 @@ export function BulletinsPage() {
                   <td className="px-4 py-3">
                     <Button variant="ghost" size="sm" onClick={() => setDetail(b)}>
                       {t('actions.voir')}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      loading={downloading === b.id}
+                      onClick={() => downloadPdf(b)}
+                    >
+                      PDF
                     </Button>
                   </td>
                 </tr>

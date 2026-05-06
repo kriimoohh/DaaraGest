@@ -149,3 +149,50 @@ export async function getBulletin(id: string, etablissement_id: string) {
 
   return { ...bulletin, notes };
 }
+
+export async function genererPdfBulletin(id: string, etablissement_id: string): Promise<Buffer> {
+  const data = await getBulletin(id, etablissement_id);
+  const etab = await prisma.etablissement.findUnique({ where: { id: etablissement_id } });
+  if (!etab) throw new Error('Établissement introuvable');
+
+  const { generateBulletinHtml } = await import('./bulletin.template');
+
+  const noteRows = (data.notes as Array<{
+    valeur: unknown;
+    matiere: { nom_fr: string; nom_ar: string; filiere: string; coeff_defaut: unknown };
+  }>).map((n) => ({
+    nom_fr: n.matiere.nom_fr,
+    nom_ar: n.matiere.nom_ar,
+    filiere: n.matiere.filiere,
+    coeff: Number(n.matiere.coeff_defaut),
+    valeur: n.valeur !== null && n.valeur !== undefined ? Number(n.valeur) : null,
+  }));
+
+  const html = generateBulletinHtml({
+    etablissement_nom_fr: etab.nom_fr,
+    etablissement_nom_ar: etab.nom_ar,
+    eleve_nom_fr: `${data.eleve.prenom_fr} ${data.eleve.nom_fr}`,
+    eleve_nom_ar: `${data.eleve.prenom_ar} ${data.eleve.nom_ar}`,
+    eleve_matricule: data.eleve.matricule,
+    annee_libelle: data.annee_scolaire.libelle,
+    periode: data.periode,
+    filiere: data.filiere,
+    moyenne: data.moyenne !== null ? Number(data.moyenne) : null,
+    rang: data.rang,
+    appreciation: data.appreciation,
+    notes: noteRows,
+    devise: etab.devise,
+  });
+
+  const puppeteer = await import('puppeteer');
+  const browser = await puppeteer.default.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  });
+  const page = await browser.newPage();
+  await page.setContent(html, { waitUntil: 'networkidle0' });
+  const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '10mm', bottom: '10mm', left: '8mm', right: '8mm' } });
+  await browser.close();
+
+  return Buffer.from(pdf);
+}
