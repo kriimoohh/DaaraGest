@@ -49,7 +49,7 @@ export async function creerUtilisateur(etablissement_id: string, data: Utilisate
   const utilisateur = await prisma.utilisateur.create({
     data: {
       etablissement_id,
-      role_id: data.role_id,
+      role_id: data.role_id ?? 'role-professeur',
       nom_fr: data.nom_fr,
       nom_ar: data.nom_ar,
       prenom_fr: data.prenom_fr,

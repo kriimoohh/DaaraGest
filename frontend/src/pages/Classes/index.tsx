@@ -298,12 +298,6 @@ export function ClassesPage() {
               onChange={(e) => setField('nom_fr', e.target.value)}
               error={formErrors.nom_fr}
             />
-            <Input
-              label="Nom (AR)"
-              value={form.nom_ar}
-              onChange={(e) => setField('nom_ar', e.target.value)}
-              dir="rtl"
-            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

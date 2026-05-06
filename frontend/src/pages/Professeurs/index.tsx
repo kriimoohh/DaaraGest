@@ -251,10 +251,7 @@ export function ProfesseursPage() {
               <Input label="Nom (FR)" value={form.nom_fr} onChange={(e) => setField('nom_fr', e.target.value)} error={formErrors.nom_fr} />
               <Input label="Prénom (FR)" value={form.prenom_fr} onChange={(e) => setField('prenom_fr', e.target.value)} error={formErrors.prenom_fr} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <Input label="Nom (AR)" value={form.nom_ar} onChange={(e) => setField('nom_ar', e.target.value)} dir="rtl" />
-              <Input label="Prénom (AR)" value={form.prenom_ar} onChange={(e) => setField('prenom_ar', e.target.value)} dir="rtl" />
-            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <Input label="Identifiant" value={form.identifiant} onChange={(e) => setField('identifiant', e.target.value)} error={formErrors.identifiant} />
               {!editTarget && (

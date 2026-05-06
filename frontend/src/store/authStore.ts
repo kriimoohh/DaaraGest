@@ -18,9 +18,11 @@ interface AuthState {
   user: AuthUser | null;
   token: string | null;
   isAuthenticated: boolean;
+  globalTheme: 'light' | 'dark';
   login: (token: string, user: AuthUser) => void;
   logout: () => void;
   updatePreferences: (langue: string, theme: string) => void;
+  setGlobalTheme: (theme: 'light' | 'dark') => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -29,9 +31,10 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       token: null,
       isAuthenticated: false,
+      globalTheme: 'light',
 
       login: (token, user) => {
-        set({ token, user, isAuthenticated: true });
+        set({ token, user, isAuthenticated: true, globalTheme: (user.theme as 'light' | 'dark') ?? 'light' });
       },
 
       logout: () => {
@@ -40,8 +43,13 @@ export const useAuthStore = create<AuthState>()(
 
       updatePreferences: (langue, theme) => {
         set((state) => ({
+          globalTheme: theme as 'light' | 'dark',
           user: state.user ? { ...state.user, langue, theme } : null,
         }));
+      },
+
+      setGlobalTheme: (theme) => {
+        set({ globalTheme: theme });
       },
     }),
     {

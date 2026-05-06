@@ -207,7 +207,6 @@ export function UtilisateursPage() {
                   <td className="px-4 py-3 font-mono text-sm text-gray-700 dark:text-gray-300">{u.identifiant}</td>
                   <td className="px-4 py-3">
                     <div className="font-medium text-sm text-gray-900 dark:text-white">{u.prenom_fr} {u.nom_fr}</div>
-                    <div className="text-xs text-gray-500" dir="rtl">{u.prenom_ar} {u.nom_ar}</div>
                   </td>
                   <td className="px-4 py-3">
                     <Badge label={u.role.libelle_fr} variant={roleVariant(u.role.libelle_fr)} />
@@ -237,10 +236,6 @@ export function UtilisateursPage() {
           <div className="grid grid-cols-2 gap-4">
             <Input label="Nom (FR)" value={form.nom_fr} onChange={(e) => setForm((f) => ({ ...f, nom_fr: e.target.value }))} />
             <Input label="Prénom (FR)" value={form.prenom_fr} onChange={(e) => setForm((f) => ({ ...f, prenom_fr: e.target.value }))} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Input label="Nom (AR)" value={form.nom_ar} onChange={(e) => setForm((f) => ({ ...f, nom_ar: e.target.value }))} dir="rtl" />
-            <Input label="Prénom (AR)" value={form.prenom_ar} onChange={(e) => setForm((f) => ({ ...f, prenom_ar: e.target.value }))} dir="rtl" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Input label="Identifiant" value={form.identifiant} onChange={(e) => setForm((f) => ({ ...f, identifiant: e.target.value }))} />
