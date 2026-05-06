@@ -18,7 +18,7 @@ export function Header() {
   };
 
   return (
-    <header className="h-14 bg-white dark:bg-brand-surface border-b border-slate-200 dark:border-white/5 flex items-center justify-end px-6 gap-2">
+    <header className="h-14 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-end px-6 gap-2">
       <button
         onClick={toggleLang}
         className="h-8 px-3 rounded-lg text-xs font-semibold border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
