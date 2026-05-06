@@ -380,20 +380,6 @@ export function ElevesPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Nom (AR)"
-              value={form.nom_ar}
-              onChange={(e) => setField('nom_ar', e.target.value)}
-              dir="rtl"
-            />
-            <Input
-              label="Prénom (AR)"
-              value={form.prenom_ar}
-              onChange={(e) => setField('prenom_ar', e.target.value)}
-              dir="rtl"
-            />
-          </div>
 
           <Input
             label="Date de naissance"
