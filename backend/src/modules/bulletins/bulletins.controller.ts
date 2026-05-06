@@ -1,7 +1,13 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
 import { genererBulletinSchema } from './bulletins.schema';
-import { listerBulletins, genererBulletins, getBulletin, genererPdfBulletin } from './bulletins.service';
+import {
+  listerBulletins,
+  genererBulletins,
+  getBulletin,
+  genererPdfBulletin,
+  genererPdfClasse,
+} from './bulletins.service';
 
 export async function listerHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
@@ -46,6 +52,27 @@ export async function pdfHandler(request: FastifyRequest, reply: FastifyReply) {
     reply
       .header('Content-Type', 'application/pdf')
       .header('Content-Disposition', `attachment; filename="bulletin-${id}.pdf"`)
+      .send(pdf);
+  } catch (err) {
+    return reply.status(500).send({ error: (err as Error).message });
+  }
+}
+
+export async function pdfClasseHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { classe_id, annee_scolaire_id, periode, filiere } = request.query as Record<string, string>;
+
+  if (!classe_id || !annee_scolaire_id || !periode || !filiere) {
+    return reply.status(400).send({ error: 'classe_id, annee_scolaire_id, periode et filiere sont requis' });
+  }
+
+  try {
+    const pdf = await genererPdfClasse(
+      classe_id, annee_scolaire_id, parseInt(periode), filiere, etablissement_id
+    );
+    reply
+      .header('Content-Type', 'application/pdf')
+      .header('Content-Disposition', `attachment; filename="bulletins-classe-T${periode}.pdf"`)
       .send(pdf);
   } catch (err) {
     return reply.status(500).send({ error: (err as Error).message });

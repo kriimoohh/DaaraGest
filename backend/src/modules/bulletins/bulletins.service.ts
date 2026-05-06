@@ -196,3 +196,120 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
 
   return Buffer.from(pdf);
 }
+
+export async function genererPdfClasse(
+  classe_id: string,
+  annee_scolaire_id: string,
+  periode: number,
+  filiere: string,
+  etablissement_id: string
+): Promise<Buffer> {
+  const etab = await prisma.etablissement.findUnique({ where: { id: etablissement_id } });
+  if (!etab) throw new Error('Établissement introuvable');
+
+  // Récupérer tous les bulletins de cette classe/période
+  const bulletins = await prisma.bulletin.findMany({
+    where: {
+      annee_scolaire_id,
+      periode,
+      filiere,
+      eleve: {
+        etablissement_id,
+        inscriptions: {
+          some: {
+            annee_scolaire_id,
+            OR: [{ classe_fr_id: classe_id }, { classe_ar_id: classe_id }],
+          },
+        },
+      },
+    },
+    include: {
+      eleve: true,
+      annee_scolaire: true,
+    },
+    orderBy: [{ rang: 'asc' }, { eleve: { nom_fr: 'asc' } }],
+  });
+
+  if (bulletins.length === 0) throw new Error('Aucun bulletin trouvé pour cette classe');
+
+  const matieres = await prisma.matiere.findMany({
+    where: { etablissement_id, filiere, active: true },
+    orderBy: { ordre_bulletin: 'asc' },
+  });
+
+  const { generateBulletinHtml } = await import('./bulletin.template');
+
+  // Générer une page HTML par élève
+  const pages: string[] = [];
+  for (const bulletin of bulletins) {
+    const notes = await prisma.note.findMany({
+      where: {
+        eleve_id: bulletin.eleve_id,
+        annee_scolaire_id,
+        periode,
+        matiere_id: { in: matieres.map((m) => m.id) },
+      },
+      include: { matiere: true },
+      orderBy: { matiere: { ordre_bulletin: 'asc' } },
+    });
+
+    const noteRows = notes.map((n) => ({
+      nom_fr: n.matiere.nom_fr,
+      nom_ar: n.matiere.nom_ar,
+      filiere: n.matiere.filiere,
+      coeff: Number(n.matiere.coeff_defaut),
+      valeur: n.valeur !== null ? Number(n.valeur) : null,
+    }));
+
+    pages.push(
+      generateBulletinHtml({
+        etablissement_nom_fr: etab.nom_fr,
+        etablissement_nom_ar: etab.nom_ar,
+        eleve_nom_fr: `${bulletin.eleve.prenom_fr} ${bulletin.eleve.nom_fr}`,
+        eleve_nom_ar: `${bulletin.eleve.prenom_ar} ${bulletin.eleve.nom_ar}`,
+        eleve_matricule: bulletin.eleve.matricule,
+        annee_libelle: bulletin.annee_scolaire.libelle,
+        periode: bulletin.periode,
+        filiere: bulletin.filiere,
+        moyenne: bulletin.moyenne !== null ? Number(bulletin.moyenne) : null,
+        rang: bulletin.rang,
+        appreciation: bulletin.appreciation,
+        notes: noteRows,
+        devise: etab.devise,
+      })
+    );
+  }
+
+  // Combiner toutes les pages en un seul HTML avec page-break
+  const combinedHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>
+      .page-break { page-break-after: always; }
+      body { margin: 0; padding: 0; }
+    </style>
+  </head><body>
+    ${pages.map((p, i) => {
+      // Extraire le contenu du body de chaque page
+      const bodyMatch = p.match(/<body>([\s\S]*)<\/body>/);
+      const content = bodyMatch ? bodyMatch[1] : p;
+      return i < pages.length - 1
+        ? `<div class="page-break" style="padding:30px 40px">${content}</div>`
+        : `<div style="padding:30px 40px">${content}</div>`;
+    }).join('\n')}
+  </body></html>`;
+
+  const puppeteer = await import('puppeteer');
+  const browser = await puppeteer.default.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  });
+  const page = await browser.newPage();
+  await page.setContent(combinedHtml, { waitUntil: 'networkidle0' });
+  const pdf = await page.pdf({
+    format: 'A4',
+    printBackground: true,
+    margin: { top: '0', bottom: '0', left: '0', right: '0' },
+  });
+  await browser.close();
+
+  return Buffer.from(pdf);
+}

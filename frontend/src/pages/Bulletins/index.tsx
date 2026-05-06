@@ -39,6 +39,7 @@ export function BulletinsPage() {
   const [generating, setGenerating] = useState(false);
   const [detail, setDetail] = useState<Bulletin | null>(null);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [downloadingClasse, setDownloadingClasse] = useState(false);
 
   useEffect(() => {
     api.get<AnneeScolaire[]>('/api/v1/annees-scolaires').then(setAnnees).catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
@@ -114,6 +115,37 @@ export function BulletinsPage() {
     }
   };
 
+  const downloadPdfClasse = async () => {
+    if (!classeId || !anneeId) {
+      toast.error('Sélectionnez une classe et une année scolaire');
+      return;
+    }
+    setDownloadingClasse(true);
+    try {
+      const token = useAuthStore.getState().token;
+      const params = new URLSearchParams({ classe_id: classeId, annee_scolaire_id: anneeId, periode, filiere });
+      const resp = await fetch(`${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/api/v1/bulletins/pdf-classe?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: 'Erreur' }));
+        throw new Error(err.error || 'Erreur génération PDF');
+      }
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bulletins-classe-T${periode}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`PDF de la classe téléchargé (${bulletins.length} bulletin(s))`);
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur lors du téléchargement');
+    } finally {
+      setDownloadingClasse(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader title={t('bulletin.titre')} />
@@ -156,6 +188,14 @@ export function BulletinsPage() {
           </Button>
           <Button onClick={generer} loading={generating} disabled={!classeId}>
             {t('bulletin.generer')}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={downloadPdfClasse}
+            loading={downloadingClasse}
+            disabled={!classeId || bulletins.length === 0}
+          >
+            ⬇ Télécharger tous ({bulletins.length})
           </Button>
         </div>
       </div>
