@@ -1,3 +1,13 @@
+function escapeHtml(str: string | null | undefined): string {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 interface NoteRow {
   nom_fr: string;
   nom_ar: string;
@@ -33,8 +43,8 @@ export function generateBulletinHtml(data: BulletinData): string {
     .map(
       (n) => `
       <tr>
-        <td class="subject">${n.nom_fr}</td>
-        <td class="subject-ar" dir="rtl">${n.nom_ar}</td>
+        <td class="subject">${escapeHtml(n.nom_fr)}</td>
+        <td class="subject-ar" dir="rtl">${escapeHtml(n.nom_ar)}</td>
         <td class="center">${n.coeff}</td>
         <td class="center grade ${n.valeur !== null && n.valeur < 10 ? 'fail' : 'pass'}">
           ${n.valeur !== null ? Number(n.valeur).toFixed(2) : '—'}
@@ -162,8 +172,8 @@ export function generateBulletinHtml(data: BulletinData): string {
 <body>
   <div class="header">
     <div>
-      <div class="school-name">${data.etablissement_nom_fr}</div>
-      <div class="school-name-ar">${data.etablissement_nom_ar}</div>
+      <div class="school-name">${escapeHtml(data.etablissement_nom_fr)}</div>
+      <div class="school-name-ar">${escapeHtml(data.etablissement_nom_ar)}</div>
     </div>
     <div class="badge">Bulletin scolaire</div>
   </div>
@@ -171,16 +181,16 @@ export function generateBulletinHtml(data: BulletinData): string {
   <div class="info-grid">
     <div class="info-box">
       <div class="info-label">Élève</div>
-      <div class="info-value">${data.eleve_nom_fr}</div>
-      <div class="info-value-ar">${data.eleve_nom_ar}</div>
+      <div class="info-value">${escapeHtml(data.eleve_nom_fr)}</div>
+      <div class="info-value-ar">${escapeHtml(data.eleve_nom_ar)}</div>
     </div>
     <div class="info-box">
       <div class="info-label">Matricule</div>
-      <div class="info-value">${data.eleve_matricule}</div>
+      <div class="info-value">${escapeHtml(data.eleve_matricule)}</div>
     </div>
     <div class="info-box">
       <div class="info-label">Année scolaire</div>
-      <div class="info-value">${data.annee_libelle}</div>
+      <div class="info-value">${escapeHtml(data.annee_libelle)}</div>
     </div>
     <div class="info-box">
       <div class="info-label">Période</div>
@@ -229,7 +239,7 @@ export function generateBulletinHtml(data: BulletinData): string {
     data.appreciation
       ? `<div class="appreciation-box">
     <div class="appreciation-label">Appréciation du conseil de classe</div>
-    <div class="appreciation-text">${data.appreciation}</div>
+    <div class="appreciation-text">${escapeHtml(data.appreciation ?? "")}</div>
   </div>`
       : ''
   }
