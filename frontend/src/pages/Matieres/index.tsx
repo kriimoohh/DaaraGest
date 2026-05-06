@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
@@ -22,6 +23,7 @@ interface Matiere {
 const EMPTY = { nom_fr: '', nom_ar: '', filiere: 'FR', coeff_defaut: '1', ordre_bulletin: '0' };
 
 export function MatieresPage() {
+  const { t } = useTranslation();
   const api = useApi();
   const [matieres, setMatieres] = useState<Matiere[]>([]);
   const [filiere, setFiliere] = useState('');
@@ -119,9 +121,9 @@ export function MatieresPage() {
           value={filiere}
           onChange={(e) => setFiliere(e.target.value)}
           options={[
-            { value: '', label: 'Toutes les filières' },
-            { value: 'FR', label: 'Filière Française' },
-            { value: 'AR', label: 'Filière Arabe' },
+            { value: '', label: t('classe.toutes_filieres') },
+            { value: 'FR', label: t('classe.filiere_fr') },
+            { value: 'AR', label: t('classe.filiere_ar') },
           ]}
         />
       </div>
@@ -155,8 +157,8 @@ export function MatieresPage() {
                   <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{m.ordre_bulletin}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <Button size="sm" variant="ghost" onClick={() => openEdit(m)}>Modifier</Button>
-                      <Button size="sm" variant="danger" onClick={() => setConfirm(m)}>Supprimer</Button>
+                      <Button size="sm" variant="ghost" onClick={() => openEdit(m)}>{t('actions.modifier')}</Button>
+                      <Button size="sm" variant="danger" onClick={() => setConfirm(m)}>{t('actions.supprimer')}</Button>
                     </div>
                   </td>
                 </tr>
@@ -170,13 +172,13 @@ export function MatieresPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Nom (Français)"
+              label={t('common.nom_fr')}
               value={form.nom_fr}
               onChange={(e) => setForm((f) => ({ ...f, nom_fr: e.target.value }))}
               placeholder="Mathématiques"
             />
             <Input
-              label="Nom (Arabe)"
+              label={t('common.nom_ar')}
               value={form.nom_ar}
               onChange={(e) => setForm((f) => ({ ...f, nom_ar: e.target.value }))}
               placeholder="الرياضيات"
@@ -185,13 +187,13 @@ export function MatieresPage() {
           </div>
           <div className="grid grid-cols-3 gap-4">
             <Select
-              label="Filière"
+              label={t('classe.filiere')}
               value={form.filiere}
               onChange={(e) => setForm((f) => ({ ...f, filiere: e.target.value }))}
-              options={[{ value: 'FR', label: 'Française' }, { value: 'AR', label: 'Arabe' }]}
+              options={[{ value: 'FR', label: t('classe.filiere_fr') }, { value: 'AR', label: t('classe.filiere_ar') }]}
             />
             <Input
-              label="Coefficient"
+              label={t('note.coefficient')}
               type="number"
               step="0.25"
               min="0.25"
@@ -199,7 +201,7 @@ export function MatieresPage() {
               onChange={(e) => setForm((f) => ({ ...f, coeff_defaut: e.target.value }))}
             />
             <Input
-              label="Ordre bulletin"
+              label={t('matiere.ordre_bulletin')}
               type="number"
               min="0"
               value={form.ordre_bulletin}
@@ -207,8 +209,8 @@ export function MatieresPage() {
             />
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={() => setModal(false)}>Annuler</Button>
-            <Button onClick={handleSave} loading={saving}>Enregistrer</Button>
+            <Button variant="secondary" onClick={() => setModal(false)}>{t('actions.annuler')}</Button>
+            <Button onClick={handleSave} loading={saving}>{t('actions.enregistrer')}</Button>
           </div>
         </div>
       </Modal>

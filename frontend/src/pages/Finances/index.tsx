@@ -32,6 +32,7 @@ interface PaiementProf {
 interface ProfTabProps { api: ReturnType<typeof useApi>; formatMontant: (v: number) => string; }
 
 function ProfsTab({ api, formatMontant }: ProfTabProps) {
+  const { t } = useTranslation();
   const now = new Date();
   const [paiements, setPaiements] = useState<PaiementProf[]>([]);
   const [profs, setProfs] = useState<ProfesseurSimple[]>([]);
@@ -129,25 +130,25 @@ function ProfsTab({ api, formatMontant }: ProfTabProps) {
 
       <Modal isOpen={modal} onClose={() => setModal(false)} title="Nouveau paiement professeur" size="md">
         <div className="space-y-4">
-          <Select label="Professeur" value={form.professeur_id}
+          <Select label={t('professeur.titre')} value={form.professeur_id}
             onChange={(e) => setForm(f => ({ ...f, professeur_id: e.target.value }))}
-            options={[{ value: '', label: 'Sélectionner...' }, ...profs.map(p => ({ value: p.id, label: `${p.utilisateur.prenom_fr} ${p.utilisateur.nom_fr}` }))]} />
+            options={[{ value: '', label: t('common.selectionner') }, ...profs.map(p => ({ value: p.id, label: `${p.utilisateur.prenom_fr} ${p.utilisateur.nom_fr}` }))]} />
           <div className="grid grid-cols-2 gap-4">
-            <Select label="Mois" value={form.mois} onChange={(e) => setForm(f => ({ ...f, mois: e.target.value }))}
+            <Select label={t('common.mois')} value={form.mois} onChange={(e) => setForm(f => ({ ...f, mois: e.target.value }))}
               options={MOIS2.map((m, i) => ({ value: String(i + 1), label: m }))} />
-            <Input label="Année" type="number" value={form.annee} onChange={(e) => setForm(f => ({ ...f, annee: e.target.value }))} />
+            <Input label={t('common.annee')} type="number" value={form.annee} onChange={(e) => setForm(f => ({ ...f, annee: e.target.value }))} />
           </div>
           <div className="grid grid-cols-3 gap-4">
-            <Input label="Montant brut (FCFA)" type="number" value={form.montant_brut}
+            <Input label={t('finance.montant_brut')} type="number" value={form.montant_brut}
               onChange={(e) => { const v = e.target.value; setForm(f => ({ ...f, montant_brut: v, net_a_payer: v })); }} />
-            <Input label="Retenues" type="number" value={form.retenues}
+            <Input label={t('finance.retenues')} type="number" value={form.retenues}
               onChange={(e) => setForm(f => ({ ...f, retenues: e.target.value }))} />
-            <Input label="Net à payer" type="number" value={form.net_a_payer}
+            <Input label={t('finance.net_a_payer')} type="number" value={form.net_a_payer}
               onChange={(e) => setForm(f => ({ ...f, net_a_payer: e.target.value }))} />
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={() => setModal(false)}>Annuler</Button>
-            <Button onClick={handleSave} loading={saving}>Enregistrer</Button>
+            <Button variant="secondary" onClick={() => setModal(false)}>{t('actions.annuler')}</Button>
+            <Button onClick={handleSave} loading={saving}>{t('actions.enregistrer')}</Button>
           </div>
         </div>
       </Modal>
@@ -319,7 +320,7 @@ export function FinancesPage() {
       <Modal isOpen={modal} onClose={() => setModal(false)} title="Nouveau paiement" size="md">
         <div className="space-y-4">
           <Select
-            label="Élève"
+            label={t('eleve.titre')}
             value={form.eleve_id}
             onChange={(e) => setForm((f) => ({ ...f, eleve_id: e.target.value }))}
             options={[{ value: '', label: 'Sélectionner un élève...' }, ...eleves.map((e) => ({ value: e.id, label: `${e.prenom_fr} ${e.nom_fr} (${e.matricule})` }))]}
@@ -341,13 +342,13 @@ export function FinancesPage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Select
-              label="Mois"
+              label={t('common.mois')}
               value={form.mois}
               onChange={(e) => setForm((f) => ({ ...f, mois: e.target.value }))}
               options={MOIS.map((m, i) => ({ value: String(i + 1), label: m }))}
             />
             <Input
-              label="Année"
+              label={t('common.annee')}
               type="number"
               value={form.annee}
               onChange={(e) => setForm((f) => ({ ...f, annee: e.target.value }))}
@@ -360,8 +361,8 @@ export function FinancesPage() {
             placeholder="REÇ-001"
           />
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={() => setModal(false)}>Annuler</Button>
-            <Button onClick={handleSave} loading={saving}>Enregistrer</Button>
+            <Button variant="secondary" onClick={() => setModal(false)}>{t('actions.annuler')}</Button>
+            <Button onClick={handleSave} loading={saving}>{t('actions.enregistrer')}</Button>
           </div>
         </div>
       </Modal>

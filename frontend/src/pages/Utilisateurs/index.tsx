@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
@@ -24,6 +25,7 @@ const EMPTY_FORM = {
 };
 
 export function UtilisateursPage() {
+  const { t } = useTranslation();
   const api = useApi();
   const [users, setUsers] = useState<Utilisateur[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -178,7 +180,7 @@ export function UtilisateursPage() {
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
           options={[
-            { value: '', label: 'Tous les rôles' },
+            { value: '', label: t('utilisateur.tous_roles') },
             ...roles.map((r) => ({ value: r.libelle_fr, label: r.libelle_fr })),
           ]}
         />
@@ -217,9 +219,9 @@ export function UtilisateursPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <Button size="sm" variant="ghost" onClick={() => openEdit(u)}>Modifier</Button>
+                      <Button size="sm" variant="ghost" onClick={() => openEdit(u)}>{t('actions.modifier')}</Button>
                       <Button size="sm" variant="secondary" onClick={() => { setResetModal(u); setNewPwd(''); }}>Mot de passe</Button>
-                      <Button size="sm" variant="danger" onClick={() => setConfirm(u)}>Désactiver</Button>
+                      <Button size="sm" variant="danger" onClick={() => setConfirm(u)}>{t('actions.desactiver')}</Button>
                     </div>
                   </td>
                 </tr>
@@ -234,35 +236,35 @@ export function UtilisateursPage() {
       <Modal isOpen={modal} onClose={() => setModal(false)} title={edit ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur'} size="lg">
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Nom (FR)" value={form.nom_fr} onChange={(e) => setForm((f) => ({ ...f, nom_fr: e.target.value }))} />
-            <Input label="Prénom (FR)" value={form.prenom_fr} onChange={(e) => setForm((f) => ({ ...f, prenom_fr: e.target.value }))} />
+            <Input label={t('common.nom_fr')} value={form.nom_fr} onChange={(e) => setForm((f) => ({ ...f, nom_fr: e.target.value }))} />
+            <Input label={t('common.prenom_fr')} value={form.prenom_fr} onChange={(e) => setForm((f) => ({ ...f, prenom_fr: e.target.value }))} />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Identifiant" value={form.identifiant} onChange={(e) => setForm((f) => ({ ...f, identifiant: e.target.value }))} />
+            <Input label={t('auth.identifiant')} value={form.identifiant} onChange={(e) => setForm((f) => ({ ...f, identifiant: e.target.value }))} />
             {!edit && (
-              <Input label="Mot de passe" type="password" value={form.mot_de_passe} onChange={(e) => setForm((f) => ({ ...f, mot_de_passe: e.target.value }))} />
+              <Input label={t('auth.password')} type="password" value={form.mot_de_passe} onChange={(e) => setForm((f) => ({ ...f, mot_de_passe: e.target.value }))} />
             )}
           </div>
           <div className="grid grid-cols-2 gap-4">
             {!edit && (
               <Select
-                label="Rôle"
+                label={t('utilisateur.role')}
                 value={form.role_id}
                 onChange={(e) => setForm((f) => ({ ...f, role_id: e.target.value }))}
-                options={[{ value: '', label: 'Sélectionner...' }, ...roles.map((r) => ({ value: r.id, label: r.libelle_fr }))]}
+                options={[{ value: '', label: t('common.selectionner') }, ...roles.map((r) => ({ value: r.id, label: r.libelle_fr }))]}
               />
             )}
             <Select
-              label="Langue"
+              label={t('utilisateur.langue')}
               value={form.langue}
               onChange={(e) => setForm((f) => ({ ...f, langue: e.target.value }))}
-              options={[{ value: 'fr', label: 'Français' }, { value: 'ar', label: 'Arabe' }]}
+              options={[{ value: 'fr', label: 'Français' }, { value: 'ar', label: t('classe.filiere_ar') }]}
             />
-            <Input label="Email (optionnel)" type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+            <Input label={t('common.email')} type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={() => setModal(false)}>Annuler</Button>
-            <Button onClick={handleSave} loading={saving}>Enregistrer</Button>
+            <Button variant="secondary" onClick={() => setModal(false)}>{t('actions.annuler')}</Button>
+            <Button onClick={handleSave} loading={saving}>{t('actions.enregistrer')}</Button>
           </div>
         </div>
       </Modal>
@@ -273,10 +275,10 @@ export function UtilisateursPage() {
           <p className="text-sm text-slate-600 dark:text-slate-400">
             Nouveau mot de passe pour <strong>{resetModal?.identifiant}</strong>
           </p>
-          <Input label="Nouveau mot de passe" type="password" value={newPwd} onChange={(e) => setNewPwd(e.target.value)} />
+          <Input label={t('utilisateur.nouveau_mdp')} type="password" value={newPwd} onChange={(e) => setNewPwd(e.target.value)} />
           <div className="flex justify-end gap-3">
-            <Button variant="secondary" onClick={() => setResetModal(null)}>Annuler</Button>
-            <Button onClick={handleReset} loading={resetting}>Réinitialiser</Button>
+            <Button variant="secondary" onClick={() => setResetModal(null)}>{t('actions.annuler')}</Button>
+            <Button onClick={handleReset} loading={resetting}>{t('actions.reinitialiser')}</Button>
           </div>
         </div>
       </Modal>

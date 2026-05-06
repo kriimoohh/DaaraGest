@@ -70,14 +70,14 @@ export function ParametresPage() {
         {etab && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <Input label="Nom (Français)" value={etab.nom_fr} onChange={(e) => setEtab((p) => p ? { ...p, nom_fr: e.target.value } : p)} />
-              <Input label="Nom (Arabe)" value={etab.nom_ar} onChange={(e) => setEtab((p) => p ? { ...p, nom_ar: e.target.value } : p)} />
+              <Input label={t('common.nom_fr')} value={etab.nom_fr} onChange={(e) => setEtab((p) => p ? { ...p, nom_fr: e.target.value } : p)} />
+              <Input label={t('common.nom_ar')} value={etab.nom_ar} onChange={(e) => setEtab((p) => p ? { ...p, nom_ar: e.target.value } : p)} />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <Input label="Adresse" value={etab.adresse ?? ''} onChange={(e) => setEtab((p) => p ? { ...p, adresse: e.target.value } : p)} />
-              <Input label="Téléphone" value={etab.telephone ?? ''} onChange={(e) => setEtab((p) => p ? { ...p, telephone: e.target.value } : p)} />
+              <Input label={t('common.adresse')} value={etab.adresse ?? ''} onChange={(e) => setEtab((p) => p ? { ...p, adresse: e.target.value } : p)} />
+              <Input label={t('common.telephone')} value={etab.telephone ?? ''} onChange={(e) => setEtab((p) => p ? { ...p, telephone: e.target.value } : p)} />
             </div>
-            <Input label="Devise" value={etab.devise} onChange={(e) => setEtab((p) => p ? { ...p, devise: e.target.value } : p)} />
+            <Input label={t('common.devise')} value={etab.devise} onChange={(e) => setEtab((p) => p ? { ...p, devise: e.target.value } : p)} />
             <div className="flex justify-end">
               <Button onClick={saveEtab} loading={saving === 'etab'}>{t('actions.enregistrer')}</Button>
             </div>

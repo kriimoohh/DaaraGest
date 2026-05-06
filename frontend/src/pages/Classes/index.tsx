@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
@@ -51,16 +52,8 @@ const EMPTY_FORM: ClasseFormData = {
   annee_scolaire_id: '',
 };
 
-const FILIERE_OPTIONS = [
-  { value: 'FR', label: 'Filière Française' },
-  { value: 'AR', label: 'Filière Arabe' },
-];
 
-const FILIERE_FILTER_OPTIONS = [
-  { value: '', label: 'Toutes les filières' },
-  { value: 'FR', label: 'Filière FR' },
-  { value: 'AR', label: 'Filière AR' },
-];
+
 
 const LIMIT = 20;
 
@@ -76,6 +69,7 @@ function validate(form: ClasseFormData): FormErrors {
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export function ClassesPage() {
+  const { t } = useTranslation();
   const api = useApi();
 
   const [classes, setClasses] = useState<Classe[]>([]);
@@ -199,7 +193,7 @@ export function ClassesPage() {
 
   const anneeOptions = annees.map((a) => ({ value: a.id, label: a.libelle }));
   const anneeFilterOptions = [
-    { value: '', label: 'Toutes les années' },
+    { value: '', label: t('classe.toutes_annees') },
     ...anneeOptions,
   ];
 
@@ -230,8 +224,8 @@ export function ClassesPage() {
         const c = row as unknown as Classe;
         return (
           <>
-            <Button size="sm" variant="ghost" onClick={() => openEdit(c)}>Modifier</Button>
-            <Button size="sm" variant="danger" onClick={() => setConfirmDelete(c)}>Supprimer</Button>
+            <Button size="sm" variant="ghost" onClick={() => openEdit(c)}>{t('actions.modifier')}</Button>
+            <Button size="sm" variant="danger" onClick={() => setConfirmDelete(c)}>{t('actions.supprimer')}</Button>
           </>
         );
       },
@@ -261,7 +255,11 @@ export function ClassesPage() {
       <div className="mb-4 flex flex-wrap gap-3">
         <div className="w-48">
           <Select
-            options={FILIERE_FILTER_OPTIONS}
+            options={[
+            { value: '', label: t('classe.toutes_filieres') },
+            { value: 'FR', label: t('classe.filiere_fr') },
+            { value: 'AR', label: t('classe.filiere_ar') },
+          ]}
             value={filiereFilter}
             onChange={(e) => setFiliereFilter(e.target.value)}
           />
@@ -293,7 +291,7 @@ export function ClassesPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Nom (FR)"
+              label={t('common.nom_fr')}
               value={form.nom_fr}
               onChange={(e) => setField('nom_fr', e.target.value)}
               error={formErrors.nom_fr}
@@ -302,15 +300,18 @@ export function ClassesPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <Select
-              label="Filière"
+              label={t('classe.filiere')}
               value={form.filiere}
               onChange={(e) => setField('filiere', e.target.value)}
               error={formErrors.filiere}
-              options={FILIERE_OPTIONS}
-              placeholder="Choisir..."
+              options={[
+                { value: 'FR', label: t('classe.filiere_fr') },
+                { value: 'AR', label: t('classe.filiere_ar') },
+              ]}
+              placeholder={t('common.selectionner')}
             />
             <Input
-              label="Niveau"
+              label={t('classe.niveau')}
               value={form.niveau}
               onChange={(e) => setField('niveau', e.target.value)}
               placeholder="Ex: CM1"
@@ -319,7 +320,7 @@ export function ClassesPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Capacité"
+              label={t('classe.capacite')}
               type="number"
               value={form.capacite}
               onChange={(e) => setField('capacite', e.target.value)}
@@ -327,7 +328,7 @@ export function ClassesPage() {
               min="0"
             />
             <Select
-              label="Année scolaire"
+              label={t('classe.annee_scolaire')}
               value={form.annee_scolaire_id}
               onChange={(e) => setField('annee_scolaire_id', e.target.value)}
               error={formErrors.annee_scolaire_id}

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
@@ -98,6 +99,7 @@ function validate(form: EleveFormData): FormErrors {
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export function ElevesPage() {
+  const { t } = useTranslation();
   const api = useApi();
 
   const [eleves, setEleves] = useState<Eleve[]>([]);
@@ -295,9 +297,9 @@ export function ElevesPage() {
         const e = row as unknown as Eleve;
         return (
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="ghost" onClick={() => openEdit(e)}>Modifier</Button>
-            <Button size="sm" variant="secondary" onClick={() => openInscription(e)}>Inscrire</Button>
-            <Button size="sm" variant="danger" onClick={() => setConfirmDelete(e)}>Supprimer</Button>
+            <Button size="sm" variant="ghost" onClick={() => openEdit(e)}>{t('actions.modifier')}</Button>
+            <Button size="sm" variant="secondary" onClick={() => openInscription(e)}>{t('actions.inscrire')}</Button>
+            <Button size="sm" variant="danger" onClick={() => setConfirmDelete(e)}>{t('actions.supprimer')}</Button>
           </div>
         );
       },
@@ -349,14 +351,14 @@ export function ElevesPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Matricule"
+              label={t('eleve.matricule')}
               value={form.matricule}
               onChange={(e) => setField('matricule', e.target.value)}
               error={formErrors.matricule}
               placeholder="ELV-001"
             />
             <Select
-              label="Sexe"
+              label={t('eleve.sexe')}
               value={form.sexe}
               onChange={(e) => setField('sexe', e.target.value)}
               error={formErrors.sexe}
@@ -367,13 +369,13 @@ export function ElevesPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Nom (FR)"
+              label={t('common.nom_fr')}
               value={form.nom_fr}
               onChange={(e) => setField('nom_fr', e.target.value)}
               error={formErrors.nom_fr}
             />
             <Input
-              label="Prénom (FR)"
+              label={t('common.prenom_fr')}
               value={form.prenom_fr}
               onChange={(e) => setField('prenom_fr', e.target.value)}
               error={formErrors.prenom_fr}
@@ -382,7 +384,7 @@ export function ElevesPage() {
 
 
           <Input
-            label="Date de naissance"
+            label={t('eleve.date_naissance')}
             type="date"
             value={form.date_naissance}
             onChange={(e) => setField('date_naissance', e.target.value)}
@@ -393,12 +395,12 @@ export function ElevesPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Nom du parent (FR)"
+              label={t('common.nom_fr')}
               value={form.parent_nom_fr}
               onChange={(e) => setField('parent_nom_fr', e.target.value)}
             />
             <Select
-              label="Lien"
+              label={t('eleve.lien')}
               value={form.parent_lien}
               onChange={(e) => setField('parent_lien', e.target.value)}
               options={LIEN_OPTIONS}
@@ -407,7 +409,7 @@ export function ElevesPage() {
           </div>
 
           <Input
-            label="Téléphone"
+            label={t('common.telephone')}
             type="tel"
             value={form.parent_telephone}
             onChange={(e) => setField('parent_telephone', e.target.value)}
@@ -430,18 +432,18 @@ export function ElevesPage() {
       {inscModal && (
         <Modal isOpen={!!inscModal} onClose={() => setInscModal(null)} title={`Inscrire ${inscModal.prenom_fr} ${inscModal.nom_fr}`} size="md">
           <div className="space-y-4">
-            <Select label="Année scolaire *" value={inscForm.annee_scolaire_id}
+            <Select label={t('classe.annee_scolaire')} value={inscForm.annee_scolaire_id}
               onChange={(e) => setInscForm(f => ({ ...f, annee_scolaire_id: e.target.value }))}
-              options={[{ value: '', label: 'Sélectionner...' }, ...annees.map(a => ({ value: a.id, label: a.libelle }))]} />
-            <Select label="Classe FR (optionnel)" value={inscForm.classe_fr_id}
+              options={[{ value: '', label: t('common.selectionner') }, ...annees.map(a => ({ value: a.id, label: a.libelle }))]} />
+            <Select label={t('eleve.classe_fr')} value={inscForm.classe_fr_id}
               onChange={(e) => setInscForm(f => ({ ...f, classe_fr_id: e.target.value }))}
-              options={[{ value: '', label: 'Aucune' }, ...classesDisp.filter(cl => cl.filiere === 'FR').map(cl => ({ value: cl.id, label: cl.nom_fr }))]} />
-            <Select label="Classe AR (optionnel)" value={inscForm.classe_ar_id}
+              options={[{ value: '', label: t('common.aucune') }, ...classesDisp.filter(cl => cl.filiere === 'FR').map(cl => ({ value: cl.id, label: cl.nom_fr }))]} />
+            <Select label={t('eleve.classe_ar')} value={inscForm.classe_ar_id}
               onChange={(e) => setInscForm(f => ({ ...f, classe_ar_id: e.target.value }))}
-              options={[{ value: '', label: 'Aucune' }, ...classesDisp.filter(cl => cl.filiere === 'AR').map(cl => ({ value: cl.id, label: cl.nom_fr }))]} />
+              options={[{ value: '', label: t('common.aucune') }, ...classesDisp.filter(cl => cl.filiere === 'AR').map(cl => ({ value: cl.id, label: cl.nom_fr }))]} />
             <div className="flex justify-end gap-3 pt-2">
-              <Button variant="secondary" onClick={() => setInscModal(null)}>Annuler</Button>
-              <Button onClick={handleInscrire} loading={inscSaving}>Inscrire</Button>
+              <Button variant="secondary" onClick={() => setInscModal(null)}>{t('actions.annuler')}</Button>
+              <Button onClick={handleInscrire} loading={inscSaving}>{t('actions.inscrire')}</Button>
             </div>
           </div>
         </Modal>

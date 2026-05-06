@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
@@ -51,8 +52,8 @@ const EMPTY_FORM: ProfesseurFormData = {
 };
 
 const CONTRAT_OPTIONS = [
-  { value: 'permanent', label: 'Permanent' },
-  { value: 'vacataire', label: 'Vacataire' },
+  { value: 'permanent', label: 'permanent' },
+  { value: 'vacataire', label: 'vacataire' },
 ];
 
 const LIMIT = 20;
@@ -68,6 +69,7 @@ function validate(form: ProfesseurFormData, isEdit: boolean): FormErrors {
 }
 
 export function ProfesseursPage() {
+  const { t } = useTranslation();
   const api = useApi();
 
   const [profs, setProfs] = useState<Professeur[]>([]);
@@ -200,8 +202,8 @@ export function ProfesseursPage() {
         const p = row as unknown as Professeur;
         return (
           <>
-            <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>Modifier</Button>
-            <Button size="sm" variant="danger" onClick={() => setConfirmDelete(p)}>Supprimer</Button>
+            <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>{t('actions.modifier')}</Button>
+            <Button size="sm" variant="danger" onClick={() => setConfirmDelete(p)}>{t('actions.supprimer')}</Button>
           </>
         );
       },
@@ -248,22 +250,22 @@ export function ProfesseursPage() {
         >
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <Input label="Nom (FR)" value={form.nom_fr} onChange={(e) => setField('nom_fr', e.target.value)} error={formErrors.nom_fr} />
-              <Input label="Prénom (FR)" value={form.prenom_fr} onChange={(e) => setField('prenom_fr', e.target.value)} error={formErrors.prenom_fr} />
+              <Input label={t('common.nom_fr')} value={form.nom_fr} onChange={(e) => setField('nom_fr', e.target.value)} error={formErrors.nom_fr} />
+              <Input label={t('common.prenom_fr')} value={form.prenom_fr} onChange={(e) => setField('prenom_fr', e.target.value)} error={formErrors.prenom_fr} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <Input label="Identifiant" value={form.identifiant} onChange={(e) => setField('identifiant', e.target.value)} error={formErrors.identifiant} />
+              <Input label={t('auth.identifiant')} value={form.identifiant} onChange={(e) => setField('identifiant', e.target.value)} error={formErrors.identifiant} />
               {!editTarget && (
-                <Input label="Mot de passe" type="password" value={form.mot_de_passe} onChange={(e) => setField('mot_de_passe', e.target.value)} error={formErrors.mot_de_passe} />
+                <Input label={t('auth.password')} type="password" value={form.mot_de_passe} onChange={(e) => setField('mot_de_passe', e.target.value)} error={formErrors.mot_de_passe} />
               )}
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <Input label="Spécialité" value={form.specialite_fr} onChange={(e) => setField('specialite_fr', e.target.value)} />
-              <Input label="Téléphone" type="tel" value={form.telephone} onChange={(e) => setField('telephone', e.target.value)} />
+              <Input label={t('professeur.specialite')} value={form.specialite_fr} onChange={(e) => setField('specialite_fr', e.target.value)} />
+              <Input label={t('common.telephone')} type="tel" value={form.telephone} onChange={(e) => setField('telephone', e.target.value)} />
             </div>
             <Select
-              label="Type de contrat"
+              label={t('professeur.type_contrat')}
               value={form.type_contrat}
               onChange={(e) => setField('type_contrat', e.target.value)}
               error={formErrors.type_contrat}
@@ -271,7 +273,7 @@ export function ProfesseursPage() {
               placeholder="Choisir..."
             />
             <div className="flex justify-end gap-3 pt-2">
-              <Button variant="secondary" onClick={() => setModalOpen(false)}>Annuler</Button>
+              <Button variant="secondary" onClick={() => setModalOpen(false)}>{t('actions.annuler')}</Button>
               <Button onClick={handleSubmit} loading={submitting}>
                 {editTarget ? 'Modifier' : 'Ajouter'}
               </Button>

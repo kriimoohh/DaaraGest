@@ -37,7 +37,8 @@
     "eleves_inscrits": "التلاميذ المسجلون",
     "professeurs_actifs": "الأساتذة النشطون",
     "classes_ouvertes": "الأقسام المفتوحة",
-    "paiements_mois": "مدفوعات الشهر"
+    "paiements_mois": "مدفوعات الشهر",
+    "acces_rapide": "وصول سريع"
   },
   "actions": {
     "ajouter": "إضافة",
@@ -47,7 +48,13 @@
     "enregistrer": "حفظ",
     "voir": "عرض",
     "generer": "توليد",
-    "rechercher": "بحث..."
+    "rechercher": "بحث...",
+    "activer": "تفعيل",
+    "inscrire": "تسجيل",
+    "telecharger": "تنزيل",
+    "reinitialiser": "إعادة تعيين",
+    "desactiver": "تعطيل",
+    "charger": "تحميل"
   },
   "eleve": {
     "titre": "التلاميذ",
@@ -62,7 +69,12 @@
     "lien": "الصلة",
     "pere": "الأب",
     "mere": "الأم",
-    "tuteur": "الوصي"
+    "tuteur": "الوصي",
+    "inscrire": "تسجيل التلميذ",
+    "classe_fr": "القسم الفرنسي (اختياري)",
+    "classe_ar": "القسم العربي (اختياري)",
+    "ajouter": "إضافة تلميذ",
+    "rechercher": "البحث بالاسم أو رقم التسجيل..."
   },
   "professeur": {
     "titre": "الأساتذة",
@@ -71,41 +83,79 @@
     "permanent": "دائم",
     "vacataire": "متعاقد",
     "salaire": "الراتب الأساسي",
-    "date_embauche": "تاريخ التوظيف"
+    "date_embauche": "تاريخ التوظيف",
+    "ajouter": "إضافة أستاذ",
+    "rechercher": "البحث بالاسم أو المعرّف..."
   },
   "classe": {
     "titre": "الأقسام",
     "filiere": "الشعبة",
+    "filiere_fr": "الشعبة الفرنسية",
+    "filiere_ar": "الشعبة العربية",
+    "toutes_filieres": "جميع الشعب",
     "niveau": "المستوى",
     "capacite": "الطاقة الاستيعابية",
-    "annee_scolaire": "السنة الدراسية"
+    "annee_scolaire": "السنة الدراسية",
+    "toutes_annees": "جميع السنوات",
+    "ajouter": "إضافة قسم"
+  },
+  "annee_scolaire": {
+    "titre": "السنوات الدراسية",
+    "libelle": "الاسم (مثال: 2025-2026)",
+    "date_debut": "تاريخ البداية",
+    "date_fin": "تاريخ النهاية",
+    "active": "نشطة",
+    "inactive": "غير نشطة",
+    "ajouter": "إضافة سنة دراسية"
+  },
+  "matiere": {
+    "titre": "المواد",
+    "nom_fr": "الاسم (بالفرنسية)",
+    "nom_ar": "الاسم (بالعربية)",
+    "ordre_bulletin": "ترتيب الشهادة",
+    "ajouter": "إضافة مادة",
+    "toutes": "جميع الشعب"
   },
   "note": {
     "titre": "الدرجات",
     "saisie": "إدخال الدرجات",
     "periode": "الفصل",
-    "valeur": "الدرجة",
+    "valeur": "الدرجة /20",
     "coefficient": "المعامل",
-    "enregistrer_tout": "حفظ جميع الدرجات"
+    "enregistrer_tout": "حفظ جميع الدرجات",
+    "selectionner": "اختر...",
+    "aucun_eleve": "لا يوجد تلاميذ في هذا القسم",
+    "notes_enregistrees": "تم حفظ الدرجات"
   },
   "bulletin": {
     "titre": "شهادات النتائج",
     "generer": "توليد شهادات النتائج",
+    "charger": "تحميل الشهادات",
+    "telecharger_tous": "تنزيل الكل",
     "moyenne": "المعدل",
     "rang": "الترتيب",
-    "appreciation": "الملاحظة"
+    "appreciation": "الملاحظة",
+    "detail": "تفاصيل الشهادة",
+    "aucun": "اختر قسماً وفصلاً ثم ولّد الشهادات"
   },
   "finance": {
     "titre": "المالية",
     "paiements_eleves": "مدفوعات التلاميذ",
     "paiements_profs": "مدفوعات الأساتذة",
     "montant": "المبلغ",
+    "montant_brut": "المبلغ الإجمالي",
     "type": "النوع",
     "mensualite": "قسط شهري",
     "inscription_fee": "رسوم التسجيل",
     "autre": "أخرى",
     "recu": "رقم الوصل",
-    "total_mois": "مجموع الشهر"
+    "total_mois": "مجموع الشهر",
+    "retenues": "الاستقطاعات",
+    "net_a_payer": "صافي المبلغ",
+    "nouveau_paiement": "دفعة جديدة",
+    "nouveau_paiement_prof": "دفعة جديدة للأستاذ",
+    "aucun_paiement": "لا توجد مدفوعات",
+    "aucun_paiement_periode": "لا توجد مدفوعات لهذه الفترة"
   },
   "parametre": {
     "titre": "الإعدادات",
@@ -113,7 +163,18 @@
     "config_notes": "إعداد الدرجات",
     "note_max": "الدرجة القصوى",
     "note_min": "الدرجة الدنيا",
-    "nb_periodes": "عدد الفصول"
+    "nb_periodes": "عدد الفصول",
+    "chiffres_arabes": "استخدام الأرقام العربية (٠١٢٣٤٥٦٧٨٩)"
+  },
+  "utilisateur": {
+    "titre": "المستخدمون",
+    "role": "الدور",
+    "tous_roles": "جميع الأدوار",
+    "langue": "اللغة",
+    "nouveau_mdp": "كلمة المرور الجديدة",
+    "reset_mdp": "إعادة تعيين كلمة المرور",
+    "ajouter": "إضافة مستخدم",
+    "desactiver": "تعطيل المستخدم"
   },
   "common": {
     "actif": "نشط",
@@ -122,6 +183,22 @@
     "chargement": "جار التحميل...",
     "page": "صفحة",
     "sur": "من",
-    "resultats": "نتائج"
+    "resultats": "نتائج",
+    "telephone": "الهاتف",
+    "email": "البريد الإلكتروني (اختياري)",
+    "adresse": "العنوان",
+    "devise": "العملة",
+    "nom_fr": "الاسم (بالفرنسية)",
+    "nom_ar": "الاسم (بالعربية)",
+    "prenom_fr": "اللقب (بالفرنسية)",
+    "mois": "الشهر",
+    "annee": "السنة",
+    "statut": "الحالة",
+    "selectionner": "اختر...",
+    "aucune": "لا شيء",
+    "confirmation_suppression": "هذا الإجراء لا يمكن التراجع عنه. هل أنت متأكد؟",
+    "trimestre_1": "الفصل الأول",
+    "trimestre_2": "الفصل الثاني",
+    "trimestre_3": "الفصل الثالث"
   }
 }

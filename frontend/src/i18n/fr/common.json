@@ -37,7 +37,8 @@
     "eleves_inscrits": "Élèves inscrits",
     "professeurs_actifs": "Professeurs actifs",
     "classes_ouvertes": "Classes ouvertes",
-    "paiements_mois": "Paiements du mois"
+    "paiements_mois": "Paiements du mois",
+    "acces_rapide": "Accès rapide"
   },
   "actions": {
     "ajouter": "Ajouter",
@@ -47,7 +48,13 @@
     "enregistrer": "Enregistrer",
     "voir": "Voir",
     "generer": "Générer",
-    "rechercher": "Rechercher..."
+    "rechercher": "Rechercher...",
+    "activer": "Activer",
+    "inscrire": "Inscrire",
+    "telecharger": "Télécharger",
+    "reinitialiser": "Réinitialiser",
+    "desactiver": "Désactiver",
+    "charger": "Charger"
   },
   "eleve": {
     "titre": "Élèves",
@@ -58,11 +65,16 @@
     "sexe": "Sexe",
     "masculin": "Masculin",
     "feminin": "Féminin",
-    "parent": "Parent",
+    "parent": "Parent / Tuteur",
     "lien": "Lien",
     "pere": "Père",
     "mere": "Mère",
-    "tuteur": "Tuteur"
+    "tuteur": "Tuteur",
+    "inscrire": "Inscrire l'élève",
+    "classe_fr": "Classe FR (optionnel)",
+    "classe_ar": "Classe AR (optionnel)",
+    "ajouter": "Ajouter un élève",
+    "rechercher": "Rechercher par nom ou matricule..."
   },
   "professeur": {
     "titre": "Professeurs",
@@ -71,41 +83,79 @@
     "permanent": "Permanent",
     "vacataire": "Vacataire",
     "salaire": "Salaire de base",
-    "date_embauche": "Date d'embauche"
+    "date_embauche": "Date d'embauche",
+    "ajouter": "Ajouter un professeur",
+    "rechercher": "Rechercher par nom ou identifiant..."
   },
   "classe": {
     "titre": "Classes",
     "filiere": "Filière",
+    "filiere_fr": "Filière Française",
+    "filiere_ar": "Filière Arabe",
+    "toutes_filieres": "Toutes les filières",
     "niveau": "Niveau",
     "capacite": "Capacité",
-    "annee_scolaire": "Année scolaire"
+    "annee_scolaire": "Année scolaire",
+    "toutes_annees": "Toutes les années",
+    "ajouter": "Ajouter une classe"
+  },
+  "annee_scolaire": {
+    "titre": "Années scolaires",
+    "libelle": "Libellé (ex : 2025-2026)",
+    "date_debut": "Date de début",
+    "date_fin": "Date de fin",
+    "active": "Active",
+    "inactive": "Inactive",
+    "ajouter": "Ajouter une année"
+  },
+  "matiere": {
+    "titre": "Matières",
+    "nom_fr": "Nom (Français)",
+    "nom_ar": "Nom (Arabe)",
+    "ordre_bulletin": "Ordre bulletin",
+    "ajouter": "Ajouter une matière",
+    "toutes": "Toutes les filières"
   },
   "note": {
     "titre": "Notes",
     "saisie": "Saisie des notes",
     "periode": "Période",
-    "valeur": "Note",
+    "valeur": "Note /20",
     "coefficient": "Coefficient",
-    "enregistrer_tout": "Enregistrer toutes les notes"
+    "enregistrer_tout": "Enregistrer toutes les notes",
+    "selectionner": "Sélectionner...",
+    "aucun_eleve": "Aucun élève dans cette classe",
+    "notes_enregistrees": "Notes enregistrées"
   },
   "bulletin": {
     "titre": "Bulletins",
     "generer": "Générer les bulletins",
+    "charger": "Charger les bulletins",
+    "telecharger_tous": "Télécharger tous",
     "moyenne": "Moyenne",
     "rang": "Rang",
-    "appreciation": "Appréciation"
+    "appreciation": "Appréciation",
+    "detail": "Détail du bulletin",
+    "aucun": "Sélectionnez une classe et une période, puis générez les bulletins"
   },
   "finance": {
     "titre": "Finances",
     "paiements_eleves": "Paiements élèves",
     "paiements_profs": "Paiements professeurs",
     "montant": "Montant",
+    "montant_brut": "Montant brut (FCFA)",
     "type": "Type",
     "mensualite": "Mensualité",
     "inscription_fee": "Frais d'inscription",
     "autre": "Autre",
     "recu": "N° Reçu",
-    "total_mois": "Total encaissé ce mois"
+    "total_mois": "Total encaissé ce mois",
+    "retenues": "Retenues",
+    "net_a_payer": "Net à payer",
+    "nouveau_paiement": "Nouveau paiement",
+    "nouveau_paiement_prof": "Nouveau paiement professeur",
+    "aucun_paiement": "Aucun paiement trouvé",
+    "aucun_paiement_periode": "Aucun paiement pour cette période"
   },
   "parametre": {
     "titre": "Paramètres",
@@ -113,7 +163,18 @@
     "config_notes": "Configuration des notes",
     "note_max": "Note maximale",
     "note_min": "Note minimale",
-    "nb_periodes": "Nombre de périodes"
+    "nb_periodes": "Nombre de périodes",
+    "chiffres_arabes": "Utiliser les chiffres arabes (٠١٢٣٤٥٦٧٨٩)"
+  },
+  "utilisateur": {
+    "titre": "Utilisateurs",
+    "role": "Rôle",
+    "tous_roles": "Tous les rôles",
+    "langue": "Langue",
+    "nouveau_mdp": "Nouveau mot de passe",
+    "reset_mdp": "Réinitialiser le mot de passe",
+    "ajouter": "Ajouter un utilisateur",
+    "desactiver": "Désactiver l'utilisateur"
   },
   "common": {
     "actif": "Actif",
@@ -122,6 +183,22 @@
     "chargement": "Chargement...",
     "page": "Page",
     "sur": "sur",
-    "resultats": "résultats"
+    "resultats": "résultats",
+    "telephone": "Téléphone",
+    "email": "Email (optionnel)",
+    "adresse": "Adresse",
+    "devise": "Devise",
+    "nom_fr": "Nom (Français)",
+    "nom_ar": "Nom (Arabe)",
+    "prenom_fr": "Prénom (Français)",
+    "mois": "Mois",
+    "annee": "Année",
+    "statut": "Statut",
+    "selectionner": "Sélectionner...",
+    "aucune": "Aucune",
+    "confirmation_suppression": "Cette action est irréversible. Êtes-vous sûr ?",
+    "trimestre_1": "1er Trimestre",
+    "trimestre_2": "2ème Trimestre",
+    "trimestre_3": "3ème Trimestre"
   }
 }

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
@@ -19,6 +20,7 @@ interface AnneeScolaire {
 const EMPTY = { libelle: '', date_debut: '', date_fin: '' };
 
 export function AnneeScolairesPage() {
+  const { t } = useTranslation();
   const api = useApi();
   const [annees, setAnnees] = useState<AnneeScolaire[]>([]);
   const [loading, setLoading] = useState(false);
@@ -154,8 +156,8 @@ export function AnneeScolairesPage() {
                           Activer
                         </Button>
                       )}
-                      <Button size="sm" variant="ghost" onClick={() => openEdit(a)}>Modifier</Button>
-                      <Button size="sm" variant="danger" onClick={() => setConfirm(a)}>Supprimer</Button>
+                      <Button size="sm" variant="ghost" onClick={() => openEdit(a)}>{t('actions.modifier')}</Button>
+                      <Button size="sm" variant="danger" onClick={() => setConfirm(a)}>{t('actions.supprimer')}</Button>
                     </div>
                   </td>
                 </tr>
@@ -168,28 +170,28 @@ export function AnneeScolairesPage() {
       <Modal isOpen={modal} onClose={() => setModal(false)} title={edit ? 'Modifier l\'année' : 'Nouvelle année scolaire'} size="md">
         <div className="space-y-4">
           <Input
-            label="Libellé (ex: 2025-2026)"
+            label={t('annee_scolaire.libelle')}
             value={form.libelle}
             onChange={(e) => setForm((f) => ({ ...f, libelle: e.target.value }))}
             placeholder="2025-2026"
           />
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Date de début"
+              label={t('annee_scolaire.date_debut')}
               type="date"
               value={form.date_debut}
               onChange={(e) => setForm((f) => ({ ...f, date_debut: e.target.value }))}
             />
             <Input
-              label="Date de fin"
+              label={t('annee_scolaire.date_fin')}
               type="date"
               value={form.date_fin}
               onChange={(e) => setForm((f) => ({ ...f, date_fin: e.target.value }))}
             />
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={() => setModal(false)}>Annuler</Button>
-            <Button onClick={handleSave} loading={saving}>Enregistrer</Button>
+            <Button variant="secondary" onClick={() => setModal(false)}>{t('actions.annuler')}</Button>
+            <Button onClick={handleSave} loading={saving}>{t('actions.enregistrer')}</Button>
           </div>
         </div>
       </Modal>

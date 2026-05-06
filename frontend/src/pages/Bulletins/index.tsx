@@ -153,33 +153,33 @@ export function BulletinsPage() {
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           <Select
-            label="Année scolaire"
+            label={t('classe.annee_scolaire')}
             value={anneeId}
             onChange={(e) => { setAnneeId(e.target.value); setClasseId(''); }}
-            options={[{ value: '', label: 'Sélectionner...' }, ...annees.map((a) => ({ value: a.id, label: a.libelle }))]}
+            options={[{ value: '', label: t('common.selectionner') }, ...annees.map((a) => ({ value: a.id, label: a.libelle }))]}
           />
           <Select
-            label="Classe"
+            label={t('nav.classes')}
             value={classeId}
             onChange={(e) => setClasseId(e.target.value)}
-            options={[{ value: '', label: 'Sélectionner...' }, ...classes.map((c) => ({ value: c.id, label: c.nom_fr }))]}
+            options={[{ value: '', label: t('common.selectionner') }, ...classes.map((c) => ({ value: c.id, label: c.nom_fr }))]}
             disabled={!anneeId}
           />
           <Select
-            label="Période"
+            label={t('note.periode')}
             value={periode}
             onChange={(e) => setPeriode(e.target.value)}
             options={[
-              { value: '1', label: '1er Trimestre' },
-              { value: '2', label: '2ème Trimestre' },
-              { value: '3', label: '3ème Trimestre' },
+              { value: '1', label: t('common.trimestre_1') },
+              { value: '2', label: t('common.trimestre_2') },
+              { value: '3', label: t('common.trimestre_3') },
             ]}
           />
           <Select
-            label="Filière"
+            label={t('classe.filiere')}
             value={filiere}
             onChange={(e) => setFiliere(e.target.value)}
-            options={[{ value: 'FR', label: 'Français' }, { value: 'AR', label: 'Arabe' }]}
+            options={[{ value: 'FR', label: 'Français' }, { value: 'AR', label: t('classe.filiere_ar') }]}
           />
         </div>
         <div className="flex gap-3">

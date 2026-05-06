@@ -84,9 +84,9 @@ export function NotesPage() {
   };
 
   const periodeOptions = [
-    { value: '1', label: '1er Trimestre' },
-    { value: '2', label: '2ème Trimestre' },
-    { value: '3', label: '3ème Trimestre' },
+    { value: '1', label: t('common.trimestre_1') },
+    { value: '2', label: t('common.trimestre_2') },
+    { value: '3', label: t('common.trimestre_3') },
   ];
 
   return (
@@ -96,27 +96,27 @@ export function NotesPage() {
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Select
-            label="Année scolaire"
+            label={t('classe.annee_scolaire')}
             value={anneeId}
             onChange={(e) => { setAnneeId(e.target.value); setClasseId(''); setMatiereId(''); }}
-            options={[{ value: '', label: 'Sélectionner...' }, ...annees.map((a) => ({ value: a.id, label: a.libelle }))]}
+            options={[{ value: '', label: t('common.selectionner') }, ...annees.map((a) => ({ value: a.id, label: a.libelle }))]}
           />
           <Select
-            label="Classe"
+            label={t('nav.classes')}
             value={classeId}
             onChange={(e) => { setClasseId(e.target.value); setMatiereId(''); }}
-            options={[{ value: '', label: 'Sélectionner...' }, ...classes.map((c) => ({ value: c.id, label: c.nom_fr }))]}
+            options={[{ value: '', label: t('common.selectionner') }, ...classes.map((c) => ({ value: c.id, label: c.nom_fr }))]}
             disabled={!anneeId}
           />
           <Select
-            label="Matière"
+            label={t('nav.matieres')}
             value={matiereId}
             onChange={(e) => setMatiereId(e.target.value)}
-            options={[{ value: '', label: 'Sélectionner...' }, ...matieres.map((m) => ({ value: m.id, label: m.nom_fr }))]}
+            options={[{ value: '', label: t('common.selectionner') }, ...matieres.map((m) => ({ value: m.id, label: m.nom_fr }))]}
             disabled={!classeId}
           />
           <Select
-            label="Période"
+            label={t('note.periode')}
             value={periode}
             onChange={(e) => setPeriode(e.target.value)}
             options={periodeOptions}
