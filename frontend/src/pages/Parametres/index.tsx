@@ -4,6 +4,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useApi } from '../../hooks/useApi';
+import { toast } from '../../store/toastStore';
 
 interface Etablissement {
   id: string; nom_fr: string; nom_ar: string; adresse?: string; telephone?: string; devise: string;
@@ -22,8 +23,8 @@ export function ParametresPage() {
   const [success, setSuccess] = useState<'etab' | 'notes' | null>(null);
 
   useEffect(() => {
-    api.get<Etablissement>('/api/v1/parametres').then(setEtab).catch(() => null);
-    api.get<ConfigNotes>('/api/v1/parametres/notes').then(setConfig).catch(() => null);
+    api.get<Etablissement>('/api/v1/parametres').then(setEtab).catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
+    api.get<ConfigNotes>('/api/v1/parametres/notes').then(setConfig).catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
   }, []);
 
   const saveEtab = async () => {
@@ -36,8 +37,8 @@ export function ParametresPage() {
       });
       setSuccess('etab');
       setTimeout(() => setSuccess(null), 3000);
-    } catch {
-      // ignore
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur lors de l\'enregistrement');
     } finally {
       setSaving(null);
     }
@@ -50,8 +51,8 @@ export function ParametresPage() {
       await api.put('/api/v1/parametres/notes', config);
       setSuccess('notes');
       setTimeout(() => setSuccess(null), 3000);
-    } catch {
-      // ignore
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur lors de l\'enregistrement');
     } finally {
       setSaving(null);
     }

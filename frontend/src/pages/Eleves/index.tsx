@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useApi } from '../../hooks/useApi';
+import { toast } from '../../store/toastStore';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { SearchInput } from '../../components/ui/SearchInput';
 import { Table, Column } from '../../components/ui/Table';
@@ -111,6 +113,17 @@ export function ElevesPage() {
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
 
+  // Delete
+  const [confirmDelete, setConfirmDelete] = useState<Eleve | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Inscription
+  const [inscModal, setInscModal] = useState<Eleve | null>(null);
+  const [annees, setAnnees] = useState<{id:string;libelle:string}[]>([]);
+  const [classesDisp, setClassesDisp] = useState<{id:string;nom_fr:string;filiere:string}[]>([]);
+  const [inscForm, setInscForm] = useState({ annee_scolaire_id:'', classe_fr_id:'', classe_ar_id:'' });
+  const [inscSaving, setInscSaving] = useState(false);
+
   const fetchEleves = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -121,11 +134,58 @@ export function ElevesPage() {
       setEleves(res.data);
       setTotal(res.total);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors du chargement');
+      const msg = err instanceof Error ? err.message : 'Erreur lors du chargement';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   }, [page, search]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/api/v1/eleves/${confirmDelete.id}`);
+      toast.success('Élève désactivé');
+      setConfirmDelete(null);
+      fetchEleves();
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur lors de la suppression');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const openInscription = async (eleve: Eleve) => {
+    setInscModal(eleve);
+    setInscForm({ annee_scolaire_id: '', classe_fr_id: '', classe_ar_id: '' });
+    try {
+      const [ans, cls] = await Promise.all([
+        api.get<{id:string;libelle:string}[]>('/api/v1/annees-scolaires'),
+        api.get<{id:string;nom_fr:string;filiere:string}[]>('/api/v1/classes'),
+      ]);
+      setAnnees(ans);
+      setClassesDisp(cls);
+    } catch { /**/ }
+  };
+
+  const handleInscrire = async () => {
+    if (!inscModal || !inscForm.annee_scolaire_id) {
+      toast.error('Année scolaire requise');
+      return;
+    }
+    setInscSaving(true);
+    try {
+      await api.post(`/api/v1/eleves/${inscModal.id}/inscrire`, inscForm);
+      toast.success('Élève inscrit avec succès');
+      setInscModal(null);
+    } catch (err) {
+      toast.error((err as Error).message || "Erreur lors de l'inscription");
+    } finally {
+      setInscSaving(false);
+    }
+  };
 
   useEffect(() => {
     fetchEleves();
@@ -191,6 +251,7 @@ export function ElevesPage() {
       } else {
         await api.post('/api/v1/eleves', payload);
       }
+      toast.success(editTarget ? 'Élève modifié' : 'Élève créé');
       setModalOpen(false);
       fetchEleves();
     } catch (err) {
@@ -234,9 +295,9 @@ export function ElevesPage() {
         const e = row as unknown as Eleve;
         return (
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="ghost" onClick={() => openEdit(e)}>
-              Modifier
-            </Button>
+            <Button size="sm" variant="ghost" onClick={() => openEdit(e)}>Modifier</Button>
+            <Button size="sm" variant="secondary" onClick={() => openInscription(e)}>Inscrire</Button>
+            <Button size="sm" variant="danger" onClick={() => setConfirmDelete(e)}>Supprimer</Button>
           </div>
         );
       },
@@ -244,6 +305,7 @@ export function ElevesPage() {
   ];
 
   return (
+    <>
     <div className="p-6">
       <PageHeader
         title="Élèves"
@@ -377,5 +439,31 @@ export function ElevesPage() {
         </div>
       </Modal>
     </div>
+
+      {/* Modal inscription */}
+      {inscModal && (
+        <Modal isOpen={!!inscModal} onClose={() => setInscModal(null)} title={`Inscrire ${inscModal.prenom_fr} ${inscModal.nom_fr}`} size="md">
+          <div className="space-y-4">
+            <Select label="Année scolaire *" value={inscForm.annee_scolaire_id}
+              onChange={(e) => setInscForm(f => ({ ...f, annee_scolaire_id: e.target.value }))}
+              options={[{ value: '', label: 'Sélectionner...' }, ...annees.map(a => ({ value: a.id, label: a.libelle }))]} />
+            <Select label="Classe FR (optionnel)" value={inscForm.classe_fr_id}
+              onChange={(e) => setInscForm(f => ({ ...f, classe_fr_id: e.target.value }))}
+              options={[{ value: '', label: 'Aucune' }, ...classesDisp.filter(cl => cl.filiere === 'FR').map(cl => ({ value: cl.id, label: cl.nom_fr }))]} />
+            <Select label="Classe AR (optionnel)" value={inscForm.classe_ar_id}
+              onChange={(e) => setInscForm(f => ({ ...f, classe_ar_id: e.target.value }))}
+              options={[{ value: '', label: 'Aucune' }, ...classesDisp.filter(cl => cl.filiere === 'AR').map(cl => ({ value: cl.id, label: cl.nom_fr }))]} />
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="secondary" onClick={() => setInscModal(null)}>Annuler</Button>
+              <Button onClick={handleInscrire} loading={inscSaving}>Inscrire</Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      <ConfirmModal isOpen={!!confirmDelete} onClose={() => setConfirmDelete(null)}
+        onConfirm={handleDelete} loading={deleting}
+        message={`Désactiver l'élève "${confirmDelete?.prenom_fr} ${confirmDelete?.nom_fr}" ?`} />
+    </>
   );
 }

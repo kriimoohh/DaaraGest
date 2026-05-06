@@ -6,6 +6,7 @@ import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { useApi } from '../../hooks/useApi';
+import { toast } from '../../store/toastStore';
 
 interface AnneeScolaire { id: string; libelle: string; }
 interface Classe { id: string; nom_fr: string; filiere: string; }
@@ -38,12 +39,12 @@ export function BulletinsPage() {
   const [detail, setDetail] = useState<Bulletin | null>(null);
 
   useEffect(() => {
-    api.get<AnneeScolaire[]>('/api/v1/annees-scolaires').then(setAnnees).catch(() => null);
+    api.get<AnneeScolaire[]>('/api/v1/annees-scolaires').then(setAnnees).catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
   }, []);
 
   useEffect(() => {
     if (!anneeId) return;
-    api.get<Classe[]>(`/api/v1/classes?annee_scolaire_id=${anneeId}`).then(setClasses).catch(() => null);
+    api.get<Classe[]>(`/api/v1/classes?annee_scolaire_id=${anneeId}`).then(setClasses).catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
   }, [anneeId]);
 
   const chargerBulletins = async () => {
@@ -54,8 +55,8 @@ export function BulletinsPage() {
         `/api/v1/bulletins?annee_scolaire_id=${anneeId}&periode=${periode}`
       );
       setBulletins(data);
-    } catch {
-      // ignore
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur lors du chargement');
     } finally {
       setLoading(false);
     }
@@ -71,9 +72,10 @@ export function BulletinsPage() {
         periode: parseInt(periode),
         filiere,
       });
+      toast.success('Bulletins générés avec succès');
       await chargerBulletins();
-    } catch {
-      // ignore
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur lors de la génération');
     } finally {
       setGenerating(false);
     }

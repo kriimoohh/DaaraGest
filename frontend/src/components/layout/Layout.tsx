@@ -1,6 +1,7 @@
 import { Outlet, Navigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { ToastContainer } from '../ui/Toast';
 import { useAuthStore } from '../../store/authStore';
 
 export function Layout() {
@@ -19,6 +20,7 @@ export function Layout() {
           <Outlet />
         </main>
       </div>
+      <ToastContainer />
     </div>
   );
 }

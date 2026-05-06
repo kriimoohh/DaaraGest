@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useApi } from '../../hooks/useApi';
+import { toast } from '../../store/toastStore';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Table, Column } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
@@ -91,6 +93,8 @@ export function ClassesPage() {
   const [form, setForm] = useState<ClasseFormData>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<Classe | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Fetch annees scolaires once
   useEffect(() => {
@@ -167,14 +171,31 @@ export function ClassesPage() {
       } else {
         await api.post('/api/v1/classes', payload);
       }
+      toast.success(editTarget ? 'Classe modifiée' : 'Classe créée');
       setModalOpen(false);
       fetchClasses();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur lors de l'enregistrement");
+      const m = err instanceof Error ? err.message : "Erreur lors de l'enregistrement";
+      setError(m); toast.error(m);
     } finally {
       setSubmitting(false);
     }
   }
+
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/api/v1/classes/${confirmDelete.id}`);
+      toast.success('Classe supprimée');
+      setConfirmDelete(null);
+      fetchClasses();
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const anneeOptions = annees.map((a) => ({ value: a.id, label: a.libelle }));
   const anneeFilterOptions = [
@@ -208,15 +229,18 @@ export function ClassesPage() {
       render: (row) => {
         const c = row as unknown as Classe;
         return (
-          <Button size="sm" variant="ghost" onClick={() => openEdit(c)}>
-            Modifier
-          </Button>
+          <>
+            <Button size="sm" variant="ghost" onClick={() => openEdit(c)}>Modifier</Button>
+            <Button size="sm" variant="danger" onClick={() => setConfirmDelete(c)}>Supprimer</Button>
+          </>
         );
       },
     },
   ];
 
+
   return (
+    <>
     <div className="p-6">
       <PageHeader
         title="Classes"
@@ -329,5 +353,14 @@ export function ClassesPage() {
         </div>
       </Modal>
     </div>
+
+    <ConfirmModal
+      isOpen={!!confirmDelete}
+      onClose={() => setConfirmDelete(null)}
+      onConfirm={handleDelete}
+      loading={deleting}
+      message={`Supprimer la classe "${confirmDelete?.nom_fr}" ?`}
+    />
+  </>
   );
 }

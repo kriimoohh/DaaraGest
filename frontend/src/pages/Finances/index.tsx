@@ -9,6 +9,7 @@ import { Select } from '../../components/ui/Select';
 import { SearchInput } from '../../components/ui/SearchInput';
 import { Pagination } from '../../components/ui/Pagination';
 import { useApi } from '../../hooks/useApi';
+import { toast } from '../../store/toastStore';
 
 interface Stats { total_encaisse_eleves: number; nb_paiements_eleves: number; total_paye_professeurs: number; }
 interface PaiementEleve {
@@ -20,6 +21,139 @@ interface Eleve { id: string; nom_fr: string; prenom_fr: string; matricule: stri
 
 const TYPES = ['mensualite', 'inscription', 'blouse', 'autre'];
 const MOIS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+
+
+interface ProfesseurSimple { id: string; utilisateur: { nom_fr: string; prenom_fr: string; }; }
+interface PaiementProf {
+  id: string; mois: number; annee: number; montant_brut: number;
+  net_a_payer: number; statut: string; created_at: string;
+  professeur: { utilisateur: { nom_fr: string; prenom_fr: string; }; };
+}
+interface ProfTabProps { api: ReturnType<typeof useApi>; formatMontant: (v: number) => string; }
+
+function ProfsTab({ api, formatMontant }: ProfTabProps) {
+  const now = new Date();
+  const [paiements, setPaiements] = useState<PaiementProf[]>([]);
+  const [profs, setProfs] = useState<ProfesseurSimple[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [moisF, setMoisF] = useState(String(now.getMonth() + 1));
+  const [anneeF, setAnneeF] = useState(String(now.getFullYear()));
+  const [loading, setLoading] = useState(false);
+  const [modal, setModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    professeur_id: '', mois: String(now.getMonth() + 1), annee: String(now.getFullYear()),
+    montant_brut: '', retenues: '0', net_a_payer: '',
+  });
+
+  useEffect(() => {
+    api.get<{ data: ProfesseurSimple[] }>('/api/v1/professeurs?limit=200')
+      .then((r) => setProfs(r.data ?? [])).catch(() => {});
+  }, []);
+
+  const charger = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ page: String(page), mois: moisF, annee: anneeF });
+      const res = await api.get<{ data: PaiementProf[]; total: number }>(
+        `/api/v1/finances/paiements-professeurs?${params}`
+      );
+      setPaiements(res.data ?? []);
+      setTotal(res.total ?? 0);
+    } catch { /**/ } finally { setLoading(false); }
+  };
+
+  useEffect(() => { charger(); }, [page, moisF, anneeF]);
+
+  const handleSave = async () => {
+    if (!form.professeur_id || !form.montant_brut) { toast.error('Professeur et montant requis'); return; }
+    setSaving(true);
+    try {
+      await api.post('/api/v1/finances/paiements-professeurs', {
+        professeur_id: form.professeur_id,
+        mois: parseInt(form.mois), annee: parseInt(form.annee),
+        montant_brut: parseFloat(form.montant_brut),
+        retenues: parseFloat(form.retenues) || 0,
+        net_a_payer: parseFloat(form.net_a_payer) || parseFloat(form.montant_brut),
+      });
+      toast.success('Paiement enregistré');
+      setModal(false);
+      charger();
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    } finally { setSaving(false); }
+  };
+
+  const MOIS2 = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-3 items-end">
+        <Select value={moisF} onChange={(e) => setMoisF(e.target.value)}
+          options={MOIS2.map((m, i) => ({ value: String(i + 1), label: m }))} />
+        <Input type="number" value={anneeF} onChange={(e) => setAnneeF(e.target.value)} label="" style={{ width: 100 }} />
+        <Button onClick={() => setModal(true)}>+ Ajouter paiement</Button>
+      </div>
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center text-gray-500">Chargement...</div>
+        ) : paiements.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">Aucun paiement pour cette période</div>
+        ) : (
+          <table className="w-full">
+            <thead className="bg-gray-50 dark:bg-gray-700/50">
+              <tr>
+                {['Professeur', 'Mois', 'Brut', 'Net à payer', 'Statut'].map((h) => (
+                  <th key={h} className="text-start px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              {paiements.map((p) => (
+                <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                  <td className="px-4 py-3 font-medium text-sm text-gray-900 dark:text-white">
+                    {p.professeur.utilisateur.prenom_fr} {p.professeur.utilisateur.nom_fr}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{MOIS2[p.mois - 1]} {p.annee}</td>
+                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{formatMontant(Number(p.montant_brut))}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{formatMontant(Number(p.net_a_payer))}</td>
+                  <td className="px-4 py-3"><Badge label={p.statut} variant={p.statut === 'paye' ? 'success' : 'warning'} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+      <Pagination page={page} total={total} limit={20} onChange={setPage} />
+
+      <Modal isOpen={modal} onClose={() => setModal(false)} title="Nouveau paiement professeur" size="md">
+        <div className="space-y-4">
+          <Select label="Professeur" value={form.professeur_id}
+            onChange={(e) => setForm(f => ({ ...f, professeur_id: e.target.value }))}
+            options={[{ value: '', label: 'Sélectionner...' }, ...profs.map(p => ({ value: p.id, label: `${p.utilisateur.prenom_fr} ${p.utilisateur.nom_fr}` }))]} />
+          <div className="grid grid-cols-2 gap-4">
+            <Select label="Mois" value={form.mois} onChange={(e) => setForm(f => ({ ...f, mois: e.target.value }))}
+              options={MOIS2.map((m, i) => ({ value: String(i + 1), label: m }))} />
+            <Input label="Année" type="number" value={form.annee} onChange={(e) => setForm(f => ({ ...f, annee: e.target.value }))} />
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <Input label="Montant brut (FCFA)" type="number" value={form.montant_brut}
+              onChange={(e) => { const v = e.target.value; setForm(f => ({ ...f, montant_brut: v, net_a_payer: v })); }} />
+            <Input label="Retenues" type="number" value={form.retenues}
+              onChange={(e) => setForm(f => ({ ...f, retenues: e.target.value }))} />
+            <Input label="Net à payer" type="number" value={form.net_a_payer}
+              onChange={(e) => setForm(f => ({ ...f, net_a_payer: e.target.value }))} />
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="secondary" onClick={() => setModal(false)}>Annuler</Button>
+            <Button onClick={handleSave} loading={saving}>Enregistrer</Button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
 
 export function FinancesPage() {
   const { t } = useTranslation();
@@ -61,8 +195,8 @@ export function FinancesPage() {
       );
       setPaiements(data.data ?? []);
       setTotal(data.total ?? 0);
-    } catch {
-      // ignore
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur de chargement');
     } finally {
       setLoading(false);
     }
@@ -84,8 +218,8 @@ export function FinancesPage() {
       setForm({ eleve_id: '', type: 'mensualite', montant: '', mois: String(now.getMonth() + 1), annee: String(now.getFullYear()), recu_numero: '' });
       await charger();
       api.get<Stats>('/api/v1/finances/stats').then(setStats).catch(() => null);
-    } catch {
-      // ignore
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
     } finally {
       setSaving(false);
     }
@@ -179,9 +313,7 @@ export function FinancesPage() {
       )}
 
       {tab === 'profs' && (
-        <div className="p-8 text-center text-gray-500 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-          Module paiements professeurs — à venir
-        </div>
+        <ProfsTab api={api} formatMontant={formatMontant} />
       )}
 
       <Modal isOpen={modal} onClose={() => setModal(false)} title="Nouveau paiement" size="md">

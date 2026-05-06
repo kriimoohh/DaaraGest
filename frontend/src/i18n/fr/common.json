@@ -19,6 +19,9 @@
     "notes": "Notes",
     "bulletins": "Bulletins",
     "finances": "Finances",
+    "annees_scolaires": "Années scolaires",
+    "matieres": "Matières",
+    "utilisateurs": "Utilisateurs",
     "parametres": "Paramètres"
   },
   "theme": {

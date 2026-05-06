@@ -4,6 +4,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
 import { useApi } from '../../hooks/useApi';
+import { toast } from '../../store/toastStore';
 
 interface AnneeScolaire { id: string; libelle: string; active: boolean; }
 interface Classe { id: string; nom_fr: string; nom_ar: string; filiere: string; }
@@ -30,19 +31,19 @@ export function NotesPage() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    api.get<AnneeScolaire[]>('/api/v1/annees-scolaires').then(setAnnees).catch(() => null);
+    api.get<AnneeScolaire[]>('/api/v1/annees-scolaires').then(setAnnees).catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
   }, []);
 
   useEffect(() => {
     if (!anneeId) return;
-    api.get<Classe[]>(`/api/v1/classes?annee_scolaire_id=${anneeId}`).then(setClasses).catch(() => null);
+    api.get<Classe[]>(`/api/v1/classes?annee_scolaire_id=${anneeId}`).then(setClasses).catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
   }, [anneeId]);
 
   useEffect(() => {
     if (!classeId) return;
     const filiere = classes.find((c) => c.id === classeId)?.filiere ?? '';
-    api.get<Matiere[]>(`/api/v1/matieres?filiere=${filiere}`).then(setMatieres).catch(() => null);
-    api.get<{ data: Eleve[] }>(`/api/v1/eleves?classe_id=${classeId}&limit=100`).then((r) => setEleves(r.data)).catch(() => null);
+    api.get<Matiere[]>(`/api/v1/matieres?filiere=${filiere}`).then(setMatieres).catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
+    api.get<{ data: Eleve[] }>(`/api/v1/eleves?classe_id=${classeId}&limit=100`).then((r) => setEleves(r.data)).catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
   }, [classeId]);
 
   useEffect(() => {
@@ -75,8 +76,8 @@ export function NotesPage() {
       await api.post('/api/v1/notes/bulk', { notes: notesList });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-    } catch {
-      // ignore
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur lors de l\'enregistrement');
     } finally {
       setSaving(false);
     }
