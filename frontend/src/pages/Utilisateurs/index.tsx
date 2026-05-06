@@ -184,34 +184,34 @@ export function UtilisateursPage() {
         />
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Chargement...</div>
+          <div className="p-8 text-center text-slate-500">Chargement...</div>
         ) : users.length === 0 ? (
           <div className="p-12 text-center">
             <div className="text-4xl mb-3">👥</div>
-            <p className="text-gray-500">Aucun utilisateur trouvé.</p>
+            <p className="text-slate-500">Aucun utilisateur trouvé.</p>
           </div>
         ) : (
           <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-700/50">
+            <thead className="bg-slate-50 dark:bg-slate-700/50">
               <tr>
                 {['Identifiant', 'Nom', 'Rôle', 'Langue', 'Statut', 'Actions'].map((h) => (
-                  <th key={h} className="text-start px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{h}</th>
+                  <th key={h} className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {users.map((u) => (
-                <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                  <td className="px-4 py-3 font-mono text-sm text-gray-700 dark:text-gray-300">{u.identifiant}</td>
+                <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                  <td className="px-4 py-3 font-mono text-sm text-slate-700 dark:text-slate-300">{u.identifiant}</td>
                   <td className="px-4 py-3">
-                    <div className="font-medium text-sm text-gray-900 dark:text-white">{u.prenom_fr} {u.nom_fr}</div>
+                    <div className="font-medium text-sm text-slate-900 dark:text-white">{u.prenom_fr} {u.nom_fr}</div>
                   </td>
                   <td className="px-4 py-3">
                     <Badge label={u.role.libelle_fr} variant={roleVariant(u.role.libelle_fr)} />
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{u.langue.toUpperCase()}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{u.langue.toUpperCase()}</td>
                   <td className="px-4 py-3">
                     <Badge label={u.actif ? 'Actif' : 'Inactif'} variant={u.actif ? 'success' : 'neutral'} />
                   </td>
@@ -270,7 +270,7 @@ export function UtilisateursPage() {
       {/* Modal reset password */}
       <Modal isOpen={!!resetModal} onClose={() => setResetModal(null)} title="Réinitialiser le mot de passe" size="sm">
         <div className="space-y-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             Nouveau mot de passe pour <strong>{resetModal?.identifiant}</strong>
           </p>
           <Input label="Nouveau mot de passe" type="password" value={newPwd} onChange={(e) => setNewPwd(e.target.value)} />

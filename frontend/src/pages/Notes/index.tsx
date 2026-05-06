@@ -93,7 +93,7 @@ export function NotesPage() {
     <div className="space-y-6">
       <PageHeader title={t('note.saisie')} />
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Select
             label="Année scolaire"
@@ -125,9 +125,9 @@ export function NotesPage() {
       </div>
 
       {classeId && matiereId && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
               {eleves.length} élève(s)
             </span>
             <div className="flex items-center gap-3">
@@ -143,23 +143,23 @@ export function NotesPage() {
           </div>
 
           {loading ? (
-            <div className="p-8 text-center text-gray-500">Chargement...</div>
+            <div className="p-8 text-center text-slate-500">Chargement...</div>
           ) : eleves.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">Aucun élève dans cette classe</div>
+            <div className="p-8 text-center text-slate-500">Aucun élève dans cette classe</div>
           ) : (
             <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-700/50">
+              <thead className="bg-slate-50 dark:bg-slate-700/50">
                 <tr>
-                  <th className="text-start px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Matricule</th>
-                  <th className="text-start px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Élève</th>
-                  <th className="text-start px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-32">Note /20</th>
+                  <th className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Matricule</th>
+                  <th className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Élève</th>
+                  <th className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase w-32">Note /20</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                 {eleves.map((eleve) => (
-                  <tr key={eleve.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono">{eleve.matricule}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                  <tr key={eleve.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                    <td className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400 font-mono">{eleve.matricule}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-white">
                       {eleve.prenom_fr} {eleve.nom_fr}
                     </td>
                     <td className="px-4 py-3">
@@ -170,7 +170,7 @@ export function NotesPage() {
                         step="0.25"
                         value={notes[eleve.id] ?? ''}
                         onChange={(e) => setNotes((prev) => ({ ...prev, [eleve.id]: e.target.value }))}
-                        className="w-24 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="w-24 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         placeholder="—"
                       />
                     </td>

@@ -95,29 +95,29 @@ function ProfsTab({ api, formatMontant }: ProfTabProps) {
         <Input type="number" value={anneeF} onChange={(e) => setAnneeF(e.target.value)} label="" style={{ width: 100 }} />
         <Button onClick={() => setModal(true)}>+ Ajouter paiement</Button>
       </div>
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Chargement...</div>
+          <div className="p-8 text-center text-slate-500">Chargement...</div>
         ) : paiements.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">Aucun paiement pour cette période</div>
+          <div className="p-8 text-center text-slate-500">Aucun paiement pour cette période</div>
         ) : (
           <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-700/50">
+            <thead className="bg-slate-50 dark:bg-slate-700/50">
               <tr>
                 {['Professeur', 'Mois', 'Brut', 'Net à payer', 'Statut'].map((h) => (
-                  <th key={h} className="text-start px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{h}</th>
+                  <th key={h} className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {paiements.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                  <td className="px-4 py-3 font-medium text-sm text-gray-900 dark:text-white">
+                <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                  <td className="px-4 py-3 font-medium text-sm text-slate-900 dark:text-white">
                     {p.professeur.utilisateur.prenom_fr} {p.professeur.utilisateur.nom_fr}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{MOIS2[p.mois - 1]} {p.annee}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{formatMontant(Number(p.montant_brut))}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{formatMontant(Number(p.net_a_payer))}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{MOIS2[p.mois - 1]} {p.annee}</td>
+                  <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{formatMontant(Number(p.montant_brut))}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-white">{formatMontant(Number(p.net_a_payer))}</td>
                   <td className="px-4 py-3"><Badge label={p.statut} variant={p.statut === 'paye' ? 'success' : 'warning'} /></td>
                 </tr>
               ))}
@@ -236,24 +236,24 @@ export function FinancesPage() {
 
       {stats && (
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex items-center gap-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex items-center gap-4">
             <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center text-xl">💰</div>
             <div>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{formatMontant(Number(stats.total_encaisse_eleves))}</p>
-              <p className="text-sm text-gray-500">{t('finance.total_mois')}</p>
+              <p className="text-xl font-bold text-slate-900 dark:text-white">{formatMontant(Number(stats.total_encaisse_eleves))}</p>
+              <p className="text-sm text-slate-500">{t('finance.total_mois')}</p>
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex items-center gap-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex items-center gap-4">
             <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-xl">📄</div>
             <div>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.nb_paiements_eleves}</p>
-              <p className="text-sm text-gray-500">Paiements ce mois</p>
+              <p className="text-xl font-bold text-slate-900 dark:text-white">{stats.nb_paiements_eleves}</p>
+              <p className="text-sm text-slate-500">Paiements ce mois</p>
             </div>
           </div>
         </div>
       )}
 
-      <div className="flex gap-1 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700">
         {(['eleves', 'profs'] as const).map((t2) => (
           <button
             key={t2}
@@ -261,7 +261,7 @@ export function FinancesPage() {
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               tab === t2
                 ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'
             }`}
           >
             {t2 === 'eleves' ? t('finance.paiements_eleves') : t('finance.paiements_profs')}
@@ -272,34 +272,34 @@ export function FinancesPage() {
       {tab === 'eleves' && (
         <div className="space-y-4">
           <SearchInput value={search} onChange={setSearch} placeholder="Rechercher par élève..." />
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
             {loading ? (
-              <div className="p-8 text-center text-gray-500">Chargement...</div>
+              <div className="p-8 text-center text-slate-500">Chargement...</div>
             ) : paiements.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">Aucun paiement trouvé</div>
+              <div className="p-8 text-center text-slate-500">Aucun paiement trouvé</div>
             ) : (
               <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-700/50">
+                <thead className="bg-slate-50 dark:bg-slate-700/50">
                   <tr>
                     {['Élève', 'Type', 'Montant', 'Mois', 'N° Reçu', 'Date'].map((h) => (
-                      <th key={h} className="text-start px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{h}</th>
+                      <th key={h} className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">{h}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                   {paiements.map((p) => (
-                    <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                    <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
                       <td className="px-4 py-3">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">{p.eleve.prenom_fr} {p.eleve.nom_fr}</div>
-                        <div className="text-xs text-gray-500 font-mono">{p.eleve.matricule}</div>
+                        <div className="text-sm font-medium text-slate-900 dark:text-white">{p.eleve.prenom_fr} {p.eleve.nom_fr}</div>
+                        <div className="text-xs text-slate-500 font-mono">{p.eleve.matricule}</div>
                       </td>
                       <td className="px-4 py-3"><Badge label={p.type} variant="info" /></td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{formatMontant(p.montant)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                      <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-white">{formatMontant(p.montant)}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
                         {p.mois ? `${MOIS[p.mois - 1]} ${p.annee}` : '—'}
                       </td>
-                      <td className="px-4 py-3 text-sm font-mono text-gray-500">{p.recu_numero ?? '—'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
+                      <td className="px-4 py-3 text-sm font-mono text-slate-500">{p.recu_numero ?? '—'}</td>
+                      <td className="px-4 py-3 text-sm text-slate-500">
                         {new Date(p.created_at).toLocaleDateString('fr-FR')}
                       </td>
                     </tr>

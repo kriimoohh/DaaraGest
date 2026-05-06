@@ -62,9 +62,9 @@ export function ParametresPage() {
     <div className="space-y-6">
       <PageHeader title={t('parametre.titre')} />
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-900 dark:text-white">{t('parametre.etablissement')}</h3>
+          <h3 className="font-semibold text-slate-900 dark:text-white">{t('parametre.etablissement')}</h3>
           {success === 'etab' && <span className="text-sm text-emerald-600">✓ Enregistré</span>}
         </div>
         {etab && (
@@ -85,9 +85,9 @@ export function ParametresPage() {
         )}
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-900 dark:text-white">{t('parametre.config_notes')}</h3>
+          <h3 className="font-semibold text-slate-900 dark:text-white">{t('parametre.config_notes')}</h3>
           {success === 'notes' && <span className="text-sm text-emerald-600">✓ Enregistré</span>}
         </div>
         {config && (
@@ -120,7 +120,7 @@ export function ParametresPage() {
                 onChange={(e) => setConfig((p) => p ? { ...p, chiffres_arabes: e.target.checked } : p)}
                 className="w-4 h-4 accent-emerald-600"
               />
-              <label htmlFor="chiffres_arabes" className="text-sm text-gray-700 dark:text-gray-300">
+              <label htmlFor="chiffres_arabes" className="text-sm text-slate-700 dark:text-slate-300">
                 Utiliser les chiffres arabes (٠١٢٣٤٥٦٧٨٩)
               </label>
             </div>

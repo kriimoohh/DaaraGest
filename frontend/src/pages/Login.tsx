@@ -104,19 +104,19 @@ export function Login() {
       {/* ── Right panel — form ── */}
       <div
         className="flex-1 flex flex-col items-center justify-center p-8 relative"
-        style={{ background: '#F1F5F9' }}
+        style={{ background: theme === 'dark' ? '#0F172A' : '#F1F5F9' }}
       >
         {/* Top controls */}
         <div className="absolute top-5 end-5 flex items-center gap-2">
           <button
             onClick={toggleLang}
-            className="h-8 px-3 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors shadow-sm"
+            className="h-8 px-3 rounded-lg text-xs font-semibold border transition-colors shadow-sm" style={{background: theme==='dark'?'#1E293B':'white', borderColor: theme==='dark'?'#334155':'#E2E8F0', color: theme==='dark'?'#CBD5E1':'#475569'}}
           >
             {i18n.language === 'fr' ? 'العربية' : 'Français'}
           </button>
           <button
             onClick={toggleTheme}
-            className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 flex items-center justify-center transition-colors shadow-sm text-sm"
+            className="w-8 h-8 rounded-lg border flex items-center justify-center transition-colors shadow-sm text-sm" style={{background: theme==='dark'?'#1E293B':'white', borderColor: theme==='dark'?'#334155':'#E2E8F0', color: theme==='dark'?'#CBD5E1':'#475569'}}
           >
             {theme === 'dark' ? '☀️' : '🌙'}
           </button>
@@ -130,7 +130,7 @@ export function Login() {
               fontFamily: 'var(--font-display)',
               fontSize: '22px',
               fontWeight: 800,
-              color: '#0F172A',
+              color: theme === 'dark' ? '#F1F5F9' : '#0F172A',
             }}
           >
             Daara<span style={{ color: '#10B981' }}>Gest</span>
@@ -146,7 +146,7 @@ export function Login() {
                 fontFamily: 'var(--font-display)',
                 fontSize: '28px',
                 fontWeight: 800,
-                color: '#0F172A',
+                color: theme === 'dark' ? '#F1F5F9' : '#0F172A',
                 letterSpacing: '-0.02em',
               }}
             >
@@ -178,13 +178,13 @@ export function Login() {
                 placeholder="admin"
                 className="w-full px-4 py-3 rounded-xl border text-sm transition-all focus:outline-none"
                 style={{
-                  background: 'white',
-                  borderColor: '#E2E8F0',
-                  color: '#0F172A',
+                  background: theme === 'dark' ? '#1E293B' : 'white',
+                  borderColor: theme === 'dark' ? '#334155' : '#E2E8F0',
+                  color: theme === 'dark' ? '#F1F5F9' : '#0F172A',
                   fontFamily: 'var(--font-body)',
                 }}
                 onFocus={(e) => { e.currentTarget.style.borderColor = '#10B981'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.12)'; }}
-                onBlur={(e)  => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.boxShadow = 'none'; }}
+                onBlur={(e)  => { e.currentTarget.style.borderColor = theme === 'dark' ? '#334155' : '#E2E8F0'; e.currentTarget.style.boxShadow = 'none'; }}
               />
             </div>
 
@@ -206,13 +206,13 @@ export function Login() {
                 placeholder="••••••••"
                 className="w-full px-4 py-3 rounded-xl border text-sm transition-all focus:outline-none"
                 style={{
-                  background: 'white',
-                  borderColor: '#E2E8F0',
-                  color: '#0F172A',
+                  background: theme === 'dark' ? '#1E293B' : 'white',
+                  borderColor: theme === 'dark' ? '#334155' : '#E2E8F0',
+                  color: theme === 'dark' ? '#F1F5F9' : '#0F172A',
                   fontFamily: 'var(--font-body)',
                 }}
                 onFocus={(e) => { e.currentTarget.style.borderColor = '#10B981'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.12)'; }}
-                onBlur={(e)  => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.boxShadow = 'none'; }}
+                onBlur={(e)  => { e.currentTarget.style.borderColor = theme === 'dark' ? '#334155' : '#E2E8F0'; e.currentTarget.style.boxShadow = 'none'; }}
               />
             </div>
 
@@ -254,11 +254,11 @@ export function Login() {
 
           {/* Gold accent footer */}
           <div className="mt-8 flex items-center gap-2">
-            <div className="h-px flex-1" style={{ background: '#E2E8F0' }} />
+            <div className="h-px flex-1" style={{ background: theme === 'dark' ? '#1E293B' : '#E2E8F0' }} />
             <span className="text-xs font-semibold" style={{ color: '#F59E0B', fontFamily: 'var(--font-body)' }}>
               ✦ DaaraGest
             </span>
-            <div className="h-px flex-1" style={{ background: '#E2E8F0' }} />
+            <div className="h-px flex-1" style={{ background: theme === 'dark' ? '#1E293B' : '#E2E8F0' }} />
           </div>
         </div>
       </div>

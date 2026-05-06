@@ -150,7 +150,7 @@ export function BulletinsPage() {
     <div className="space-y-6">
       <PageHeader title={t('bulletin.titre')} />
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           <Select
             label="Année scolaire"
@@ -201,25 +201,25 @@ export function BulletinsPage() {
       </div>
 
       {bulletins.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
           <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-700/50">
+            <thead className="bg-slate-50 dark:bg-slate-700/50">
               <tr>
-                <th className="text-start px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Élève</th>
-                <th className="text-start px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Filière</th>
-                <th className="text-start px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Moyenne</th>
-                <th className="text-start px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Rang</th>
-                <th className="text-start px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
+                <th className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Élève</th>
+                <th className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Filière</th>
+                <th className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Moyenne</th>
+                <th className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Rang</th>
+                <th className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {bulletins.map((b) => (
-                <tr key={b.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                <tr key={b.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
                   <td className="px-4 py-3">
-                    <div className="font-medium text-sm text-gray-900 dark:text-white">
+                    <div className="font-medium text-sm text-slate-900 dark:text-white">
                       {b.eleve.prenom_fr} {b.eleve.nom_fr}
                     </div>
-                    <div className="text-xs text-gray-500 font-mono">{b.eleve.matricule}</div>
+                    <div className="text-xs text-slate-500 font-mono">{b.eleve.matricule}</div>
                   </td>
                   <td className="px-4 py-3">
                     <Badge label={b.filiere} variant={b.filiere === 'FR' ? 'info' : 'warning'} />
@@ -230,7 +230,7 @@ export function BulletinsPage() {
                       variant={getMoyenneColor(b.moyenne)}
                     />
                   </td>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                  <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-white">
                     {b.rang ?? '—'}
                   </td>
                   <td className="px-4 py-3">
@@ -254,9 +254,9 @@ export function BulletinsPage() {
       )}
 
       {bulletins.length === 0 && !loading && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-12 text-center">
           <div className="text-4xl mb-3">📋</div>
-          <p className="text-gray-500 dark:text-gray-400">
+          <p className="text-slate-500 dark:text-slate-400">
             Sélectionnez une année et une classe, puis cliquez sur "Générer les bulletins"
           </p>
         </div>
@@ -266,15 +266,15 @@ export function BulletinsPage() {
         {detail && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><span className="text-gray-500">Élève:</span> <strong>{detail.eleve.prenom_fr} {detail.eleve.nom_fr}</strong></div>
-              <div><span className="text-gray-500">Matricule:</span> <strong>{detail.eleve.matricule}</strong></div>
-              <div><span className="text-gray-500">Période:</span> <strong>Trimestre {detail.periode}</strong></div>
-              <div><span className="text-gray-500">Filière:</span> <strong>{detail.filiere}</strong></div>
-              <div><span className="text-gray-500">Moyenne:</span> <strong>{detail.moyenne !== null ? `${Number(detail.moyenne).toFixed(2)}/20` : 'N/A'}</strong></div>
-              <div><span className="text-gray-500">Rang:</span> <strong>{detail.rang ?? '—'}</strong></div>
+              <div><span className="text-slate-500">Élève:</span> <strong>{detail.eleve.prenom_fr} {detail.eleve.nom_fr}</strong></div>
+              <div><span className="text-slate-500">Matricule:</span> <strong>{detail.eleve.matricule}</strong></div>
+              <div><span className="text-slate-500">Période:</span> <strong>Trimestre {detail.periode}</strong></div>
+              <div><span className="text-slate-500">Filière:</span> <strong>{detail.filiere}</strong></div>
+              <div><span className="text-slate-500">Moyenne:</span> <strong>{detail.moyenne !== null ? `${Number(detail.moyenne).toFixed(2)}/20` : 'N/A'}</strong></div>
+              <div><span className="text-slate-500">Rang:</span> <strong>{detail.rang ?? '—'}</strong></div>
             </div>
             {detail.appreciation && (
-              <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-300">
+              <div className="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-300">
                 {detail.appreciation}
               </div>
             )}

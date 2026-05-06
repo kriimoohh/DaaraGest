@@ -388,8 +388,8 @@ export function ElevesPage() {
             onChange={(e) => setField('date_naissance', e.target.value)}
           />
 
-          <hr className="border-gray-200 dark:border-gray-700" />
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Parent / Tuteur</h3>
+          <hr className="border-slate-200 dark:border-slate-700" />
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Parent / Tuteur</h3>
 
           <div className="grid grid-cols-2 gap-4">
             <Input

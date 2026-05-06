@@ -116,29 +116,29 @@ export function AnneeScolairesPage() {
         action={<Button onClick={openAdd}>+ Ajouter une année</Button>}
       />
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Chargement...</div>
+          <div className="p-8 text-center text-slate-500">Chargement...</div>
         ) : annees.length === 0 ? (
           <div className="p-12 text-center">
             <div className="text-4xl mb-3">📅</div>
-            <p className="text-gray-500">Aucune année scolaire. Commencez par en créer une.</p>
+            <p className="text-slate-500">Aucune année scolaire. Commencez par en créer une.</p>
           </div>
         ) : (
           <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-700/50">
+            <thead className="bg-slate-50 dark:bg-slate-700/50">
               <tr>
                 {['Libellé', 'Début', 'Fin', 'Statut', 'Actions'].map((h) => (
-                  <th key={h} className="text-start px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{h}</th>
+                  <th key={h} className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {annees.map((a) => (
-                <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{a.libelle}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{fmt(a.date_debut)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{fmt(a.date_fin)}</td>
+                <tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{a.libelle}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{fmt(a.date_debut)}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{fmt(a.date_fin)}</td>
                   <td className="px-4 py-3">
                     <Badge label={a.active ? 'Active' : 'Inactive'} variant={a.active ? 'success' : 'neutral'} />
                   </td>
