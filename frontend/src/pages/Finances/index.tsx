@@ -10,7 +10,7 @@ import { SearchInput } from '../../components/ui/SearchInput';
 import { Pagination } from '../../components/ui/Pagination';
 import { useApi } from '../../hooks/useApi';
 
-interface Stats { total_mois: number; nb_paiements: number; }
+interface Stats { total_encaisse_eleves: number; nb_paiements_eleves: number; total_paye_professeurs: number; }
 interface PaiementEleve {
   id: string; type: string; montant: number; mois?: number; annee?: number;
   recu_numero?: string; created_at: string; statut: string;
@@ -105,14 +105,14 @@ export function FinancesPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex items-center gap-4">
             <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center text-xl">💰</div>
             <div>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{formatMontant(stats.total_mois)}</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">{formatMontant(Number(stats.total_encaisse_eleves))}</p>
               <p className="text-sm text-gray-500">{t('finance.total_mois')}</p>
             </div>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex items-center gap-4">
             <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-xl">📄</div>
             <div>
-              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.nb_paiements}</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.nb_paiements_eleves}</p>
               <p className="text-sm text-gray-500">Paiements ce mois</p>
             </div>
           </div>

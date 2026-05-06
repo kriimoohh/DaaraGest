@@ -45,7 +45,7 @@ export async function listerPaiementsEleves(
     }),
   ]);
 
-  return { total, page, limit, items };
+  return { total, page, limit, data: items };
 }
 
 export async function creerPaiementEleve(etablissement_id: string, data: PaiementEleveInput) {
@@ -99,7 +99,7 @@ export async function listerPaiementsProfesseurs(
     }),
   ]);
 
-  return { total, page, limit, items };
+  return { total, page, limit, data: items };
 }
 
 export async function creerPaiementProfesseur(etablissement_id: string, data: PaiementProfesseurInput) {

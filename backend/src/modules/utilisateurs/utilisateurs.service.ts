@@ -40,7 +40,7 @@ export async function listerUtilisateurs(
   // Remove password from response
   const sanitized = items.map(({ mot_de_passe: _, ...u }) => u);
 
-  return { total, page, limit, items: sanitized };
+  return { total, page, limit, data: sanitized };
 }
 
 export async function creerUtilisateur(etablissement_id: string, data: UtilisateurInput) {

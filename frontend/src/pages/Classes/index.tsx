@@ -27,12 +27,6 @@ interface Classe {
   annee_scolaire?: string;
 }
 
-interface ClassesResponse {
-  data: Classe[];
-  total: number;
-  page: number;
-}
-
 interface ClasseFormData {
   nom_fr: string;
   nom_ar: string;
@@ -101,8 +95,8 @@ export function ClassesPage() {
   // Fetch annees scolaires once
   useEffect(() => {
     api
-      .get<{ data: AnneeScolaire[] }>('/api/v1/annees-scolaires')
-      .then((res) => setAnnees(res.data))
+      .get<AnneeScolaire[]>('/api/v1/annees-scolaires')
+      .then((res) => setAnnees(res))
       .catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -113,9 +107,9 @@ export function ClassesPage() {
       const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
       if (filiereFilter) params.set('filiere', filiereFilter);
       if (anneeFilter) params.set('annee_scolaire_id', anneeFilter);
-      const res = await api.get<ClassesResponse>(`/api/v1/classes?${params}`);
-      setClasses(res.data);
-      setTotal(res.total);
+      const res = await api.get<Classe[]>(`/api/v1/classes?${params}`);
+      setClasses(res);
+      setTotal(res.length);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors du chargement');
     } finally {

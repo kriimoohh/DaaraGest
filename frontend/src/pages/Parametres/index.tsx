@@ -22,7 +22,7 @@ export function ParametresPage() {
   const [success, setSuccess] = useState<'etab' | 'notes' | null>(null);
 
   useEffect(() => {
-    api.get<{ etablissement: Etablissement }>('/api/v1/parametres').then((r) => setEtab(r.etablissement)).catch(() => null);
+    api.get<Etablissement>('/api/v1/parametres').then(setEtab).catch(() => null);
     api.get<ConfigNotes>('/api/v1/parametres/notes').then(setConfig).catch(() => null);
   }, []);
 

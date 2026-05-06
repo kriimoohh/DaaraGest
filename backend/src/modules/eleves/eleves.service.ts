@@ -44,7 +44,7 @@ export async function listerEleves(
     }),
   ]);
 
-  return { total, page, limit, items };
+  return { total, page, limit, data: items };
 }
 
 export async function getEleve(id: string, etablissement_id: string) {

@@ -33,7 +33,7 @@ export async function listerProfesseurs(etablissement_id: string, page = 1, sear
     }),
   ]);
 
-  return { total, page, limit, items };
+  return { total, page, limit, data: items };
 }
 
 export async function getProfesseur(id: string, etablissement_id: string) {
