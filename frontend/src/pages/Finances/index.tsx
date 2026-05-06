@@ -23,7 +23,7 @@ const TYPES = ['mensualite', 'inscription', 'blouse', 'autre'];
 const MOIS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
 
 
-interface ProfesseurSimple { id: string; utilisateur: { nom_fr: string; prenom_fr: string; }; }
+interface ProfesseurSimple { id: string; nom_fr: string; prenom_fr: string; professeur: { id: string; salaire_base: string | null } | null; }
 interface PaiementProf {
   id: string; mois: number; annee: number; montant_brut: number;
   net_a_payer: number; statut: string; created_at: string;
@@ -131,8 +131,16 @@ function ProfsTab({ api, formatMontant }: ProfTabProps) {
       <Modal isOpen={modal} onClose={() => setModal(false)} title="Nouveau paiement professeur" size="md">
         <div className="space-y-4">
           <Select label={t('professeur.titre')} value={form.professeur_id}
-            onChange={(e) => setForm(f => ({ ...f, professeur_id: e.target.value }))}
-            options={[{ value: '', label: t('common.selectionner') }, ...profs.map(p => ({ value: p.id, label: `${p.utilisateur.prenom_fr} ${p.utilisateur.nom_fr}` }))]} />
+            onChange={(e) => {
+              const profId = e.target.value;
+              const prof = profs.find(p => p.professeur?.id === profId);
+              const salaire = prof?.professeur?.salaire_base ?? '';
+              const brut = salaire ? String(parseFloat(salaire)) : '';
+              const retenues = brut ? String(Math.round(parseFloat(brut) * 0.05)) : '0';
+              const net = brut && retenues ? String(parseFloat(brut) - parseFloat(retenues)) : brut;
+              setForm(f => ({ ...f, professeur_id: profId, montant_brut: brut, retenues, net_a_payer: net }));
+            }}
+            options={[{ value: '', label: t('common.selectionner') }, ...profs.filter(p => p.professeur).map(p => ({ value: p.professeur!.id, label: `${p.prenom_fr} ${p.nom_fr}` }))]}  />
           <div className="grid grid-cols-2 gap-4">
             <Select label={t('common.mois')} value={form.mois} onChange={(e) => setForm(f => ({ ...f, mois: e.target.value }))}
               options={MOIS2.map((m, i) => ({ value: String(i + 1), label: m }))} />
@@ -142,7 +150,7 @@ function ProfsTab({ api, formatMontant }: ProfTabProps) {
             <Input label={t('finance.montant_brut')} type="number" value={form.montant_brut}
               onChange={(e) => { const v = e.target.value; setForm(f => ({ ...f, montant_brut: v, net_a_payer: v })); }} />
             <Input label={t('finance.retenues')} type="number" value={form.retenues}
-              onChange={(e) => setForm(f => ({ ...f, retenues: e.target.value }))} />
+              onChange={(e) => { const r = e.target.value; const net = form.montant_brut && r ? String(parseFloat(form.montant_brut) - (parseFloat(r) || 0)) : form.montant_brut; setForm(f => ({ ...f, retenues: r, net_a_payer: net })); }} />
             <Input label={t('finance.net_a_payer')} type="number" value={form.net_a_payer}
               onChange={(e) => setForm(f => ({ ...f, net_a_payer: e.target.value }))} />
           </div>

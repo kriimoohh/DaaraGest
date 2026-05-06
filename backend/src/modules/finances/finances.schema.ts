@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 export const paiementEleveSchema = z.object({
-  eleve_id: z.string().uuid(),
-  inscription_id: z.string().uuid().optional(),
+  eleve_id: z.string().min(1),
+  inscription_id: z.string().min(1).optional(),
   type: z.string().min(1),
   montant: z.number().positive(),
   mois: z.number().int().min(1).max(12).optional(),
@@ -11,7 +11,7 @@ export const paiementEleveSchema = z.object({
 });
 
 export const paiementProfesseurSchema = z.object({
-  professeur_id: z.string().uuid(),
+  professeur_id: z.string().min(1),
   mois: z.number().int().min(1).max(12),
   annee: z.number().int(),
   montant_brut: z.number().positive(),
