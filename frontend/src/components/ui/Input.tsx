@@ -6,15 +6,12 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export function Input({ label, error, id, className = '', ...rest }: InputProps) {
-  const inputId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
+  const inputId = id ?? label?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1.5">
       {label && (
-        <label
-          htmlFor={inputId}
-          className="text-sm font-medium text-gray-700 dark:text-gray-300"
-        >
+        <label htmlFor={inputId} className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
           {label}
         </label>
       )}
@@ -22,14 +19,14 @@ export function Input({ label, error, id, className = '', ...rest }: InputProps)
         id={inputId}
         {...rest}
         className={[
-          'w-full rounded-lg border px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400',
+          'w-full rounded-xl border px-3.5 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-all focus:outline-none focus:ring-2 focus:border-transparent',
           error
-            ? 'border-red-500 dark:border-red-400'
-            : 'border-gray-300 dark:border-gray-600',
+            ? 'border-red-400 dark:border-red-500 focus:ring-red-500/30'
+            : 'border-slate-200 dark:border-slate-700 focus:ring-emerald-500/30 focus:border-emerald-500',
           className,
         ].join(' ')}
       />
-      {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-xs text-red-500 dark:text-red-400 mt-0.5">{error}</p>}
     </div>
   );
 }
