@@ -1,0 +1,313 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Etablissement {
+  id          String   @id @default(uuid())
+  nom_fr      String
+  nom_ar      String
+  adresse     String?
+  telephone   String?
+  logo_url    String?
+  devise      String   @default("FCFA")
+  actif       Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  utilisateurs     Utilisateur[]
+  annees_scolaires AnneeScolaire[]
+  classes          Classe[]
+  eleves           Eleve[]
+  matieres         Matiere[]
+  config_notes     ConfigNotes?
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  libelle_fr  String   @unique
+  libelle_ar  String
+  permissions Json     @default("{}")
+  created_at  DateTime @default(now())
+
+  utilisateurs Utilisateur[]
+}
+
+model Utilisateur {
+  id               String    @id @default(uuid())
+  etablissement_id String
+  role_id          String
+  nom_fr           String
+  nom_ar           String
+  prenom_fr        String
+  prenom_ar        String
+  identifiant      String    @unique
+  email            String?
+  mot_de_passe     String
+  langue           String    @default("fr")
+  theme            String    @default("light")
+  actif            Boolean   @default(true)
+  last_login       DateTime?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
+  role          Role          @relation(fields: [role_id], references: [id])
+  professeur    Professeur?
+}
+
+model Professeur {
+  id             String    @id @default(uuid())
+  utilisateur_id String    @unique
+  specialite_fr  String?
+  specialite_ar  String?
+  telephone      String?
+  date_embauche  DateTime?
+  type_contrat   String    @default("permanent")
+  salaire_base   Decimal?  @db.Decimal(10, 2)
+  photo_url      String?
+  created_at     DateTime  @default(now())
+
+  utilisateur      Utilisateur          @relation(fields: [utilisateur_id], references: [id])
+  cartes_nfc       ProfesseurCarte[]
+  pointages        Pointage[]
+  heures_travail   HeureTravail[]
+  paiements        PaiementProfesseur[]
+  matieres_classes ProfMatiereClasse[]
+}
+
+model ProfesseurCarte {
+  id            String   @id @default(uuid())
+  professeur_id String
+  uid_nfc       String   @unique
+  active        Boolean  @default(true)
+  created_at    DateTime @default(now())
+
+  professeur Professeur @relation(fields: [professeur_id], references: [id])
+}
+
+model Pointage {
+  id            String   @id @default(uuid())
+  professeur_id String
+  type          String
+  horodatage    DateTime @default(now())
+  uid_carte     String
+  valide        Boolean  @default(true)
+
+  professeur Professeur @relation(fields: [professeur_id], references: [id])
+}
+
+model HeureTravail {
+  id            String    @id @default(uuid())
+  professeur_id String
+  date_jour     DateTime  @db.Date
+  heure_arrivee DateTime?
+  heure_depart  DateTime?
+  duree_minutes Int?
+  created_at    DateTime  @default(now())
+
+  professeur Professeur @relation(fields: [professeur_id], references: [id])
+}
+
+model PaiementProfesseur {
+  id                String   @id @default(uuid())
+  professeur_id     String
+  mois              Int
+  annee             Int
+  heures_theoriques Decimal? @db.Decimal(6, 2)
+  heures_reelles    Decimal? @db.Decimal(6, 2)
+  montant_brut      Decimal  @db.Decimal(12, 2)
+  retenues          Decimal  @default(0) @db.Decimal(12, 2)
+  net_a_payer       Decimal  @db.Decimal(12, 2)
+  statut            String   @default("en_attente")
+  created_at        DateTime @default(now())
+
+  professeur Professeur @relation(fields: [professeur_id], references: [id])
+}
+
+model AnneeScolaire {
+  id               String   @id @default(uuid())
+  etablissement_id String
+  libelle          String
+  date_debut       DateTime @db.Date
+  date_fin         DateTime @db.Date
+  active           Boolean  @default(false)
+  created_at       DateTime @default(now())
+
+  etablissement Etablissement       @relation(fields: [etablissement_id], references: [id])
+  classes       Classe[]
+  inscriptions  Inscription[]
+  prof_matieres ProfMatiereClasse[]
+  bulletins     Bulletin[]
+  notes         Note[]
+}
+
+model ConfigNotes {
+  id               String   @id @default(uuid())
+  etablissement_id String   @unique
+  note_max         Decimal  @default(20) @db.Decimal(5, 2)
+  note_min         Decimal  @default(0) @db.Decimal(5, 2)
+  nb_periodes      Int      @default(3)
+  noms_periodes    Json     @default("{\"fr\":[\"1er Trimestre\",\"2ème Trimestre\",\"3ème Trimestre\"],\"ar\":[\"الفصل الأول\",\"الفصل الثاني\",\"الفصل الثالث\"]}")
+  arrondi          Int      @default(2)
+  chiffres_arabes  Boolean  @default(false)
+  updated_at       DateTime @updatedAt
+
+  etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
+}
+
+model Matiere {
+  id               String  @id @default(uuid())
+  etablissement_id String
+  nom_fr           String
+  nom_ar           String
+  filiere          String
+  coeff_defaut     Decimal @default(1) @db.Decimal(4, 2)
+  ordre_bulletin   Int     @default(0)
+  active           Boolean @default(true)
+
+  etablissement Etablissement       @relation(fields: [etablissement_id], references: [id])
+  prof_matieres ProfMatiereClasse[]
+  notes         Note[]
+}
+
+model Classe {
+  id               String  @id @default(uuid())
+  etablissement_id String
+  annee_scolaire_id String
+  nom_fr           String
+  nom_ar           String
+  filiere          String
+  niveau           String
+  capacite         Int     @default(30)
+  active           Boolean @default(true)
+
+  etablissement  Etablissement       @relation(fields: [etablissement_id], references: [id])
+  annee_scolaire AnneeScolaire       @relation(fields: [annee_scolaire_id], references: [id])
+  inscriptions_fr Inscription[]      @relation("ClasseFR")
+  inscriptions_ar Inscription[]      @relation("ClasseAR")
+  prof_matieres   ProfMatiereClasse[]
+}
+
+model ProfMatiereClasse {
+  id                String  @id @default(uuid())
+  professeur_id     String
+  classe_id         String
+  matiere_id        String
+  annee_scolaire_id String
+  coefficient       Decimal @default(1) @db.Decimal(4, 2)
+
+  professeur     Professeur    @relation(fields: [professeur_id], references: [id])
+  classe         Classe        @relation(fields: [classe_id], references: [id])
+  matiere        Matiere       @relation(fields: [matiere_id], references: [id])
+  annee_scolaire AnneeScolaire @relation(fields: [annee_scolaire_id], references: [id])
+}
+
+model Eleve {
+  id               String   @id @default(uuid())
+  etablissement_id String
+  matricule        String   @unique
+  nom_fr           String
+  nom_ar           String
+  prenom_fr        String
+  prenom_ar        String
+  date_naissance   DateTime @db.Date
+  sexe             String
+  photo_url        String?
+  actif            Boolean  @default(true)
+  created_at       DateTime @default(now())
+
+  etablissement Etablissement   @relation(fields: [etablissement_id], references: [id])
+  parents       Parent[]
+  inscriptions  Inscription[]
+  paiements     PaiementEleve[]
+  bulletins     Bulletin[]
+  notes         Note[]
+}
+
+model Parent {
+  id        String  @id @default(uuid())
+  eleve_id  String
+  nom_fr    String
+  nom_ar    String?
+  lien      String
+  telephone String
+  email     String?
+  adresse   String?
+
+  eleve Eleve @relation(fields: [eleve_id], references: [id])
+}
+
+model Inscription {
+  id                String   @id @default(uuid())
+  eleve_id          String
+  classe_fr_id      String?
+  classe_ar_id      String?
+  annee_scolaire_id String
+  date_inscription  DateTime @default(now())
+  statut            String   @default("actif")
+  created_at        DateTime @default(now())
+
+  eleve          Eleve         @relation(fields: [eleve_id], references: [id])
+  classe_fr      Classe?       @relation("ClasseFR", fields: [classe_fr_id], references: [id])
+  classe_ar      Classe?       @relation("ClasseAR", fields: [classe_ar_id], references: [id])
+  annee_scolaire AnneeScolaire @relation(fields: [annee_scolaire_id], references: [id])
+  paiements      PaiementEleve[]
+}
+
+model PaiementEleve {
+  id             String   @id @default(uuid())
+  eleve_id       String
+  inscription_id String?
+  type           String
+  montant        Decimal  @db.Decimal(12, 2)
+  mois           Int?
+  annee          Int?
+  statut         String   @default("paye")
+  recu_numero    String?
+  created_at     DateTime @default(now())
+
+  eleve       Eleve        @relation(fields: [eleve_id], references: [id])
+  inscription Inscription? @relation(fields: [inscription_id], references: [id])
+}
+
+model Note {
+  id                String   @id @default(uuid())
+  eleve_id          String
+  matiere_id        String
+  periode           Int
+  annee_scolaire_id String
+  valeur            Decimal  @db.Decimal(5, 2)
+  commentaire       String?
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  matiere        Matiere       @relation(fields: [matiere_id], references: [id])
+  annee_scolaire AnneeScolaire @relation(fields: [annee_scolaire_id], references: [id])
+  eleve          Eleve         @relation(fields: [eleve_id], references: [id])
+
+  @@unique([eleve_id, matiere_id, periode, annee_scolaire_id])
+}
+
+model Bulletin {
+  id                String    @id @default(uuid())
+  eleve_id          String
+  annee_scolaire_id String
+  filiere           String
+  periode           Int
+  moyenne           Decimal?  @db.Decimal(5, 2)
+  rang              Int?
+  appreciation      String?
+  pdf_url           String?
+  generated_at      DateTime?
+  created_at        DateTime  @default(now())
+
+  eleve          Eleve         @relation(fields: [eleve_id], references: [id])
+  annee_scolaire AnneeScolaire @relation(fields: [annee_scolaire_id], references: [id])
+
+  @@unique([eleve_id, annee_scolaire_id, filiere, periode])
+}

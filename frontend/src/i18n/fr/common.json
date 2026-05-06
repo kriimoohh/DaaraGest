@@ -1,0 +1,39 @@
+{
+  "app": {
+    "name": "DaaraGest",
+    "tagline": "La gestion de votre école, simplifiée"
+  },
+  "auth": {
+    "login": "Connexion",
+    "identifiant": "Identifiant",
+    "password": "Mot de passe",
+    "submit": "Se connecter",
+    "logout": "Déconnexion",
+    "error": "Email ou mot de passe incorrect"
+  },
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "eleves": "Élèves",
+    "professeurs": "Professeurs",
+    "classes": "Classes",
+    "notes": "Notes",
+    "bulletins": "Bulletins",
+    "finances": "Finances",
+    "parametres": "Paramètres"
+  },
+  "theme": {
+    "light": "Mode clair",
+    "dark": "Mode sombre"
+  },
+  "lang": {
+    "fr": "Français",
+    "ar": "العربية"
+  },
+  "dashboard": {
+    "welcome": "Bienvenue",
+    "eleves_inscrits": "Élèves inscrits",
+    "professeurs_actifs": "Professeurs actifs",
+    "classes_ouvertes": "Classes ouvertes",
+    "paiements_mois": "Paiements du mois"
+  }
+}

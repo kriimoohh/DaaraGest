@@ -1,0 +1,74 @@
+import bcrypt from 'bcryptjs';
+import prisma from '../../config/database';
+
+export async function login(identifiant: string, mot_de_passe: string) {
+  const utilisateur = await prisma.utilisateur.findUnique({
+    where: { identifiant },
+    include: { role: true },
+  });
+
+  if (!utilisateur || !utilisateur.actif) {
+    throw new Error('Identifiants incorrects');
+  }
+
+  const valid = await bcrypt.compare(mot_de_passe, utilisateur.mot_de_passe);
+  if (!valid) {
+    throw new Error('Identifiants incorrects');
+  }
+
+  await prisma.utilisateur.update({
+    where: { id: utilisateur.id },
+    data: { last_login: new Date() },
+  });
+
+  return {
+    payload: {
+      id: utilisateur.id,
+      role: utilisateur.role.libelle_fr,
+      etablissement_id: utilisateur.etablissement_id,
+      langue: utilisateur.langue,
+      theme: utilisateur.theme,
+    },
+    user: {
+      id: utilisateur.id,
+      nom_fr: utilisateur.nom_fr,
+      nom_ar: utilisateur.nom_ar,
+      prenom_fr: utilisateur.prenom_fr,
+      prenom_ar: utilisateur.prenom_ar,
+      identifiant: utilisateur.identifiant,
+      langue: utilisateur.langue,
+      theme: utilisateur.theme,
+      role: utilisateur.role.libelle_fr,
+      etablissement_id: utilisateur.etablissement_id,
+    },
+  };
+}
+
+export async function getMe(id: string) {
+  const utilisateur = await prisma.utilisateur.findUnique({
+    where: { id },
+    include: { role: true, etablissement: true },
+  });
+
+  if (!utilisateur) {
+    throw new Error('Utilisateur introuvable');
+  }
+
+  return {
+    id: utilisateur.id,
+    nom_fr: utilisateur.nom_fr,
+    nom_ar: utilisateur.nom_ar,
+    prenom_fr: utilisateur.prenom_fr,
+    prenom_ar: utilisateur.prenom_ar,
+    identifiant: utilisateur.identifiant,
+    langue: utilisateur.langue,
+    theme: utilisateur.theme,
+    role: utilisateur.role.libelle_fr,
+    etablissement_id: utilisateur.etablissement_id,
+    etablissement: {
+      id: utilisateur.etablissement.id,
+      nom_fr: utilisateur.etablissement.nom_fr,
+      nom_ar: utilisateur.etablissement.nom_ar,
+    },
+  };
+}

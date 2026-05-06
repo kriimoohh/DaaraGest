@@ -1,0 +1,39 @@
+{
+  "app": {
+    "name": "دارا جيست",
+    "tagline": "إدارة مدرستك بكل سهولة"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "identifiant": "المعرّف",
+    "password": "كلمة المرور",
+    "submit": "دخول",
+    "logout": "تسجيل الخروج",
+    "error": "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+  },
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "eleves": "التلاميذ",
+    "professeurs": "الأساتذة",
+    "classes": "الأقسام",
+    "notes": "الدرجات",
+    "bulletins": "شهادات النتائج",
+    "finances": "المالية",
+    "parametres": "الإعدادات"
+  },
+  "theme": {
+    "light": "الوضع الفاتح",
+    "dark": "الوضع الداكن"
+  },
+  "lang": {
+    "fr": "Français",
+    "ar": "العربية"
+  },
+  "dashboard": {
+    "welcome": "أهلاً",
+    "eleves_inscrits": "التلاميذ المسجلون",
+    "professeurs_actifs": "الأساتذة النشطون",
+    "classes_ouvertes": "الأقسام المفتوحة",
+    "paiements_mois": "مدفوعات الشهر"
+  }
+}
