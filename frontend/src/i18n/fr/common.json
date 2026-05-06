@@ -9,7 +9,7 @@
     "password": "Mot de passe",
     "submit": "Se connecter",
     "logout": "Déconnexion",
-    "error": "Email ou mot de passe incorrect"
+    "error": "Identifiant ou mot de passe incorrect"
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -35,5 +35,90 @@
     "professeurs_actifs": "Professeurs actifs",
     "classes_ouvertes": "Classes ouvertes",
     "paiements_mois": "Paiements du mois"
+  },
+  "actions": {
+    "ajouter": "Ajouter",
+    "modifier": "Modifier",
+    "supprimer": "Supprimer",
+    "annuler": "Annuler",
+    "enregistrer": "Enregistrer",
+    "voir": "Voir",
+    "generer": "Générer",
+    "rechercher": "Rechercher..."
+  },
+  "eleve": {
+    "titre": "Élèves",
+    "matricule": "Matricule",
+    "nom": "Nom",
+    "prenom": "Prénom",
+    "date_naissance": "Date de naissance",
+    "sexe": "Sexe",
+    "masculin": "Masculin",
+    "feminin": "Féminin",
+    "parent": "Parent",
+    "lien": "Lien",
+    "pere": "Père",
+    "mere": "Mère",
+    "tuteur": "Tuteur"
+  },
+  "professeur": {
+    "titre": "Professeurs",
+    "specialite": "Spécialité",
+    "type_contrat": "Type de contrat",
+    "permanent": "Permanent",
+    "vacataire": "Vacataire",
+    "salaire": "Salaire de base",
+    "date_embauche": "Date d'embauche"
+  },
+  "classe": {
+    "titre": "Classes",
+    "filiere": "Filière",
+    "niveau": "Niveau",
+    "capacite": "Capacité",
+    "annee_scolaire": "Année scolaire"
+  },
+  "note": {
+    "titre": "Notes",
+    "saisie": "Saisie des notes",
+    "periode": "Période",
+    "valeur": "Note",
+    "coefficient": "Coefficient",
+    "enregistrer_tout": "Enregistrer toutes les notes"
+  },
+  "bulletin": {
+    "titre": "Bulletins",
+    "generer": "Générer les bulletins",
+    "moyenne": "Moyenne",
+    "rang": "Rang",
+    "appreciation": "Appréciation"
+  },
+  "finance": {
+    "titre": "Finances",
+    "paiements_eleves": "Paiements élèves",
+    "paiements_profs": "Paiements professeurs",
+    "montant": "Montant",
+    "type": "Type",
+    "mensualite": "Mensualité",
+    "inscription_fee": "Frais d'inscription",
+    "autre": "Autre",
+    "recu": "N° Reçu",
+    "total_mois": "Total encaissé ce mois"
+  },
+  "parametre": {
+    "titre": "Paramètres",
+    "etablissement": "Établissement",
+    "config_notes": "Configuration des notes",
+    "note_max": "Note maximale",
+    "note_min": "Note minimale",
+    "nb_periodes": "Nombre de périodes"
+  },
+  "common": {
+    "actif": "Actif",
+    "inactif": "Inactif",
+    "aucun_resultat": "Aucun résultat",
+    "chargement": "Chargement...",
+    "page": "Page",
+    "sur": "sur",
+    "resultats": "résultats"
   }
 }

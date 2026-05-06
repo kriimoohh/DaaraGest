@@ -9,7 +9,7 @@
     "password": "كلمة المرور",
     "submit": "دخول",
     "logout": "تسجيل الخروج",
-    "error": "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+    "error": "المعرّف أو كلمة المرور غير صحيحة"
   },
   "nav": {
     "dashboard": "لوحة التحكم",
@@ -35,5 +35,90 @@
     "professeurs_actifs": "الأساتذة النشطون",
     "classes_ouvertes": "الأقسام المفتوحة",
     "paiements_mois": "مدفوعات الشهر"
+  },
+  "actions": {
+    "ajouter": "إضافة",
+    "modifier": "تعديل",
+    "supprimer": "حذف",
+    "annuler": "إلغاء",
+    "enregistrer": "حفظ",
+    "voir": "عرض",
+    "generer": "توليد",
+    "rechercher": "بحث..."
+  },
+  "eleve": {
+    "titre": "التلاميذ",
+    "matricule": "رقم التسجيل",
+    "nom": "الاسم",
+    "prenom": "اللقب",
+    "date_naissance": "تاريخ الميلاد",
+    "sexe": "الجنس",
+    "masculin": "ذكر",
+    "feminin": "أنثى",
+    "parent": "ولي الأمر",
+    "lien": "الصلة",
+    "pere": "الأب",
+    "mere": "الأم",
+    "tuteur": "الوصي"
+  },
+  "professeur": {
+    "titre": "الأساتذة",
+    "specialite": "التخصص",
+    "type_contrat": "نوع العقد",
+    "permanent": "دائم",
+    "vacataire": "متعاقد",
+    "salaire": "الراتب الأساسي",
+    "date_embauche": "تاريخ التوظيف"
+  },
+  "classe": {
+    "titre": "الأقسام",
+    "filiere": "الشعبة",
+    "niveau": "المستوى",
+    "capacite": "الطاقة الاستيعابية",
+    "annee_scolaire": "السنة الدراسية"
+  },
+  "note": {
+    "titre": "الدرجات",
+    "saisie": "إدخال الدرجات",
+    "periode": "الفصل",
+    "valeur": "الدرجة",
+    "coefficient": "المعامل",
+    "enregistrer_tout": "حفظ جميع الدرجات"
+  },
+  "bulletin": {
+    "titre": "شهادات النتائج",
+    "generer": "توليد شهادات النتائج",
+    "moyenne": "المعدل",
+    "rang": "الترتيب",
+    "appreciation": "الملاحظة"
+  },
+  "finance": {
+    "titre": "المالية",
+    "paiements_eleves": "مدفوعات التلاميذ",
+    "paiements_profs": "مدفوعات الأساتذة",
+    "montant": "المبلغ",
+    "type": "النوع",
+    "mensualite": "قسط شهري",
+    "inscription_fee": "رسوم التسجيل",
+    "autre": "أخرى",
+    "recu": "رقم الوصل",
+    "total_mois": "مجموع الشهر"
+  },
+  "parametre": {
+    "titre": "الإعدادات",
+    "etablissement": "المؤسسة",
+    "config_notes": "إعداد الدرجات",
+    "note_max": "الدرجة القصوى",
+    "note_min": "الدرجة الدنيا",
+    "nb_periodes": "عدد الفصول"
+  },
+  "common": {
+    "actif": "نشط",
+    "inactif": "غير نشط",
+    "aucun_resultat": "لا توجد نتائج",
+    "chargement": "جار التحميل...",
+    "page": "صفحة",
+    "sur": "من",
+    "resultats": "نتائج"
   }
 }
