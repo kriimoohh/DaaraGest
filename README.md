@@ -9,6 +9,7 @@ Application web de gestion d'école franco-arabe, conçue pour les établissemen
 - [Fonctionnalités](#fonctionnalités)
 - [Stack technique](#stack-technique)
 - [Architecture](#architecture)
+- [Identité graphique](#identité-graphique)
 - [Installation](#installation)
 - [Variables d'environnement](#variables-denvironnement)
 - [Comptes par défaut](#comptes-par-défaut)
@@ -86,6 +87,50 @@ Chaque requête authentifiée extrait `etablissement_id` du JWT. Tous les servic
 | `directeur` | Tous sauf gestion utilisateurs |
 | `caissier` | Dashboard, Élèves, Finances |
 | `professeur` | Dashboard, Classes, Notes, Bulletins |
+
+---
+
+## Identité graphique
+
+### Palette chromatique
+
+| Rôle | Nom | Hex | Usage |
+|------|-----|-----|-------|
+| Primaire | Émeraude | `#10B981` | Actions, liens actifs, CTA |
+| Secondaire | Teal | `#14B8A6` | Gradients, info, badges |
+| Accent | Or Sénégal | `#F59E0B` | Points d'excellence, indicateurs actifs |
+| Fond | Nuit | `#0F172A` | Sidebar, login panel, dark bg |
+| Surface | Ardoise | `#1E293B` | Cartes dark, header dark |
+| Interface | Lumière | `#F1F5F9` | Fond principal light mode |
+
+### Typographie
+
+| Usage | Police | Poids |
+|-------|--------|-------|
+| Titres & Logo | Big Shoulders Display | 800–900 |
+| Interface & Corps | Instrument Sans | 400–700 |
+| Arabe | Noto Naskh Arabic | 400–700 |
+
+### Logo
+
+Le logo DaaraGest est composé de :
+- **Arc émeraude** — porte du savoir, héritage du Daara sénégalais
+- **Lettre D** géométrique blanche — DaaraGest, construite avec précision
+- **Arc or + point doré** — chaleur, excellence, accent sénégalais
+- **Cercle** — communauté, complétude, cycle scolaire
+
+### Design tokens (CSS)
+
+```css
+--color-primary:   #10B981;
+--color-secondary: #14B8A6;
+--color-accent:    #F59E0B;
+--color-bg:        #0F172A;
+--color-surface:   #1E293B;
+--color-light:     #F1F5F9;
+--font-display:    'Big Shoulders Display', system-ui, sans-serif;
+--font-body:       'Instrument Sans', system-ui, sans-serif;
+```
 
 ---
 

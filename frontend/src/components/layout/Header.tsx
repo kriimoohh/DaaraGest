@@ -18,28 +18,24 @@ export function Header() {
   };
 
   return (
-    <header className="h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-end px-6 gap-2">
-      {/* Lang toggle */}
+    <header className="h-14 bg-white dark:bg-brand-surface border-b border-slate-200 dark:border-white/5 flex items-center justify-end px-6 gap-2">
       <button
         onClick={toggleLang}
-        className="h-8 px-3 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+        className="h-8 px-3 rounded-lg text-xs font-semibold border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
       >
         {i18n.language === 'fr' ? 'العربية' : 'Français'}
       </button>
 
-      {/* Theme toggle */}
       <button
         onClick={toggleTheme}
-        className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center transition-colors"
+        className="w-8 h-8 rounded-lg border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center justify-center transition-colors text-sm"
         aria-label={t(`theme.${theme === 'dark' ? 'light' : 'dark'}`)}
       >
         {theme === 'dark' ? '☀️' : '🌙'}
       </button>
 
-      {/* Divider */}
-      <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1" />
+      <div className="w-px h-5 bg-slate-200 dark:bg-white/10 mx-1" />
 
-      {/* User + logout */}
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-slate-700 dark:text-slate-300 hidden sm:block">
           {i18n.language === 'ar'

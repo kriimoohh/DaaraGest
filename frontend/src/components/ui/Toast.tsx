@@ -1,10 +1,10 @@
 import { useToastStore } from '../../store/toastStore';
 
 const styles = {
-  success: 'bg-emerald-500',
+  success: 'bg-[#10B981]',
   error: 'bg-red-500',
-  info: 'bg-blue-500',
-  warning: 'bg-amber-500',
+  info: 'bg-[#14B8A6]',
+  warning: 'bg-[#F59E0B]',
 };
 
 const icons = { success: '✓', error: '✕', info: 'ℹ', warning: '⚠' };

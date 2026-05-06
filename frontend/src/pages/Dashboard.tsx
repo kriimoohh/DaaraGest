@@ -51,19 +51,19 @@ export function Dashboard() {
   const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
 
   const statCards = [
-    { key: 'eleves_inscrits', value: stats.nb_eleves, icon: '🎓', from: 'from-blue-500', to: 'to-blue-600' },
-    { key: 'professeurs_actifs', value: stats.nb_professeurs, icon: '👨‍🏫', from: 'from-emerald-500', to: 'to-emerald-600' },
-    { key: 'classes_ouvertes', value: stats.nb_classes, icon: '🏫', from: 'from-amber-500', to: 'to-amber-600' },
-    { key: 'paiements_mois', value: stats.paiements_mois, icon: '💰', from: 'from-purple-500', to: 'to-purple-600' },
+    { key: 'eleves_inscrits', value: stats.nb_eleves, icon: '🎓', from: 'from-blue-500', to: 'to-blue-600', color: '#3B82F6' },
+    { key: 'professeurs_actifs', value: stats.nb_professeurs, icon: '👨‍🏫', from: 'from-emerald-500', to: 'to-emerald-600', color: '#10B981' },
+    { key: 'classes_ouvertes', value: stats.nb_classes, icon: '🏫', from: 'from-amber-500', to: 'to-amber-600', color: '#F59E0B' },
+    { key: 'paiements_mois', value: stats.paiements_mois, icon: '💰', from: 'from-purple-500', to: 'to-purple-600', color: '#8B5CF6' },
   ];
 
   return (
     <div className="space-y-6 max-w-6xl">
       {/* Welcome banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-500 p-8 text-white shadow-lg shadow-emerald-500/20">
+      <div className="relative overflow-hidden rounded-2xl p-8 text-white shadow-lg" style={{background: "linear-gradient(135deg, #10B981 0%, #14B8A6 100%)", boxShadow: "0 8px 24px rgba(16,185,129,0.25)"}}>
         <div className="relative z-10">
           <p className="text-emerald-100 text-sm font-medium">{greeting} 👋</p>
-          <h1 className="text-3xl font-black mt-1 tracking-tight">{displayName}</h1>
+          <h1 className="text-3xl mt-1" style={{fontFamily:"var(--font-display)",fontWeight:900,letterSpacing:"-0.03em"}}>{displayName}</h1>
           {schoolName && (
             <p className="text-emerald-100 mt-1 text-sm flex items-center gap-1.5">
               <span>🏫</span> {schoolName}
@@ -86,7 +86,7 @@ export function Dashboard() {
             <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${card.from} ${card.to} flex items-center justify-center text-xl mb-4 shadow-sm`}>
               {card.icon}
             </div>
-            <p className="text-3xl font-black text-slate-900 dark:text-white tabular-nums">{card.value}</p>
+            <p className="text-3xl tabular-nums text-slate-900 dark:text-white" style={{fontFamily:"var(--font-display)",fontWeight:900}}>{card.value}</p>
             <p className="text-slate-500 dark:text-slate-400 text-xs mt-1 font-medium">{t(`dashboard.${card.key}`)}</p>
           </div>
         ))}
@@ -94,7 +94,7 @@ export function Dashboard() {
 
       {/* Quick access */}
       <div>
-        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Accès rapide</h2>
+        <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-3" style={{fontFamily:"var(--font-body)"}}>Accès rapide</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
           {quickLinks
             .filter((l) => {
