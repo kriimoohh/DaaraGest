@@ -27,7 +27,13 @@
   }
 
   body {
-    @apply bg-brand-light text-slate-900 dark:bg-brand-night dark:text-slate-100;
+    background-color: #F1F5F9;
+    color: #0F172A;
+  }
+
+  .dark body {
+    background-color: #0F172A;
+    color: #F1F5F9;
   }
 
   /* Big Shoulders for all headings */
