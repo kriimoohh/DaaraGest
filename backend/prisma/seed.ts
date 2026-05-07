@@ -47,6 +47,7 @@ async function main() {
     { id: 'role-directeur',  libelle_fr: 'directeur',  libelle_ar: 'المدير' },
     { id: 'role-caissier',   libelle_fr: 'caissier',   libelle_ar: 'أمين الصندوق' },
     { id: 'role-professeur', libelle_fr: 'professeur', libelle_ar: 'الأستاذ' },
+    { id: 'role-pointeur',   libelle_fr: 'pointeur',   libelle_ar: 'مسجّل الحضور' },
   ];
   for (const r of roles) {
     await prisma.role.upsert({ where: { libelle_fr: r.libelle_fr }, update: {}, create: r });
@@ -78,6 +79,8 @@ async function main() {
       nom_fr: 'Ahmed',      prenom_fr: 'Sheikh',       nom_ar: 'أحمد', prenom_ar: 'شيخ' },
     { id: 'user-prof4',      identifiant: 'prof.ndiaye',mot_de_passe: await pwd('Prof123!'),      role_id: 'role-professeur',
       nom_fr: 'Ndiaye',     prenom_fr: 'Ibrahima',     nom_ar: 'نجاي', prenom_ar: 'إبراهيم' },
+    { id: 'user-pointeur',   identifiant: 'pointeur',  mot_de_passe: await pwd('Pointeur123!'), role_id: 'role-pointeur',
+      nom_fr: 'Ba',         prenom_fr: 'Oumar',         nom_ar: 'با', prenom_ar: 'عمر' },
   ];
 
   for (const u of utilisateurs) {

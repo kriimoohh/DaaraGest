@@ -192,7 +192,7 @@ export function Dashboard() {
                 notes:       ['admin','directeur','professeur'],
                 bulletins:   ['admin','directeur','professeur'],
                 finances:    ['admin','directeur','caissier'],
-                pointage:    ['admin','directeur'],
+                pointage:    ['admin','directeur','pointeur'],
                 professeurs: ['admin','directeur'],
               };
               return (allowed[l.key] ?? []).includes(role);

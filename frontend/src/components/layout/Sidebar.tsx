@@ -28,7 +28,7 @@ const sections = [
     label: 'Administration',
     labelAr: 'الإدارة',
     items: [
-      { key: 'pointage',         path: '/pointage',          icon: '📌', roles: ['admin', 'directeur'] },
+      { key: 'pointage',         path: '/pointage',          icon: '📌', roles: ['admin', 'directeur', 'pointeur'] },
       { key: 'finances',         path: '/finances',          icon: '💰', roles: ['admin', 'directeur', 'caissier'] },
       { key: 'utilisateurs',     path: '/utilisateurs',      icon: '👥', roles: ['admin'] },
       { key: 'parametres',       path: '/parametres',        icon: '⚙️', roles: ['admin', 'directeur'] },

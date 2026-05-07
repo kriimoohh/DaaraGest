@@ -178,6 +178,7 @@
     "titre": "Utilisateurs",
     "role": "Rôle",
     "tous_roles": "Tous les rôles",
+    "pointeur": "Pointeur",
     "langue": "Langue",
     "nouveau_mdp": "Nouveau mot de passe",
     "reset_mdp": "Réinitialiser le mot de passe",
