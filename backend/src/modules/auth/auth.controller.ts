@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { login, getMe } from './auth.service';
+import { login, getMe, changePassword, updateProfil } from './auth.service';
 import { loginSchema } from './auth.schema';
 import { JwtPayload } from '../../utils/jwt';
 
@@ -25,9 +25,33 @@ export async function logoutHandler(_request: FastifyRequest, reply: FastifyRepl
 export async function getMeHandler(request: FastifyRequest, reply: FastifyReply) {
   const user = request.user as JwtPayload;
   try {
-    const data = await getMe(user.id);
-    return reply.send(data);
+    return reply.send(await getMe(user.id));
   } catch (err) {
     return reply.status(404).send({ error: (err as Error).message });
+  }
+}
+
+export async function changePasswordHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { id } = request.user as JwtPayload;
+  const { ancien_mot_de_passe, nouveau_mot_de_passe } = request.body as Record<string, string>;
+  if (!ancien_mot_de_passe || !nouveau_mot_de_passe) {
+    return reply.status(400).send({ error: 'Les deux champs mot de passe sont requis' });
+  }
+  try {
+    await changePassword(id, ancien_mot_de_passe, nouveau_mot_de_passe);
+    return reply.send({ message: 'Mot de passe modifié avec succès' });
+  } catch (err) {
+    return reply.status(400).send({ error: (err as Error).message });
+  }
+}
+
+export async function updateProfilHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { id } = request.user as JwtPayload;
+  const { nom_fr, prenom_fr, langue, theme } = request.body as Record<string, string>;
+  try {
+    const updated = await updateProfil(id, { nom_fr, prenom_fr, langue, theme });
+    return reply.send(updated);
+  } catch (err) {
+    return reply.status(400).send({ error: (err as Error).message });
   }
 }

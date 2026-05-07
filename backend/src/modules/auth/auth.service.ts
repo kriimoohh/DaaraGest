@@ -44,6 +44,20 @@ export async function login(identifiant: string, mot_de_passe: string) {
   };
 }
 
+export async function changePassword(id: string, ancien: string, nouveau: string) {
+  const utilisateur = await prisma.utilisateur.findUnique({ where: { id } });
+  if (!utilisateur) throw new Error('Utilisateur introuvable');
+  const valid = await bcrypt.compare(ancien, utilisateur.mot_de_passe);
+  if (!valid) throw new Error('Mot de passe actuel incorrect');
+  if (nouveau.length < 8) throw new Error('Le nouveau mot de passe doit contenir au moins 8 caractères');
+  const hash = await bcrypt.hash(nouveau, 10);
+  await prisma.utilisateur.update({ where: { id }, data: { mot_de_passe: hash } });
+}
+
+export async function updateProfil(id: string, data: { nom_fr?: string; prenom_fr?: string; langue?: string; theme?: string }) {
+  return prisma.utilisateur.update({ where: { id }, data });
+}
+
 export async function getMe(id: string) {
   const utilisateur = await prisma.utilisateur.findUnique({
     where: { id },
