@@ -44,12 +44,12 @@ interface PaiementProf {
 const MOIS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 const TYPES_PAIEMENT = ['mensualite', 'inscription', 'blouse', 'autre'];
 const FILTRES = [
-  { value: '', label: 'Tous les paiements' },
-  { value: 'paye', label: '✅ Payés' },
-  { value: 'impaye', label: '⚠️ Non payés' },
-  { value: 'mensualite', label: '📅 Mensualités' },
-  { value: 'inscription', label: '📝 Inscriptions' },
-  { value: 'reliquat', label: '🔴 Reliquats' },
+  { value: '', label: 'Tous' },
+  { value: 'paye', label: 'Payés' },
+  { value: 'impaye', label: 'Non payés' },
+  { value: 'mensualite', label: 'Mensualités' },
+  { value: 'inscription', label: 'Inscriptions' },
+  { value: 'reliquat', label: 'Reliquats' },
 ];
 
 // ─── ProfsTab ─────────────────────────────────────────────────────────────────
@@ -312,20 +312,47 @@ export function FinancesPage() {
       </div>
 
       {tab === 'eleves' && (
-        <div className="space-y-4">
-          {/* Filtres */}
-          <div className="flex flex-wrap gap-3 items-end">
-            <div className="flex-1 min-w-48">
+        <div className="space-y-3">
+          {/* Ligne 1 : Recherche + action */}
+          <div className="flex gap-3 items-center">
+            <div className="flex-1">
               <SearchInput value={search} onChange={setSearch} placeholder="Rechercher un élève..." />
             </div>
-            <Select value={filtre} onChange={e => setFiltre(e.target.value)} options={FILTRES} />
-            {!isReliquat && <>
-              <Select value={mois} onChange={e => setMois(e.target.value)}
-                options={[{ value: '', label: 'Tous les mois' }, ...MOIS.map((m, i) => ({ value: String(i+1), label: m }))]} />
-              <Input label="" type="number" value={annee} onChange={e => setAnnee(e.target.value)} className="w-24" />
-            </>}
             <Button onClick={() => setModal(true)}>+ Paiement</Button>
           </div>
+
+          {/* Ligne 2 : Pills statut/type */}
+          <div className="flex flex-wrap gap-2">
+            {FILTRES.map(f => (
+              <button
+                key={f.value}
+                onClick={() => setFiltre(f.value)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  filtre === f.value
+                    ? f.value === 'reliquat' ? 'bg-red-500 text-white'
+                      : f.value === 'impaye' ? 'bg-amber-500 text-white'
+                      : f.value === 'paye' ? 'bg-emerald-500 text-white'
+                      : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                }`}
+              >
+                {f.value === 'reliquat' && '🔴 '}
+                {f.value === 'impaye' && '⚠️ '}
+                {f.value === 'paye' && '✅ '}
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Ligne 3 : Période (masquée en vue reliquats) */}
+          {!isReliquat && (
+            <div className="flex gap-3 items-center">
+              <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">Période :</span>
+              <Select value={mois} onChange={e => setMois(e.target.value)}
+                options={[{ value: '', label: 'Tous les mois' }, ...MOIS.map((m, i) => ({ value: String(i+1), label: m }))]} />
+              <Input label="" type="number" value={annee} onChange={e => setAnnee(e.target.value)} className="w-28" />
+            </div>
+          )}
 
           {/* Reliquats view */}
           {isReliquat ? (
