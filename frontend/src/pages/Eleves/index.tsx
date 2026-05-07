@@ -72,16 +72,7 @@ const EMPTY_FORM: EleveFormData = {
   parent_telephone: '',
 };
 
-const SEXE_OPTIONS = [
-  { value: 'M', label: 'Masculin' },
-  { value: 'F', label: 'Féminin' },
-];
-
-const LIEN_OPTIONS = [
-  { value: 'père', label: 'Père' },
-  { value: 'mère', label: 'Mère' },
-  { value: 'tuteur', label: 'Tuteur' },
-];
+// Options définies dans le composant via t() pour la traduction
 
 const LIMIT = 20;
 
@@ -100,6 +91,15 @@ function validate(form: EleveFormData): FormErrors {
 
 export function ElevesPage() {
   const { t } = useTranslation();
+  const SEXE_OPTIONS = [
+    { value: 'M', label: t('eleve.masculin') },
+    { value: 'F', label: t('eleve.feminin') },
+  ];
+  const LIEN_OPTIONS = [
+    { value: 'père', label: t('eleve.pere') },
+    { value: 'mère', label: t('eleve.mere') },
+    { value: 'tuteur', label: t('eleve.tuteur') },
+  ];
   const api = useApi();
 
   const [eleves, setEleves] = useState<Eleve[]>([]);
@@ -283,7 +283,7 @@ export function ElevesPage() {
         const e = row as unknown as Eleve;
         return (
           <Badge
-            label={e.statut === 'actif' ? 'Actif' : 'Inactif'}
+            label={e.statut === 'actif' ? t('common.actif') : t('common.inactif')}
             variant={e.statut === 'actif' ? 'success' : 'neutral'}
           />
         );
@@ -391,7 +391,7 @@ export function ElevesPage() {
           />
 
           <hr className="border-slate-200 dark:border-slate-700" />
-          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Parent / Tuteur</h3>
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('eleve.parent')}</h3>
 
           <div className="grid grid-cols-2 gap-4">
             <Input

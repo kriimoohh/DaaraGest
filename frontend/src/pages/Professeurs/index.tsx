@@ -51,10 +51,7 @@ const EMPTY_FORM: ProfesseurFormData = {
   identifiant: '', mot_de_passe: '', specialite_fr: '', telephone: '', type_contrat: '',
 };
 
-const CONTRAT_OPTIONS = [
-  { value: 'permanent', label: 'permanent' },
-  { value: 'vacataire', label: 'vacataire' },
-];
+// Labels définis dans le composant via t() pour la traduction
 
 const LIMIT = 20;
 
@@ -191,7 +188,7 @@ export function ProfesseursPage() {
       header: 'Contrat',
       render: (row) => {
         const p = row as unknown as Professeur;
-        return <Badge label={p.type_contrat === 'permanent' ? 'Permanent' : 'Vacataire'} variant={p.type_contrat === 'permanent' ? 'info' : 'warning'} />;
+        return <Badge label={p.type_contrat === 'permanent' ? t('professeur.permanent') : t('professeur.vacataire')} variant={p.type_contrat === 'permanent' ? 'info' : 'warning'} />;
       },
     },
     {
@@ -269,7 +266,11 @@ export function ProfesseursPage() {
               value={form.type_contrat}
               onChange={(e) => setField('type_contrat', e.target.value)}
               error={formErrors.type_contrat}
-              options={CONTRAT_OPTIONS}
+              options={[
+                { value: '', label: t('common.selectionner') },
+                { value: 'permanent', label: t('professeur.permanent') },
+                { value: 'vacataire', label: t('professeur.vacataire') },
+              ]}
               placeholder="Choisir..."
             />
             <div className="flex justify-end gap-3 pt-2">

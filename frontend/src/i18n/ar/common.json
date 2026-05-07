@@ -147,15 +147,22 @@
     "type": "النوع",
     "mensualite": "قسط شهري",
     "inscription_fee": "رسوم التسجيل",
+    "blouse": "بلوزة",
     "autre": "أخرى",
+    "paye": "مدفوع",
+    "impaye": "غير مدفوع",
     "recu": "رقم الوصل",
     "total_mois": "مجموع الشهر",
+    "paiements_mois": "مدفوعات هذا الشهر",
+    "verse_profs": "مدفوعات الأساتذة",
     "retenues": "الاستقطاعات",
     "net_a_payer": "صافي المبلغ",
-    "nouveau_paiement": "دفعة جديدة",
+    "nouveau_paiement": "دفعة جديدة للتلميذ",
     "nouveau_paiement_prof": "دفعة جديدة للأستاذ",
     "aucun_paiement": "لا توجد مدفوعات",
-    "aucun_paiement_periode": "لا توجد مدفوعات لهذه الفترة"
+    "aucun_paiement_periode": "لا توجد مدفوعات لهذه الفترة",
+    "recu_auto": "سيتم توليد رقم الوصل تلقائياً.",
+    "selectionner_eleve": "اختر تلميذاً..."
   },
   "parametre": {
     "titre": "الإعدادات",
@@ -199,6 +206,8 @@
     "confirmation_suppression": "هذا الإجراء لا يمكن التراجع عنه. هل أنت متأكد؟",
     "trimestre_1": "الفصل الأول",
     "trimestre_2": "الفصل الثاني",
-    "trimestre_3": "الفصل الثالث"
+    "trimestre_3": "الفصل الثالث",
+    "tous": "الكل",
+    "aucune_note": "لا توجد درجات مسجلة"
   }
 }

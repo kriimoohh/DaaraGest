@@ -147,15 +147,22 @@
     "type": "Type",
     "mensualite": "Mensualité",
     "inscription_fee": "Frais d'inscription",
+    "blouse": "Blouse",
     "autre": "Autre",
+    "paye": "Payé",
+    "impaye": "Non payé",
     "recu": "N° Reçu",
     "total_mois": "Total encaissé ce mois",
+    "paiements_mois": "Paiements ce mois",
+    "verse_profs": "Versé aux profs",
     "retenues": "Retenues",
     "net_a_payer": "Net à payer",
-    "nouveau_paiement": "Nouveau paiement",
+    "nouveau_paiement": "Nouveau paiement élève",
     "nouveau_paiement_prof": "Nouveau paiement professeur",
     "aucun_paiement": "Aucun paiement trouvé",
-    "aucun_paiement_periode": "Aucun paiement pour cette période"
+    "aucun_paiement_periode": "Aucun paiement pour cette période",
+    "recu_auto": "Le numéro de reçu sera généré automatiquement.",
+    "selectionner_eleve": "Sélectionner un élève..."
   },
   "parametre": {
     "titre": "Paramètres",
@@ -199,6 +206,8 @@
     "confirmation_suppression": "Cette action est irréversible. Êtes-vous sûr ?",
     "trimestre_1": "1er Trimestre",
     "trimestre_2": "2ème Trimestre",
-    "trimestre_3": "3ème Trimestre"
+    "trimestre_3": "3ème Trimestre",
+    "tous": "Tous",
+    "aucune_note": "Aucune note enregistrée"
   }
 }

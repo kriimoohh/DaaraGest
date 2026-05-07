@@ -42,7 +42,6 @@ interface PaiementProf {
 // ─── Constantes ──────────────────────────────────────────────────────────────
 
 const MOIS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-const TYPES_PAIEMENT = ['mensualite', 'inscription', 'blouse', 'autre'];
 const FILTER_TYPES = [
   { value: '', label: 'Tous types' },
   { value: 'mensualite', label: 'Mensualités' },
@@ -148,7 +147,7 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
                   <td className="px-4 py-3 text-red-500 dark:text-red-400 text-xs">-{formatMontant(Number(p.retenues))}</td>
                   <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white">{formatMontant(Number(p.net_a_payer))}</td>
                   <td className="px-4 py-3">
-                    <Badge label={p.statut} variant={p.statut === 'paye' ? 'success' : 'warning'} />
+                    <Badge label={p.statut === 'paye' ? t('finance.paye') : t('finance.impaye')} variant={p.statut === 'paye' ? 'success' : 'warning'} />
                   </td>
                 </tr>
               ))}
@@ -158,7 +157,7 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
       )}
       <Pagination page={page} total={total} limit={20} onChange={setPage} />
 
-      <Modal isOpen={modal} onClose={() => setModal(false)} title="Nouveau paiement professeur" size="md">
+      <Modal isOpen={modal} onClose={() => setModal(false)} title={t('finance.nouveau_paiement_prof')} size="md">
         <div className="space-y-4">
           <Select label={t('professeur.titre')} value={form.professeur_id}
             onChange={(e) => {
@@ -225,6 +224,18 @@ export function FinancesPage() {
   const formatMontant = (v: number) => new Intl.NumberFormat('fr-FR').format(v) + ' FCFA';
   const isReliquat = filterStatut === 'reliquat';
 
+  const TYPE_LABELS: Record<string, string> = {
+    mensualite: t('finance.mensualite'),
+    inscription: t('finance.inscription_fee'),
+    blouse: t('finance.blouse'),
+    autre: t('finance.autre'),
+  };
+  const STATUT_LABELS: Record<string, string> = {
+    paye: t('finance.paye'),
+    impaye: t('finance.impaye'),
+  };
+  const TYPES_PAIEMENT = Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label }));
+
   useEffect(() => {
     api.get<Stats>('/api/v1/finances/stats').then(setStats).catch(() => {});
     api.get<{ data: typeof eleves }>('/api/v1/eleves?limit=300').then(r => setEleves(r.data ?? [])).catch(() => {});
@@ -288,8 +299,8 @@ export function FinancesPage() {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {[
             { label: t('finance.total_mois'), value: formatMontant(Number(stats.total_encaisse_eleves)), icon: '💰', color: 'text-emerald-600' },
-            { label: 'Paiements ce mois', value: stats.nb_paiements_eleves, icon: '📄', color: 'text-blue-600' },
-            { label: 'Versé aux profs', value: formatMontant(Number(stats.total_paye_professeurs)), icon: '👨‍🏫', color: 'text-purple-600' },
+            { label: t('finance.paiements_mois'), value: stats.nb_paiements_eleves, icon: '📄', color: 'text-blue-600' },
+            { label: t('finance.verse_profs'), value: formatMontant(Number(stats.total_paye_professeurs)), icon: '👨‍🏫', color: 'text-purple-600' },
           ].map(s => (
             <div key={s.label} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex items-center gap-3">
               <span className="text-2xl">{s.icon}</span>
@@ -434,11 +445,11 @@ export function FinancesPage() {
                         <tr key={p.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30">
                           <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{p.eleve.prenom_fr} {p.eleve.nom_fr}</td>
                           <td className="px-4 py-3 font-mono text-xs text-slate-500">{p.eleve.matricule}</td>
-                          <td className="px-4 py-3"><Badge label={p.type} variant="info" /></td>
+                          <td className="px-4 py-3"><Badge label={TYPE_LABELS[p.type] ?? p.type} variant="info" /></td>
                           <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white">{formatMontant(p.montant)}</td>
                           <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{p.mois ? `${MOIS[p.mois-1]} ${p.annee}` : '—'}</td>
                           <td className="px-4 py-3 font-mono text-xs text-slate-500">{p.recu_numero ?? '—'}</td>
-                          <td className="px-4 py-3"><Badge label={p.statut} variant={p.statut === 'paye' ? 'success' : 'warning'} /></td>
+                          <td className="px-4 py-3"><Badge label={STATUT_LABELS[p.statut] ?? p.statut} variant={p.statut === 'paye' ? 'success' : 'warning'} /></td>
                         </tr>
                       ))}
                     </tbody>
@@ -454,13 +465,13 @@ export function FinancesPage() {
       {tab === 'profs' && <ProfsTab api={api} formatMontant={formatMontant} />}
 
       {/* Modal paiement élève */}
-      <Modal isOpen={modal} onClose={() => setModal(false)} title="Nouveau paiement élève" size="md">
+      <Modal isOpen={modal} onClose={() => setModal(false)} title={t('finance.nouveau_paiement')} size="md">
         <div className="space-y-4">
-          <Select label="Élève" value={form.eleve_id} onChange={e => setForm(f => ({ ...f, eleve_id: e.target.value }))}
-            options={[{ value: '', label: 'Sélectionner un élève...' }, ...eleves.map(e => ({ value: e.id, label: `${e.prenom_fr} ${e.nom_fr} (${e.matricule})` }))]} />
+          <Select label={t('nav.eleves')} value={form.eleve_id} onChange={e => setForm(f => ({ ...f, eleve_id: e.target.value }))}
+            options={[{ value: '', label: t('finance.selectionner_eleve') }, ...eleves.map(e => ({ value: e.id, label: `${e.prenom_fr} ${e.nom_fr} (${e.matricule})` }))]} />
           <div className="grid grid-cols-2 gap-4">
             <Select label={t('finance.type')} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
-              options={TYPES_PAIEMENT.map(v => ({ value: v, label: v.charAt(0).toUpperCase() + v.slice(1) }))} />
+              options={TYPES_PAIEMENT} />
             <Input label={`${t('finance.montant')} (FCFA)`} type="number" value={form.montant}
               onChange={e => setForm(f => ({ ...f, montant: e.target.value }))} placeholder="0" />
           </div>
@@ -470,7 +481,7 @@ export function FinancesPage() {
             <Input label={t('common.annee')} type="number" value={form.annee}
               onChange={e => setForm(f => ({ ...f, annee: e.target.value }))} />
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 italic">Le numéro de reçu sera généré automatiquement.</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 italic">{t('finance.recu_auto')}</p>
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="secondary" onClick={() => setModal(false)}>{t('actions.annuler')}</Button>
             <Button onClick={handleSave} loading={saving}>{t('actions.enregistrer')}</Button>
