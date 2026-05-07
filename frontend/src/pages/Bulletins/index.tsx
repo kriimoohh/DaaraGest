@@ -455,9 +455,9 @@ export function BulletinsPage() {
 
 // ─── Contenu modal détail ─────────────────────────────────────────────────────
 
-function noteColor(valeur: number | null, noteMax: number): string {
+function noteColor(valeur: number | string | null, noteMax: number | string): string {
   if (valeur === null) return 'text-slate-400 dark:text-slate-500';
-  const ratio = valeur / noteMax;
+  const ratio = Number(valeur) / Number(noteMax);
   if (ratio >= 0.7) return 'text-emerald-600 dark:text-emerald-400 font-semibold';
   if (ratio >= 0.5) return 'text-amber-600 dark:text-amber-400 font-semibold';
   return 'text-red-600 dark:text-red-400 font-semibold';
@@ -483,9 +483,9 @@ function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere
               <td className="py-2 text-center text-slate-500 dark:text-slate-400 text-xs">{n.matiere.coeff_defaut}</td>
               <td className="py-2 text-center">
                 <span className={noteColor(n.valeur, n.matiere.note_max)}>
-                  {n.valeur !== null ? n.valeur.toFixed(1) : '—'}
+                  {n.valeur !== null ? Number(n.valeur).toFixed(1) : '—'}
                 </span>
-                <span className="text-slate-400 dark:text-slate-500 text-xs">/{n.matiere.note_max}</span>
+                <span className="text-slate-400 dark:text-slate-500 text-xs">/{Number(n.matiere.note_max)}</span>
               </td>
             </tr>
           ))}
@@ -498,9 +498,9 @@ function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere
   const matMap = new Map<string, { nom_fr: string; coeff: number; noteMax: number; vals: Record<number, number | null> }>();
   for (const n of notes) {
     if (!matMap.has(n.matiere.nom_fr)) {
-      matMap.set(n.matiere.nom_fr, { nom_fr: n.matiere.nom_fr, coeff: n.matiere.coeff_defaut, noteMax: n.matiere.note_max, vals: {} });
+      matMap.set(n.matiere.nom_fr, { nom_fr: n.matiere.nom_fr, coeff: Number(n.matiere.coeff_defaut), noteMax: Number(n.matiere.note_max), vals: {} });
     }
-    matMap.get(n.matiere.nom_fr)!.vals[n.periode] = n.valeur;
+    matMap.get(n.matiere.nom_fr)!.vals[n.periode] = n.valeur !== null ? Number(n.valeur) : null;
   }
   const rows = Array.from(matMap.values()).map(m => {
     const vs = [1, 2, 3].map(p => m.vals[p] ?? null);
