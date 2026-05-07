@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import Papa from 'papaparse';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
@@ -118,6 +119,13 @@ export function ElevesPage() {
   // Delete
   const [confirmDelete, setConfirmDelete] = useState<Eleve | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Import CSV
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importModal, setImportModal] = useState(false);
+  const [importRows, setImportRows] = useState<Record<string, string>[]>([]);
+  const [importResult, setImportResult] = useState<{ created: number; errors: { ligne: number; message: string }[] } | null>(null);
+  const [importing, setImporting] = useState(false);
 
   // Inscription
   const [inscModal, setInscModal] = useState<Eleve | null>(null);
@@ -306,6 +314,44 @@ export function ElevesPage() {
     },
   ];
 
+  const handleCsvFile = (file: File) => {
+    setImportResult(null);
+    Papa.parse<Record<string, string>>(file, {
+      header: true, skipEmptyLines: true,
+      complete: (result) => {
+        setImportRows(result.data);
+        setImportModal(true);
+      },
+      error: () => toast.error('Fichier CSV invalide'),
+    });
+  };
+
+  const handleImport = async () => {
+    if (importRows.length === 0) return;
+    setImporting(true);
+    try {
+      const rows = importRows.map(r => ({
+        nom_fr: r.nom_fr ?? r['Nom'] ?? '',
+        prenom_fr: r.prenom_fr ?? r['Prénom'] ?? '',
+        nom_ar: r.nom_ar ?? '',
+        prenom_ar: r.prenom_ar ?? '',
+        date_naissance: r.date_naissance ?? r['Date de naissance'] ?? '',
+        sexe: (r.sexe ?? r['Sexe'] ?? 'M') as 'M' | 'F',
+        parent_nom_fr: r.parent_nom_fr ?? r['Parent'] ?? '',
+        parent_lien: r.parent_lien ?? 'pere',
+        parent_telephone: r.parent_telephone ?? r['Téléphone'] ?? '',
+      }));
+      const result = await api.post<{ created: number; errors: { ligne: number; message: string }[] }>(
+        '/api/v1/eleves/import', { rows }
+      );
+      setImportResult(result);
+      if (result.created > 0) { fetchEleves(); }
+      toast.success(`${result.created} élève(s) importé(s)`);
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur lors de l\'import');
+    } finally { setImporting(false); }
+  };
+
   return (
     <>
     <div className="p-6">
@@ -313,9 +359,16 @@ export function ElevesPage() {
         title="Élèves"
         subtitle="Gestion des élèves inscrits"
         action={
-          <Button onClick={openAdd} icon={<span>+</span>}>
-            Ajouter un élève
-          </Button>
+          <div className="flex gap-2">
+            <input ref={fileInputRef} type="file" accept=".csv" className="hidden"
+              onChange={e => { if (e.target.files?.[0]) handleCsvFile(e.target.files[0]); e.target.value = ''; }} />
+            <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>
+              ⬆ Importer CSV
+            </Button>
+            <Button onClick={openAdd} icon={<span>+</span>}>
+              {t('eleve.ajouter')}
+            </Button>
+          </div>
         }
       />
 
@@ -456,6 +509,71 @@ export function ElevesPage() {
       <ConfirmModal isOpen={!!confirmDelete} onClose={() => setConfirmDelete(null)}
         onConfirm={handleDelete} loading={deleting}
         message={`Désactiver l'élève "${confirmDelete?.prenom_fr} ${confirmDelete?.nom_fr}" ?`} />
+
+      {/* Modal Import CSV */}
+      <Modal isOpen={importModal} onClose={() => { setImportModal(false); setImportRows([]); setImportResult(null); }}
+        title="Importer des élèves (CSV)" size="lg">
+        <div className="space-y-4">
+          {!importResult ? (
+            <>
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-700 dark:text-blue-300">
+                <p className="font-semibold mb-1">Format attendu — colonnes CSV :</p>
+                <code className="text-xs block bg-blue-100 dark:bg-blue-900/40 p-2 rounded mt-1">
+                  nom_fr, prenom_fr, nom_ar, prenom_ar, date_naissance, sexe, parent_nom_fr, parent_lien, parent_telephone
+                </code>
+                <p className="mt-2 text-xs opacity-80">sexe: M ou F · parent_lien: pere, mere ou tuteur · date_naissance: YYYY-MM-DD</p>
+              </div>
+              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-auto max-h-64">
+                <table className="w-full text-xs">
+                  <thead className="bg-slate-50 dark:bg-slate-700 sticky top-0">
+                    <tr>{importRows[0] && Object.keys(importRows[0]).map(k => (
+                      <th key={k} className="px-3 py-2 text-start text-slate-600 dark:text-slate-400">{k}</th>
+                    ))}</tr>
+                  </thead>
+                  <tbody>
+                    {importRows.slice(0, 10).map((row, i) => (
+                      <tr key={i} className="border-t border-slate-100 dark:border-slate-700">
+                        {Object.values(row).map((v, j) => (
+                          <td key={j} className="px-3 py-1.5 text-slate-700 dark:text-slate-300">{v}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-sm text-slate-500">{importRows.length} ligne(s) détectée(s){importRows.length > 10 ? ' (aperçu 10 premières)' : ''}.</p>
+              <div className="flex justify-end gap-3">
+                <Button variant="secondary" onClick={() => { setImportModal(false); setImportRows([]); }}>{t('actions.annuler')}</Button>
+                <Button onClick={handleImport} loading={importing}>Importer {importRows.length} élève(s)</Button>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                <span className="text-3xl">✅</span>
+                <div>
+                  <p className="font-semibold text-emerald-700 dark:text-emerald-400">{importResult.created} élève(s) importé(s) avec succès</p>
+                  {importResult.errors.length > 0 && (
+                    <p className="text-sm text-amber-600 dark:text-amber-400">{importResult.errors.length} ligne(s) ignorée(s)</p>
+                  )}
+                </div>
+              </div>
+              {importResult.errors.length > 0 && (
+                <div className="space-y-1 max-h-40 overflow-auto">
+                  {importResult.errors.map((e, i) => (
+                    <div key={i} className="text-xs text-red-600 dark:text-red-400 px-3 py-1 bg-red-50 dark:bg-red-900/10 rounded">
+                      Ligne {e.ligne} : {e.message}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex justify-end">
+                <Button onClick={() => { setImportModal(false); setImportRows([]); setImportResult(null); }}>Fermer</Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
     </>
   );
 }

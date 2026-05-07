@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
+import rateLimit from '@fastify/rate-limit';
 import { authRoutes } from './modules/auth/auth.routes';
 import { anneeScolaireRoutes } from './modules/annees-scolaires/annees-scolaires.routes';
 import { matiereRoutes } from './modules/matieres/matieres.routes';
@@ -32,6 +33,11 @@ async function build() {
   });
 
   await fastify.register(jwt, { secret: JWT_SECRET });
+
+  await fastify.register(rateLimit, {
+    global: false,
+    errorResponseBuilder: () => ({ error: 'Trop de tentatives. Réessayez dans 1 minute.' }),
+  });
 
   fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
 

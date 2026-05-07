@@ -7,6 +7,7 @@ import {
   modifierHandler,
   supprimerHandler,
   inscrireHandler,
+  importHandler,
 } from './eleves.controller';
 
 export async function eleveRoutes(fastify: FastifyInstance) {
@@ -16,4 +17,5 @@ export async function eleveRoutes(fastify: FastifyInstance) {
   fastify.put('/:id', { preHandler: [authMiddleware] }, modifierHandler);
   fastify.delete('/:id', { preHandler: [authMiddleware] }, supprimerHandler);
   fastify.post('/:id/inscrire', { preHandler: [authMiddleware] }, inscrireHandler);
+  fastify.post('/import', { preHandler: [authMiddleware] }, importHandler);
 }

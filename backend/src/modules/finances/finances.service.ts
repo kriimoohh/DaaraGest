@@ -126,6 +126,24 @@ export async function creerPaiementProfesseur(etablissement_id: string, data: Pa
   });
 }
 
+export async function getStatsMensuels(etablissement_id: string, nbMois = 6) {
+  const now = new Date();
+  const mois: { label: string; mois: number; annee: number; total: number }[] = [];
+
+  for (let i = nbMois - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const m = d.getMonth() + 1;
+    const a = d.getFullYear();
+    const agg = await prisma.paiementEleve.aggregate({
+      where: { eleve: { etablissement_id }, mois: m, annee: a },
+      _sum: { montant: true },
+    });
+    const MOIS_LABELS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+    mois.push({ label: `${MOIS_LABELS[m-1]} ${a}`, mois: m, annee: a, total: Number(agg._sum.montant ?? 0) });
+  }
+  return mois;
+}
+
 export async function getStatsFinances(etablissement_id: string) {
   const now = new Date();
   const moisCourant = now.getMonth() + 1;

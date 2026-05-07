@@ -120,6 +120,49 @@ export async function supprimerEleve(id: string, etablissement_id: string) {
   return prisma.eleve.update({ where: { id }, data: { actif: false } });
 }
 
+export interface ImportRow {
+  nom_fr: string; prenom_fr: string; nom_ar?: string; prenom_ar?: string;
+  date_naissance?: string; sexe: 'M' | 'F';
+  parent_nom_fr?: string; parent_lien?: string; parent_telephone?: string;
+}
+
+export async function importerEleves(etablissement_id: string, rows: ImportRow[]) {
+  const created: string[] = [];
+  const errors: { ligne: number; message: string }[] = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    try {
+      if (!row.nom_fr?.trim()) throw new Error('nom_fr requis');
+      if (!row.prenom_fr?.trim()) throw new Error('prenom_fr requis');
+      if (!['M', 'F'].includes(row.sexe)) throw new Error('sexe invalide (M ou F)');
+
+      const matricule = await genererMatricule(etablissement_id);
+      const parent = row.parent_nom_fr
+        ? [{ nom_fr: row.parent_nom_fr, lien: (row.parent_lien || 'pere') as 'pere' | 'mere' | 'tuteur', telephone: row.parent_telephone || '' }]
+        : undefined;
+
+      await prisma.eleve.create({
+        data: {
+          etablissement_id,
+          matricule,
+          nom_fr: row.nom_fr.trim(),
+          prenom_fr: row.prenom_fr.trim(),
+          nom_ar: row.nom_ar?.trim() ?? '',
+          prenom_ar: row.prenom_ar?.trim() ?? '',
+          date_naissance: row.date_naissance ? new Date(row.date_naissance) : new Date('2010-01-01'),
+          sexe: row.sexe,
+          parents: parent ? { create: parent } : undefined,
+        },
+      });
+      created.push(matricule);
+    } catch (err) {
+      errors.push({ ligne: i + 2, message: (err as Error).message });
+    }
+  }
+  return { total: rows.length, created: created.length, errors };
+}
+
 export async function inscrireEleve(id: string, etablissement_id: string, data: InscriptionInput) {
   const existing = await prisma.eleve.findFirst({ where: { id, etablissement_id } });
   if (!existing) throw new Error('Élève introuvable');

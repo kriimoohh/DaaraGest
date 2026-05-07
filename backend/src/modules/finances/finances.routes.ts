@@ -3,7 +3,7 @@ import { authMiddleware } from '../../middlewares/auth.middleware';
 import {
   listerPaiementsElevesHandler, creerPaiementEleveHandler,
   listerPaiementsProfesseursHandler, creerPaiementProfesseurHandler,
-  statsHandler, reliquatsHandler,
+  statsHandler, reliquatsHandler, statsMensuelsHandler,
 } from './finances.controller';
 
 export async function financesRoutes(fastify: FastifyInstance) {
@@ -13,4 +13,5 @@ export async function financesRoutes(fastify: FastifyInstance) {
   fastify.post('/paiements-professeurs',{ preHandler: [authMiddleware] }, creerPaiementProfesseurHandler);
   fastify.get('/stats',                 { preHandler: [authMiddleware] }, statsHandler);
   fastify.get('/reliquats',             { preHandler: [authMiddleware] }, reliquatsHandler);
+  fastify.get('/stats-mensuels',        { preHandler: [authMiddleware] }, statsMensuelsHandler);
 }

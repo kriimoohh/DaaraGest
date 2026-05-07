@@ -7,11 +7,15 @@
     "start": "node dist/server.js",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@fastify/cors": "^9.0.0",
     "@fastify/jwt": "^8.0.0",
+    "@fastify/rate-limit": "^10.3.0",
     "@prisma/client": "^5.0.0",
     "bcryptjs": "^2.4.3",
     "fastify": "^4.0.0",
@@ -24,8 +28,10 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.0.0",
+    "@vitest/coverage-v8": "^4.1.5",
     "prisma": "^5.0.0",
     "tsx": "^4.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^4.1.5"
   }
 }

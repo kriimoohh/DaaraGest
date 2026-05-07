@@ -4,8 +4,14 @@ import { paiementEleveSchema, paiementProfesseurSchema } from './finances.schema
 import {
   listerPaiementsEleves, creerPaiementEleve,
   listerPaiementsProfesseurs, creerPaiementProfesseur,
-  getStatsFinances, getReliquats,
+  getStatsFinances, getReliquats, getStatsMensuels,
 } from './finances.service';
+
+export async function statsMensuelsHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { nb_mois } = request.query as Record<string, string | undefined>;
+  return reply.send(await getStatsMensuels(etablissement_id, nb_mois ? parseInt(nb_mois) : 6));
+}
 
 export async function listerPaiementsElevesHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
