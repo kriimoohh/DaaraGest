@@ -14,17 +14,24 @@ import { parametresRoutes } from './modules/parametres/parametres.routes';
 import { utilisateurRoutes } from './modules/utilisateurs/utilisateurs.routes';
 import { pointageRoutes } from './modules/pointage/pointage.routes';
 
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret) {
+  console.error('[ERREUR] JWT_SECRET non défini. Définissez cette variable d\'environnement.');
+  process.exit(1);
+}
+// Après le guard, jwtSecret est garanti non-undefined
+const JWT_SECRET: string = jwtSecret as string;
+
 const fastify = Fastify({ logger: true });
 
 async function build() {
+  const corsOrigin = process.env.CORS_ORIGIN ?? 'http://localhost:5173';
   await fastify.register(cors, {
-    origin: 'http://localhost:5173',
+    origin: corsOrigin,
     credentials: true,
   });
 
-  await fastify.register(jwt, {
-    secret: process.env.JWT_SECRET ?? 'fallback-secret-change-in-production',
-  });
+  await fastify.register(jwt, { secret: JWT_SECRET });
 
   fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
 

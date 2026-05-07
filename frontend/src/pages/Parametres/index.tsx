@@ -10,7 +10,7 @@ interface Etablissement {
   id: string; nom_fr: string; nom_ar: string; adresse?: string; telephone?: string; devise: string;
 }
 interface ConfigNotes {
-  note_max: number; note_min: number; nb_periodes: number; arrondi: number; chiffres_arabes: boolean;
+  note_max: number; note_min: number; nb_periodes: number; arrondi: number; chiffres_arabes: boolean; montant_mensualite: number;
 }
 
 export function ParametresPage() {
@@ -112,6 +112,12 @@ export function ParametresPage() {
                 onChange={(e) => setConfig((p) => p ? { ...p, nb_periodes: parseInt(e.target.value) } : p)}
               />
             </div>
+            <Input
+              label="Montant mensualité (FCFA)"
+              type="number"
+              value={String(config.montant_mensualite ?? 7500)}
+              onChange={(e) => setConfig((p) => p ? { ...p, montant_mensualite: parseFloat(e.target.value) } : p)}
+            />
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"

@@ -192,6 +192,9 @@ export async function getReliquats(
 
   const anneesUtilisees = [...new Set(moisScolaireAnnee.map(m => m.annee))];
 
+  const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
+  const montantMensualite = Number(config?.montant_mensualite ?? 7500);
+
   const inscriptions = await prisma.inscription.findMany({
     where: {
       statut: 'actif',
@@ -219,7 +222,7 @@ export async function getReliquats(
         eleve: { id: insc.eleve.id, nom_fr: insc.eleve.nom_fr, prenom_fr: insc.eleve.prenom_fr, matricule: insc.eleve.matricule },
         nb_mois_dus: manquants.length,
         mois_manquants: manquants,
-        montant_du: manquants.length * 7500,
+        montant_du: manquants.length * montantMensualite,
       };
     })
     .filter(r => r.nb_mois_dus > 0)

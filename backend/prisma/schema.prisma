@@ -171,9 +171,10 @@ model ConfigNotes {
   note_min         Decimal  @default(0) @db.Decimal(5, 2)
   nb_periodes      Int      @default(3)
   noms_periodes    Json     @default("{\"fr\":[\"1er Trimestre\",\"2ème Trimestre\",\"3ème Trimestre\"],\"ar\":[\"الفصل الأول\",\"الفصل الثاني\",\"الفصل الثالث\"]}")
-  arrondi          Int      @default(2)
-  chiffres_arabes  Boolean  @default(false)
-  updated_at       DateTime @updatedAt
+  arrondi              Int      @default(2)
+  chiffres_arabes      Boolean  @default(false)
+  montant_mensualite   Decimal  @default(7500) @db.Decimal(10, 2)
+  updated_at           DateTime @updatedAt
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
 }

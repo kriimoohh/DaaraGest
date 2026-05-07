@@ -8,7 +8,6 @@ export function useApi() {
     get: <T>(path: string) => api.get<T>(path, token ?? undefined),
     post: <T>(path: string, body: unknown) => api.post<T>(path, body, token ?? undefined),
     put: <T>(path: string, body: unknown) => api.put<T>(path, body, token ?? undefined),
-    del: <T>(path: string) => api.delete<T>(path, token ?? undefined),
     delete: <T>(path: string) => api.delete<T>(path, token ?? undefined),
   };
 }

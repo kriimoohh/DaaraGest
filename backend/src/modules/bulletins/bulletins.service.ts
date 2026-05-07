@@ -57,19 +57,26 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
   const matMap: Record<string, Awaited<ReturnType<typeof getMatieres>>> = {};
   for (const f of filieres) matMap[f] = await getMatieres(etablissement_id, f);
 
+  // Fetch toutes les notes d'un coup (évite N+1)
+  const tousMatIds = filieres.flatMap(f => matMap[f].map(m => m.id));
+  const elevesIds = inscriptions.map(i => i.eleve_id);
+  const toutesLesNotes = await prisma.note.findMany({
+    where: { eleve_id: { in: elevesIds }, annee_scolaire_id, periode, matiere_id: { in: tousMatIds } },
+    include: { matiere: true },
+  });
+  const notesByEleve = new Map<string, typeof toutesLesNotes>();
+  for (const n of toutesLesNotes) {
+    if (!notesByEleve.has(n.eleve_id)) notesByEleve.set(n.eleve_id, []);
+    notesByEleve.get(n.eleve_id)!.push(n);
+  }
+
   const moyennes: { eleve_id: string; moyenne: number }[] = [];
   for (const { eleve_id } of inscriptions) {
     let totalP = 0, totalC = 0;
-    for (const f of filieres) {
-      const notes = await prisma.note.findMany({
-        where: { eleve_id, annee_scolaire_id, periode, matiere_id: { in: matMap[f].map(m => m.id) } },
-        include: { matiere: true },
-      });
-      for (const n of notes) {
-        const c = Number(n.matiere.coeff_defaut);
-        totalP += Number(n.valeur) * c;
-        totalC += c;
-      }
+    for (const n of notesByEleve.get(eleve_id) ?? []) {
+      const c = Number(n.matiere.coeff_defaut);
+      totalP += Number(n.valeur) * c;
+      totalC += c;
     }
     if (totalC === 0) continue;
     moyennes.push({ eleve_id, moyenne: Math.round((totalP / totalC) * 100) / 100 });
@@ -102,21 +109,26 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
   const matMap: Record<string, Awaited<ReturnType<typeof getMatieres>>> = {};
   for (const f of filieres) matMap[f] = await getMatieres(etablissement_id, f);
 
+  // Fetch toutes les notes annuelles d'un coup (évite N+1)
+  const tousMatIdsAnnuel = filieres.flatMap(f => matMap[f].map(m => m.id));
+  const elevesIdsAnnuel = inscriptions.map(i => i.eleve_id);
+  const toutesLesNotesAnnuel = await prisma.note.findMany({
+    where: { eleve_id: { in: elevesIdsAnnuel }, annee_scolaire_id, periode: { in: [1, 2, 3] }, matiere_id: { in: tousMatIdsAnnuel } },
+    include: { matiere: true },
+  });
+  const notesByEleveAnnuel = new Map<string, typeof toutesLesNotesAnnuel>();
+  for (const n of toutesLesNotesAnnuel) {
+    if (!notesByEleveAnnuel.has(n.eleve_id)) notesByEleveAnnuel.set(n.eleve_id, []);
+    notesByEleveAnnuel.get(n.eleve_id)!.push(n);
+  }
+
   const moyennes: { eleve_id: string; moyenne: number }[] = [];
   for (const { eleve_id } of inscriptions) {
     let totalP = 0, totalC = 0;
-    for (const f of filieres) {
-      for (const periode of [1, 2, 3]) {
-        const notes = await prisma.note.findMany({
-          where: { eleve_id, annee_scolaire_id, periode, matiere_id: { in: matMap[f].map(m => m.id) } },
-          include: { matiere: true },
-        });
-        for (const n of notes) {
-          const c = Number(n.matiere.coeff_defaut);
-          totalP += Number(n.valeur) * c;
-          totalC += c;
-        }
-      }
+    for (const n of notesByEleveAnnuel.get(eleve_id) ?? []) {
+      const c = Number(n.matiere.coeff_defaut);
+      totalP += Number(n.valeur) * c;
+      totalC += c;
     }
     if (totalC === 0) continue;
     moyennes.push({ eleve_id, moyenne: Math.round((totalP / totalC) * 100) / 100 });

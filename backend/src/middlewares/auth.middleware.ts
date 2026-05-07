@@ -4,6 +4,6 @@ export async function authMiddleware(request: FastifyRequest, reply: FastifyRepl
   try {
     await request.jwtVerify();
   } catch {
-    reply.status(401).send({ error: 'Non authentifié' });
+    return reply.status(401).send({ error: 'Non authentifié' });
   }
 }

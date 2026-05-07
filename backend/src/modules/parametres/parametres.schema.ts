@@ -16,6 +16,7 @@ export const configNotesSchema = z.object({
   noms_periodes: z.any().optional(),
   arrondi: z.number().int().min(0).optional(),
   chiffres_arabes: z.boolean().optional(),
+  montant_mensualite: z.number().positive().optional(),
 });
 
 export type EtablissementUpdateInput = z.infer<typeof etablissementUpdateSchema>;
