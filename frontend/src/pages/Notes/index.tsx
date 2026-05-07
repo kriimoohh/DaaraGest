@@ -43,7 +43,9 @@ export function NotesPage() {
     if (!classeId) return;
     const filiere = classes.find((c) => c.id === classeId)?.filiere ?? '';
     api.get<Matiere[]>(`/api/v1/matieres?filiere=${filiere}`).then(setMatieres).catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
-    api.get<{ data: Eleve[] }>(`/api/v1/eleves?classe_id=${classeId}&limit=100`).then((r) => setEleves(r.data)).catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
+    api.get<{ data: Eleve[] }>(`/api/v1/eleves?classe_id=${classeId}&limit=100`)
+      .then((r) => setEleves([...(r.data ?? [])].sort((a, b) => `${a.nom_fr} ${a.prenom_fr}`.localeCompare(`${b.nom_fr} ${b.prenom_fr}`, 'fr'))))
+      .catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
   }, [classeId]);
 
   useEffect(() => {
