@@ -2,12 +2,17 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
 import { utilisateurSchema, resetPasswordSchema } from './utilisateurs.schema';
 import {
+  listerRoles,
   listerUtilisateurs,
   creerUtilisateur,
   modifierUtilisateur,
   supprimerUtilisateur,
   resetPassword,
 } from './utilisateurs.service';
+
+export async function rolesHandler(_request: FastifyRequest, reply: FastifyReply) {
+  return reply.send(await listerRoles());
+}
 
 export async function listerHandler(
   request: FastifyRequest, reply: FastifyReply

@@ -48,16 +48,7 @@ export function UtilisateursPage() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    api.get<Role[]>('/api/v1/utilisateurs/roles').catch(() => {
-      // fallback: fetch from backend roles endpoint if available
-    });
-    // On utilise les rôles hard-codés pour le select
-    setRoles([
-      { id: 'role-admin', libelle_fr: 'admin' },
-      { id: 'role-directeur', libelle_fr: 'directeur' },
-      { id: 'role-caissier', libelle_fr: 'caissier' },
-      { id: 'role-professeur', libelle_fr: 'professeur' },
-    ]);
+    api.get<Role[]>('/api/v1/utilisateurs/roles').then(setRoles).catch(() => {});
   }, []);
 
   const charger = async () => {
@@ -181,7 +172,7 @@ export function UtilisateursPage() {
           onChange={(e) => setRoleFilter(e.target.value)}
           options={[
             { value: '', label: t('utilisateur.tous_roles') },
-            ...roles.map((r) => ({ value: r.libelle_fr, label: r.libelle_fr })),
+            ...roles.map((r) => ({ value: r.libelle_fr, label: r.libelle_fr.charAt(0).toUpperCase() + r.libelle_fr.slice(1) })),
           ]}
         />
       </div>
@@ -211,7 +202,7 @@ export function UtilisateursPage() {
                     <div className="font-medium text-sm text-slate-900 dark:text-white">{u.prenom_fr} {u.nom_fr}</div>
                   </td>
                   <td className="px-4 py-3">
-                    <Badge label={u.role.libelle_fr} variant={roleVariant(u.role.libelle_fr)} />
+                    <Badge label={u.role.libelle_fr.charAt(0).toUpperCase() + u.role.libelle_fr.slice(1)} variant={roleVariant(u.role.libelle_fr)} />
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{u.langue.toUpperCase()}</td>
                   <td className="px-4 py-3">
@@ -251,7 +242,7 @@ export function UtilisateursPage() {
                 label={t('utilisateur.role')}
                 value={form.role_id}
                 onChange={(e) => setForm((f) => ({ ...f, role_id: e.target.value }))}
-                options={[{ value: '', label: t('common.selectionner') }, ...roles.map((r) => ({ value: r.id, label: r.libelle_fr }))]}
+                options={[{ value: '', label: t('common.selectionner') }, ...roles.map((r) => ({ value: r.id, label: r.libelle_fr.charAt(0).toUpperCase() + r.libelle_fr.slice(1) }))]}
               />
             )}
             <Select

@@ -2,6 +2,10 @@ import bcrypt from 'bcryptjs';
 import prisma from '../../config/database';
 import { UtilisateurInput, ResetPasswordInput } from './utilisateurs.schema';
 
+export async function listerRoles() {
+  return prisma.role.findMany({ orderBy: { libelle_fr: 'asc' } });
+}
+
 export async function listerUtilisateurs(
   etablissement_id: string,
   page = 1,
