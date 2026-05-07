@@ -1,17 +1,14 @@
 import { FastifyInstance } from 'fastify';
 import { authMiddleware } from '../../middlewares/auth.middleware';
-import {
-  listerHandler,
-  creerHandler,
-  modifierHandler,
-  activerHandler,
-  supprimerHandler,
-} from './annees-scolaires.controller';
+import { requireRole } from '../../middlewares/role.middleware';
+import { listerHandler, creerHandler, modifierHandler, activerHandler, supprimerHandler } from './annees-scolaires.controller';
+
+const gestion = requireRole('admin', 'directeur');
 
 export async function anneeScolaireRoutes(fastify: FastifyInstance) {
-  fastify.get('/', { preHandler: [authMiddleware] }, listerHandler);
-  fastify.post('/', { preHandler: [authMiddleware] }, creerHandler);
-  fastify.put('/:id', { preHandler: [authMiddleware] }, modifierHandler);
-  fastify.put('/:id/activer', { preHandler: [authMiddleware] }, activerHandler);
-  fastify.delete('/:id', { preHandler: [authMiddleware] }, supprimerHandler);
+  fastify.get('/',           { preHandler: [authMiddleware] }, listerHandler);             // tous
+  fastify.post('/',          { preHandler: [authMiddleware, gestion] }, creerHandler);
+  fastify.put('/:id',        { preHandler: [authMiddleware, gestion] }, modifierHandler);
+  fastify.put('/:id/activer',{ preHandler: [authMiddleware, gestion] }, activerHandler);
+  fastify.delete('/:id',     { preHandler: [authMiddleware, gestion] }, supprimerHandler);
 }

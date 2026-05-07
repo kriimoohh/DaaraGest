@@ -1,15 +1,13 @@
 import { FastifyInstance } from 'fastify';
 import { authMiddleware } from '../../middlewares/auth.middleware';
-import {
-  getParametresHandler,
-  updateEtablissementHandler,
-  getConfigNotesHandler,
-  updateConfigNotesHandler,
-} from './parametres.controller';
+import { requireRole } from '../../middlewares/role.middleware';
+import { getParametresHandler, updateEtablissementHandler, getConfigNotesHandler, updateConfigNotesHandler } from './parametres.controller';
+
+const gestion = requireRole('admin', 'directeur');
 
 export async function parametresRoutes(fastify: FastifyInstance) {
-  fastify.get('/', { preHandler: [authMiddleware] }, getParametresHandler);
-  fastify.put('/', { preHandler: [authMiddleware] }, updateEtablissementHandler);
-  fastify.get('/notes', { preHandler: [authMiddleware] }, getConfigNotesHandler);
-  fastify.put('/notes', { preHandler: [authMiddleware] }, updateConfigNotesHandler);
+  fastify.get('/',      { preHandler: [authMiddleware, gestion] }, getParametresHandler);
+  fastify.put('/',      { preHandler: [authMiddleware, gestion] }, updateEtablissementHandler);
+  fastify.get('/notes', { preHandler: [authMiddleware, gestion] }, getConfigNotesHandler);
+  fastify.put('/notes', { preHandler: [authMiddleware, gestion] }, updateConfigNotesHandler);
 }
