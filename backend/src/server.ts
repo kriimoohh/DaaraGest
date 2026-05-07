@@ -26,9 +26,11 @@ const JWT_SECRET: string = jwtSecret as string;
 const fastify = Fastify({ logger: true });
 
 async function build() {
-  const corsOrigin = process.env.CORS_ORIGIN ?? 'http://localhost:5173';
+  // Support plusieurs origines séparées par des virgules
+  const corsRaw = process.env.CORS_ORIGIN ?? 'http://localhost:5173';
+  const corsOrigins = corsRaw.split(',').map(s => s.trim()).filter(Boolean);
   await fastify.register(cors, {
-    origin: corsOrigin,
+    origin: corsOrigins.length === 1 ? corsOrigins[0] : corsOrigins,
     credentials: true,
   });
 
