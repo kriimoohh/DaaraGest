@@ -31,11 +31,12 @@ async function main() {
   console.log('✅ Établissement');
 
   const roles = [
-    { id: 'role-admin',      libelle_fr: 'admin',      libelle_ar: 'مدير النظام' },
-    { id: 'role-directeur',  libelle_fr: 'directeur',  libelle_ar: 'المدير' },
-    { id: 'role-caissier',   libelle_fr: 'caissier',   libelle_ar: 'أمين الصندوق' },
-    { id: 'role-professeur', libelle_fr: 'professeur', libelle_ar: 'الأستاذ' },
-    { id: 'role-pointeur',   libelle_fr: 'pointeur',   libelle_ar: 'مسجّل الحضور' },
+    { id: 'role-admin',        libelle_fr: 'admin',        libelle_ar: 'مدير النظام' },
+    { id: 'role-directeur',    libelle_fr: 'directeur',    libelle_ar: 'المدير' },
+    { id: 'role-gestionnaire', libelle_fr: 'gestionnaire', libelle_ar: 'المسيّر' },
+    { id: 'role-caissier',     libelle_fr: 'caissier',     libelle_ar: 'أمين الصندوق' },
+    { id: 'role-professeur',   libelle_fr: 'professeur',   libelle_ar: 'الأستاذ' },
+    { id: 'role-pointeur',     libelle_fr: 'pointeur',     libelle_ar: 'مسجّل الحضور' },
   ];
   for (const r of roles) {
     await prisma.role.upsert({ where: { libelle_fr: r.libelle_fr }, update: {}, create: r });

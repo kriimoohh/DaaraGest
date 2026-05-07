@@ -3,8 +3,8 @@ import { authMiddleware } from '../../middlewares/auth.middleware';
 import { requireRole } from '../../middlewares/role.middleware';
 import { listerHandler, getHandler, creerHandler, modifierHandler, supprimerHandler } from './professeurs.controller';
 
-const lecture  = requireRole('admin', 'directeur', 'pointeur');
-const gestion  = requireRole('admin', 'directeur');
+const lecture  = requireRole('admin', 'directeur', 'gestionnaire', 'pointeur');
+const gestion  = requireRole('admin', 'directeur', 'gestionnaire');
 
 export async function professeurRoutes(fastify: FastifyInstance) {
   fastify.get('/',       { preHandler: [authMiddleware, lecture] }, listerHandler);

@@ -3,7 +3,7 @@ import { authMiddleware } from '../../middlewares/auth.middleware';
 import { requireRole } from '../../middlewares/role.middleware';
 import { listerHandler, saisieJourHandler, upsertHandler, bulkHandler, statsHandler } from './pointage.controller';
 
-const acces = requireRole('admin', 'directeur', 'pointeur');
+const acces = requireRole('admin', 'directeur', 'gestionnaire', 'pointeur');
 
 export async function pointageRoutes(fastify: FastifyInstance) {
   fastify.get('/',       { preHandler: [authMiddleware, acces] }, listerHandler);

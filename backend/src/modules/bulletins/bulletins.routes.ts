@@ -3,7 +3,7 @@ import { authMiddleware } from '../../middlewares/auth.middleware';
 import { requireRole } from '../../middlewares/role.middleware';
 import { listerHandler, genererHandler, genererAnnuelHandler, getHandler, pdfHandler, pdfClasseHandler } from './bulletins.controller';
 
-const acces = requireRole('admin', 'directeur', 'professeur');
+const acces = requireRole('admin', 'directeur', 'gestionnaire', 'professeur');
 
 export async function bulletinRoutes(fastify: FastifyInstance) {
   fastify.get('/',               { preHandler: [authMiddleware, acces] }, listerHandler);

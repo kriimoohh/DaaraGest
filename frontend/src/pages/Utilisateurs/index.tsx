@@ -150,7 +150,7 @@ export function UtilisateursPage() {
 
   const roleVariant = (r: string) => {
     const map: Record<string, 'success' | 'info' | 'warning' | 'neutral'> = {
-      admin: 'success', directeur: 'info', caissier: 'warning', professeur: 'neutral',
+      admin: 'success', directeur: 'info', gestionnaire: 'info', caissier: 'warning', professeur: 'neutral',
     };
     return map[r] ?? 'neutral';
   };
