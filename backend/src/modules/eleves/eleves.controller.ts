@@ -109,8 +109,8 @@ export async function importHandler(request: FastifyRequest, reply: FastifyReply
   if (!Array.isArray(body?.rows) || body.rows.length === 0) {
     return reply.status(400).send({ error: 'rows[] requis et non vide' });
   }
-  if (body.rows.length > 500) {
-    return reply.status(400).send({ error: 'Maximum 500 élèves par import' });
+  if (body.rows.length > 1000) {
+    return reply.status(400).send({ error: 'Maximum 1000 élèves par import' });
   }
   try {
     return reply.status(201).send(await importerEleves(etablissement_id, body.rows));
