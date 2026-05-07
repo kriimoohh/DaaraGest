@@ -43,13 +43,18 @@ interface PaiementProf {
 
 const MOIS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 const TYPES_PAIEMENT = ['mensualite', 'inscription', 'blouse', 'autre'];
-const FILTRES = [
-  { value: '', label: 'Tous' },
-  { value: 'paye', label: 'Payés' },
-  { value: 'impaye', label: 'Non payés' },
+const FILTER_TYPES = [
+  { value: '', label: 'Tous types' },
   { value: 'mensualite', label: 'Mensualités' },
   { value: 'inscription', label: 'Inscriptions' },
-  { value: 'reliquat', label: 'Reliquats' },
+  { value: 'autre', label: 'Autres' },
+];
+
+const FILTER_STATUTS = [
+  { value: '', label: 'Tous statuts' },
+  { value: 'paye', label: 'Payés', activeClass: 'bg-emerald-500 text-white' },
+  { value: 'impaye', label: 'Non payés', activeClass: 'bg-amber-500 text-white' },
+  { value: 'reliquat', label: 'Manquants', activeClass: 'bg-red-500 text-white', icon: '🔴' },
 ];
 
 // ─── ProfsTab ─────────────────────────────────────────────────────────────────
@@ -204,7 +209,8 @@ export function FinancesPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [filtre, setFiltre] = useState('');
+  const [filterType, setFilterType] = useState('');
+  const [filterStatut, setFilterStatut] = useState('');
   const [mois, setMois] = useState('');
   const [annee, setAnnee] = useState(String(now.getFullYear()));
   const [loading, setLoading] = useState(false);
@@ -217,7 +223,7 @@ export function FinancesPage() {
   });
 
   const formatMontant = (v: number) => new Intl.NumberFormat('fr-FR').format(v) + ' FCFA';
-  const isReliquat = filtre === 'reliquat';
+  const isReliquat = filterStatut === 'reliquat';
 
   useEffect(() => {
     api.get<Stats>('/api/v1/finances/stats').then(setStats).catch(() => {});
@@ -225,37 +231,32 @@ export function FinancesPage() {
   }, []);
 
   const charger = async () => {
-    if (isReliquat) {
-      setLoading(true);
-      try {
-        const data = await api.get<Reliquat[]>('/api/v1/finances/reliquats');
-        setReliquats(data);
-      } catch (err) {
-        toast.error((err as Error).message || 'Erreur');
-      } finally { setLoading(false); }
-      return;
-    }
-
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page: String(page), limit: '20' });
-      if (search) params.set('search', search);
-      if (annee) params.set('annee', annee);
-      if (mois) params.set('mois', mois);
-      // Filtre type/statut
-      if (filtre === 'paye') params.set('statut', 'paye');
-      else if (filtre === 'impaye') params.set('statut', 'impaye');
-      else if (filtre === 'mensualite' || filtre === 'inscription') params.set('type', filtre);
-      const data = await api.get<{ data: PaiementEleve[]; total: number }>(`/api/v1/finances/paiements-eleves?${params}`);
-      setPaiements(data.data ?? []);
-      setTotal(data.total ?? 0);
+      if (isReliquat) {
+        const params = new URLSearchParams();
+        if (mois) params.set('mois', mois);
+        if (annee) params.set('annee', annee);
+        const data = await api.get<Reliquat[]>(`/api/v1/finances/reliquats?${params}`);
+        setReliquats(data);
+      } else {
+        const params = new URLSearchParams({ page: String(page), limit: '20' });
+        if (search) params.set('search', search);
+        if (annee) params.set('annee', annee);
+        if (mois) params.set('mois', mois);
+        if (filterType) params.set('type', filterType);
+        if (filterStatut) params.set('statut', filterStatut);
+        const data = await api.get<{ data: PaiementEleve[]; total: number }>(`/api/v1/finances/paiements-eleves?${params}`);
+        setPaiements(data.data ?? []);
+        setTotal(data.total ?? 0);
+      }
     } catch (err) {
       toast.error((err as Error).message || 'Erreur de chargement');
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { if (tab === 'eleves') charger(); }, [page, search, filtre, mois, annee, tab]);
-  useEffect(() => { setPage(1); }, [search, filtre, mois, annee]);
+  useEffect(() => { if (tab === 'eleves') charger(); }, [page, search, filterType, filterStatut, mois, annee, tab]);
+  useEffect(() => { setPage(1); }, [search, filterType, filterStatut, mois, annee]);
 
   const handleSave = async () => {
     if (!form.eleve_id || !form.montant) { toast.error('Élève et montant requis'); return; }
@@ -321,38 +322,50 @@ export function FinancesPage() {
             <Button onClick={() => setModal(true)}>+ Paiement</Button>
           </div>
 
-          {/* Ligne 2 : Pills statut/type */}
-          <div className="flex flex-wrap gap-2">
-            {FILTRES.map(f => (
-              <button
-                key={f.value}
-                onClick={() => setFiltre(f.value)}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                  filtre === f.value
-                    ? f.value === 'reliquat' ? 'bg-red-500 text-white'
-                      : f.value === 'impaye' ? 'bg-amber-500 text-white'
-                      : f.value === 'paye' ? 'bg-emerald-500 text-white'
-                      : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
-                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                }`}
-              >
-                {f.value === 'reliquat' && '🔴 '}
-                {f.value === 'impaye' && '⚠️ '}
-                {f.value === 'paye' && '✅ '}
-                {f.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Ligne 3 : Période (masquée en vue reliquats) */}
+          {/* Ligne 2 : Type de paiement (désactivé en mode reliquats) */}
           {!isReliquat && (
-            <div className="flex gap-3 items-center">
-              <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">Période :</span>
-              <Select value={mois} onChange={e => setMois(e.target.value)}
-                options={[{ value: '', label: 'Tous les mois' }, ...MOIS.map((m, i) => ({ value: String(i+1), label: m }))]} />
-              <Input label="" type="number" value={annee} onChange={e => setAnnee(e.target.value)} className="w-28" />
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0 w-14">Type :</span>
+              {FILTER_TYPES.map(f => (
+                <button key={f.value} onClick={() => setFilterType(f.value)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    filterType === f.value
+                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                  }`}>
+                  {f.label}
+                </button>
+              ))}
             </div>
           )}
+
+          {/* Ligne 3 : Statut */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0 w-14">Statut :</span>
+            {FILTER_STATUTS.map(f => (
+              <button key={f.value} onClick={() => setFilterStatut(f.value)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  filterStatut === f.value
+                    ? f.activeClass ?? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                }`}>
+                {f.icon && `${f.icon} `}{f.label}
+              </button>
+            ))}
+            {isReliquat && (
+              <span className="text-xs text-slate-400 dark:text-slate-500 italic ms-2">
+                — Élèves sans paiement enregistré pour la période
+              </span>
+            )}
+          </div>
+
+          {/* Ligne 4 : Période */}
+          <div className="flex gap-3 items-center">
+            <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0 w-14">Période :</span>
+            <Select value={mois} onChange={e => setMois(e.target.value)}
+              options={[{ value: '', label: isReliquat ? 'Toute l\'année' : 'Tous les mois' }, ...MOIS.map((m, i) => ({ value: String(i+1), label: m }))]} />
+            <Input label="" type="number" value={annee} onChange={e => setAnnee(e.target.value)} className="w-28" />
+          </div>
 
           {/* Reliquats view */}
           {isReliquat ? (
@@ -368,9 +381,12 @@ export function FinancesPage() {
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 flex items-center gap-3">
                   <span className="text-2xl">🔴</span>
                   <div>
-                    <p className="font-semibold text-red-700 dark:text-red-400">{reliquats.length} élève(s) avec reliquats</p>
+                    <p className="font-semibold text-red-700 dark:text-red-400">
+                      {reliquats.length} élève(s) sans paiement
+                      {mois ? ` pour ${MOIS[parseInt(mois)-1]} ${annee}` : ' (toute l\'année scolaire)'}
+                    </p>
                     <p className="text-sm text-red-600 dark:text-red-500">
-                      Total dû : {formatMontant(reliquats.reduce((s, r) => s + r.montant_du, 0))}
+                      Montant total dû : {formatMontant(reliquats.reduce((s, r) => s + r.montant_du, 0))}
                     </p>
                   </div>
                 </div>

@@ -62,6 +62,11 @@ export async function statsHandler(request: FastifyRequest, reply: FastifyReply)
 
 export async function reliquatsHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
-  const { annee_scolaire_id } = request.query as Record<string, string | undefined>;
-  return reply.send(await getReliquats(etablissement_id, annee_scolaire_id));
+  const { annee_scolaire_id, mois, annee } = request.query as Record<string, string | undefined>;
+  return reply.send(await getReliquats(
+    etablissement_id,
+    annee_scolaire_id,
+    mois ? parseInt(mois) : undefined,
+    annee ? parseInt(annee) : undefined,
+  ));
 }

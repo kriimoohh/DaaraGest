@@ -167,15 +167,30 @@ export async function getStatsFinances(etablissement_id: string) {
   };
 }
 
-export async function getReliquats(etablissement_id: string, annee_scolaire_id?: string) {
+export async function getReliquats(
+  etablissement_id: string,
+  annee_scolaire_id?: string,
+  filtreMois?: number,
+  filtreAnnee?: number,
+) {
   const now = new Date();
-  const annee = now.getFullYear();
+  const anneeActuelle = now.getFullYear();
   const moisActuel = now.getMonth() + 1;
-  // Mois scolaires de septembre (9) à mois actuel
-  const moisScolaires: number[] = [];
-  for (let m = 9; m <= 12; m++) moisScolaires.push(m);
-  for (let m = 1; m <= moisActuel; m++) moisScolaires.push(m);
-  const moisScolaireAnnee = moisScolaires.map(m => ({ mois: m, annee: m >= 9 ? annee - 1 : annee }));
+
+  let moisScolaireAnnee: { mois: number; annee: number }[];
+
+  if (filtreMois && filtreAnnee) {
+    // Vue d'un seul mois précis
+    moisScolaireAnnee = [{ mois: filtreMois, annee: filtreAnnee }];
+  } else {
+    // Tous les mois scolaires de septembre à aujourd'hui
+    const moisScolaires: number[] = [];
+    for (let m = 9; m <= 12; m++) moisScolaires.push(m);
+    for (let m = 1; m <= moisActuel; m++) moisScolaires.push(m);
+    moisScolaireAnnee = moisScolaires.map(m => ({ mois: m, annee: m >= 9 ? anneeActuelle - 1 : anneeActuelle }));
+  }
+
+  const anneesUtilisees = [...new Set(moisScolaireAnnee.map(m => m.annee))];
 
   const inscriptions = await prisma.inscription.findMany({
     where: {
@@ -186,7 +201,7 @@ export async function getReliquats(etablissement_id: string, annee_scolaire_id?:
     include: {
       eleve: {
         select: { id: true, nom_fr: true, prenom_fr: true, matricule: true },
-        include: { paiements: { where: { type: 'mensualite', annee: { in: [annee-1, annee] } } } },
+        include: { paiements: { where: { type: 'mensualite', annee: { in: anneesUtilisees } } } },
       },
     },
   });
@@ -194,7 +209,7 @@ export async function getReliquats(etablissement_id: string, annee_scolaire_id?:
   return inscriptions
     .map(insc => {
       const payes = insc.eleve.paiements.map(p => `${p.mois}-${p.annee}`);
-      const manquants = moisScolaireAnnee.filter(({ mois, annee: a }) => !payes.includes(`${mois}-${a}`));
+      const manquants = moisScolaireAnnee.filter(({ mois, annee }) => !payes.includes(`${mois}-${annee}`));
       return {
         eleve: { id: insc.eleve.id, nom_fr: insc.eleve.nom_fr, prenom_fr: insc.eleve.prenom_fr, matricule: insc.eleve.matricule },
         nb_mois_dus: manquants.length,
