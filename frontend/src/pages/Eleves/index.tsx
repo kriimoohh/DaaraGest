@@ -78,9 +78,9 @@ const LIMIT = 20;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function validate(form: EleveFormData): FormErrors {
+function validate(form: EleveFormData, isEdit: boolean): FormErrors {
   const errors: FormErrors = {};
-  if (!form.matricule.trim()) errors.matricule = 'Le matricule est requis';
+  if (isEdit && !form.matricule.trim()) errors.matricule = 'Le matricule est requis';
   if (!form.nom_fr.trim()) errors.nom_fr = 'Le nom (FR) est requis';
   if (!form.prenom_fr.trim()) errors.prenom_fr = 'Le prénom (FR) est requis';
   if (!form.sexe) errors.sexe = 'Le sexe est requis';
@@ -229,7 +229,7 @@ export function ElevesPage() {
   }
 
   async function handleSubmit() {
-    const errors = validate(form);
+    const errors = validate(form, !!editTarget);
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
@@ -237,7 +237,7 @@ export function ElevesPage() {
     setSubmitting(true);
     try {
       const payload = {
-        matricule: form.matricule,
+        ...(form.matricule ? { matricule: form.matricule } : {}),
         nom_fr: form.nom_fr,
         prenom_fr: form.prenom_fr,
         nom_ar: form.nom_ar,
@@ -349,23 +349,27 @@ export function ElevesPage() {
         size="lg"
       >
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          {editTarget && (
             <Input
               label={t('eleve.matricule')}
               value={form.matricule}
               onChange={(e) => setField('matricule', e.target.value)}
               error={formErrors.matricule}
-              placeholder="ELV-001"
             />
-            <Select
-              label={t('eleve.sexe')}
-              value={form.sexe}
-              onChange={(e) => setField('sexe', e.target.value)}
-              error={formErrors.sexe}
-              options={SEXE_OPTIONS}
-              placeholder="Choisir..."
-            />
-          </div>
+          )}
+          {!editTarget && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 italic bg-slate-50 dark:bg-slate-700/50 px-3 py-2 rounded-lg">
+              Le matricule sera généré automatiquement (format DG-YYYY-NNN).
+            </p>
+          )}
+          <Select
+            label={t('eleve.sexe')}
+            value={form.sexe}
+            onChange={(e) => setField('sexe', e.target.value)}
+            error={formErrors.sexe}
+            options={SEXE_OPTIONS}
+            placeholder="Choisir..."
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <Input

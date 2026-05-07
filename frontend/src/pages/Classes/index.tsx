@@ -27,7 +27,7 @@ interface Classe {
   niveau: string;
   capacite: number;
   annee_scolaire_id: string;
-  annee_scolaire?: string;
+  annee_scolaire?: { id: string; libelle: string } | string;
 }
 
 interface ClasseFormData {
@@ -215,7 +215,17 @@ export function ClassesPage() {
     },
     { key: 'niveau', header: 'Niveau' },
     { key: 'capacite', header: 'Capacité', width: '100px' },
-    { key: 'annee_scolaire', header: 'Année scolaire' },
+    {
+      key: 'annee_scolaire',
+      header: t('classe.annee_scolaire'),
+      render: (row) => {
+        const c = row as unknown as Classe;
+        const obj = c.annee_scolaire;
+        if (obj && typeof obj === 'object') return obj.libelle;
+        const found = annees.find(a => a.id === c.annee_scolaire_id);
+        return found?.libelle ?? (typeof obj === 'string' ? obj : '—');
+      },
+    },
     {
       key: 'actions',
       header: 'Actions',
