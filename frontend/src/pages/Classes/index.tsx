@@ -22,7 +22,6 @@ interface AnneeScolaire {
 interface Classe {
   id: string;
   nom_fr: string;
-  nom_ar: string;
   filiere: 'FR' | 'AR';
   niveau: string;
   capacite: number;
@@ -32,7 +31,6 @@ interface Classe {
 
 interface ClasseFormData {
   nom_fr: string;
-  nom_ar: string;
   filiere: string;
   niveau: string;
   capacite: string;
@@ -45,7 +43,6 @@ type FormErrors = Partial<Record<keyof ClasseFormData, string>>;
 
 const EMPTY_FORM: ClasseFormData = {
   nom_fr: '',
-  nom_ar: '',
   filiere: '',
   niveau: '',
   capacite: '',
@@ -129,7 +126,6 @@ export function ClassesPage() {
     setEditTarget(classe);
     setForm({
       nom_fr: classe.nom_fr,
-      nom_ar: classe.nom_ar,
       filiere: classe.filiere,
       niveau: classe.niveau,
       capacite: String(classe.capacite ?? ''),
@@ -154,7 +150,6 @@ export function ClassesPage() {
     try {
       const payload = {
         nom_fr: form.nom_fr,
-        nom_ar: form.nom_ar,
         filiere: form.filiere,
         niveau: form.niveau,
         capacite: form.capacite ? Number(form.capacite) : undefined,
@@ -199,7 +194,6 @@ export function ClassesPage() {
 
   const columns: Column<Record<string, unknown>>[] = [
     { key: 'nom_fr', header: 'Nom FR' },
-    { key: 'nom_ar', header: 'Nom AR' },
     {
       key: 'filiere',
       header: 'Filière',
@@ -299,14 +293,12 @@ export function ClassesPage() {
         size="md"
       >
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label={t('common.nom_fr')}
-              value={form.nom_fr}
-              onChange={(e) => setField('nom_fr', e.target.value)}
-              error={formErrors.nom_fr}
-            />
-          </div>
+          <Input
+            label={t('common.nom_fr')}
+            value={form.nom_fr}
+            onChange={(e) => setField('nom_fr', e.target.value)}
+            error={formErrors.nom_fr}
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <Select

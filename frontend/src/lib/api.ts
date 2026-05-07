@@ -16,6 +16,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 
   const response = await fetch(`${API_BASE}${path}`, { ...rest, headers });
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   const data = await response.json();
 
   if (!response.ok) {

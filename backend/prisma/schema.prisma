@@ -201,7 +201,6 @@ model Classe {
   etablissement_id String
   annee_scolaire_id String
   nom_fr           String
-  nom_ar           String
   filiere          String
   niveau           String
   capacite         Int     @default(30)

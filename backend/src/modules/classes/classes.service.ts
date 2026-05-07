@@ -27,7 +27,6 @@ export async function creerClasse(etablissement_id: string, data: ClasseInput) {
     data: {
       etablissement_id,
       nom_fr: data.nom_fr,
-      nom_ar: data.nom_ar,
       filiere: data.filiere,
       niveau: data.niveau,
       annee_scolaire_id: data.annee_scolaire_id,
@@ -44,7 +43,6 @@ export async function modifierClasse(id: string, etablissement_id: string, data:
     where: { id },
     data: {
       nom_fr: data.nom_fr,
-      nom_ar: data.nom_ar,
       filiere: data.filiere,
       niveau: data.niveau,
       annee_scolaire_id: data.annee_scolaire_id,
