@@ -12,6 +12,7 @@ import { bulletinRoutes } from './modules/bulletins/bulletins.routes';
 import { financesRoutes } from './modules/finances/finances.routes';
 import { parametresRoutes } from './modules/parametres/parametres.routes';
 import { utilisateurRoutes } from './modules/utilisateurs/utilisateurs.routes';
+import { pointageRoutes } from './modules/pointage/pointage.routes';
 
 const fastify = Fastify({ logger: true });
 
@@ -40,6 +41,7 @@ async function build() {
       await api.register(financesRoutes, { prefix: '/finances' });
       await api.register(parametresRoutes, { prefix: '/parametres' });
       await api.register(utilisateurRoutes, { prefix: '/utilisateurs' });
+      await api.register(pointageRoutes, { prefix: '/pointage' });
     },
     { prefix: '/api/v1' }
   );

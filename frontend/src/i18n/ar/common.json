@@ -22,7 +22,8 @@
     "annees_scolaires": "السنوات الدراسية",
     "matieres": "المواد",
     "utilisateurs": "المستخدمون",
-    "parametres": "الإعدادات"
+    "parametres": "الإعدادات",
+    "pointage": "الحضور"
   },
   "theme": {
     "light": "الوضع الفاتح",
@@ -182,6 +183,13 @@
     "reset_mdp": "إعادة تعيين كلمة المرور",
     "ajouter": "إضافة مستخدم",
     "desactiver": "تعطيل المستخدم"
+  },
+  "pointage": {
+    "titre": "حضور الأساتذة",
+    "present": "حاضر",
+    "absent": "غائب",
+    "retard": "متأخر",
+    "conge": "إجازة"
   },
   "common": {
     "actif": "نشط",

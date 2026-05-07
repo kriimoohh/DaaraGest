@@ -76,6 +76,7 @@ model Professeur {
   cartes_nfc       ProfesseurCarte[]
   pointages        Pointage[]
   heures_travail   HeureTravail[]
+  presences        PresenceProfesseur[]
   paiements        PaiementProfesseur[]
   matieres_classes ProfMatiereClasse[]
 }
@@ -111,6 +112,21 @@ model HeureTravail {
   created_at    DateTime  @default(now())
 
   professeur Professeur @relation(fields: [professeur_id], references: [id])
+}
+
+model PresenceProfesseur {
+  id             String   @id @default(uuid())
+  professeur_id  String
+  date           DateTime @db.Date
+  statut         String   // 'present' | 'absent' | 'retard' | 'conge'
+  heures_prevues Decimal? @db.Decimal(4, 2)
+  heures_reelles Decimal? @db.Decimal(4, 2)
+  motif          String?
+  created_at     DateTime @default(now())
+
+  professeur Professeur @relation(fields: [professeur_id], references: [id])
+
+  @@unique([professeur_id, date])
 }
 
 model PaiementProfesseur {

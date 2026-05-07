@@ -22,7 +22,8 @@
     "annees_scolaires": "Années scolaires",
     "matieres": "Matières",
     "utilisateurs": "Utilisateurs",
-    "parametres": "Paramètres"
+    "parametres": "Paramètres",
+    "pointage": "Pointage"
   },
   "theme": {
     "light": "Mode clair",
@@ -182,6 +183,13 @@
     "reset_mdp": "Réinitialiser le mot de passe",
     "ajouter": "Ajouter un utilisateur",
     "desactiver": "Désactiver l'utilisateur"
+  },
+  "pointage": {
+    "titre": "Pointage des professeurs",
+    "present": "Présent",
+    "absent": "Absent",
+    "retard": "Retard",
+    "conge": "Congé"
   },
   "common": {
     "actif": "Actif",
