@@ -65,8 +65,15 @@ export async function getEleve(id: string, etablissement_id: string) {
   return eleve;
 }
 
+async function genererMatricule(etablissement_id: string): Promise<string> {
+  const annee = new Date().getFullYear();
+  const count = await prisma.eleve.count({ where: { etablissement_id, matricule: { startsWith: `DG-${annee}-` } } });
+  return `DG-${annee}-${String(count + 1).padStart(3, '0')}`;
+}
+
 export async function creerEleve(etablissement_id: string, data: EleveInput) {
-  const { parents, ...eleveData } = data;
+  const matricule = data.matricule || await genererMatricule(etablissement_id);
+  const { parents, ...eleveData } = { ...data, matricule };
 
   return prisma.eleve.create({
     data: {

@@ -1,11 +1,11 @@
 import { z } from 'zod';
 
 export const noteItemSchema = z.object({
-  eleve_id: z.string().uuid(),
-  matiere_id: z.string().uuid(),
+  eleve_id: z.string().min(1),
+  matiere_id: z.string().min(1),
   periode: z.number().int().min(1),
-  annee_scolaire_id: z.string().uuid(),
-  valeur: z.number().min(0).max(20),
+  annee_scolaire_id: z.string().min(1),
+  valeur: z.number().min(0).max(200),
   commentaire: z.string().optional(),
 });
 

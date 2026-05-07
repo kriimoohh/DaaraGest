@@ -1,36 +1,40 @@
 import prisma from '../../config/database';
 import { PaiementEleveInput, PaiementProfesseurInput } from './finances.schema';
 
+function genererRecu(): string {
+  const now = new Date();
+  const ymd = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  const rand = String(Math.floor(Math.random() * 90000) + 10000);
+  return `REC-${ymd}-${rand}`;
+}
+
 export async function listerPaiementsEleves(
   etablissement_id: string,
   page = 1,
   search?: string,
   type?: string,
   mois?: number,
-  annee?: number
+  annee?: number,
+  statut?: string,
 ) {
   const limit = 20;
   const skip = (page - 1) * limit;
 
-  const where: Record<string, unknown> = {
-    eleve: { etablissement_id },
-  };
+  const eleveWhere: Record<string, unknown> = { etablissement_id };
+  if (search) {
+    eleveWhere.OR = [
+      { nom_fr: { contains: search, mode: 'insensitive' } },
+      { prenom_fr: { contains: search, mode: 'insensitive' } },
+      { matricule: { contains: search, mode: 'insensitive' } },
+    ];
+  }
 
+  const where: Record<string, unknown> = { eleve: eleveWhere };
   if (type) where.type = type;
   if (mois) where.mois = mois;
   if (annee) where.annee = annee;
-
-  if (search) {
-    where.eleve = {
-      etablissement_id,
-      OR: [
-        { nom_fr: { contains: search, mode: 'insensitive' } },
-        { nom_ar: { contains: search, mode: 'insensitive' } },
-        { prenom_fr: { contains: search, mode: 'insensitive' } },
-        { matricule: { contains: search, mode: 'insensitive' } },
-      ],
-    };
-  }
+  if (statut === 'paye') where.statut = 'paye';
+  if (statut === 'impaye') where.statut = { not: 'paye' };
 
   const [total, items] = await Promise.all([
     prisma.paiementEleve.count({ where }),
@@ -60,7 +64,7 @@ export async function creerPaiementEleve(etablissement_id: string, data: Paiemen
       montant: data.montant,
       mois: data.mois,
       annee: data.annee,
-      recu_numero: data.recu_numero,
+      recu_numero: data.recu_numero || genererRecu(),
     },
     include: { eleve: true },
   });
@@ -161,4 +165,43 @@ export async function getStatsFinances(etablissement_id: string) {
     nb_paiements_eleves: nbPaiements,
     total_paye_professeurs: totalProfesseurs._sum.net_a_payer ?? 0,
   };
+}
+
+export async function getReliquats(etablissement_id: string, annee_scolaire_id?: string) {
+  const now = new Date();
+  const annee = now.getFullYear();
+  const moisActuel = now.getMonth() + 1;
+  // Mois scolaires de septembre (9) à mois actuel
+  const moisScolaires: number[] = [];
+  for (let m = 9; m <= 12; m++) moisScolaires.push(m);
+  for (let m = 1; m <= moisActuel; m++) moisScolaires.push(m);
+  const moisScolaireAnnee = moisScolaires.map(m => ({ mois: m, annee: m >= 9 ? annee - 1 : annee }));
+
+  const inscriptions = await prisma.inscription.findMany({
+    where: {
+      statut: 'actif',
+      ...(annee_scolaire_id ? { annee_scolaire_id } : {}),
+      eleve: { etablissement_id },
+    },
+    include: {
+      eleve: {
+        select: { id: true, nom_fr: true, prenom_fr: true, matricule: true },
+        include: { paiements: { where: { type: 'mensualite', annee: { in: [annee-1, annee] } } } },
+      },
+    },
+  });
+
+  return inscriptions
+    .map(insc => {
+      const payes = insc.eleve.paiements.map(p => `${p.mois}-${p.annee}`);
+      const manquants = moisScolaireAnnee.filter(({ mois, annee: a }) => !payes.includes(`${mois}-${a}`));
+      return {
+        eleve: { id: insc.eleve.id, nom_fr: insc.eleve.nom_fr, prenom_fr: insc.eleve.prenom_fr, matricule: insc.eleve.matricule },
+        nb_mois_dus: manquants.length,
+        mois_manquants: manquants,
+        montant_du: manquants.length * 7500,
+      };
+    })
+    .filter(r => r.nb_mois_dus > 0)
+    .sort((a, b) => b.nb_mois_dus - a.nb_mois_dus);
 }

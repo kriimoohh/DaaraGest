@@ -10,7 +10,7 @@ export const parentSchema = z.object({
 });
 
 export const eleveSchema = z.object({
-  matricule: z.string().min(1),
+  matricule: z.string().optional(),
   nom_fr: z.string().min(1),
   nom_ar: z.string().default(''),
   prenom_fr: z.string().min(1),
@@ -22,9 +22,9 @@ export const eleveSchema = z.object({
 });
 
 export const inscriptionSchema = z.object({
-  annee_scolaire_id: z.string().uuid(),
-  classe_fr_id: z.string().uuid().optional(),
-  classe_ar_id: z.string().uuid().optional(),
+  annee_scolaire_id: z.string().min(1),
+  classe_fr_id: z.string().min(1).optional(),
+  classe_ar_id: z.string().min(1).optional(),
 });
 
 export type EleveInput = z.infer<typeof eleveSchema>;

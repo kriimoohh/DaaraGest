@@ -11,27 +11,50 @@ import { Pagination } from '../../components/ui/Pagination';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
 
+// ─── Types ───────────────────────────────────────────────────────────────────
+
 interface Stats { total_encaisse_eleves: number; nb_paiements_eleves: number; total_paye_professeurs: number; }
+
 interface PaiementEleve {
   id: string; type: string; montant: number; mois?: number; annee?: number;
   recu_numero?: string; created_at: string; statut: string;
   eleve: { nom_fr: string; prenom_fr: string; matricule: string; };
 }
-interface Eleve { id: string; nom_fr: string; prenom_fr: string; matricule: string; }
 
-const TYPES = ['mensualite', 'inscription', 'blouse', 'autre'];
-const MOIS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+interface Reliquat {
+  eleve: { id: string; nom_fr: string; prenom_fr: string; matricule: string; };
+  nb_mois_dus: number;
+  mois_manquants: { mois: number; annee: number }[];
+  montant_du: number;
+}
 
+interface ProfesseurSimple {
+  id: string; nom_fr: string; prenom_fr: string;
+  professeur: { id: string; salaire_base: string | null } | null;
+}
 
-interface ProfesseurSimple { id: string; nom_fr: string; prenom_fr: string; professeur: { id: string; salaire_base: string | null } | null; }
 interface PaiementProf {
   id: string; mois: number; annee: number; montant_brut: number;
-  net_a_payer: number; statut: string; created_at: string;
+  retenues: number; net_a_payer: number; statut: string; created_at: string;
   professeur: { utilisateur: { nom_fr: string; prenom_fr: string; }; };
 }
-interface ProfTabProps { api: ReturnType<typeof useApi>; formatMontant: (v: number) => string; }
 
-function ProfsTab({ api, formatMontant }: ProfTabProps) {
+// ─── Constantes ──────────────────────────────────────────────────────────────
+
+const MOIS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+const TYPES_PAIEMENT = ['mensualite', 'inscription', 'blouse', 'autre'];
+const FILTRES = [
+  { value: '', label: 'Tous les paiements' },
+  { value: 'paye', label: '✅ Payés' },
+  { value: 'impaye', label: '⚠️ Non payés' },
+  { value: 'mensualite', label: '📅 Mensualités' },
+  { value: 'inscription', label: '📝 Inscriptions' },
+  { value: 'reliquat', label: '🔴 Reliquats' },
+];
+
+// ─── ProfsTab ─────────────────────────────────────────────────────────────────
+
+function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; formatMontant: (v: number) => string }) {
   const { t } = useTranslation();
   const now = new Date();
   const [paiements, setPaiements] = useState<PaiementProf[]>([]);
@@ -57,9 +80,7 @@ function ProfsTab({ api, formatMontant }: ProfTabProps) {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), mois: moisF, annee: anneeF });
-      const res = await api.get<{ data: PaiementProf[]; total: number }>(
-        `/api/v1/finances/paiements-professeurs?${params}`
-      );
+      const res = await api.get<{ data: PaiementProf[]; total: number }>(`/api/v1/finances/paiements-professeurs?${params}`);
       setPaiements(res.data ?? []);
       setTotal(res.total ?? 0);
     } catch { /**/ } finally { setLoading(false); }
@@ -86,46 +107,50 @@ function ProfsTab({ api, formatMontant }: ProfTabProps) {
     } finally { setSaving(false); }
   };
 
-  const MOIS2 = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3 items-end">
         <Select value={moisF} onChange={(e) => setMoisF(e.target.value)}
-          options={MOIS2.map((m, i) => ({ value: String(i + 1), label: m }))} />
-        <Input type="number" value={anneeF} onChange={(e) => setAnneeF(e.target.value)} label="" style={{ width: 100 }} />
+          options={MOIS.map((m, i) => ({ value: String(i + 1), label: m }))} />
+        <Input label="" type="number" value={anneeF} onChange={(e) => setAnneeF(e.target.value)}
+          className="w-24" />
+        <Button onClick={() => charger()} variant="secondary" loading={loading}>Charger</Button>
         <Button onClick={() => setModal(true)}>+ Ajouter paiement</Button>
       </div>
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-slate-500">Chargement...</div>
-        ) : paiements.length === 0 ? (
-          <div className="p-8 text-center text-slate-500">Aucun paiement pour cette période</div>
-        ) : (
-          <table className="w-full">
-            <thead className="bg-slate-50 dark:bg-slate-700/50">
+
+      {paiements.length === 0 ? (
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-8 text-center text-slate-500">
+          Aucun paiement pour {MOIS[parseInt(moisF)-1]} {anneeF}
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
               <tr>
-                {['Professeur', 'Mois', 'Brut', 'Net à payer', 'Statut'].map((h) => (
-                  <th key={h} className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">{h}</th>
+                {['Professeur', 'Période', 'Brut', 'Retenues', 'Net à payer', 'Statut'].map(h => (
+                  <th key={h} className="px-4 py-3 text-start text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {paiements.map((p) => (
-                <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                  <td className="px-4 py-3 font-medium text-sm text-slate-900 dark:text-white">
+            <tbody>
+              {paiements.map(p => (
+                <tr key={p.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
                     {p.professeur.utilisateur.prenom_fr} {p.professeur.utilisateur.nom_fr}
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{MOIS2[p.mois - 1]} {p.annee}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{formatMontant(Number(p.montant_brut))}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-white">{formatMontant(Number(p.net_a_payer))}</td>
-                  <td className="px-4 py-3"><Badge label={p.statut} variant={p.statut === 'paye' ? 'success' : 'warning'} /></td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{MOIS[p.mois-1]} {p.annee}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{formatMontant(Number(p.montant_brut))}</td>
+                  <td className="px-4 py-3 text-red-500 dark:text-red-400 text-xs">-{formatMontant(Number(p.retenues))}</td>
+                  <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white">{formatMontant(Number(p.net_a_payer))}</td>
+                  <td className="px-4 py-3">
+                    <Badge label={p.statut} variant={p.statut === 'paye' ? 'success' : 'warning'} />
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      )}
       <Pagination page={page} total={total} limit={20} onChange={setPage} />
 
       <Modal isOpen={modal} onClose={() => setModal(false)} title="Nouveau paiement professeur" size="md">
@@ -140,17 +165,17 @@ function ProfsTab({ api, formatMontant }: ProfTabProps) {
               const net = brut && retenues ? String(parseFloat(brut) - parseFloat(retenues)) : brut;
               setForm(f => ({ ...f, professeur_id: profId, montant_brut: brut, retenues, net_a_payer: net }));
             }}
-            options={[{ value: '', label: t('common.selectionner') }, ...profs.filter(p => p.professeur).map(p => ({ value: p.professeur!.id, label: `${p.prenom_fr} ${p.nom_fr}` }))]}  />
+            options={[{ value: '', label: t('common.selectionner') }, ...profs.filter(p => p.professeur).map(p => ({ value: p.professeur!.id, label: `${p.prenom_fr} ${p.nom_fr}` }))]} />
           <div className="grid grid-cols-2 gap-4">
             <Select label={t('common.mois')} value={form.mois} onChange={(e) => setForm(f => ({ ...f, mois: e.target.value }))}
-              options={MOIS2.map((m, i) => ({ value: String(i + 1), label: m }))} />
+              options={MOIS.map((m, i) => ({ value: String(i + 1), label: m }))} />
             <Input label={t('common.annee')} type="number" value={form.annee} onChange={(e) => setForm(f => ({ ...f, annee: e.target.value }))} />
           </div>
           <div className="grid grid-cols-3 gap-4">
             <Input label={t('finance.montant_brut')} type="number" value={form.montant_brut}
-              onChange={(e) => { const v = e.target.value; setForm(f => ({ ...f, montant_brut: v, net_a_payer: v })); }} />
+              onChange={(e) => { const v = e.target.value; const net = v && form.retenues ? String(parseFloat(v) - (parseFloat(form.retenues)||0)) : v; setForm(f => ({ ...f, montant_brut: v, net_a_payer: net })); }} />
             <Input label={t('finance.retenues')} type="number" value={form.retenues}
-              onChange={(e) => { const r = e.target.value; const net = form.montant_brut && r ? String(parseFloat(form.montant_brut) - (parseFloat(r) || 0)) : form.montant_brut; setForm(f => ({ ...f, retenues: r, net_a_payer: net })); }} />
+              onChange={(e) => { const r = e.target.value; const net = form.montant_brut && r ? String(parseFloat(form.montant_brut) - (parseFloat(r)||0)) : form.montant_brut; setForm(f => ({ ...f, retenues: r, net_a_payer: net })); }} />
             <Input label={t('finance.net_a_payer')} type="number" value={form.net_a_payer}
               onChange={(e) => setForm(f => ({ ...f, net_a_payer: e.target.value }))} />
           </div>
@@ -164,6 +189,8 @@ function ProfsTab({ api, formatMontant }: ProfTabProps) {
   );
 }
 
+// ─── FinancesPage ─────────────────────────────────────────────────────────────
+
 export function FinancesPage() {
   const { t } = useTranslation();
   const api = useApi();
@@ -172,47 +199,66 @@ export function FinancesPage() {
   const [tab, setTab] = useState<'eleves' | 'profs'>('eleves');
   const [stats, setStats] = useState<Stats | null>(null);
   const [paiements, setPaiements] = useState<PaiementEleve[]>([]);
-  const [eleves, setEleves] = useState<Eleve[]>([]);
+  const [reliquats, setReliquats] = useState<Reliquat[]>([]);
+  const [eleves, setEleves] = useState<{ id: string; nom_fr: string; prenom_fr: string; matricule: string }[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [filtre, setFiltre] = useState('');
+  const [mois, setMois] = useState('');
+  const [annee, setAnnee] = useState(String(now.getFullYear()));
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
     eleve_id: '', type: 'mensualite', montant: '',
-    mois: String(now.getMonth() + 1), annee: String(now.getFullYear()), recu_numero: '',
+    mois: String(now.getMonth() + 1), annee: String(now.getFullYear()),
   });
 
+  const formatMontant = (v: number) => new Intl.NumberFormat('fr-FR').format(v) + ' FCFA';
+  const isReliquat = filtre === 'reliquat';
+
   useEffect(() => {
-    api.get<Stats>('/api/v1/finances/stats').then(setStats).catch(() => null);
-    api.get<{ data: Eleve[] }>('/api/v1/eleves?limit=200').then((r) => setEleves(r.data ?? [])).catch(() => null);
+    api.get<Stats>('/api/v1/finances/stats').then(setStats).catch(() => {});
+    api.get<{ data: typeof eleves }>('/api/v1/eleves?limit=300').then(r => setEleves(r.data ?? [])).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    charger();
-  }, [page, search]);
-
   const charger = async () => {
+    if (isReliquat) {
+      setLoading(true);
+      try {
+        const data = await api.get<Reliquat[]>('/api/v1/finances/reliquats');
+        setReliquats(data);
+      } catch (err) {
+        toast.error((err as Error).message || 'Erreur');
+      } finally { setLoading(false); }
+      return;
+    }
+
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), limit: '20' });
       if (search) params.set('search', search);
-      const data = await api.get<{ data: PaiementEleve[]; total: number }>(
-        `/api/v1/finances/paiements-eleves?${params}`
-      );
+      if (annee) params.set('annee', annee);
+      if (mois) params.set('mois', mois);
+      // Filtre type/statut
+      if (filtre === 'paye') params.set('statut', 'paye');
+      else if (filtre === 'impaye') params.set('statut', 'impaye');
+      else if (filtre === 'mensualite' || filtre === 'inscription') params.set('type', filtre);
+      const data = await api.get<{ data: PaiementEleve[]; total: number }>(`/api/v1/finances/paiements-eleves?${params}`);
       setPaiements(data.data ?? []);
       setTotal(data.total ?? 0);
     } catch (err) {
       toast.error((err as Error).message || 'Erreur de chargement');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
+  useEffect(() => { if (tab === 'eleves') charger(); }, [page, search, filtre, mois, annee, tab]);
+  useEffect(() => { setPage(1); }, [search, filtre, mois, annee]);
+
   const handleSave = async () => {
-    if (!form.eleve_id || !form.montant) return;
+    if (!form.eleve_id || !form.montant) { toast.error('Élève et montant requis'); return; }
     setSaving(true);
     try {
       await api.post('/api/v1/finances/paiements-eleves', {
@@ -221,58 +267,45 @@ export function FinancesPage() {
         montant: parseFloat(form.montant),
         mois: parseInt(form.mois),
         annee: parseInt(form.annee),
-        recu_numero: form.recu_numero || undefined,
       });
+      toast.success('Paiement enregistré');
       setModal(false);
-      setForm({ eleve_id: '', type: 'mensualite', montant: '', mois: String(now.getMonth() + 1), annee: String(now.getFullYear()), recu_numero: '' });
-      await charger();
-      api.get<Stats>('/api/v1/finances/stats').then(setStats).catch(() => null);
+      setForm({ eleve_id: '', type: 'mensualite', montant: '', mois: String(now.getMonth()+1), annee: String(now.getFullYear()) });
+      charger();
+      api.get<Stats>('/api/v1/finances/stats').then(setStats).catch(() => {});
     } catch (err) {
       toast.error((err as Error).message || 'Erreur');
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
-  const formatMontant = (v: number) => new Intl.NumberFormat('fr-FR').format(v) + ' FCFA';
-
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={t('finance.titre')}
-        action={<Button onClick={() => setModal(true)}>Ajouter un paiement</Button>}
-      />
+    <div className="space-y-5">
+      <PageHeader title={t('finance.titre')} />
 
+      {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex items-center gap-4">
-            <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center text-xl">💰</div>
-            <div>
-              <p className="text-xl font-bold text-slate-900 dark:text-white">{formatMontant(Number(stats.total_encaisse_eleves))}</p>
-              <p className="text-sm text-slate-500">{t('finance.total_mois')}</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {[
+            { label: t('finance.total_mois'), value: formatMontant(Number(stats.total_encaisse_eleves)), icon: '💰', color: 'text-emerald-600' },
+            { label: 'Paiements ce mois', value: stats.nb_paiements_eleves, icon: '📄', color: 'text-blue-600' },
+            { label: 'Versé aux profs', value: formatMontant(Number(stats.total_paye_professeurs)), icon: '👨‍🏫', color: 'text-purple-600' },
+          ].map(s => (
+            <div key={s.label} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex items-center gap-3">
+              <span className="text-2xl">{s.icon}</span>
+              <div>
+                <p className={`text-lg font-bold ${s.color}`}>{s.value}</p>
+                <p className="text-xs text-slate-500">{s.label}</p>
+              </div>
             </div>
-          </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex items-center gap-4">
-            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-xl">📄</div>
-            <div>
-              <p className="text-xl font-bold text-slate-900 dark:text-white">{stats.nb_paiements_eleves}</p>
-              <p className="text-sm text-slate-500">Paiements ce mois</p>
-            </div>
-          </div>
+          ))}
         </div>
       )}
 
+      {/* Tabs */}
       <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700">
-        {(['eleves', 'profs'] as const).map((t2) => (
-          <button
-            key={t2}
-            onClick={() => setTab(t2)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              tab === t2
-                ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'
-            }`}
-          >
+        {(['eleves', 'profs'] as const).map(t2 => (
+          <button key={t2} onClick={() => setTab(t2)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t2 ? 'border-[#10B981] text-[#10B981]' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>
             {t2 === 'eleves' ? t('finance.paiements_eleves') : t('finance.paiements_profs')}
           </button>
         ))}
@@ -280,94 +313,121 @@ export function FinancesPage() {
 
       {tab === 'eleves' && (
         <div className="space-y-4">
-          <SearchInput value={search} onChange={setSearch} placeholder="Rechercher par élève..." />
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-            {loading ? (
-              <div className="p-8 text-center text-slate-500">Chargement...</div>
-            ) : paiements.length === 0 ? (
-              <div className="p-8 text-center text-slate-500">Aucun paiement trouvé</div>
-            ) : (
-              <table className="w-full">
-                <thead className="bg-slate-50 dark:bg-slate-700/50">
-                  <tr>
-                    {['Élève', 'Type', 'Montant', 'Mois', 'N° Reçu', 'Date'].map((h) => (
-                      <th key={h} className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                  {paiements.map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                      <td className="px-4 py-3">
-                        <div className="text-sm font-medium text-slate-900 dark:text-white">{p.eleve.prenom_fr} {p.eleve.nom_fr}</div>
-                        <div className="text-xs text-slate-500 font-mono">{p.eleve.matricule}</div>
-                      </td>
-                      <td className="px-4 py-3"><Badge label={p.type} variant="info" /></td>
-                      <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-white">{formatMontant(p.montant)}</td>
-                      <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
-                        {p.mois ? `${MOIS[p.mois - 1]} ${p.annee}` : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-mono text-slate-500">{p.recu_numero ?? '—'}</td>
-                      <td className="px-4 py-3 text-sm text-slate-500">
-                        {new Date(p.created_at).toLocaleDateString('fr-FR')}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+          {/* Filtres */}
+          <div className="flex flex-wrap gap-3 items-end">
+            <div className="flex-1 min-w-48">
+              <SearchInput value={search} onChange={setSearch} placeholder="Rechercher un élève..." />
+            </div>
+            <Select value={filtre} onChange={e => setFiltre(e.target.value)} options={FILTRES} />
+            {!isReliquat && <>
+              <Select value={mois} onChange={e => setMois(e.target.value)}
+                options={[{ value: '', label: 'Tous les mois' }, ...MOIS.map((m, i) => ({ value: String(i+1), label: m }))]} />
+              <Input label="" type="number" value={annee} onChange={e => setAnnee(e.target.value)} className="w-24" />
+            </>}
+            <Button onClick={() => setModal(true)}>+ Paiement</Button>
           </div>
-          <Pagination page={page} total={total} limit={20} onChange={setPage} />
+
+          {/* Reliquats view */}
+          {isReliquat ? (
+            loading ? <div className="p-8 text-center text-slate-500">Chargement...</div> :
+            reliquats.length === 0 ? (
+              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-8 text-center">
+                <div className="text-3xl mb-2">✅</div>
+                <p className="text-slate-500">Aucun reliquat — tous les élèves sont à jour</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {/* Summary */}
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 flex items-center gap-3">
+                  <span className="text-2xl">🔴</span>
+                  <div>
+                    <p className="font-semibold text-red-700 dark:text-red-400">{reliquats.length} élève(s) avec reliquats</p>
+                    <p className="text-sm text-red-600 dark:text-red-500">
+                      Total dû : {formatMontant(reliquats.reduce((s, r) => s + r.montant_du, 0))}
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
+                      <tr>
+                        {['Élève', 'Matricule', 'Mois dus', 'Mois manquants', 'Montant dû'].map(h => (
+                          <th key={h} className="px-4 py-3 text-start text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reliquats.map(r => (
+                        <tr key={r.eleve.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-red-50/50 dark:hover:bg-red-900/10">
+                          <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{r.eleve.prenom_fr} {r.eleve.nom_fr}</td>
+                          <td className="px-4 py-3 font-mono text-xs text-slate-500">{r.eleve.matricule}</td>
+                          <td className="px-4 py-3"><Badge label={String(r.nb_mois_dus)} variant="error" /></td>
+                          <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400">
+                            {r.mois_manquants.map(m => `${MOIS[m.mois-1]} ${m.annee}`).join(', ')}
+                          </td>
+                          <td className="px-4 py-3 font-semibold text-red-600 dark:text-red-400">{formatMontant(r.montant_du)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )
+          ) : (
+            <>
+              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                {loading ? <div className="p-8 text-center text-slate-500">Chargement...</div> :
+                paiements.length === 0 ? <div className="p-8 text-center text-slate-500">Aucun paiement trouvé</div> : (
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
+                      <tr>
+                        {['Élève', 'Matricule', 'Type', 'Montant', 'Période', 'N° Reçu', 'Statut'].map(h => (
+                          <th key={h} className="px-4 py-3 text-start text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paiements.map(p => (
+                        <tr key={p.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                          <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{p.eleve.prenom_fr} {p.eleve.nom_fr}</td>
+                          <td className="px-4 py-3 font-mono text-xs text-slate-500">{p.eleve.matricule}</td>
+                          <td className="px-4 py-3"><Badge label={p.type} variant="info" /></td>
+                          <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white">{formatMontant(p.montant)}</td>
+                          <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{p.mois ? `${MOIS[p.mois-1]} ${p.annee}` : '—'}</td>
+                          <td className="px-4 py-3 font-mono text-xs text-slate-500">{p.recu_numero ?? '—'}</td>
+                          <td className="px-4 py-3"><Badge label={p.statut} variant={p.statut === 'paye' ? 'success' : 'warning'} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              <Pagination page={page} total={total} limit={20} onChange={setPage} />
+            </>
+          )}
         </div>
       )}
 
-      {tab === 'profs' && (
-        <ProfsTab api={api} formatMontant={formatMontant} />
-      )}
+      {tab === 'profs' && <ProfsTab api={api} formatMontant={formatMontant} />}
 
-      <Modal isOpen={modal} onClose={() => setModal(false)} title="Nouveau paiement" size="md">
+      {/* Modal paiement élève */}
+      <Modal isOpen={modal} onClose={() => setModal(false)} title="Nouveau paiement élève" size="md">
         <div className="space-y-4">
-          <Select
-            label={t('eleve.titre')}
-            value={form.eleve_id}
-            onChange={(e) => setForm((f) => ({ ...f, eleve_id: e.target.value }))}
-            options={[{ value: '', label: 'Sélectionner un élève...' }, ...eleves.map((e) => ({ value: e.id, label: `${e.prenom_fr} ${e.nom_fr} (${e.matricule})` }))]}
-          />
+          <Select label="Élève" value={form.eleve_id} onChange={e => setForm(f => ({ ...f, eleve_id: e.target.value }))}
+            options={[{ value: '', label: 'Sélectionner un élève...' }, ...eleves.map(e => ({ value: e.id, label: `${e.prenom_fr} ${e.nom_fr} (${e.matricule})` }))]} />
           <div className="grid grid-cols-2 gap-4">
-            <Select
-              label={t('finance.type')}
-              value={form.type}
-              onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
-              options={TYPES.map((v) => ({ value: v, label: v.charAt(0).toUpperCase() + v.slice(1) }))}
-            />
-            <Input
-              label={`${t('finance.montant')} (FCFA)`}
-              type="number"
-              value={form.montant}
-              onChange={(e) => setForm((f) => ({ ...f, montant: e.target.value }))}
-              placeholder="0"
-            />
+            <Select label={t('finance.type')} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
+              options={TYPES_PAIEMENT.map(v => ({ value: v, label: v.charAt(0).toUpperCase() + v.slice(1) }))} />
+            <Input label={`${t('finance.montant')} (FCFA)`} type="number" value={form.montant}
+              onChange={e => setForm(f => ({ ...f, montant: e.target.value }))} placeholder="0" />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Select
-              label={t('common.mois')}
-              value={form.mois}
-              onChange={(e) => setForm((f) => ({ ...f, mois: e.target.value }))}
-              options={MOIS.map((m, i) => ({ value: String(i + 1), label: m }))}
-            />
-            <Input
-              label={t('common.annee')}
-              type="number"
-              value={form.annee}
-              onChange={(e) => setForm((f) => ({ ...f, annee: e.target.value }))}
-            />
+            <Select label={t('common.mois')} value={form.mois} onChange={e => setForm(f => ({ ...f, mois: e.target.value }))}
+              options={MOIS.map((m, i) => ({ value: String(i+1), label: m }))} />
+            <Input label={t('common.annee')} type="number" value={form.annee}
+              onChange={e => setForm(f => ({ ...f, annee: e.target.value }))} />
           </div>
-          <Input
-            label={t('finance.recu')}
-            value={form.recu_numero}
-            onChange={(e) => setForm((f) => ({ ...f, recu_numero: e.target.value }))}
-            placeholder="REÇ-001"
-          />
+          <p className="text-xs text-slate-500 dark:text-slate-400 italic">Le numéro de reçu sera généré automatiquement.</p>
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="secondary" onClick={() => setModal(false)}>{t('actions.annuler')}</Button>
             <Button onClick={handleSave} loading={saving}>{t('actions.enregistrer')}</Button>
