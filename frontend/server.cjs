@@ -1,46 +1,50 @@
-const express = require('express');
-const path = require('path');
-const fs = require('fs');
+'use strict';
+var http = require('http');
+var fs = require('fs');
+var path = require('path');
 
-const app = express();
-const PORT = parseInt(process.env.PORT, 10) || 3000;
-const distPath = path.join(__dirname, 'dist');
+var PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+var ROOT = path.join(__dirname, 'dist');
 
-// Diagnostics au démarrage
-console.log('PORT       :', PORT);
-console.log('__dirname  :', __dirname);
-console.log('dist path  :', distPath);
-console.log('dist exists:', fs.existsSync(distPath));
-console.log('index.html :', fs.existsSync(path.join(distPath, 'index.html')));
+var MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.js':   'application/javascript',
+  '.css':  'text/css',
+  '.json': 'application/json',
+  '.png':  'image/png',
+  '.jpg':  'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.svg':  'image/svg+xml',
+  '.ico':  'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2':'font/woff2',
+  '.ttf':  'font/ttf',
+};
 
-// Statique
-app.use(express.static(distPath));
+http.createServer(function (req, res) {
+  var url = req.url.split('?')[0];
+  var file = path.join(ROOT, url);
 
-// SPA fallback
-app.get('*', function (req, res) {
-  var indexPath = path.join(distPath, 'index.html');
-  res.sendFile(indexPath, function (err) {
+  // SPA fallback si le fichier n'existe pas
+  if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+    file = path.join(ROOT, 'index.html');
+  }
+
+  var contentType = MIME[path.extname(file)] || 'application/octet-stream';
+
+  fs.readFile(file, function (err, data) {
     if (err) {
-      console.error('sendFile error:', err.message);
-      res.status(500).send('Build introuvable. Contactez l\'administrateur.');
+      res.writeHead(500, { 'Content-Type': 'text/plain' });
+      res.end('Erreur serveur: ' + err.message);
+      return;
     }
+    res.writeHead(200, {
+      'Content-Type': contentType,
+      'Cache-Control': file.endsWith('index.html') ? 'no-cache' : 'max-age=31536000',
+    });
+    res.end(data);
   });
-});
-
-// Error handler Express
-app.use(function (err, req, res, next) {
-  console.error('Express error:', err);
-  res.status(500).send('Erreur interne');
-});
-
-// Ne pas crasher sur erreur non capturée
-process.on('uncaughtException', function (err) {
-  console.error('uncaughtException:', err);
-});
-process.on('unhandledRejection', function (err) {
-  console.error('unhandledRejection:', err);
-});
-
-app.listen(PORT, '0.0.0.0', function () {
-  console.log('Serveur prêt sur le port', PORT);
+}).listen(PORT, '0.0.0.0', function () {
+  console.log('DaaraGest frontend - port ' + PORT);
+  console.log('Dist:', ROOT, '| exists:', fs.existsSync(ROOT));
 });
