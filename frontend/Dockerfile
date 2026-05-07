@@ -17,6 +17,6 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 ENV NODE_ENV=production
-EXPOSE 3000
 
+# PORT est injecté dynamiquement par Railway — pas de EXPOSE fixe
 CMD ["node", "server.cjs"]
