@@ -24,7 +24,12 @@ export function ParametresPage() {
 
   useEffect(() => {
     api.get<Etablissement>('/api/v1/parametres').then(setEtab).catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
-    api.get<ConfigNotes>('/api/v1/parametres/notes').then(setConfig).catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
+    api.get<ConfigNotes>('/api/v1/parametres/notes').then(data => data && setConfig({
+      ...data,
+      note_max: Number(data.note_max),
+      note_min: Number(data.note_min),
+      montant_mensualite: Number(data.montant_mensualite),
+    })).catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
   }, []);
 
   const saveEtab = async () => {

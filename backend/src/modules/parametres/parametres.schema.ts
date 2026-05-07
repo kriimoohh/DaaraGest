@@ -10,13 +10,13 @@ export const etablissementUpdateSchema = z.object({
 });
 
 export const configNotesSchema = z.object({
-  note_max: z.number().positive().optional(),
-  note_min: z.number().min(0).optional(),
-  nb_periodes: z.number().int().positive().optional(),
+  note_max: z.coerce.number().positive().optional(),
+  note_min: z.coerce.number().min(0).optional(),
+  nb_periodes: z.coerce.number().int().positive().optional(),
   noms_periodes: z.any().optional(),
-  arrondi: z.number().int().min(0).optional(),
+  arrondi: z.coerce.number().int().min(0).optional(),
   chiffres_arabes: z.boolean().optional(),
-  montant_mensualite: z.number().positive().optional(),
+  montant_mensualite: z.coerce.number().positive().optional(),
 });
 
 export type EtablissementUpdateInput = z.infer<typeof etablissementUpdateSchema>;
