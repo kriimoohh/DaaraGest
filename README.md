@@ -13,40 +13,54 @@ Application web de gestion d'école franco-arabe, conçue pour les établissemen
 - [Installation](#installation)
 - [Variables d'environnement](#variables-denvironnement)
 - [Comptes par défaut](#comptes-par-défaut)
+- [Commandes disponibles](#commandes-disponibles)
 - [API Reference](#api-reference)
 - [Modules](#modules)
 - [Sécurité](#sécurité)
+- [Tests](#tests)
 - [Roadmap](#roadmap)
 
 ---
 
 ## Fonctionnalités
 
-- **Gestion des élèves** — Inscription, fiche complète, matricule auto-généré (DG-YYYY-NNN), inscription dans les classes FR et AR
-- **Gestion des professeurs** — Création de comptes liés, spécialités, contrats (permanent/vacataire), salaire de base
-- **Classes & Matières** — Deux filières (Française / Arabe), coefficients configurables, note max/min par matière
-- **Saisie des notes** — Grille de saisie par classe/matière/période, tri alphabétique, enregistrement en masse, validation par matière
-- **Bulletins scolaires** — 4 types (FR, AR, Combiné FR+AR, Annuel), calcul automatique des moyennes pondérées et du classement, export PDF par élève ou par classe entière, vue détail avec notes par matière
-- **Pointage des professeurs** — Saisie journalière (Présent/Absent/Retard/Congé), heure d'arrivée et de départ avec calcul automatique de la durée, historique filtrable, statistiques mensuelles par professeur
-- **Finances** — Paiements élèves (mensualités, inscriptions, blouse), filtres combinables, détection des reliquats par mois, paiements professeurs avec retenues et net à payer, auto-génération des numéros de reçu
-- **Utilisateurs & Rôles** — Gestion des comptes (admin, directeur, caissier, professeur), rôles depuis la base de données, réinitialisation de mot de passe
-- **Paramètres** — Configuration de l'établissement, barème des notes, nombre de périodes, montant mensualité configurable
-- **Bilingue FR/AR** — Interface complète en Français et Arabe avec basculement RTL instantané
-- **Dark mode** — Mode sombre persistant par utilisateur, actif aussi sur la page de connexion
+| Module | Description |
+|--------|-------------|
+| **Élèves** | Inscription, fiche complète, matricule auto-généré `DG-YYYY-NNN`, import en masse via CSV |
+| **Professeurs** | Comptes liés à un utilisateur, spécialités, type de contrat, salaire de base |
+| **Classes** | Deux filières (Française / Arabe), niveaux, capacité, par année scolaire |
+| **Matières** | Coefficients, note max/min configurables par matière |
+| **Notes** | Saisie en masse par classe/matière/période, tri alphabétique, validation par matière |
+| **Bulletins** | 4 types (FR · AR · Combiné · Annuel), moyennes pondérées, classement, export PDF individuel ou classe entière, vue détail avec notes par matière |
+| **Pointage** | Saisie journalière présence/absence/retard/congé, heure d'arrivée/départ avec calcul auto de la durée, historique filtrable, statistiques mensuelles par professeur |
+| **Finances** | Paiements élèves (mensualités, inscriptions, blouse), filtres combinables type+statut+période, reliquats par mois, paiements professeurs, numéros de reçu auto-générés |
+| **Utilisateurs** | Rôles depuis la DB, réinitialisation de mot de passe |
+| **Paramètres** | Établissement, barème des notes, montant mensualité configurable |
+| **Dashboard** | Statistiques clés, graphique des encaissements sur 6 mois (Recharts), résumé financier du mois |
+| **i18n FR/AR** | Interface complète bilingue avec basculement RTL instantané |
+| **Dark mode** | Persistant par utilisateur, actif dès la page de connexion |
 
 ---
 
 ## Stack technique
 
-| Couche | Technologie |
-|--------|-------------|
-| Frontend | React 18, Vite, Tailwind CSS, i18next, Zustand |
-| Backend | Node.js, Fastify v4, Prisma ORM |
-| Base de données | PostgreSQL 15+ |
-| Authentification | JWT (jsonwebtoken via @fastify/jwt) + bcrypt (cost 10) |
-| Validation | Zod |
-| PDF | Puppeteer (Chromium bundlé) |
-| Tests | — (à venir) |
+| Couche | Technologie | Version |
+|--------|-------------|---------|
+| Backend | Node.js + Fastify | 4.x |
+| ORM | Prisma | 5.x |
+| Base de données | PostgreSQL | 15+ |
+| Authentification | @fastify/jwt + bcryptjs | cost 10 |
+| Rate limiting | @fastify/rate-limit | 9.x |
+| Validation | Zod (avec coerce pour les Decimal Prisma) | 3.x |
+| PDF | Puppeteer | 24.x |
+| Tests | Vitest + @vitest/coverage-v8 | 4.x |
+| Frontend | React 18 + Vite | — |
+| Styles | Tailwind CSS (darkMode: class) | — |
+| État global | Zustand + persist | — |
+| i18n | i18next + react-i18next | — |
+| Graphiques | Recharts | — |
+| Import CSV | PapaParse | — |
+| Routing | react-router-dom v6 (flags v7 activés) | — |
 
 ---
 
@@ -54,38 +68,54 @@ Application web de gestion d'école franco-arabe, conçue pour les établissemen
 
 ```
 DaaraGest/
-├── backend/                    # API REST Fastify
+├── backend/
 │   ├── prisma/
-│   │   ├── schema.prisma       # 20 modèles, multi-tenant par etablissement_id
-│   │   └── seed.ts             # Données initiales (École Franco Arabe Cheikh Abdoul Ahad Mbacké)
+│   │   ├── schema.prisma        # 20 modèles, multi-tenant etablissement_id
+│   │   └── seed.ts              # École Franco Arabe Cheikh Abdoul Ahad Mbacké
 │   └── src/
-│       ├── config/database.ts  # Client Prisma singleton
-│       ├── middlewares/        # authMiddleware
-│       ├── modules/            # 12 modules (auth, élèves, professeurs, pointage…)
-│       │   └── {module}/       # routes · controller · service · schema
-│       └── server.ts           # Fastify + CORS configurable + JWT fail-fast
+│       ├── middlewares/         # authMiddleware (return sur 401)
+│       ├── modules/             # 12 modules
+│       │   ├── auth/            # login, me
+│       │   ├── annees-scolaires/
+│       │   ├── classes/
+│       │   ├── eleves/          # + import CSV bulk
+│       │   ├── matieres/
+│       │   ├── notes/           # bulk upsert
+│       │   ├── bulletins/       # 4 types + PDF Puppeteer
+│       │   ├── finances/        # paiements + reliquats + stats mensuelles
+│       │   ├── parametres/      # établissement + configNotes
+│       │   ├── pointage/        # présences manuelles
+│       │   ├── professeurs/
+│       │   └── utilisateurs/    # + GET /roles
+│       └── server.ts            # Fastify + CORS configurable + JWT fail-fast
 │
-└── frontend/                   # SPA React
+└── frontend/
     └── src/
         ├── components/
-        │   ├── layout/         # Sidebar, Header, Layout
-        │   └── ui/             # Button, Badge, Table, Modal, Input, Select…
-        ├── hooks/              # useTheme, useApi
-        ├── i18n/               # Traductions FR et AR (95+ clés)
-        ├── pages/              # Un dossier par module
-        └── store/              # authStore (Zustand + persist)
+        │   ├── layout/          # Sidebar (12 items, role-based), Layout
+        │   └── ui/              # Button, Badge, Table, Modal, Input, Select,
+        │                        #   SearchInput, Pagination, ConfirmModal, PageHeader
+        ├── hooks/               # useApi, useAuth, useTheme
+        ├── i18n/fr/ + i18n/ar/  # 110+ clés de traduction
+        ├── pages/               # 11 pages (+ Dashboard)
+        ├── lib/api.ts           # fetch wrapper
+        └── store/               # authStore (Zustand + persist)
 ```
+
+### Modèles Prisma (20)
+
+`Etablissement` · `Role` · `Utilisateur` · `AnneeScolaire` · `Classe` · `Matiere` · `Eleve` · `Parent` · `Inscription` · `Note` · `Bulletin` · `PaiementEleve` · `PaiementProfesseur` · `Professeur` · `ProfesseurCarte` · `Pointage` · `HeureTravail` · `PresenceProfesseur` · `ProfMatiereClasse` · `ConfigNotes`
 
 ### Isolation multi-établissements
 
-Chaque requête authentifiée extrait `etablissement_id` du JWT. Tous les services filtrent systématiquement par cet identifiant — aucune donnée d'un autre établissement n'est accessible.
+Chaque requête authentifiée extrait `etablissement_id` du JWT. Tous les services filtrent par cet identifiant — aucune donnée d'un autre établissement n'est accessible.
 
-### Rôles et permissions
+### Rôles et accès
 
-| Rôle | Accès |
-|------|-------|
-| `admin` | Tous les modules |
-| `directeur` | Tous sauf gestion utilisateurs |
+| Rôle | Pages accessibles |
+|------|------------------|
+| `admin` | Toutes |
+| `directeur` | Toutes sauf Utilisateurs |
 | `caissier` | Dashboard, Élèves, Finances |
 | `professeur` | Dashboard, Classes, Notes, Bulletins |
 
@@ -93,32 +123,15 @@ Chaque requête authentifiée extrait `etablissement_id` du JWT. Tous les servic
 
 ## Identité graphique
 
-### Palette chromatique
+| Rôle | Couleur | Hex |
+|------|---------|-----|
+| Primaire | Émeraude | `#10B981` |
+| Secondaire | Teal | `#14B8A6` |
+| Accent | Or Sénégal | `#F59E0B` |
+| Fond dark | Nuit | `#0F172A` |
+| Surface dark | Ardoise | `#1E293B` |
 
-| Rôle | Nom | Hex | Usage |
-|------|-----|-----|-------|
-| Primaire | Émeraude | `#10B981` | Actions, liens actifs, CTA |
-| Secondaire | Teal | `#14B8A6` | Gradients, info, badges |
-| Accent | Or Sénégal | `#F59E0B` | Points d'excellence, indicateurs actifs |
-| Fond | Nuit | `#0F172A` | Sidebar, login panel, dark bg |
-| Surface | Ardoise | `#1E293B` | Cartes dark, header dark |
-| Interface | Lumière | `#F1F5F9` | Fond principal light mode |
-
-### Typographie
-
-| Usage | Police | Poids |
-|-------|--------|-------|
-| Titres & Logo | Big Shoulders Display | 800–900 |
-| Interface & Corps | Instrument Sans | 400–700 |
-| Arabe | Noto Naskh Arabic | 400–700 |
-
-### Logo
-
-Le logo DaaraGest est composé de :
-- **Arc émeraude** — porte du savoir, héritage du Daara sénégalais
-- **Lettre D** géométrique blanche — DaaraGest, construite avec précision
-- **Arc or + point doré** — chaleur, excellence, accent sénégalais
-- **Cercle** — communauté, complétude, cycle scolaire
+Polices : **Big Shoulders Display** (titres, 800–900) · **Instrument Sans** (corps, 400–700) · **Noto Naskh Arabic** (arabe)
 
 ---
 
@@ -129,7 +142,7 @@ Le logo DaaraGest est composé de :
 - Node.js 20+
 - PostgreSQL 15+
 
-### 1. Cloner le dépôt
+### 1. Cloner
 
 ```bash
 git clone https://github.com/kriimoohh/DaaraGest.git
@@ -142,18 +155,17 @@ cd DaaraGest
 cd backend
 npm install
 
-# Copier et configurer les variables d'environnement
-cp .env.example .env
-# Éditer .env : DATABASE_URL, JWT_SECRET (obligatoire), CORS_ORIGIN
+# Configurer l'environnement
+cp .env.example .env   # puis éditer DATABASE_URL et JWT_SECRET
 
-# Créer la base de données et appliquer le schéma
+# Créer les tables
 npx prisma db push
 
 # Injecter les données initiales
 npm run db:seed
 
-# Démarrer en développement
-npm run dev
+# Démarrer
+npm run dev            # http://localhost:3000
 ```
 
 ### 3. Frontend
@@ -161,37 +173,37 @@ npm run dev
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run dev            # http://localhost:5173
 ```
 
-L'application est accessible sur **http://localhost:5173**
+> Les deux serveurs doivent tourner simultanément.
 
 ---
 
 ## Variables d'environnement
 
-### Backend (`backend/.env`)
+### `backend/.env`
 
-| Variable | Description | Défaut | Obligatoire |
-|----------|-------------|--------|------------|
-| `DATABASE_URL` | URL de connexion PostgreSQL | — | ✅ |
-| `JWT_SECRET` | Clé secrète JWT (le serveur refuse de démarrer si absente) | — | ✅ |
-| `CORS_ORIGIN` | Origine autorisée pour les requêtes cross-domain | `http://localhost:5173` | En production |
-| `JWT_EXPIRES_IN` | Durée de validité du token | `7d` | |
-| `PORT` | Port du serveur | `3000` | |
-| `NODE_ENV` | Environnement | `development` | |
+| Variable | Description | Requis |
+|----------|-------------|--------|
+| `DATABASE_URL` | URL PostgreSQL (`postgresql://user:pass@host:5432/db`) | ✅ |
+| `JWT_SECRET` | Clé secrète JWT — le serveur **refuse de démarrer** si absente | ✅ |
+| `CORS_ORIGIN` | Origine autorisée (ex: `https://mon-ecole.sn`) | ✅ prod |
+| `PORT` | Port du serveur | défaut `3000` |
+| `JWT_EXPIRES_IN` | Durée des tokens | défaut `7d` |
+| `NODE_ENV` | `development` ou `production` | — |
 
-### Frontend (`frontend/.env`)
+### `frontend/.env`
 
 | Variable | Description | Défaut |
 |----------|-------------|--------|
-| `VITE_API_URL` | URL de l'API backend | `http://localhost:3000` |
+| `VITE_API_URL` | URL du backend | `http://localhost:3000` |
 
 ---
 
 ## Comptes par défaut
 
-Créés par le seed. **À changer impérativement en production.**
+Générés par le seed. **À changer immédiatement en production.**
 
 | Identifiant | Mot de passe | Rôle |
 |-------------|-------------|------|
@@ -199,16 +211,41 @@ Créés par le seed. **À changer impérativement en production.**
 
 ---
 
+## Commandes disponibles
+
+### Backend
+
+```bash
+npm run dev            # Serveur en mode watch (tsx)
+npm run build          # Compilation TypeScript
+npm start              # Démarrer le build compilé
+npm test               # Tests unitaires (Vitest)
+npm run test:watch     # Tests en mode watch
+npm run test:coverage  # Rapport de couverture de code
+npm run db:seed        # Injecter les données initiales
+npm run db:studio      # Interface Prisma Studio
+```
+
+### Frontend
+
+```bash
+npm run dev            # Serveur Vite
+npm run build          # Build de production
+npm run preview        # Prévisualiser le build
+```
+
+---
+
 ## API Reference
 
-Toutes les routes (sauf `/health` et `/api/v1/auth/login`) requièrent un header `Authorization: Bearer <token>`.
+Toutes les routes (sauf `/health` et `POST /api/v1/auth/login`) requièrent `Authorization: Bearer <token>`.
 
-### Authentification
+### Auth
 
 | Méthode | Route | Description |
 |---------|-------|-------------|
-| `POST` | `/api/v1/auth/login` | Connexion — retourne `{ token, user }` |
-| `GET` | `/api/v1/auth/me` | Profil de l'utilisateur connecté |
+| `POST` | `/api/v1/auth/login` | Connexion · rate-limited 5 req/min · retourne `{ token, user }` |
+| `GET` | `/api/v1/auth/me` | Profil connecté |
 
 ### Années scolaires
 
@@ -224,7 +261,7 @@ Toutes les routes (sauf `/health` et `/api/v1/auth/login`) requièrent un header
 
 | Méthode | Route | Description |
 |---------|-------|-------------|
-| `GET` | `/api/v1/matieres?filiere=FR\|AR` | Liste (filtre optionnel) |
+| `GET` | `/api/v1/matieres?filiere=FR\|AR` | Liste |
 | `POST` | `/api/v1/matieres` | Créer |
 | `PUT` | `/api/v1/matieres/:id` | Modifier |
 | `DELETE` | `/api/v1/matieres/:id` | Désactiver |
@@ -243,20 +280,21 @@ Toutes les routes (sauf `/health` et `/api/v1/auth/login`) requièrent un header
 
 | Méthode | Route | Description |
 |---------|-------|-------------|
-| `GET` | `/api/v1/eleves?page&search&classe_id&actif` | Liste paginée |
+| `GET` | `/api/v1/eleves?page&search&classe_id&actif&limit` | Liste paginée |
 | `GET` | `/api/v1/eleves/:id` | Détail + parents + inscriptions |
 | `POST` | `/api/v1/eleves` | Créer (matricule auto si absent) |
 | `PUT` | `/api/v1/eleves/:id` | Modifier |
 | `DELETE` | `/api/v1/eleves/:id` | Désactiver |
 | `POST` | `/api/v1/eleves/:id/inscrire` | Inscrire dans une classe |
+| `POST` | `/api/v1/eleves/import` | Import CSV · body `{ rows[] }` · max 500 · retourne `{ created, errors[] }` |
 
 ### Professeurs
 
 | Méthode | Route | Description |
 |---------|-------|-------------|
-| `GET` | `/api/v1/professeurs?page&search` | Liste paginée |
+| `GET` | `/api/v1/professeurs?page&search&limit` | Liste paginée |
 | `GET` | `/api/v1/professeurs/:id` | Détail |
-| `POST` | `/api/v1/professeurs` | Créer (user + profil liés) |
+| `POST` | `/api/v1/professeurs` | Créer (utilisateur + profil liés) |
 | `PUT` | `/api/v1/professeurs/:id` | Modifier |
 | `DELETE` | `/api/v1/professeurs/:id` | Désactiver |
 
@@ -265,56 +303,57 @@ Toutes les routes (sauf `/health` et `/api/v1/auth/login`) requièrent un header
 | Méthode | Route | Description |
 |---------|-------|-------------|
 | `GET` | `/api/v1/notes?classe_id&matiere_id&periode&annee_scolaire_id` | Liste |
-| `POST` | `/api/v1/notes/bulk` | Enregistrement en masse (upsert) |
+| `POST` | `/api/v1/notes/bulk` | Upsert en masse (valide contre note_max/min par matière) |
 | `GET` | `/api/v1/notes/eleve/:eleve_id` | Notes d'un élève |
 
 ### Bulletins
 
 | Méthode | Route | Description |
 |---------|-------|-------------|
-| `GET` | `/api/v1/bulletins?annee_scolaire_id&periode&filiere` | Liste |
-| `POST` | `/api/v1/bulletins/generer` | Générer trimestriel (FR\|AR\|COMBINE) |
-| `POST` | `/api/v1/bulletins/generer-annuel` | Générer annuel |
+| `GET` | `/api/v1/bulletins?annee_scolaire_id&periode&filiere&eleve_id` | Liste |
+| `POST` | `/api/v1/bulletins/generer` | Générer trimestriel FR·AR·COMBINE (fetch groupé, plus de N+1) |
+| `POST` | `/api/v1/bulletins/generer-annuel` | Générer annuel (periode=0) |
 | `GET` | `/api/v1/bulletins/:id` | Détail avec notes par filière |
-| `GET` | `/api/v1/bulletins/:id/pdf` | PDF individuel |
+| `GET` | `/api/v1/bulletins/:id/pdf` | PDF individuel (Puppeteer) |
 | `GET` | `/api/v1/bulletins/pdf-classe?classe_id&periode&filiere` | PDF toute une classe |
 
 ### Finances
 
 | Méthode | Route | Description |
 |---------|-------|-------------|
-| `GET` | `/api/v1/finances/stats` | Statistiques du mois courant |
+| `GET` | `/api/v1/finances/stats` | Stats du mois courant |
+| `GET` | `/api/v1/finances/stats-mensuels?nb_mois=6` | Encaissements des N derniers mois |
 | `GET` | `/api/v1/finances/paiements-eleves?page&search&type&statut&mois&annee` | Liste paginée |
-| `POST` | `/api/v1/finances/paiements-eleves` | Enregistrer un paiement (reçu auto) |
+| `POST` | `/api/v1/finances/paiements-eleves` | Créer (numéro de reçu auto `REC-YYYYMMDD-XXXXX`) |
 | `GET` | `/api/v1/finances/paiements-professeurs?page&mois&annee` | Liste paginée |
-| `POST` | `/api/v1/finances/paiements-professeurs` | Enregistrer un paiement professeur |
-| `GET` | `/api/v1/finances/reliquats?mois&annee&annee_scolaire_id` | Élèves avec mensualités manquantes |
+| `POST` | `/api/v1/finances/paiements-professeurs` | Créer |
+| `GET` | `/api/v1/finances/reliquats?mois&annee&annee_scolaire_id` | Élèves sans mensualité pour la période |
 
 ### Pointage
 
 | Méthode | Route | Description |
 |---------|-------|-------------|
-| `GET` | `/api/v1/pointage/jour?date=YYYY-MM-DD` | Tous les profs + présence du jour |
+| `GET` | `/api/v1/pointage/jour?date=YYYY-MM-DD` | Tous les profs actifs + présence du jour (pré-remplie) |
 | `POST` | `/api/v1/pointage/bulk` | Saisie groupée d'une journée |
 | `POST` | `/api/v1/pointage` | Upsert individuel |
-| `GET` | `/api/v1/pointage?mois&annee&statut&professeur_id` | Historique paginé |
-| `GET` | `/api/v1/pointage/stats?mois&annee` | Statistiques par professeur |
+| `GET` | `/api/v1/pointage?mois&annee&statut&professeur_id&page` | Historique paginé |
+| `GET` | `/api/v1/pointage/stats?mois&annee` | Stats par professeur (taux de présence) |
 
 ### Paramètres
 
 | Méthode | Route | Description |
 |---------|-------|-------------|
-| `GET` | `/api/v1/parametres` | Infos établissement + config notes |
+| `GET` | `/api/v1/parametres` | Établissement + config notes |
 | `PUT` | `/api/v1/parametres` | Modifier l'établissement |
-| `GET` | `/api/v1/parametres/notes` | Config des notes |
-| `PUT` | `/api/v1/parametres/notes` | Modifier la config (note_max, note_min, montant_mensualite…) |
+| `GET` | `/api/v1/parametres/notes` | Config notes |
+| `PUT` | `/api/v1/parametres/notes` | Modifier (note_max, note_min, montant_mensualite…) |
 
 ### Utilisateurs
 
 | Méthode | Route | Description |
 |---------|-------|-------------|
+| `GET` | `/api/v1/utilisateurs/roles` | Liste des rôles (depuis la DB) |
 | `GET` | `/api/v1/utilisateurs?page&search&role` | Liste paginée |
-| `GET` | `/api/v1/utilisateurs/roles` | Liste des rôles disponibles |
 | `POST` | `/api/v1/utilisateurs` | Créer |
 | `PUT` | `/api/v1/utilisateurs/:id` | Modifier |
 | `DELETE` | `/api/v1/utilisateurs/:id` | Désactiver |
@@ -326,88 +365,111 @@ Toutes les routes (sauf `/health` et `/api/v1/auth/login`) requièrent un header
 
 ### Workflow typique en début d'année
 
-1. **Paramètres** — Vérifier le nom de l'établissement, le montant mensualité et la config des notes
+1. **Paramètres** — Vérifier l'établissement, le montant mensualité et la config des notes
 2. **Années scolaires** — Créer l'année (ex: "2025-2026") et l'activer
-3. **Matières** — Vérifier/ajouter les matières FR et AR avec leurs coefficients et notes max
+3. **Matières** — Vérifier/ajouter les matières FR et AR avec coefficients et notes max
 4. **Classes** — Créer les classes pour l'année
-5. **Élèves** — Ajouter les élèves (matricule auto-généré) et les inscrire dans leurs classes
+5. **Élèves** — Ajouter manuellement ou **importer via CSV** (matricule auto `DG-YYYY-NNN`)
 6. **Professeurs** — Créer les comptes professeurs
-7. **Notes** → **Bulletins** → **Finances** → **Pointage** au fil de l'année
+7. **Notes → Bulletins → Finances → Pointage** au fil de l'année
+
+### Import CSV élèves
+
+Format attendu (en-têtes obligatoires : `nom_fr`, `prenom_fr`, `sexe`) :
+
+```csv
+nom_fr,prenom_fr,nom_ar,prenom_ar,date_naissance,sexe,parent_nom_fr,parent_lien,parent_telephone
+FALL,Amadou,فال,أمادو,2010-05-15,M,FALL Moussa,père,771234567
+DIALLO,Fatou,ديالو,فاتو,2011-09-20,F,DIALLO Ibrahima,père,775678901
+```
+
+- `sexe` : M ou F
+- `parent_lien` : pere · mere · tuteur
+- `date_naissance` : YYYY-MM-DD
+- Maximum 500 lignes par import
+- Les lignes invalides sont ignorées avec rapport d'erreur détaillé
 
 ### Génération des bulletins
 
-1. Saisir les notes (page Notes) par classe/matière/période
-2. Sur la page Bulletins : sélectionner année + classe + type (FR/AR/Combiné/Annuel) + période
-3. Cliquer **"Générer les bulletins"** — calcule les moyennes pondérées et le classement
-4. Télécharger en PDF : individuel (bouton PDF) ou toute la classe (⬇ Télécharger tous)
-5. Cliquer **Détail** pour voir les notes matière par matière dans l'interface
+1. Saisir les notes par classe / matière / période
+2. Page Bulletins : sélectionner année + classe + type + période
+3. **Générer** — calcule les moyennes pondérées et le classement
+4. **Détail** — voir les notes matière par matière (table T1·T2·T3·Moy. pour les annuels)
+5. **Télécharger PDF** individuel ou toute la classe
 
 ### Pointage des professeurs
 
-1. Aller sur la page **Pointage** (onglet Saisie du jour)
+1. Page Pointage → onglet **Saisie du jour**
 2. Sélectionner la date (défaut : aujourd'hui)
-3. Pour chaque professeur : cliquer sur le statut (Présent/Retard/Absent/Congé)
-4. Saisir l'heure d'arrivée et de départ → la durée se calcule automatiquement
-5. Cliquer **Enregistrer** pour sauvegarder la journée
-6. Consulter l'historique et les statistiques dans les autres onglets
+3. Pour chaque professeur : statut + heure d'arrivée + heure de départ
+4. La durée réelle se calcule automatiquement
+5. **Enregistrer** — les données sont préservées si on revient sur la même date
 
-### Filtres paiements
+### Filtres paiements (combinables)
 
-La page Finances propose des filtres combinables :
-- **Type** : Mensualités / Inscriptions / Autres
-- **Statut** : Payés / Non payés / Manquants (reliquats — aucun enregistrement pour ce mois)
+- **Type** : Mensualités · Inscriptions · Autres
+- **Statut** : Payés · Non payés · Manquants (reliquats — aucun enregistrement pour ce mois)
 - **Période** : Mois + Année (s'applique aussi aux reliquats)
 
 ---
 
 ## Sécurité
 
-### Mesures en place
+| Mesure | Détail |
+|--------|--------|
+| JWT | HMAC-SHA256, expiration 7j, **fail-fast si `JWT_SECRET` absent** |
+| Mots de passe | bcrypt cost 10 |
+| Auth middleware | `return reply.status(401)` — arrêt immédiat sur token invalide |
+| Rate limiting | Login : 5 tentatives/minute par IP (`@fastify/rate-limit` v9) |
+| CORS | Configurable via `CORS_ORIGIN` (pas d'URL hardcodée) |
+| Multi-tenant | Chaque requête filtre par `etablissement_id` extrait du JWT |
+| Validation | Zod sur tous les body POST/PUT · `z.coerce.number()` pour les Decimal Prisma |
+| PDF | `escapeHtml()` sur toutes les données utilisateur avant insertion dans les templates |
 
-- **Authentification** : JWT signé HMAC-SHA256, expiration configurable (défaut 7j)
-- **Mots de passe** : bcrypt avec cost factor 10
-- **JWT fail-fast** : le serveur refuse de démarrer si `JWT_SECRET` n'est pas défini dans l'environnement
-- **CORS configurable** : via variable `CORS_ORIGIN`, plus d'URL hardcodée
-- **Isolation multi-tenant** : chaque requête filtre par `etablissement_id` extrait du JWT
-- **Validation des entrées** : Zod sur tous les body de requêtes POST/PUT
-- **Auth middleware** : retour immédiat sur 401 (plus de continuation après rejet)
-- **Échappement HTML** : toutes les données utilisateur sont échappées (`escapeHtml()`) avant insertion dans les templates PDF
-
-### Variables à configurer en production
+### Configuration production
 
 ```bash
-# Obligatoire — le serveur refuse de démarrer sans cette variable
-JWT_SECRET=<clé aléatoire 64+ caractères>
-
-# Obligatoire — restreindre CORS à votre domaine réel
+JWT_SECRET=<64+ caractères aléatoires>
 CORS_ORIGIN=https://votre-domaine.com
-
-# Recommandé
 NODE_ENV=production
 ```
 
-> ⚠️ **Changer le mot de passe admin** (`Admin123!`) immédiatement après la première connexion.
+> ⚠️ Changer le mot de passe admin `Admin123!` dès la première connexion.
+
+---
+
+## Tests
+
+**28 tests** répartis en 4 fichiers, exécutés avec Vitest (zéro dépendance DB).
+
+| Fichier | Fonctions testées |
+|---------|------------------|
+| `bulletins.test.ts` | `appreciation()`, `calculerMoyenne()` pondérée, classement |
+| `pointage.test.ts` | `calcHeures()` (6 cas limites), validation statuts |
+| `eleves.test.ts` | `genererMatricule()` format/padding, validation formulaire |
+| `finances.test.ts` | Format reçu `REC-YYYYMMDD-XXXXX`, filtre impayé |
+
+```bash
+cd backend
+npm test                 # run once
+npm run test:watch       # watch mode
+npm run test:coverage    # rapport HTML dans coverage/
+```
 
 ---
 
 ## Roadmap
 
-### Court terme (priorité haute)
+### À venir (moyen terme)
 
-- [ ] **Tests unitaires et d'intégration** — Vitest + Supertest pour les routes critiques
-- [ ] **Rate limiting** — Protection brute-force sur `/auth/login` (ex: 5 tentatives/minute)
-- [ ] **Import CSV** — Import en masse des élèves depuis un fichier Excel/CSV
-
-### Moyen terme
-
-- [ ] **Tableau de bord enrichi** — Graphiques (présence, finances, notes moyennes par classe)
-- [ ] **Module NFC** — Pointage automatique par carte NFC (`ProfesseurCarte`, `Pointage` déjà en schema)
 - [ ] **Notifications** — Alertes paiements en retard, bulletins disponibles (email ou in-app)
-- [ ] **Export données** — Export Excel des listes d'élèves, relevés de notes, états financiers
+- [ ] **Module NFC** — Pointage automatique par badge (modèles `Pointage` · `HeureTravail` · `ProfesseurCarte` déjà en schéma)
+- [ ] **Export Excel** — Listes d'élèves, relevés de notes, états financiers
+- [ ] **Absences élèves** — Suivi de la présence des élèves en classe
 
 ### Long terme
 
-- [ ] **Application mobile** — App React Native pour les professeurs (saisie notes hors-ligne)
-- [ ] **Communication parents** — Portail parents pour consulter bulletins et paiements
-- [ ] **Statistiques avancées** — Analyse de progression par élève, détection des élèves en difficulté
+- [ ] **Portail parents** — Consultation bulletins + paiements
+- [ ] **App mobile** — React Native, saisie notes hors-ligne
 - [ ] **Multi-établissements** — Dashboard central pour groupes scolaires
+- [ ] **Statistiques avancées** — Analyse de progression par élève, détection des difficultés
