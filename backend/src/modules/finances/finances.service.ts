@@ -200,8 +200,13 @@ export async function getReliquats(
     },
     include: {
       eleve: {
-        select: { id: true, nom_fr: true, prenom_fr: true, matricule: true },
-        include: { paiements: { where: { type: 'mensualite', annee: { in: anneesUtilisees } } } },
+        select: {
+          id: true,
+          nom_fr: true,
+          prenom_fr: true,
+          matricule: true,
+          paiements: { where: { type: 'mensualite', annee: { in: anneesUtilisees } } },
+        },
       },
     },
   });
