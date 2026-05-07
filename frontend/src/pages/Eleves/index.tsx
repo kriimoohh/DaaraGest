@@ -318,6 +318,7 @@ export function ElevesPage() {
     setImportResult(null);
     Papa.parse<Record<string, string>>(file, {
       header: true, skipEmptyLines: true,
+      encoding: 'UTF-8',
       complete: (result) => {
         setImportRows(result.data);
         setImportModal(true);
@@ -326,20 +327,40 @@ export function ElevesPage() {
     });
   };
 
+  // Convertit DD/MM/YYYY → YYYY-MM-DD
+  const convertDate = (d: string): string => {
+    if (!d) return '';
+    const parts = d.trim().split('/');
+    if (parts.length === 3 && parts[2].length === 4) {
+      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+    return d;
+  };
+
+  // Résolution flexible des colonnes (insensible à la casse et variantes)
+  const col = (r: Record<string, string>, ...keys: string[]): string => {
+    for (const k of keys) {
+      const found = Object.keys(r).find(rk => rk.trim().toLowerCase() === k.toLowerCase());
+      if (found && r[found]?.trim()) return r[found].trim();
+    }
+    return '';
+  };
+
   const handleImport = async () => {
     if (importRows.length === 0) return;
     setImporting(true);
     try {
       const rows = importRows.map(r => ({
-        nom_fr: r.nom_fr ?? r['Nom'] ?? '',
-        prenom_fr: r.prenom_fr ?? r['Prénom'] ?? '',
-        nom_ar: r.nom_ar ?? '',
-        prenom_ar: r.prenom_ar ?? '',
-        date_naissance: r.date_naissance ?? r['Date de naissance'] ?? '',
-        sexe: (r.sexe ?? r['Sexe'] ?? 'M') as 'M' | 'F',
-        parent_nom_fr: r.parent_nom_fr ?? r['Parent'] ?? '',
-        parent_lien: r.parent_lien ?? 'pere',
-        parent_telephone: r.parent_telephone ?? r['Téléphone'] ?? '',
+        matricule:    col(r, 'MATRICULE', 'matricule') || undefined,
+        nom_fr:       col(r, 'NOM', 'nom_fr', 'Nom'),
+        prenom_fr:    col(r, 'PRENOM(S)', 'PRENOMS', 'prenom_fr', 'Prénom', 'PRENOM'),
+        nom_ar:       col(r, 'nom_ar', 'NOM_AR') || undefined,
+        prenom_ar:    col(r, 'prenom_ar', 'PRENOM_AR') || undefined,
+        date_naissance: convertDate(col(r, 'DATE_NAISSANCE', 'date_naissance', 'Date de naissance', 'DATE NAISSANCE')),
+        sexe: (col(r, 'SEXE', 'sexe', 'Sexe') || 'M') as 'M' | 'F',
+        parent_nom_fr: col(r, 'parent_nom_fr', 'Parent', 'PARENT', 'NOM_PARENT') || undefined,
+        parent_lien:   col(r, 'parent_lien', 'LIEN', 'lien') || 'pere',
+        parent_telephone: col(r, 'parent_telephone', 'Téléphone', 'TELEPHONE', 'TEL') || undefined,
       }));
       const result = await api.post<{ created: number; errors: { ligne: number; message: string }[] }>(
         '/api/v1/eleves/import', { rows }
