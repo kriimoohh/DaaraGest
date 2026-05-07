@@ -19,6 +19,19 @@ interface Bulletin {
   annee_scolaire: { libelle: string; };
 }
 
+interface NoteDetail {
+  valeur: number | null;
+  periode: number;
+  matiere: { nom_fr: string; nom_ar: string; coeff_defaut: number; note_max: number; };
+}
+
+interface DetailBulletin extends Bulletin {
+  eleve: Bulletin['eleve'] & {
+    inscriptions: { classe_fr: { nom_fr: string } | null; classe_ar: { nom_fr: string } | null; }[];
+  };
+  notesByFiliere: { FR?: NoteDetail[]; AR?: NoteDetail[]; };
+}
+
 type BulletinType = 'FR' | 'AR' | 'COMBINE' | 'ANNUEL_FR' | 'ANNUEL_AR' | 'ANNUEL_COMBINE';
 
 const TYPE_OPTIONS = [
@@ -126,7 +139,8 @@ export function BulletinsPage() {
   const [generating, setGenerating] = useState(false);
   const [downloadingClasse, setDownloadingClasse] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
-  const [detail, setDetail] = useState<Bulletin | null>(null);
+  const [detail, setDetail] = useState<DetailBulletin | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
   const [view, setView] = useState<'cards' | 'table'>('cards');
 
   const isAnnuel = type.startsWith('ANNUEL');
@@ -223,6 +237,18 @@ export function BulletinsPage() {
       toast.error((err as Error).message || 'Erreur PDF classe');
     } finally {
       setDownloadingClasse(false);
+    }
+  };
+
+  const openDetail = async (b: Bulletin) => {
+    setLoadingDetail(true);
+    try {
+      const data = await api.get<DetailBulletin>(`/api/v1/bulletins/${b.id}`);
+      setDetail(data);
+    } catch {
+      toast.error('Impossible de charger le détail');
+    } finally {
+      setLoadingDetail(false);
     }
   };
 
@@ -339,7 +365,7 @@ export function BulletinsPage() {
                   {/* Actions */}
                   <div className="flex gap-2 pt-1 border-t border-slate-100 dark:border-slate-700">
                     <button
-                      onClick={() => setDetail(b)}
+                      onClick={() => openDetail(b)}
                       className="flex-1 text-xs text-center py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                     >
                       Détail
@@ -393,7 +419,7 @@ export function BulletinsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => setDetail(b)}>{t('actions.voir')}</Button>
+                        <Button variant="ghost" size="sm" onClick={() => openDetail(b)}>{t('actions.voir')}</Button>
                         <Button variant="secondary" size="sm" loading={downloading === b.id} onClick={() => downloadPdf(b)}>PDF</Button>
                       </div>
                     </td>
@@ -417,60 +443,189 @@ export function BulletinsPage() {
       )}
 
       {/* Modal détail */}
-      <Modal isOpen={!!detail} onClose={() => setDetail(null)} title={t('bulletin.detail')} size="md">
-        {detail && (
-          <div className="space-y-4">
-            {/* En-tête avec moyenne mise en valeur */}
-            <div className={`rounded-xl p-5 text-center ${detail.moyenne !== null && Number(detail.moyenne) >= 14 ? 'bg-emerald-50 dark:bg-emerald-900/20' : detail.moyenne !== null && Number(detail.moyenne) >= 10 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
-              <div className={`text-5xl font-bold ${moyenneClass(detail.moyenne !== null ? Number(detail.moyenne) : null)}`}>
-                {detail.moyenne !== null ? Number(detail.moyenne).toFixed(2) : 'N/A'}
-              </div>
-              <div className="text-sm text-slate-500 dark:text-slate-400 mt-1">/ 20</div>
-              {detail.rang && (
-                <div className="mt-2">
-                  <RangMedal rang={detail.rang} />
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
-                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Élève</div>
-                <div className="font-semibold text-slate-900 dark:text-white">{detail.eleve.prenom_fr} {detail.eleve.nom_fr}</div>
-                <div className="font-mono text-xs text-slate-400 dark:text-slate-500">{detail.eleve.matricule}</div>
-              </div>
-              <div className="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
-                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Bulletin</div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {filiereChip(detail.filiere)}
-                  <span className="text-xs text-slate-600 dark:text-slate-300">
-                    {detail.periode === 0 ? 'Annuel' : `Trimestre ${detail.periode}`}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {detail.appreciation && (
-              <div className="p-3 bg-slate-50 dark:bg-slate-700 rounded-xl text-sm italic text-slate-600 dark:text-slate-300 border-l-4 border-amber-400">
-                « {detail.appreciation} »
-              </div>
-            )}
-
-            {detail.generated_at && (
-              <div className="text-xs text-slate-400 dark:text-slate-500 text-end">
-                Généré le {new Date(detail.generated_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
-              </div>
-            )}
-
-            <div className="flex justify-end gap-3 pt-2">
-              <Button variant="secondary" onClick={() => setDetail(null)}>Fermer</Button>
-              <Button onClick={() => downloadPdf(detail)} loading={downloading === detail.id}>
-                ⬇ Télécharger PDF
-              </Button>
-            </div>
-          </div>
+      <Modal isOpen={!!detail || loadingDetail} onClose={() => setDetail(null)} title={t('bulletin.detail')} size="lg">
+        {loadingDetail && (
+          <div className="py-16 text-center text-slate-400 dark:text-slate-500 text-sm">Chargement…</div>
         )}
+        {detail && !loadingDetail && <BulletinDetailContent detail={detail} downloading={downloading} onDownload={downloadPdf} onClose={() => setDetail(null)} />}
       </Modal>
+    </div>
+  );
+}
+
+// ─── Contenu modal détail ─────────────────────────────────────────────────────
+
+function noteColor(valeur: number | null, noteMax: number): string {
+  if (valeur === null) return 'text-slate-400 dark:text-slate-500';
+  const ratio = valeur / noteMax;
+  if (ratio >= 0.7) return 'text-emerald-600 dark:text-emerald-400 font-semibold';
+  if (ratio >= 0.5) return 'text-amber-600 dark:text-amber-400 font-semibold';
+  return 'text-red-600 dark:text-red-400 font-semibold';
+}
+
+function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere: string; isAnnuel: boolean }) {
+  if (notes.length === 0) return null;
+
+  if (!isAnnuel) {
+    return (
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-slate-200 dark:border-slate-700">
+            <th className="py-2 text-start text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Matière ({filiere})</th>
+            <th className="py-2 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase w-14">Coeff</th>
+            <th className="py-2 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase w-24">Note / Max</th>
+          </tr>
+        </thead>
+        <tbody>
+          {notes.map((n, i) => (
+            <tr key={i} className="border-b border-slate-100 dark:border-slate-800 last:border-0">
+              <td className="py-2 text-slate-800 dark:text-slate-200">{n.matiere.nom_fr}</td>
+              <td className="py-2 text-center text-slate-500 dark:text-slate-400 text-xs">{n.matiere.coeff_defaut}</td>
+              <td className="py-2 text-center">
+                <span className={noteColor(n.valeur, n.matiere.note_max)}>
+                  {n.valeur !== null ? n.valeur.toFixed(1) : '—'}
+                </span>
+                <span className="text-slate-400 dark:text-slate-500 text-xs">/{n.matiere.note_max}</span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+
+  // Annuel: group by matiere, columns T1 | T2 | T3 | Moy.
+  const matMap = new Map<string, { nom_fr: string; coeff: number; noteMax: number; vals: Record<number, number | null> }>();
+  for (const n of notes) {
+    if (!matMap.has(n.matiere.nom_fr)) {
+      matMap.set(n.matiere.nom_fr, { nom_fr: n.matiere.nom_fr, coeff: n.matiere.coeff_defaut, noteMax: n.matiere.note_max, vals: {} });
+    }
+    matMap.get(n.matiere.nom_fr)!.vals[n.periode] = n.valeur;
+  }
+  const rows = Array.from(matMap.values()).map(m => {
+    const vs = [1, 2, 3].map(p => m.vals[p] ?? null);
+    const nums = vs.filter((v): v is number => v !== null);
+    const moy = nums.length > 0 ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length * 100) / 100 : null;
+    return { ...m, vs, moy };
+  });
+
+  return (
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="border-b border-slate-200 dark:border-slate-700">
+          <th className="py-2 text-start text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Matière ({filiere})</th>
+          <th className="py-2 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase w-10">Coeff</th>
+          {['T1', 'T2', 'T3'].map(t => (
+            <th key={t} className="py-2 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase w-14">{t}</th>
+          ))}
+          <th className="py-2 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase w-16">Moy.</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r, i) => (
+          <tr key={i} className="border-b border-slate-100 dark:border-slate-800 last:border-0">
+            <td className="py-2 text-slate-800 dark:text-slate-200">{r.nom_fr}</td>
+            <td className="py-2 text-center text-slate-400 dark:text-slate-500 text-xs">{r.coeff}</td>
+            {r.vs.map((v, j) => (
+              <td key={j} className={`py-2 text-center text-xs ${noteColor(v, r.noteMax)}`}>
+                {v !== null ? v.toFixed(1) : '—'}
+              </td>
+            ))}
+            <td className={`py-2 text-center text-xs ${noteColor(r.moy, r.noteMax)}`}>
+              {r.moy !== null ? r.moy.toFixed(2) : '—'}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function BulletinDetailContent({
+  detail, downloading, onDownload, onClose,
+}: {
+  detail: DetailBulletin;
+  downloading: string | null;
+  onDownload: (b: DetailBulletin) => void;
+  onClose: () => void;
+}) {
+  const moy = detail.moyenne !== null ? Number(detail.moyenne) : null;
+  const isAnnuel = detail.periode === 0;
+  const filieres: ('FR' | 'AR')[] = detail.filiere === 'COMBINE' ? ['FR', 'AR'] : [detail.filiere as 'FR' | 'AR'];
+  const insc = detail.eleve.inscriptions?.[0];
+  const classeNom = insc?.classe_fr?.nom_fr ?? insc?.classe_ar?.nom_fr ?? '—';
+
+  return (
+    <div className="space-y-5">
+      {/* Bandeau moyenne + rang */}
+      <div className={`rounded-xl p-5 flex items-center justify-between gap-4 ${moy === null ? 'bg-slate-50 dark:bg-slate-700' : moy >= 14 ? 'bg-emerald-50 dark:bg-emerald-900/20' : moy >= 10 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
+        <div>
+          <div className={`text-4xl font-bold ${moyenneClass(moy)}`}>
+            {moy !== null ? moy.toFixed(2) : 'N/A'}
+            <span className="text-base font-normal text-slate-400 dark:text-slate-500 ms-1">/20</span>
+          </div>
+          {detail.appreciation && (
+            <div className="text-sm italic text-slate-600 dark:text-slate-300 mt-1">{detail.appreciation}</div>
+          )}
+        </div>
+        <div className="text-end">
+          <RangMedal rang={detail.rang} />
+          <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+            {isAnnuel ? 'Bulletin Annuel' : `Trimestre ${detail.periode}`}
+          </div>
+        </div>
+      </div>
+
+      {/* Infos élève */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+        <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+          <div className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Élève</div>
+          <div className="font-semibold text-slate-900 dark:text-white">{detail.eleve.prenom_fr} {detail.eleve.nom_fr}</div>
+          <div className="font-mono text-xs text-slate-400 dark:text-slate-500">{detail.eleve.matricule}</div>
+        </div>
+        <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+          <div className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Classe</div>
+          <div className="font-semibold text-slate-900 dark:text-white">{classeNom}</div>
+          <div className="mt-1">{filiereChip(detail.filiere)}</div>
+        </div>
+        <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+          <div className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Année scolaire</div>
+          <div className="font-semibold text-slate-900 dark:text-white">{detail.annee_scolaire.libelle}</div>
+          {detail.generated_at && (
+            <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+              Généré le {new Date(detail.generated_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Tables de notes par filière */}
+      <div className="space-y-4">
+        {filieres.map(f => {
+          const notes = detail.notesByFiliere[f] ?? [];
+          return (
+            <div key={f} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className={`px-4 py-2 text-xs font-semibold border-b border-slate-200 dark:border-slate-700 ${f === 'FR' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300'}`}>
+                Filière {f === 'FR' ? 'Française' : 'Arabe'} — {notes.length} matière(s)
+              </div>
+              <div className="px-4 pb-3">
+                {notes.length === 0
+                  ? <p className="py-4 text-xs text-slate-400 dark:text-slate-500 text-center">Aucune note enregistrée</p>
+                  : <NotesTable notes={notes} filiere={f} isAnnuel={isAnnuel} />
+                }
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Actions */}
+      <div className="flex justify-end gap-3 pt-1">
+        <Button variant="secondary" onClick={onClose}>Fermer</Button>
+        <Button onClick={() => onDownload(detail)} loading={downloading === detail.id}>
+          ⬇ Télécharger PDF
+        </Button>
+      </div>
     </div>
   );
 }
