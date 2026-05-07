@@ -2,6 +2,9 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# OpenSSL requis par Prisma sur Alpine
+RUN apk add --no-cache openssl
+
 COPY package*.json ./
 RUN npm ci
 
@@ -15,8 +18,9 @@ RUN npm run build
 FROM node:20-alpine
 WORKDIR /app
 
-# Chromium + dépendances pour Puppeteer (génération PDF)
+# OpenSSL (Prisma) + Chromium (Puppeteer PDF)
 RUN apk add --no-cache \
+    openssl \
     chromium \
     nss \
     freetype \
