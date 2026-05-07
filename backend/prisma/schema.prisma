@@ -115,14 +115,16 @@ model HeureTravail {
 }
 
 model PresenceProfesseur {
-  id             String   @id @default(uuid())
-  professeur_id  String
-  date           DateTime @db.Date
-  statut         String   // 'present' | 'absent' | 'retard' | 'conge'
-  heures_prevues Decimal? @db.Decimal(4, 2)
-  heures_reelles Decimal? @db.Decimal(4, 2)
-  motif          String?
-  created_at     DateTime @default(now())
+  id              String   @id @default(uuid())
+  professeur_id   String
+  date            DateTime @db.Date
+  statut          String   // 'present' | 'absent' | 'retard' | 'conge'
+  heure_arrivee   String?  // format HH:MM
+  heure_depart    String?  // format HH:MM
+  heures_prevues  Decimal? @db.Decimal(4, 2)
+  heures_reelles  Decimal? @db.Decimal(4, 2)  // calculé auto si arrivee+depart fournis
+  motif           String?
+  created_at      DateTime @default(now())
 
   professeur Professeur @relation(fields: [professeur_id], references: [id])
 

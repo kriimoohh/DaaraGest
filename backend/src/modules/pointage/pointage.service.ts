@@ -1,6 +1,14 @@
 import prisma from '../../config/database';
 import { PresenceInput, BulkPresenceInput } from './pointage.schema';
 
+function calcHeures(arrivee?: string, depart?: string): number | undefined {
+  if (!arrivee || !depart) return undefined;
+  const [ah, am] = arrivee.split(':').map(Number);
+  const [dh, dm] = depart.split(':').map(Number);
+  const diff = (dh * 60 + dm) - (ah * 60 + am);
+  return diff > 0 ? Math.round((diff / 60) * 100) / 100 : undefined;
+}
+
 export async function listerPresences(
   etablissement_id: string,
   date?: string,
@@ -70,22 +78,20 @@ export async function upsertPresence(etablissement_id: string, data: PresenceInp
   if (!prof) throw new Error('Professeur introuvable');
 
   const date = new Date(data.date);
+  const heuresAuto = calcHeures(data.heure_arrivee, data.heure_depart);
+  const heures_reelles = heuresAuto ?? data.heures_reelles;
+  const payload = {
+    statut: data.statut,
+    heure_arrivee: data.heure_arrivee ?? null,
+    heure_depart:  data.heure_depart  ?? null,
+    heures_prevues: data.heures_prevues ?? null,
+    heures_reelles: heures_reelles ?? null,
+    motif: data.motif ?? null,
+  };
   return prisma.presenceProfesseur.upsert({
     where: { professeur_id_date: { professeur_id: data.professeur_id, date } },
-    create: {
-      professeur_id: data.professeur_id,
-      date,
-      statut: data.statut,
-      heures_prevues: data.heures_prevues,
-      heures_reelles: data.heures_reelles,
-      motif: data.motif,
-    },
-    update: {
-      statut: data.statut,
-      heures_prevues: data.heures_prevues,
-      heures_reelles: data.heures_reelles,
-      motif: data.motif,
-    },
+    create: { professeur_id: data.professeur_id, date, ...payload },
+    update: payload,
     include: { professeur: { include: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } } } },
   });
 }
@@ -98,10 +104,19 @@ export async function bulkUpsertPresences(etablissement_id: string, data: BulkPr
       where: { id: p.professeur_id, utilisateur: { etablissement_id } },
     });
     if (!prof) continue;
+    const heuresAuto = calcHeures(p.heure_arrivee, p.heure_depart);
+    const bulk_payload = {
+      statut: p.statut,
+      heure_arrivee: p.heure_arrivee ?? null,
+      heure_depart:  p.heure_depart  ?? null,
+      heures_prevues: p.heures_prevues ?? null,
+      heures_reelles: heuresAuto ?? p.heures_reelles ?? null,
+      motif: p.motif ?? null,
+    };
     const r = await prisma.presenceProfesseur.upsert({
       where: { professeur_id_date: { professeur_id: p.professeur_id, date } },
-      create: { professeur_id: p.professeur_id, date, statut: p.statut, heures_prevues: p.heures_prevues, heures_reelles: p.heures_reelles, motif: p.motif },
-      update: { statut: p.statut, heures_prevues: p.heures_prevues, heures_reelles: p.heures_reelles, motif: p.motif },
+      create: { professeur_id: p.professeur_id, date, ...bulk_payload },
+      update: bulk_payload,
     });
     results.push(r);
   }

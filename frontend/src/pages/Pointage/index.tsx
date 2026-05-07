@@ -19,12 +19,14 @@ interface ProfJour {
 }
 
 interface PresenceRecord {
-  id: string; statut: string; heures_prevues: number | null;
-  heures_reelles: number | null; motif: string | null; date: string;
+  id: string; statut: string; date: string;
+  heure_arrivee: string | null; heure_depart: string | null;
+  heures_prevues: number | null; heures_reelles: number | null; motif: string | null;
 }
 
 interface PresenceHistorique {
   id: string; date: string; statut: string;
+  heure_arrivee: string | null; heure_depart: string | null;
   heures_prevues: number | null; heures_reelles: number | null; motif: string | null;
   professeur: { utilisateur: { nom_fr: string; prenom_fr: string } };
 }
@@ -58,7 +60,10 @@ function dateAujourdHui() {
 function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
   const [date, setDate] = useState(dateAujourdHui());
   const [profs, setProfs] = useState<ProfJour[]>([]);
-  const [saisie, setSaisie] = useState<Record<string, { statut: string; heures_reelles: string; motif: string }>>({});
+  const [saisie, setSaisie] = useState<Record<string, {
+    statut: string; heure_arrivee: string; heure_depart: string;
+    heures_reelles: string; motif: string;
+  }>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -72,6 +77,8 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
       for (const p of data) {
         init[p.professeur_id] = {
           statut: p.presence?.statut ?? '',
+          heure_arrivee: p.presence?.heure_arrivee ?? '',
+          heure_depart:  p.presence?.heure_depart  ?? '',
           heures_reelles: p.presence?.heures_reelles != null ? String(p.presence.heures_reelles) : '',
           motif: p.presence?.motif ?? '',
         };
@@ -84,21 +91,43 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
 
   useEffect(() => { charger(); }, [date]);
 
+  const calcHeures = (arrivee: string, depart: string): string => {
+    if (!arrivee || !depart) return '';
+    const [ah, am] = arrivee.split(':').map(Number);
+    const [dh, dm] = depart.split(':').map(Number);
+    const diff = (dh * 60 + dm) - (ah * 60 + am);
+    return diff > 0 ? String(Math.round((diff / 60) * 100) / 100) : '';
+  };
+
   const setStatut = (profId: string, statut: string) =>
     setSaisie(s => ({ ...s, [profId]: { ...s[profId], statut } }));
 
-  const setField = (profId: string, field: 'heures_reelles' | 'motif', val: string) =>
-    setSaisie(s => ({ ...s, [profId]: { ...s[profId], [field]: val } }));
+  const setField = (profId: string, field: 'heures_reelles' | 'motif' | 'heure_arrivee' | 'heure_depart', val: string) =>
+    setSaisie(s => {
+      const updated = { ...s[profId], [field]: val };
+      if (field === 'heure_arrivee' || field === 'heure_depart') {
+        const arrivee = field === 'heure_arrivee' ? val : s[profId]?.heure_arrivee ?? '';
+        const depart  = field === 'heure_depart'  ? val : s[profId]?.heure_depart  ?? '';
+        const auto = calcHeures(arrivee, depart);
+        if (auto) updated.heures_reelles = auto;
+      }
+      return { ...s, [profId]: updated };
+    });
 
   const handleSave = async () => {
     const presences = profs
       .filter(p => saisie[p.professeur_id]?.statut)
-      .map(p => ({
-        professeur_id: p.professeur_id,
-        statut: saisie[p.professeur_id].statut as 'present' | 'absent' | 'retard' | 'conge',
-        heures_reelles: saisie[p.professeur_id].heures_reelles ? parseFloat(saisie[p.professeur_id].heures_reelles) : undefined,
-        motif: saisie[p.professeur_id].motif || undefined,
-      }));
+      .map(p => {
+        const s = saisie[p.professeur_id];
+        return {
+          professeur_id: p.professeur_id,
+          statut: s.statut as 'present' | 'absent' | 'retard' | 'conge',
+          heure_arrivee: s.heure_arrivee || undefined,
+          heure_depart:  s.heure_depart  || undefined,
+          heures_reelles: s.heures_reelles ? parseFloat(s.heures_reelles) : undefined,
+          motif: s.motif || undefined,
+        };
+      });
 
     if (presences.length === 0) { toast.error('Aucune présence à enregistrer'); return; }
     setSaving(true);
@@ -147,7 +176,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
               <tr>
-                {['Professeur', 'Statut', 'Heures réelles', 'Motif (si absent/retard)'].map(h => (
+                {['Professeur', 'Statut', 'Arrivée', 'Départ', 'Durée (h)', 'Motif'].map(h => (
                   <th key={h} className="px-4 py-3 text-start text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
@@ -180,12 +209,35 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
                     </td>
                     <td className="px-4 py-3 w-28">
                       <input
-                        type="number" min="0" max="24" step="0.5"
-                        value={s.heures_reelles}
-                        onChange={e => setField(p.professeur_id, 'heures_reelles', e.target.value)}
-                        placeholder="h"
-                        className="w-20 px-2 py-1 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        type="time"
+                        value={s.heure_arrivee}
+                        onChange={e => setField(p.professeur_id, 'heure_arrivee', e.target.value)}
+                        disabled={s.statut === 'absent' || s.statut === 'conge'}
+                        className="w-24 px-2 py-1 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-40"
                       />
+                    </td>
+                    <td className="px-4 py-3 w-28">
+                      <input
+                        type="time"
+                        value={s.heure_depart}
+                        onChange={e => setField(p.professeur_id, 'heure_depart', e.target.value)}
+                        disabled={s.statut === 'absent' || s.statut === 'conge'}
+                        className="w-24 px-2 py-1 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-40"
+                      />
+                    </td>
+                    <td className="px-4 py-3 w-24">
+                      {s.heures_reelles ? (
+                        <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{s.heures_reelles}h</span>
+                      ) : (
+                        <input
+                          type="number" min="0" max="24" step="0.5"
+                          value={s.heures_reelles}
+                          onChange={e => setField(p.professeur_id, 'heures_reelles', e.target.value)}
+                          placeholder="—"
+                          disabled={s.statut === 'absent' || s.statut === 'conge'}
+                          className="w-16 px-2 py-1 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-40"
+                        />
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       {needMotif && (
@@ -263,7 +315,7 @@ function Historique({ api }: { api: ReturnType<typeof useApi> }) {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
               <tr>
-                {['Date', 'Professeur', 'Statut', 'Heures réelles', 'Motif'].map(h => (
+                {['Date', 'Professeur', 'Statut', 'Arrivée', 'Départ', 'Durée', 'Motif'].map(h => (
                   <th key={h} className="px-4 py-3 text-start text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
@@ -278,8 +330,10 @@ function Historique({ api }: { api: ReturnType<typeof useApi> }) {
                     {r.professeur.utilisateur.prenom_fr} {r.professeur.utilisateur.nom_fr}
                   </td>
                   <td className="px-4 py-3"><Badge label={statutLabel(r.statut)} variant={statutBadge(r.statut)} /></td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
-                    {r.heures_reelles != null ? `${Number(r.heures_reelles)}h` : '—'}
+                  <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">{r.heure_arrivee ?? '—'}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">{r.heure_depart ?? '—'}</td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400 text-sm">
+                    {r.heures_reelles != null ? <span className="font-semibold">{Number(r.heures_reelles)}h</span> : '—'}
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 italic">{r.motif ?? '—'}</td>
                 </tr>
