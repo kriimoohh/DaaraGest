@@ -3,6 +3,7 @@ import React from 'react';
 export interface Column<T> {
   key: string;
   header: string;
+  headerRender?: () => React.ReactNode;
   render?: (row: T) => React.ReactNode;
   width?: string;
   sortable?: boolean;
@@ -52,7 +53,7 @@ export function Table<T extends Record<string, unknown>>({
                   ].join(' ')}
                   style={col.width ? { width: col.width } : undefined}
                 >
-                  {canSort ? (
+                  {col.headerRender ? col.headerRender() : canSort ? (
                     <span className="inline-flex items-center gap-1.5">
                       {col.header}
                       <span className={isSorted ? 'text-emerald-500' : 'opacity-30'}>

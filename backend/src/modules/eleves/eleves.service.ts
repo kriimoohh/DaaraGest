@@ -193,3 +193,28 @@ export async function inscrireEleve(id: string, etablissement_id: string, data: 
     include: { annee_scolaire: true, classe_fr: true, classe_ar: true },
   });
 }
+
+export async function bulkDesactiverEleves(ids: string[], etablissement_id: string) {
+  return prisma.eleve.updateMany({
+    where: { id: { in: ids }, etablissement_id },
+    data: { actif: false },
+  });
+}
+
+export async function bulkInscrireEleves(ids: string[], etablissement_id: string, data: InscriptionInput) {
+  const existing = await prisma.eleve.findMany({
+    where: { id: { in: ids }, etablissement_id },
+    select: { id: true },
+  });
+  const validIds = existing.map(e => e.id);
+
+  return prisma.inscription.createMany({
+    data: validIds.map(eleve_id => ({
+      eleve_id,
+      annee_scolaire_id: data.annee_scolaire_id,
+      classe_fr_id: data.classe_fr_id ?? null,
+      classe_ar_id: data.classe_ar_id ?? null,
+    })),
+    skipDuplicates: true,
+  });
+}
