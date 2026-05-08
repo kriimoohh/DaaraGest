@@ -72,9 +72,10 @@ async function main() {
       nom_fr: 'Administrateur',
       nom_ar: 'مدير',
       langue: 'fr', theme: 'light',
+      must_change_password: true,
     },
   });
-  console.log('✅ Compte admin créé (admin / Admin123!)');
+  console.log('✅ Compte admin créé (admin / Admin123!) — changement de mot de passe requis à la connexion');
 
   // ── 5. Matières (utiles dès le départ, même en production) ──────────────────
   const matieres = [

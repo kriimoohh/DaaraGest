@@ -1,5 +1,5 @@
 import prisma from '../../config/database';
-import { GenererBulletinInput, GenererBulletinAnnuelInput } from './bulletins.schema';
+import { GenererBulletinInput, GenererBulletinAnnuelInput, ObservationInput } from './bulletins.schema';
 
 function appreciation(m: number): string {
   if (m >= 16) return 'Très bien — Félicitations du conseil';
@@ -172,6 +172,29 @@ export async function getBulletin(id: string, etablissement_id: string) {
     });
   }
   return { ...bulletin, notesByFiliere };
+}
+
+// ─── Mettre à jour les observations ─────────────────────────────────────────
+
+export async function mettreAJourObservation(
+  id: string,
+  etablissement_id: string,
+  data: ObservationInput,
+  valide_par: string,
+) {
+  const bulletin = await prisma.bulletin.findFirst({ where: { id, eleve: { etablissement_id } } });
+  if (!bulletin) throw new Error('Bulletin introuvable');
+
+  return prisma.bulletin.update({
+    where: { id },
+    data: {
+      observation_fr: data.observation_fr ?? bulletin.observation_fr,
+      observation_ar: data.observation_ar ?? bulletin.observation_ar,
+      observation_prof: data.observation_prof ?? bulletin.observation_prof,
+      valide_par,
+      valide_le: new Date(),
+    },
+  });
 }
 
 // ─── PDF individuel ──────────────────────────────────────────────────────────
