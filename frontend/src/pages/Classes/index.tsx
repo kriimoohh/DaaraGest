@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
+import { API_BASE } from '../../lib/api';
 import { toast } from '../../store/toastStore';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { PageHeader } from '../../components/ui/PageHeader';
@@ -97,6 +98,7 @@ export function ClassesPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [annees, setAnnees] = useState<AnneeScolaire[]>([]);
+  const token = useAuthStore((s) => s.token);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Classe | null>(null);
@@ -111,6 +113,9 @@ export function ClassesPage() {
   const [listeData, setListeData] = useState<ListeElevesResponse | null>(null);
   const [listeLoading, setListeLoading] = useState(false);
   const [listeSearch, setListeSearch] = useState('');
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfToutesLoading, setPdfToutesLoading] = useState(false);
+  const [imprimerToutesLoading, setImprimerToutesLoading] = useState(false);
 
   // Fetch annees scolaires once
   useEffect(() => {
@@ -227,14 +232,15 @@ export function ClassesPage() {
     }
   }
 
-  function downloadPdf() {
-    if (!listeData) return;
-    const { classe, eleves } = listeData;
+  function buildListeHtml(data: ListeElevesResponse, withPrintScript: boolean): string {
+    const { classe, eleves, total } = data;
     const anneeLabel = typeof classe.annee_scolaire === 'object' ? classe.annee_scolaire.libelle : '';
     const filiereLabel = classe.filiere === 'FR' ? 'Filière Française' : 'Filière Arabe';
     const dateImpression = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
     const nbM = eleves.filter(e => e.sexe === 'M').length;
-    const nbF = eleves.filter(e => e.sexe === 'F').length;
+    const nbF = total - nbM;
+    const badgeBg = classe.filiere === 'FR' ? '#dbeafe' : '#d1fae5';
+    const badgeColor = classe.filiere === 'FR' ? '#1e40af' : '#065f46';
 
     const rows = eleves.map(e => `
       <tr>
@@ -248,35 +254,35 @@ export function ClassesPage() {
         <td class="mono">${e.parents?.[0]?.telephone ?? '—'}</td>
       </tr>`).join('');
 
-    const html = `<!DOCTYPE html>
+    const css = `
+      * { margin:0; padding:0; box-sizing:border-box; }
+      body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; color: #1a1a1a; padding: 15mm; }
+      .header { text-align: center; margin-bottom: 18px; border-bottom: 2px solid #10B981; padding-bottom: 12px; }
+      .header h1 { font-size: 18px; font-weight: 700; color: #10B981; letter-spacing: 0.5px; }
+      .header h2 { font-size: 14px; font-weight: 600; margin-top: 4px; }
+      .meta { display: flex; justify-content: space-between; font-size: 10px; color: #555; margin-top: 6px; }
+      .badge { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 10px; font-weight: 600; background: ${badgeBg}; color: ${badgeColor}; }
+      table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+      thead tr { background: #10B981; color: white; }
+      thead th { padding: 7px 6px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+      tbody tr:nth-child(even) { background: #f0fdf4; }
+      tbody tr:hover { background: #d1fae5; }
+      td { padding: 5px 6px; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
+      td:first-child { text-align: center; color: #6b7280; font-size: 10px; font-weight: 600; }
+      .mono { font-family: monospace; font-size: 10px; color: #374151; }
+      .center { text-align: center; }
+      .footer { margin-top: 20px; display: flex; justify-content: space-between; font-size: 9px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 8px; }
+      .signature { margin-top: 40px; display: flex; justify-content: flex-end; }
+      .signature-box { text-align: center; font-size: 10px; color: #374151; }
+      .signature-line { border-top: 1px solid #374151; width: 160px; margin: 30px auto 4px; }
+      @page { size: A4; margin: 0; }`;
+
+    return `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8"/>
   <title>Liste ${classe.nom_fr} — ${anneeLabel}</title>
-  <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; color: #1a1a1a; padding: 20mm 15mm; }
-    .header { text-align: center; margin-bottom: 18px; border-bottom: 2px solid #10B981; padding-bottom: 12px; }
-    .header h1 { font-size: 18px; font-weight: 700; color: #10B981; letter-spacing: 0.5px; }
-    .header h2 { font-size: 14px; font-weight: 600; margin-top: 4px; }
-    .meta { display: flex; justify-content: space-between; font-size: 10px; color: #555; margin-top: 6px; }
-    .badge { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 10px; font-weight: 600;
-      background: ${classe.filiere === 'FR' ? '#dbeafe' : '#d1fae5'}; color: ${classe.filiere === 'FR' ? '#1e40af' : '#065f46'}; }
-    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-    thead tr { background: #10B981; color: white; }
-    thead th { padding: 7px 6px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
-    tbody tr:nth-child(even) { background: #f0fdf4; }
-    tbody tr:hover { background: #d1fae5; }
-    td { padding: 5px 6px; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
-    td:first-child { text-align: center; color: #6b7280; font-size: 10px; font-weight: 600; }
-    .mono { font-family: monospace; font-size: 10px; color: #374151; }
-    .center { text-align: center; }
-    .footer { margin-top: 20px; display: flex; justify-content: space-between; font-size: 9px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 8px; }
-    .signature { margin-top: 40px; display: flex; justify-content: flex-end; }
-    .signature-box { text-align: center; font-size: 10px; color: #374151; }
-    .signature-line { border-top: 1px solid #374151; width: 160px; margin: 30px auto 4px; }
-    @media print { body { padding: 10mm 12mm; } @page { size: A4; margin: 0; } }
-  </style>
+  <style>${css}</style>
 </head>
 <body>
   <div class="header">
@@ -288,47 +294,176 @@ export function ClassesPage() {
       <span>Niveau : <strong>${classe.niveau || '—'}</strong></span>
     </div>
   </div>
-
   <table>
     <thead>
       <tr>
-        <th style="width:32px">N°</th>
-        <th>Matricule</th>
-        <th>Nom</th>
-        <th>Prénom</th>
-        <th style="width:36px">Sexe</th>
-        <th>Date de naissance</th>
-        <th>Parent / Tuteur</th>
-        <th>Téléphone</th>
+        <th style="width:32px">N°</th><th>Matricule</th><th>Nom</th><th>Prénom</th>
+        <th style="width:36px">Sexe</th><th>Date de naissance</th><th>Parent / Tuteur</th><th>Téléphone</th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>
   </table>
-
   <div class="footer">
-    <span>
-      Total : <strong>${listeData.total} élève${listeData.total > 1 ? 's' : ''}</strong>
-      &nbsp;·&nbsp; Garçons : <strong>${nbM}</strong>
-      &nbsp;·&nbsp; Filles : <strong>${nbF}</strong>
-    </span>
+    <span>Total : <strong>${total} élève${total > 1 ? 's' : ''}</strong> &nbsp;·&nbsp; Garçons : <strong>${nbM}</strong> &nbsp;·&nbsp; Filles : <strong>${nbF}</strong></span>
     <span>Imprimé le ${dateImpression}</span>
   </div>
-
   <div class="signature">
-    <div class="signature-box">
-      <div class="signature-line"></div>
-      Signature du responsable
-    </div>
+    <div class="signature-box"><div class="signature-line"></div>Signature du responsable</div>
   </div>
-
-  <script>window.onload = () => { window.print(); }</script>
+  ${withPrintScript ? '<script>window.onload = () => { window.print(); }<\/script>' : ''}
 </body>
 </html>`;
+  }
 
+  function imprimerListe() {
+    if (!listeData) return;
+    const html = buildListeHtml(listeData, true);
     const win = window.open('', '_blank');
-    if (!win) { toast.error('Autoriser les popups pour télécharger le PDF'); return; }
+    if (!win) { toast.error('Autoriser les popups pour imprimer'); return; }
     win.document.write(html);
     win.document.close();
+  }
+
+  async function telechargerPdfListe() {
+    if (!listeData || !listeModal) return;
+    setPdfLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (anneeFilter) params.set('annee_scolaire_id', anneeFilter);
+      const res = await fetch(`${API_BASE}/api/v1/classes/${listeModal.id}/pdf-liste?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Erreur lors de la génération du PDF');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `liste-${listeData.classe.nom_fr}.pdf`.replace(/\s+/g, '-');
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur PDF');
+    } finally {
+      setPdfLoading(false);
+    }
+  }
+
+  async function telechargerPdfToutesClasses() {
+    setPdfToutesLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (anneeFilter) params.set('annee_scolaire_id', anneeFilter);
+      const res = await fetch(`${API_BASE}/api/v1/classes/pdf-toutes-classes?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Erreur lors de la génération du PDF');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'toutes-les-classes.pdf';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur PDF');
+    } finally {
+      setPdfToutesLoading(false);
+    }
+  }
+
+  async function imprimerToutesClasses() {
+    setImprimerToutesLoading(true);
+    try {
+      const allData: ListeElevesResponse[] = [];
+      for (const classe of classes) {
+        try {
+          const data = await api.get<ListeElevesResponse>(
+            `/api/v1/classes/${classe.id}/eleves${anneeFilter ? `?annee_scolaire_id=${anneeFilter}` : ''}`
+          );
+          if (data.eleves.length > 0) allData.push(data);
+        } catch { /* ignore */ }
+      }
+      if (allData.length === 0) { toast.error('Aucun élève trouvé'); return; }
+
+      const sharedCss = `
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; color: #1a1a1a; }
+        .page { padding: 15mm; page-break-after: always; }
+        .page:last-child { page-break-after: avoid; }
+        .header { text-align: center; margin-bottom: 18px; border-bottom: 2px solid #10B981; padding-bottom: 12px; }
+        .header h1 { font-size: 18px; font-weight: 700; color: #10B981; letter-spacing: 0.5px; }
+        .header h2 { font-size: 14px; font-weight: 600; margin-top: 4px; }
+        .meta { display: flex; justify-content: space-between; font-size: 10px; color: #555; margin-top: 6px; }
+        .badge { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 10px; font-weight: 600; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        thead tr { background: #10B981; color: white; }
+        thead th { padding: 7px 6px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+        tbody tr:nth-child(even) { background: #f0fdf4; }
+        td { padding: 5px 6px; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
+        td:first-child { text-align: center; color: #6b7280; font-size: 10px; font-weight: 600; }
+        .mono { font-family: monospace; font-size: 10px; color: #374151; }
+        .center { text-align: center; }
+        .footer { margin-top: 20px; display: flex; justify-content: space-between; font-size: 9px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 8px; }
+        .signature { margin-top: 40px; display: flex; justify-content: flex-end; }
+        .signature-box { text-align: center; font-size: 10px; color: #374151; }
+        .signature-line { border-top: 1px solid #374151; width: 160px; margin: 30px auto 4px; }
+        @page { size: A4; margin: 0; }`;
+
+      const pages = allData.map(data => {
+        const { classe, eleves, total } = data;
+        const anneeLabel = typeof classe.annee_scolaire === 'object' ? classe.annee_scolaire.libelle : '';
+        const filiereLabel = classe.filiere === 'FR' ? 'Filière Française' : 'Filière Arabe';
+        const dateImpression = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+        const nbM = eleves.filter(e => e.sexe === 'M').length;
+        const nbF = total - nbM;
+        const badgeBg = classe.filiere === 'FR' ? '#dbeafe' : '#d1fae5';
+        const badgeColor = classe.filiere === 'FR' ? '#1e40af' : '#065f46';
+        const rows = eleves.map(e => `
+          <tr>
+            <td>${e.rang}</td><td class="mono">${e.matricule}</td>
+            <td>${e.nom_fr}</td><td>${e.prenom_fr}</td>
+            <td class="center">${e.sexe === 'M' ? 'M' : 'F'}</td>
+            <td>${e.date_naissance ? new Date(e.date_naissance).toLocaleDateString('fr-FR') : '—'}</td>
+            <td>${e.parents?.[0]?.nom_fr ?? '—'}</td>
+            <td class="mono">${e.parents?.[0]?.telephone ?? '—'}</td>
+          </tr>`).join('');
+        return `<div class="page">
+          <div class="header">
+            <h1>DaaraGest</h1>
+            <h2>Liste des élèves — ${classe.nom_fr}</h2>
+            <div class="meta">
+              <span>Année scolaire : <strong>${anneeLabel}</strong></span>
+              <span class="badge" style="background:${badgeBg};color:${badgeColor}">${filiereLabel}</span>
+              <span>Niveau : <strong>${classe.niveau || '—'}</strong></span>
+            </div>
+          </div>
+          <table>
+            <thead><tr>
+              <th style="width:32px">N°</th><th>Matricule</th><th>Nom</th><th>Prénom</th>
+              <th style="width:36px">Sexe</th><th>Date de naissance</th><th>Parent / Tuteur</th><th>Téléphone</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div class="footer">
+            <span>Total : <strong>${total} élève${total > 1 ? 's' : ''}</strong> · Garçons : <strong>${nbM}</strong> · Filles : <strong>${nbF}</strong></span>
+            <span>Imprimé le ${dateImpression}</span>
+          </div>
+          <div class="signature"><div class="signature-box"><div class="signature-line"></div>Signature du responsable</div></div>
+        </div>`;
+      }).join('\n');
+
+      const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><title>Toutes les classes</title><style>${sharedCss}</style></head>
+      <body>${pages}<script>window.onload = () => { window.print(); }<\/script></body></html>`;
+
+      const win = window.open('', '_blank');
+      if (!win) { toast.error('Autoriser les popups pour imprimer'); return; }
+      win.document.write(html);
+      win.document.close();
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    } finally {
+      setImprimerToutesLoading(false);
+    }
   }
 
   function downloadCsv() {
@@ -429,7 +564,7 @@ export function ClassesPage() {
         </div>
       )}
 
-      <div className="mb-4 flex flex-wrap gap-3">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="w-48">
           <Select
             options={[
@@ -447,6 +582,27 @@ export function ClassesPage() {
             value={anneeFilter}
             onChange={(e) => setAnneeFilter(e.target.value)}
           />
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-xs text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap">Toutes les classes :</span>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={imprimerToutesClasses}
+            loading={imprimerToutesLoading}
+            icon={<span>🖨</span>}
+          >
+            Imprimer
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={telechargerPdfToutesClasses}
+            loading={pdfToutesLoading}
+            icon={<span>⬇</span>}
+          >
+            PDF
+          </Button>
         </div>
       </div>
 
@@ -562,8 +718,11 @@ export function ClassesPage() {
               <Button size="sm" variant="secondary" onClick={downloadCsv} icon={<span>⬇</span>}>
                 CSV
               </Button>
-              <Button size="sm" variant="secondary" onClick={downloadPdf} icon={<span>🖨</span>}>
-                PDF / Imprimer
+              <Button size="sm" variant="secondary" onClick={imprimerListe} icon={<span>🖨</span>}>
+                Imprimer
+              </Button>
+              <Button size="sm" variant="secondary" onClick={telechargerPdfListe} loading={pdfLoading} icon={<span>⬇</span>}>
+                PDF
               </Button>
             </div>
 

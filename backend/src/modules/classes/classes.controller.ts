@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
 import { classeSchema } from './classes.schema';
-import { listerClasses, getClasse, creerClasse, modifierClasse, supprimerClasse, listerElevesDeClasse } from './classes.service';
+import { listerClasses, getClasse, creerClasse, modifierClasse, supprimerClasse, listerElevesDeClasse, genererPdfListeClasse, genererPdfToutesClasses } from './classes.service';
 
 export async function listerHandler(
   request: FastifyRequest, reply: FastifyReply
@@ -80,5 +80,36 @@ export async function listerElevesHandler(
     return reply.send(data);
   } catch (err) {
     return reply.status(404).send({ error: (err as Error).message });
+  }
+}
+
+export async function pdfListeClasseHandler(
+  request: FastifyRequest, reply: FastifyReply
+) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { id } = request.params as { id: string };
+  const { annee_scolaire_id } = request.query as Record<string, string | undefined>;
+  try {
+    const pdf = await genererPdfListeClasse(id, etablissement_id, annee_scolaire_id);
+    reply.header('Content-Type', 'application/pdf');
+    reply.header('Content-Disposition', `attachment; filename="liste-classe-${id}.pdf"`);
+    return reply.send(pdf);
+  } catch (err) {
+    return reply.status(404).send({ error: (err as Error).message });
+  }
+}
+
+export async function pdfToutesClassesHandler(
+  request: FastifyRequest, reply: FastifyReply
+) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { annee_scolaire_id } = request.query as Record<string, string | undefined>;
+  try {
+    const pdf = await genererPdfToutesClasses(etablissement_id, annee_scolaire_id);
+    reply.header('Content-Type', 'application/pdf');
+    reply.header('Content-Disposition', 'attachment; filename="toutes-les-classes.pdf"');
+    return reply.send(pdf);
+  } catch (err) {
+    return reply.status(400).send({ error: (err as Error).message });
   }
 }
