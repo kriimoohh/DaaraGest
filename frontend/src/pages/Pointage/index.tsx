@@ -41,10 +41,10 @@ interface StatProf {
 const MOIS_LABELS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 
 const STATUTS = [
-  { value: 'present', label: 'Présent',  color: 'bg-emerald-500', textColor: 'text-emerald-700 dark:text-emerald-400', badge: 'success' as const },
-  { value: 'retard',  label: 'Retard',   color: 'bg-amber-500',   textColor: 'text-amber-700 dark:text-amber-400',     badge: 'warning' as const },
-  { value: 'absent',  label: 'Absent',   color: 'bg-red-500',     textColor: 'text-red-700 dark:text-red-400',         badge: 'error'   as const },
-  { value: 'conge',   label: 'Congé',    color: 'bg-blue-500',    textColor: 'text-blue-700 dark:text-blue-400',       badge: 'info'    as const },
+  { value: 'present', label: 'Présent', badge: 'success' as const },
+  { value: 'retard',  label: 'Retard',  badge: 'warning' as const },
+  { value: 'absent',  label: 'Absent',  badge: 'error'   as const },
+  { value: 'conge',   label: 'Congé',   badge: 'info'    as const },
 ];
 
 function statutLabel(s: string) { return STATUTS.find(x => x.value === s)?.label ?? s; }
@@ -144,116 +144,107 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
   const nbAbsents = profs.filter(p => saisie[p.professeur_id]?.statut === 'absent').length;
 
   return (
-    <div className="space-y-4">
-      {/* Barre date + actions */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-slate-600 dark:text-slate-400 shrink-0">Date :</label>
-          <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-44" />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="filter-row">
+        <div className="row">
+          <label style={{ fontSize: 13, color: 'var(--text-3)', flexShrink: 0 }}>Date :</label>
+          <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
         </div>
         <Button variant="secondary" onClick={charger} loading={loading}>Actualiser</Button>
         <Button onClick={handleSave} loading={saving} disabled={nbSaisis === 0}>
           Enregistrer ({nbSaisis})
         </Button>
         {nbSaisis > 0 && (
-          <div className="flex gap-3 ms-auto text-sm">
-            <span className="text-emerald-600 dark:text-emerald-400 font-medium">✓ {nbPresents} présents</span>
-            <span className="text-red-500 dark:text-red-400 font-medium">✗ {nbAbsents} absents</span>
+          <div className="row" style={{ marginInlineStart: 'auto', gap: 12 }}>
+            <span style={{ fontSize: 13, color: 'var(--success)', fontWeight: 500 }}>✓ {nbPresents} présents</span>
+            <span style={{ fontSize: 13, color: 'var(--danger)', fontWeight: 500 }}>✗ {nbAbsents} absents</span>
           </div>
         )}
       </div>
 
       {loading ? (
-        <div className="p-8 text-center text-slate-500 dark:text-slate-400">Chargement…</div>
+        <div className="empty">Chargement…</div>
       ) : profs.length === 0 ? (
-        <div className="p-12 text-center bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-          <div className="text-4xl mb-3">👨‍🏫</div>
-          <p className="text-slate-500 dark:text-slate-400">Aucun professeur actif</p>
+        <div className="card empty" style={{ flexDirection: 'column', gap: 8, padding: 48 }}>
+          <span style={{ fontSize: 36 }}>👨‍🏫</span>
+          <p>Aucun professeur actif</p>
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
-              <tr>
-                {['Professeur', 'Statut', 'Arrivée', 'Départ', 'Durée (h)', 'Motif'].map(h => (
-                  <th key={h} className="px-4 py-3 text-start text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {profs.map(p => {
-                const s = saisie[p.professeur_id] ?? { statut: '', heures_reelles: '', motif: '' };
-                const needMotif = s.statut === 'absent' || s.statut === 'retard';
-                return (
-                  <tr key={p.professeur_id} className={`border-b border-slate-100 dark:border-slate-800 last:border-0 transition-colors ${s.statut === 'absent' ? 'bg-red-50/40 dark:bg-red-900/10' : s.statut === 'present' ? 'bg-emerald-50/40 dark:bg-emerald-900/10' : s.statut === 'retard' ? 'bg-amber-50/40 dark:bg-amber-900/10' : ''}`}>
-                    <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
-                      {p.nom_fr}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-1 flex-wrap">
-                        {STATUTS.map(st => (
-                          <button
-                            key={st.value}
-                            onClick={() => setStatut(p.professeur_id, s.statut === st.value ? '' : st.value)}
-                            className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
-                              s.statut === st.value
-                                ? `${st.color} text-white shadow-sm`
-                                : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
-                            }`}
-                          >
-                            {st.label}
-                          </button>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 w-28">
-                      <input
-                        type="time"
-                        value={s.heure_arrivee}
-                        onChange={e => setField(p.professeur_id, 'heure_arrivee', e.target.value)}
-                        disabled={s.statut === 'absent' || s.statut === 'conge'}
-                        className="w-24 px-2 py-1 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-40"
-                      />
-                    </td>
-                    <td className="px-4 py-3 w-28">
-                      <input
-                        type="time"
-                        value={s.heure_depart}
-                        onChange={e => setField(p.professeur_id, 'heure_depart', e.target.value)}
-                        disabled={s.statut === 'absent' || s.statut === 'conge'}
-                        className="w-24 px-2 py-1 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-40"
-                      />
-                    </td>
-                    <td className="px-4 py-3 w-24">
-                      {s.heures_reelles ? (
-                        <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{s.heures_reelles}h</span>
-                      ) : (
-                        <input
-                          type="number" min="0" max="24" step="0.5"
-                          value={s.heures_reelles}
-                          onChange={e => setField(p.professeur_id, 'heures_reelles', e.target.value)}
-                          placeholder="—"
+        <div className="card">
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  {['Professeur', 'Statut', 'Arrivée', 'Départ', 'Durée (h)', 'Motif'].map(h => (
+                    <th key={h}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {profs.map(p => {
+                  const s = saisie[p.professeur_id] ?? { statut: '', heures_reelles: '', motif: '' };
+                  const needMotif = s.statut === 'absent' || s.statut === 'retard';
+                  const rowBg = s.statut === 'absent' ? 'oklch(0.96 0.03 25/0.4)'
+                    : s.statut === 'present' ? 'oklch(0.96 0.03 145/0.4)'
+                    : s.statut === 'retard' ? 'oklch(0.96 0.05 80/0.4)' : undefined;
+                  return (
+                    <tr key={p.professeur_id} style={rowBg ? { background: rowBg } : undefined}>
+                      <td>{p.nom_fr}</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                          {STATUTS.map(st => (
+                            <button
+                              key={st.value}
+                              onClick={() => setStatut(p.professeur_id, s.statut === st.value ? '' : st.value)}
+                              style={{
+                                padding: '3px 10px', borderRadius: 99, fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer',
+                                background: s.statut === st.value ? `var(--${st.badge === 'success' ? 'success' : st.badge === 'warning' ? 'warning' : st.badge === 'error' ? 'danger' : 'info'})` : 'var(--bg-3)',
+                                color: s.statut === st.value ? '#fff' : 'var(--text-3)',
+                              }}
+                            >
+                              {st.label}
+                            </button>
+                          ))}
+                        </div>
+                      </td>
+                      <td style={{ width: 112 }}>
+                        <input type="time" value={s.heure_arrivee}
+                          onChange={e => setField(p.professeur_id, 'heure_arrivee', e.target.value)}
                           disabled={s.statut === 'absent' || s.statut === 'conge'}
-                          className="w-16 px-2 py-1 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-40"
-                        />
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {needMotif && (
-                        <input
-                          type="text"
-                          value={s.motif}
-                          onChange={e => setField(p.professeur_id, 'motif', e.target.value)}
-                          placeholder="Raison…"
-                          className="w-full px-2 py-1 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        />
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                          className="input" style={{ width: 96, padding: '4px 8px' }} />
+                      </td>
+                      <td style={{ width: 112 }}>
+                        <input type="time" value={s.heure_depart}
+                          onChange={e => setField(p.professeur_id, 'heure_depart', e.target.value)}
+                          disabled={s.statut === 'absent' || s.statut === 'conge'}
+                          className="input" style={{ width: 96, padding: '4px 8px' }} />
+                      </td>
+                      <td style={{ width: 96 }}>
+                        {s.heures_reelles ? (
+                          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--success)' }}>{s.heures_reelles}h</span>
+                        ) : (
+                          <input type="number" min="0" max="24" step="0.5"
+                            value={s.heures_reelles}
+                            onChange={e => setField(p.professeur_id, 'heures_reelles', e.target.value)}
+                            placeholder="—"
+                            disabled={s.statut === 'absent' || s.statut === 'conge'}
+                            className="input" style={{ width: 64, padding: '4px 8px' }} />
+                        )}
+                      </td>
+                      <td>
+                        {needMotif && (
+                          <input type="text" value={s.motif}
+                            onChange={e => setField(p.professeur_id, 'motif', e.target.value)}
+                            placeholder="Raison…"
+                            className="input" style={{ width: '100%', padding: '4px 8px' }} />
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
@@ -288,57 +279,55 @@ function Historique({ api }: { api: ReturnType<typeof useApi> }) {
   useEffect(() => { setPage(1); }, [mois, annee, statut]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-3 items-center">
-        <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">Période :</span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="filter-row">
+        <span style={{ fontSize: 12, color: 'var(--text-3)', flexShrink: 0 }}>Période :</span>
         <Select value={mois} onChange={e => setMois(e.target.value)}
           options={MOIS_LABELS.map((m, i) => ({ value: String(i + 1), label: m }))} />
-        <Input type="number" value={annee} onChange={e => setAnnee(e.target.value)} className="w-24" />
-        <div className="flex gap-1 flex-wrap">
+        <Input type="number" value={annee} onChange={e => setAnnee(e.target.value)} />
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           {[{ value: '', label: 'Tous' }, ...STATUTS].map(s => (
             <button key={s.value} onClick={() => setStatut(s.value)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                statut === s.value
-                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
-                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-              }`}>
+              style={{
+                padding: '4px 12px', borderRadius: 99, fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer',
+                background: statut === s.value ? 'var(--text)' : 'var(--bg-3)',
+                color: statut === s.value ? 'var(--bg)' : 'var(--text-3)',
+              }}>
               {s.label}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-        {loading ? <div className="p-8 text-center text-slate-500">Chargement…</div> :
-        records.length === 0 ? <div className="p-8 text-center text-slate-500">Aucun enregistrement</div> : (
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
-              <tr>
-                {['Date', 'Professeur', 'Statut', 'Arrivée', 'Départ', 'Durée', 'Motif'].map(h => (
-                  <th key={h} className="px-4 py-3 text-start text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {records.map(r => (
-                <tr key={r.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                  <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">
-                    {new Date(r.date).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' })}
-                  </td>
-                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
-                    {r.professeur.utilisateur.nom_fr}
-                  </td>
-                  <td className="px-4 py-3"><Badge label={statutLabel(r.statut)} variant={statutBadge(r.statut)} /></td>
-                  <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">{r.heure_arrivee ?? '—'}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">{r.heure_depart ?? '—'}</td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400 text-sm">
-                    {r.heures_reelles != null ? <span className="font-semibold">{Number(r.heures_reelles)}h</span> : '—'}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 italic">{r.motif ?? '—'}</td>
+      <div className="card">
+        {loading ? <div className="empty">Chargement…</div> :
+        records.length === 0 ? <div className="empty">Aucun enregistrement</div> : (
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  {['Date', 'Professeur', 'Statut', 'Arrivée', 'Départ', 'Durée', 'Motif'].map(h => (
+                    <th key={h}>{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {records.map(r => (
+                  <tr key={r.id}>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+                      {new Date(r.date).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' })}
+                    </td>
+                    <td>{r.professeur.utilisateur.nom_fr}</td>
+                    <td><Badge label={statutLabel(r.statut)} variant={statutBadge(r.statut)} /></td>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{r.heure_arrivee ?? '—'}</td>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{r.heure_depart ?? '—'}</td>
+                    <td>{r.heures_reelles != null ? <span style={{ fontWeight: 600 }}>{Number(r.heures_reelles)}h</span> : '—'}</td>
+                    <td style={{ fontSize: 12, fontStyle: 'italic' }}>{r.motif ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
       <Pagination page={page} total={total} limit={30} onChange={setPage} />
@@ -374,72 +363,72 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
   }), { presents: 0, absents: 0, retards: 0, conges: 0 });
 
   return (
-    <div className="space-y-4">
-      <div className="flex gap-3 items-center">
-        <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">Période :</span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="filter-row">
+        <span style={{ fontSize: 12, color: 'var(--text-3)', flexShrink: 0 }}>Période :</span>
         <Select value={mois} onChange={e => setMois(e.target.value)}
           options={MOIS_LABELS.map((m, i) => ({ value: String(i + 1), label: m }))} />
-        <Input type="number" value={annee} onChange={e => setAnnee(e.target.value)} className="w-24" />
+        <Input type="number" value={annee} onChange={e => setAnnee(e.target.value)} />
         <Button variant="secondary" onClick={charger} loading={loading}>Actualiser</Button>
       </div>
 
-      {/* Résumé global */}
       {stats.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid-4">
           {[
-            { label: 'Présences', value: total.presents, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-            { label: 'Absences', value: total.absents, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20' },
-            { label: 'Retards', value: total.retards, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20' },
-            { label: 'Congés', value: total.conges, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+            { label: 'Présences', value: total.presents, color: 'var(--success)' },
+            { label: 'Absences', value: total.absents, color: 'var(--danger)' },
+            { label: 'Retards', value: total.retards, color: 'var(--warning)' },
+            { label: 'Congés', value: total.conges, color: 'var(--info)' },
           ].map(c => (
-            <div key={c.label} className={`${c.bg} rounded-xl p-4 text-center border border-slate-100 dark:border-slate-700`}>
-              <div className={`text-2xl font-bold ${c.color}`}>{c.value}</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">{c.label}</div>
+            <div key={c.label} className="card" style={{ textAlign: 'center', padding: 16 }}>
+              <div style={{ fontSize: 24, fontWeight: 700, color: c.color }}>{c.value}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>{c.label}</div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Tableau par prof */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-        {loading ? <div className="p-8 text-center text-slate-500">Chargement…</div> :
-        stats.length === 0 ? <div className="p-8 text-center text-slate-500">Aucune donnée pour cette période</div> : (
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
-              <tr>
-                {['Professeur', 'Jours saisis', '✓ Présents', '✗ Absents', '⚡ Retards', '✈ Congés', 'Taux'].map(h => (
-                  <th key={h} className="px-4 py-3 text-start text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {stats.map(s => (
-                <tr key={s.professeur_id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{s.nom_fr}</td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{s.total_jours}</td>
-                  <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-semibold">{s.presents}</td>
-                  <td className="px-4 py-3 text-red-500 dark:text-red-400 font-semibold">{s.absents}</td>
-                  <td className="px-4 py-3 text-amber-600 dark:text-amber-400">{s.retards}</td>
-                  <td className="px-4 py-3 text-blue-600 dark:text-blue-400">{s.conges}</td>
-                  <td className="px-4 py-3">
-                    {s.taux_presence !== null ? (
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-slate-200 dark:bg-slate-600 rounded-full h-1.5 min-w-16">
-                          <div
-                            className={`h-1.5 rounded-full ${s.taux_presence >= 80 ? 'bg-emerald-500' : s.taux_presence >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
-                            style={{ width: `${s.taux_presence}%` }}
-                          />
-                        </div>
-                        <span className={`text-xs font-semibold ${s.taux_presence >= 80 ? 'text-emerald-600 dark:text-emerald-400' : s.taux_presence >= 60 ? 'text-amber-600' : 'text-red-500'}`}>
-                          {s.taux_presence}%
-                        </span>
-                      </div>
-                    ) : <span className="text-slate-400 text-xs">—</span>}
-                  </td>
+      <div className="card">
+        {loading ? <div className="empty">Chargement…</div> :
+        stats.length === 0 ? <div className="empty">Aucune donnée pour cette période</div> : (
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  {['Professeur', 'Jours saisis', '✓ Présents', '✗ Absents', '⚡ Retards', '✈ Congés', 'Taux'].map(h => (
+                    <th key={h}>{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {stats.map(s => (
+                  <tr key={s.professeur_id}>
+                    <td>{s.nom_fr}</td>
+                    <td>{s.total_jours}</td>
+                    <td style={{ color: 'var(--success)', fontWeight: 600 }}>{s.presents}</td>
+                    <td style={{ color: 'var(--danger)', fontWeight: 600 }}>{s.absents}</td>
+                    <td style={{ color: 'var(--warning)' }}>{s.retards}</td>
+                    <td style={{ color: 'var(--info)' }}>{s.conges}</td>
+                    <td>
+                      {s.taux_presence !== null ? (
+                        <div className="row" style={{ gap: 8 }}>
+                          <div style={{ flex: 1, background: 'var(--bg-3)', borderRadius: 99, height: 6, minWidth: 64 }}>
+                            <div style={{
+                              height: 6, borderRadius: 99, width: `${s.taux_presence}%`,
+                              background: s.taux_presence >= 80 ? 'var(--success)' : s.taux_presence >= 60 ? 'var(--warning)' : 'var(--danger)',
+                            }} />
+                          </div>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: s.taux_presence >= 80 ? 'var(--success)' : s.taux_presence >= 60 ? 'var(--warning)' : 'var(--danger)' }}>
+                            {s.taux_presence}%
+                          </span>
+                        </div>
+                      ) : <span style={{ color: 'var(--text-4)', fontSize: 12 }}>—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
@@ -460,14 +449,14 @@ export function PointagePage() {
   ];
 
   return (
-    <div className="space-y-5">
+    <>
       <PageHeader title={t('pointage.titre')} />
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700">
+      <div className="tabs" style={{ marginBottom: 16 }}>
         {TABS.map(tb => (
           <button key={tb.key} onClick={() => setTab(tb.key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === tb.key ? 'border-[#10B981] text-[#10B981]' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>
+            className={`tab${tab === tb.key ? ' active' : ''}`}>
             {tb.label}
           </button>
         ))}
@@ -476,6 +465,6 @@ export function PointagePage() {
       {tab === 'saisie'     && <SaisieJour api={api} />}
       {tab === 'historique' && <Historique api={api} />}
       {tab === 'stats'      && <Statistiques api={api} />}
-    </div>
+    </>
   );
 }

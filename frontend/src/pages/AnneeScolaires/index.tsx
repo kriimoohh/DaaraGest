@@ -113,71 +113,73 @@ export function AnneeScolairesPage() {
   const fmt = (d: string) => new Date(d).toLocaleDateString('fr-FR');
 
   return (
-    <div className="space-y-6">
+    <>
       <PageHeader
         title="Années scolaires"
         subtitle="Gérer les années scolaires de l'établissement"
         action={<Button onClick={openAdd}>+ Ajouter une année</Button>}
       />
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="card">
         {loading ? (
-          <div className="p-8 text-center text-slate-500">Chargement...</div>
+          <div className="empty">Chargement...</div>
         ) : annees.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="text-4xl mb-3">📅</div>
-            <p className="text-slate-500">Aucune année scolaire. Commencez par en créer une.</p>
+          <div className="empty" style={{ flexDirection: 'column', gap: 8 }}>
+            <span style={{ fontSize: 36 }}>📅</span>
+            <p>Aucune année scolaire. Commencez par en créer une.</p>
           </div>
         ) : (
-          <table className="w-full">
-            <thead className="bg-slate-50 dark:bg-slate-700/50">
-              <tr>
-                {['Libellé', 'Début', 'Fin', 'Statut', 'Actions'].map((h) => (
-                  <th key={h} className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {annees.map((a) => (
-                <tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{a.libelle}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{fmt(a.date_debut)}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{fmt(a.date_fin)}</td>
-                  <td className="px-4 py-3">
-                    <Badge label={a.active ? 'Active' : 'Inactive'} variant={a.active ? 'success' : 'neutral'} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      {!a.active && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleActiver(a)}
-                          loading={activating === a.id}
-                        >
-                          Activer
-                        </Button>
-                      )}
-                      <Button size="sm" variant="ghost" onClick={() => openEdit(a)}>{t('actions.modifier')}</Button>
-                      {isAdmin && <Button size="sm" variant="danger" onClick={() => setConfirm(a)}>{t('actions.supprimer')}</Button>}
-                    </div>
-                  </td>
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  {['Libellé', 'Début', 'Fin', 'Statut', 'Actions'].map((h) => (
+                    <th key={h}>{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {annees.map((a) => (
+                  <tr key={a.id}>
+                    <td>{a.libelle}</td>
+                    <td>{fmt(a.date_debut)}</td>
+                    <td>{fmt(a.date_fin)}</td>
+                    <td>
+                      <Badge label={a.active ? 'Active' : 'Inactive'} variant={a.active ? 'success' : 'neutral'} />
+                    </td>
+                    <td>
+                      <div className="row">
+                        {!a.active && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleActiver(a)}
+                            loading={activating === a.id}
+                          >
+                            Activer
+                          </Button>
+                        )}
+                        <Button size="sm" variant="ghost" onClick={() => openEdit(a)}>{t('actions.modifier')}</Button>
+                        {isAdmin && <Button size="sm" variant="danger" onClick={() => setConfirm(a)}>{t('actions.supprimer')}</Button>}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
       <Modal isOpen={modal} onClose={() => setModal(false)} title={edit ? 'Modifier l\'année' : 'Nouvelle année scolaire'} size="md">
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <Input
             label={t('annee_scolaire.libelle')}
             value={form.libelle}
             onChange={(e) => setForm((f) => ({ ...f, libelle: e.target.value }))}
             placeholder="2025-2026"
           />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid-2">
             <Input
               label={t('annee_scolaire.date_debut')}
               type="date"
@@ -191,7 +193,7 @@ export function AnneeScolairesPage() {
               onChange={(e) => setForm((f) => ({ ...f, date_fin: e.target.value }))}
             />
           </div>
-          <div className="flex justify-end gap-3 pt-2">
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
             <Button variant="secondary" onClick={() => setModal(false)}>{t('actions.annuler')}</Button>
             <Button onClick={handleSave} loading={saving}>{t('actions.enregistrer')}</Button>
           </div>
@@ -205,6 +207,6 @@ export function AnneeScolairesPage() {
         loading={deleting}
         message={`Supprimer l'année "${confirm?.libelle}" ?`}
       />
-    </div>
+    </>
   );
 }
