@@ -20,8 +20,11 @@ import { Pagination } from '../../components/ui/Pagination';
 interface Parent {
   id?: string;
   nom_fr: string;
+  nom_ar?: string;
   lien: string;
   telephone: string;
+  email?: string;
+  adresse?: string;
 }
 
 interface EleveInscription {
@@ -125,6 +128,8 @@ function FicheRow({ label, value }: { label: string; value: React.ReactNode }) {
 export function ElevesPage() {
   const { t } = useTranslation();
   const isAdmin = useAuthStore(s => s.user?.role === 'admin');
+  const isGestion = useAuthStore(s => ['admin', 'directeur', 'gestionnaire'].includes(s.user?.role ?? ''));
+  const canInscrire = useAuthStore(s => ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'].includes(s.user?.role ?? ''));
   const SEXE_OPTIONS = [
     { value: 'M', label: t('eleve.masculin') },
     { value: 'F', label: t('eleve.feminin') },
@@ -170,6 +175,8 @@ export function ElevesPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [confirmBulkSupprimer, setConfirmBulkSupprimer] = useState(false);
+  const [bulkSupprimant, setBulkSupprimant] = useState(false);
   const [bulkInscModal, setBulkInscModal] = useState(false);
   const [bulkInscForm, setBulkInscForm] = useState({ annee_scolaire_id: '', classe_fr_id: '', classe_ar_id: '' });
   const [bulkInscSaving, setBulkInscSaving] = useState(false);
@@ -269,6 +276,21 @@ export function ElevesPage() {
     }
   }
 
+  async function handleBulkSupprimer() {
+    setBulkSupprimant(true);
+    try {
+      const res = await api.post<{ count: number }>('/api/v1/eleves/bulk-supprimer', { ids: [...selectedIds] });
+      toast.success(`${res.count} élève(s) supprimé(s) définitivement`);
+      setSelectedIds(new Set());
+      setConfirmBulkSupprimer(false);
+      fetchEleves();
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur lors de la suppression');
+    } finally {
+      setBulkSupprimant(false);
+    }
+  }
+
   async function openBulkInscription() {
     try {
       const [ans, cls] = await Promise.all([
@@ -312,6 +334,27 @@ export function ElevesPage() {
       toast.error('Impossible de charger la fiche');
     } finally {
       setFicheLoading(false);
+    }
+  }
+
+  // ── Toggle actif ───────────────────────────────────────────────────────────
+
+  const [toggleLoading, setToggleLoading] = useState<string | null>(null);
+
+  async function handleToggleActif(eleve: Eleve) {
+    setToggleLoading(eleve.id);
+    try {
+      await api.patch(`/api/v1/eleves/${eleve.id}/toggle-actif`, {});
+      toast.success(eleve.actif ? 'Élève désactivé' : 'Élève réactivé');
+      fetchEleves();
+      if (ficheModal?.id === eleve.id) {
+        const updated = await api.get<EleveFiche>(`/api/v1/eleves/${eleve.id}`);
+        setFicheModal(updated);
+      }
+    } catch {
+      toast.error('Impossible de modifier le statut');
+    } finally {
+      setToggleLoading(null);
     }
   }
 
@@ -498,7 +541,7 @@ export function ElevesPage() {
     {
       key: 'actions',
       header: 'Actions',
-      width: '240px',
+      width: '280px',
       render: (row) => {
         const e = row as unknown as Eleve;
         return (
@@ -508,6 +551,16 @@ export function ElevesPage() {
             </Button>
             <Button size="sm" variant="ghost" onClick={() => openEdit(e)}>{t('actions.modifier')}</Button>
             <Button size="sm" variant="secondary" onClick={() => openInscription(e)}>{t('actions.inscrire')}</Button>
+            {isGestion && (
+              <Button
+                size="sm"
+                variant={e.actif ? 'danger' : 'primary'}
+                loading={toggleLoading === e.id}
+                onClick={() => handleToggleActif(e)}
+              >
+                {e.actif ? 'Désactiver' : 'Réactiver'}
+              </Button>
+            )}
             {isAdmin && <Button size="sm" variant="danger" onClick={() => setConfirmDelete(e)}>{t('actions.supprimer')}</Button>}
           </div>
         );
@@ -760,6 +813,17 @@ export function ElevesPage() {
           size="lg"
         >
           <div className="space-y-6">
+            {/* Photo + en-tête */}
+            {ficheModal.photo_url && (
+              <div className="flex justify-center">
+                <img
+                  src={ficheModal.photo_url}
+                  alt={`${ficheModal.prenom_fr} ${ficheModal.nom_fr}`}
+                  className="w-24 h-24 rounded-full object-cover border-2 border-slate-200 dark:border-slate-700 shadow"
+                />
+              </div>
+            )}
+
             {/* Informations personnelles */}
             <section>
               <h3 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
@@ -797,13 +861,18 @@ export function ElevesPage() {
                 <h3 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
                   Parent / Tuteur
                 </h3>
-                {ficheModal.parents.map((p, i) => (
-                  <dl key={i} className="grid grid-cols-3 gap-x-8 gap-y-4">
-                    <FicheRow label="Nom" value={p.nom_fr} />
-                    <FicheRow label="Lien" value={p.lien} />
-                    <FicheRow label="Téléphone" value={p.telephone || '—'} />
-                  </dl>
-                ))}
+                <div className="space-y-4">
+                  {ficheModal.parents.map((p, i) => (
+                    <dl key={i} className="grid grid-cols-2 gap-x-8 gap-y-3 px-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                      <FicheRow label="Nom (FR)" value={p.nom_fr} />
+                      <FicheRow label="Nom (AR)" value={p.nom_ar || '—'} />
+                      <FicheRow label="Lien" value={p.lien} />
+                      <FicheRow label="Téléphone" value={p.telephone || '—'} />
+                      <FicheRow label="Email" value={p.email || '—'} />
+                      <FicheRow label="Adresse" value={p.adresse || '—'} />
+                    </dl>
+                  ))}
+                </div>
               </section>
             )}
 
@@ -842,14 +911,25 @@ export function ElevesPage() {
               </section>
             )}
 
-            <div className="flex justify-end gap-3 pt-1">
-              <Button
-                variant="secondary"
-                onClick={() => { setFicheModal(null); openEdit(ficheModal); }}
-              >
-                Modifier
-              </Button>
-              <Button variant="secondary" onClick={() => setFicheModal(null)}>Fermer</Button>
+            <div className="flex justify-between items-center pt-1">
+              {isGestion && (
+                <Button
+                  variant={ficheModal.actif ? 'danger' : 'primary'}
+                  loading={toggleLoading === ficheModal.id}
+                  onClick={() => handleToggleActif(ficheModal)}
+                >
+                  {ficheModal.actif ? 'Désactiver l\'élève' : 'Réactiver l\'élève'}
+                </Button>
+              )}
+              <div className="flex gap-3 ml-auto">
+                <Button
+                  variant="secondary"
+                  onClick={() => { setFicheModal(null); openEdit(ficheModal); }}
+                >
+                  Modifier
+                </Button>
+                <Button variant="secondary" onClick={() => setFicheModal(null)}>Fermer</Button>
+              </div>
             </div>
           </div>
         </Modal>
@@ -892,6 +972,16 @@ export function ElevesPage() {
         onConfirm={handleBulkDelete}
         loading={bulkDeleting}
         message={`Désactiver ${selectedIds.size} élève(s) sélectionné(s) ?`}
+      />
+
+      {/* ── Confirmation suppression définitive bulk ────────────────────────── */}
+      <ConfirmModal
+        isOpen={confirmBulkSupprimer}
+        onClose={() => setConfirmBulkSupprimer(false)}
+        onConfirm={handleBulkSupprimer}
+        loading={bulkSupprimant}
+        title="Suppression définitive"
+        message={`Supprimer définitivement ${selectedIds.size} élève(s) ? Cette action est irréversible et effacera toutes leurs données (inscriptions, paiements, notes, bulletins).`}
       />
 
       {/* ── Modal inscription bulk ───────────────────────────────────────────── */}
@@ -943,9 +1033,14 @@ export function ElevesPage() {
             Inscrire
           </Button>
           {isAdmin && (
-            <Button size="sm" variant="danger" onClick={() => setConfirmBulkDelete(true)}>
-              Désactiver
-            </Button>
+            <>
+              <Button size="sm" variant="danger" onClick={() => setConfirmBulkDelete(true)}>
+                Désactiver
+              </Button>
+              <Button size="sm" variant="danger" onClick={() => setConfirmBulkSupprimer(true)}>
+                Supprimer définitivement
+              </Button>
+            </>
           )}
           <div className="w-px h-5 bg-slate-200 dark:bg-slate-700" />
           <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
