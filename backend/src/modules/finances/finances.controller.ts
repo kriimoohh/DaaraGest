@@ -13,6 +13,27 @@ export async function statsMensuelsHandler(request: FastifyRequest, reply: Fasti
   return reply.send(await getStatsMensuels(etablissement_id, nb_mois ? parseInt(nb_mois) : 6));
 }
 
+export async function exportExcelHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { type, mois, annee, statut } = request.query as Record<string, string | undefined>;
+  try {
+    const { data } = await listerPaiementsEleves(
+      etablissement_id, 1, undefined, type,
+      mois ? parseInt(mois) : undefined,
+      annee ? parseInt(annee) : undefined,
+      statut,
+    );
+    const { exportFinancesExcel } = await import('../../utils/excel');
+    const buffer = await exportFinancesExcel(data);
+    reply
+      .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      .header('Content-Disposition', 'attachment; filename="paiements.xlsx"')
+      .send(buffer);
+  } catch (err) {
+    return reply.status(500).send({ error: (err as Error).message });
+  }
+}
+
 export async function listerPaiementsElevesHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
   const { page, search, type, mois, annee, statut } = request.query as Record<string, string | undefined>;

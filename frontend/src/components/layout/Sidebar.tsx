@@ -34,6 +34,7 @@ const sections = [
     label: 'Administration',
     labelAr: 'الإدارة',
     items: [
+      { key: 'absences',          path: '/absences',          icon: '📋', roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité', 'professeur', 'pointeur'] },
       { key: 'pointage',         path: '/pointage',          icon: '📌', roles: ['admin', 'directeur', 'gestionnaire', 'pointeur'] },
       { key: 'finances',         path: '/finances',          icon: '💰', roles: ['admin', 'gestionnaire', 'agent de scolarité'] },
       { key: 'utilisateurs',     path: '/utilisateurs',      icon: '👥', roles: ['admin'] },

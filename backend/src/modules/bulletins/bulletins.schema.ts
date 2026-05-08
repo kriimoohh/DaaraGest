@@ -13,5 +13,12 @@ export const genererBulletinAnnuelSchema = z.object({
   filiere: z.enum(['FR', 'AR', 'COMBINE']),
 });
 
+export const observationSchema = z.object({
+  observation_fr: z.string().max(500).optional(),
+  observation_ar: z.string().max(500).optional(),
+  observation_prof: z.string().max(500).optional(),
+});
+
 export type GenererBulletinInput = z.infer<typeof genererBulletinSchema>;
 export type GenererBulletinAnnuelInput = z.infer<typeof genererBulletinAnnuelSchema>;
+export type ObservationInput = z.infer<typeof observationSchema>;

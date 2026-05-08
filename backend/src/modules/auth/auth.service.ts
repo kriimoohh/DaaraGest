@@ -38,6 +38,7 @@ export async function login(identifiant: string, mot_de_passe: string) {
       theme: utilisateur.theme,
       role: utilisateur.role.libelle_fr,
       etablissement_id: utilisateur.etablissement_id,
+      must_change_password: utilisateur.must_change_password,
     },
   };
 }
@@ -49,7 +50,10 @@ export async function changePassword(id: string, ancien: string, nouveau: string
   if (!valid) throw new Error('Mot de passe actuel incorrect');
   if (nouveau.length < 8) throw new Error('Le nouveau mot de passe doit contenir au moins 8 caractères');
   const hash = await bcrypt.hash(nouveau, 10);
-  await prisma.utilisateur.update({ where: { id }, data: { mot_de_passe: hash } });
+  await prisma.utilisateur.update({
+    where: { id },
+    data: { mot_de_passe: hash, must_change_password: false },
+  });
 }
 
 export async function updateProfil(id: string, data: { nom_fr?: string; langue?: string; theme?: string }) {

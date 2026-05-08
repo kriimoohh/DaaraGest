@@ -14,6 +14,7 @@ import { financesRoutes } from './modules/finances/finances.routes';
 import { parametresRoutes } from './modules/parametres/parametres.routes';
 import { utilisateurRoutes } from './modules/utilisateurs/utilisateurs.routes';
 import { pointageRoutes } from './modules/pointage/pointage.routes';
+import { absencesRoutes } from './modules/absences/absences.routes';
 
 const jwtSecret = process.env.JWT_SECRET;
 if (!jwtSecret) {
@@ -57,6 +58,7 @@ async function build() {
       await api.register(parametresRoutes, { prefix: '/parametres' });
       await api.register(utilisateurRoutes, { prefix: '/utilisateurs' });
       await api.register(pointageRoutes, { prefix: '/pointage' });
+      await api.register(absencesRoutes, { prefix: '/absences' });
     },
     { prefix: '/api/v1' }
   );
