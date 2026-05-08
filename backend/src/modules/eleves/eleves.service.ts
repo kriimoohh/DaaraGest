@@ -136,6 +136,13 @@ export async function supprimerEleve(id: string, etablissement_id: string) {
   return prisma.eleve.update({ where: { id }, data: { actif: false } });
 }
 
+export async function toggleActifEleve(id: string, etablissement_id: string) {
+  const existing = await prisma.eleve.findFirst({ where: { id, etablissement_id } });
+  if (!existing) throw new Error('Élève introuvable');
+
+  return prisma.eleve.update({ where: { id }, data: { actif: !existing.actif } });
+}
+
 export interface ImportRow {
   nom_fr: string; prenom_fr: string; nom_ar?: string; prenom_ar?: string;
   date_naissance?: string; sexe: 'M' | 'F';
@@ -199,6 +206,26 @@ export async function bulkDesactiverEleves(ids: string[], etablissement_id: stri
     where: { id: { in: ids }, etablissement_id },
     data: { actif: false },
   });
+}
+
+export async function bulkSupprimerEleves(ids: string[], etablissement_id: string) {
+  const validIds = await prisma.eleve.findMany({
+    where: { id: { in: ids }, etablissement_id },
+    select: { id: true },
+  }).then(rows => rows.map(r => r.id));
+
+  if (validIds.length === 0) return { count: 0 };
+
+  await prisma.$transaction([
+    prisma.note.deleteMany({ where: { eleve_id: { in: validIds } } }),
+    prisma.bulletin.deleteMany({ where: { eleve_id: { in: validIds } } }),
+    prisma.paiementEleve.deleteMany({ where: { eleve_id: { in: validIds } } }),
+    prisma.inscription.deleteMany({ where: { eleve_id: { in: validIds } } }),
+    prisma.parent.deleteMany({ where: { eleve_id: { in: validIds } } }),
+    prisma.eleve.deleteMany({ where: { id: { in: validIds } } }),
+  ]);
+
+  return { count: validIds.length };
 }
 
 export async function bulkInscrireEleves(ids: string[], etablissement_id: string, data: InscriptionInput) {
