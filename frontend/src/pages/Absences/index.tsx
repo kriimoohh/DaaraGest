@@ -61,8 +61,8 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    api.get<{ data: AnneeScolaire[] }>('/api/v1/annees-scolaires').then(r => {
-      const list = r.data ?? [];
+    api.get<AnneeScolaire[]>('/api/v1/annees-scolaires').then(r => {
+      const list = r ?? [];
       setAnnees(list);
       const active = list.find(a => a.active);
       if (active) setAnneeId(active.id);
@@ -71,8 +71,9 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
 
   useEffect(() => {
     if (!anneeId) return;
-    api.get<{ data: Classe[] }>(`/api/v1/classes?annee_scolaire_id=${anneeId}&limit=100`)
-      .then(r => setClasses(r.data ?? []))
+    setClasseId('');
+    api.get<Classe[]>(`/api/v1/classes?annee_scolaire_id=${anneeId}&limit=100`)
+      .then(r => setClasses(r ?? []))
       .catch(() => {});
   }, [anneeId]);
 
@@ -333,8 +334,8 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    api.get<{ data: AnneeScolaire[] }>('/api/v1/annees-scolaires').then(r => {
-      const list = r.data ?? [];
+    api.get<AnneeScolaire[]>('/api/v1/annees-scolaires').then(r => {
+      const list = r ?? [];
       setAnnees(list);
       const active = list.find(a => a.active);
       if (active) setAnneeId(active.id);
@@ -343,8 +344,9 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
 
   useEffect(() => {
     if (!anneeId) return;
-    api.get<{ data: Classe[] }>(`/api/v1/classes?annee_scolaire_id=${anneeId}&limit=100`)
-      .then(r => setClasses(r.data ?? []))
+    setClasseId('');
+    api.get<Classe[]>(`/api/v1/classes?annee_scolaire_id=${anneeId}&limit=100`)
+      .then(r => setClasses(r ?? []))
       .catch(() => {});
   }, [anneeId]);
 
