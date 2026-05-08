@@ -136,7 +136,7 @@ function buildListeBodyContent(data: ListeData): string {
 
   const rows = eleves.map((e: {
     matricule: string; nom_fr: string; prenom_fr: string; sexe: string;
-    date_naissance: string | null; parents?: { nom_fr: string; telephone: string }[];
+    date_naissance: Date | null; parents?: { nom_fr: string; telephone: string }[];
   }, idx: number) => `
     <tr>
       <td>${idx + 1}</td>
