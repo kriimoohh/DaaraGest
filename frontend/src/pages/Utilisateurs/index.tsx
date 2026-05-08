@@ -103,14 +103,16 @@ export function UtilisateursPage() {
       if (!edit && form.role_id) payload.role_id = form.role_id;
 
       if (edit) {
-        await api.put(`/api/v1/utilisateurs/${edit.id}`, payload);
+        const updated = await api.put<Utilisateur>(`/api/v1/utilisateurs/${edit.id}`, payload);
+        setUsers(prev => prev.map(u => u.id === edit.id ? updated : u));
         toast.success('Utilisateur modifié');
+        setModal(false);
       } else {
         await api.post('/api/v1/utilisateurs', payload);
         toast.success('Utilisateur créé');
+        setModal(false);
+        charger();
       }
-      setModal(false);
-      charger();
     } catch (err) {
       toast.error((err as Error).message || 'Erreur');
     } finally {
