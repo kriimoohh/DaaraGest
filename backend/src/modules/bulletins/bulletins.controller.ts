@@ -1,9 +1,9 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
-import { genererBulletinSchema, genererBulletinAnnuelSchema } from './bulletins.schema';
+import { genererBulletinSchema, genererBulletinAnnuelSchema, observationSchema } from './bulletins.schema';
 import {
   listerBulletins, genererBulletins, genererBulletinsAnnuels,
-  getBulletin, genererPdfBulletin, genererPdfClasse,
+  getBulletin, genererPdfBulletin, genererPdfClasse, mettreAJourObservation,
 } from './bulletins.service';
 
 export async function listerHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -60,6 +60,18 @@ export async function pdfHandler(request: FastifyRequest, reply: FastifyReply) {
          .send(pdf);
   } catch (err) {
     return reply.status(500).send({ error: (err as Error).message });
+  }
+}
+
+export async function observationHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id, id: userId } = request.user as JwtPayload;
+  const { id } = request.params as { id: string };
+  const parsed = observationSchema.safeParse(request.body);
+  if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  try {
+    return reply.send(await mettreAJourObservation(id, etablissement_id, parsed.data, userId));
+  } catch (err) {
+    return reply.status(404).send({ error: (err as Error).message });
   }
 }
 

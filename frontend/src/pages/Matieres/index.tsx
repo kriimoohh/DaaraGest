@@ -124,6 +124,16 @@ export function MatieresPage() {
         action={<Button onClick={openAdd}>+ Ajouter une matière</Button>}
       />
 
+      {/* Bandeau guide filière */}
+      <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl text-sm text-blue-800 dark:text-blue-300 flex items-start gap-3">
+        <span className="text-lg shrink-0">ℹ️</span>
+        <div>
+          <strong>Configuration des notes par filière :</strong> chaque matière possède sa propre plage de notation (Note Max / Note Min).
+          Les matières arabes peuvent avoir une notation différente des matières françaises (ex. sur 10 au lieu de 20).
+          Pour modifier la plage d'une matière, cliquez sur <em>Modifier</em>.
+        </div>
+      </div>
+
       <div className="flex gap-3">
         <Select
           value={filiere}

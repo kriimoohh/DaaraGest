@@ -24,6 +24,7 @@ model Etablissement {
   eleves           Eleve[]
   matieres         Matiere[]
   config_notes     ConfigNotes?
+  absences_eleves  AbsenceEleve[]
 }
 
 model Role {
@@ -36,20 +37,21 @@ model Role {
 }
 
 model Utilisateur {
-  id               String    @id @default(uuid())
-  etablissement_id String
-  role_id          String
-  nom_fr           String
-  nom_ar           String
-  identifiant      String    @unique
-  email            String?
-  mot_de_passe     String
-  langue           String    @default("fr")
-  theme            String    @default("light")
-  actif            Boolean   @default(true)
-  last_login       DateTime?
-  created_at       DateTime  @default(now())
-  updated_at       DateTime  @updatedAt
+  id                   String    @id @default(uuid())
+  etablissement_id     String
+  role_id              String
+  nom_fr               String
+  nom_ar               String
+  identifiant          String    @unique
+  email                String?
+  mot_de_passe         String
+  langue               String    @default("fr")
+  theme                String    @default("light")
+  actif                Boolean   @default(true)
+  must_change_password Boolean   @default(false)
+  last_login           DateTime?
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
   role          Role          @relation(fields: [role_id], references: [id])
@@ -152,12 +154,13 @@ model AnneeScolaire {
   active           Boolean  @default(false)
   created_at       DateTime @default(now())
 
-  etablissement Etablissement       @relation(fields: [etablissement_id], references: [id])
-  classes       Classe[]
-  inscriptions  Inscription[]
-  prof_matieres ProfMatiereClasse[]
-  bulletins     Bulletin[]
-  notes         Note[]
+  etablissement   Etablissement       @relation(fields: [etablissement_id], references: [id])
+  classes         Classe[]
+  inscriptions    Inscription[]
+  prof_matieres   ProfMatiereClasse[]
+  bulletins       Bulletin[]
+  notes           Note[]
+  absences_eleves AbsenceEleve[]
 }
 
 model ConfigNotes {
@@ -207,6 +210,7 @@ model Classe {
   inscriptions_fr Inscription[]      @relation("ClasseFR")
   inscriptions_ar Inscription[]      @relation("ClasseAR")
   prof_matieres   ProfMatiereClasse[]
+  absences        AbsenceEleve[]
 }
 
 model ProfMatiereClasse {
@@ -242,6 +246,7 @@ model Eleve {
   paiements     PaiementEleve[]
   bulletins     Bulletin[]
   notes         Note[]
+  absences      AbsenceEleve[]
 }
 
 model Parent {
@@ -317,6 +322,11 @@ model Bulletin {
   moyenne           Decimal?  @db.Decimal(5, 2)
   rang              Int?
   appreciation      String?
+  observation_fr    String?
+  observation_ar    String?
+  observation_prof  String?
+  valide_par        String?
+  valide_le         DateTime?
   pdf_url           String?
   generated_at      DateTime?
   created_at        DateTime  @default(now())
@@ -325,4 +335,27 @@ model Bulletin {
   annee_scolaire AnneeScolaire @relation(fields: [annee_scolaire_id], references: [id])
 
   @@unique([eleve_id, annee_scolaire_id, filiere, periode])
+}
+
+model AbsenceEleve {
+  id                String        @id @default(uuid())
+  eleve_id          String
+  classe_id         String
+  annee_scolaire_id String
+  etablissement_id  String
+  date              DateTime      @db.Date
+  statut            String        // present | absent | retard | dispense
+  justifiee         Boolean       @default(false)
+  motif             String?
+  heure_arrivee     String?
+  cree_par          String?
+  created_at        DateTime      @default(now())
+  updated_at        DateTime      @updatedAt
+
+  eleve          Eleve         @relation(fields: [eleve_id], references: [id])
+  classe         Classe        @relation(fields: [classe_id], references: [id])
+  annee_scolaire AnneeScolaire @relation(fields: [annee_scolaire_id], references: [id])
+  etablissement  Etablissement @relation(fields: [etablissement_id], references: [id])
+
+  @@unique([eleve_id, classe_id, date])
 }

@@ -13,6 +13,7 @@ import { AnneeScolairesPage } from './pages/AnneeScolaires';
 import { MatieresPage } from './pages/Matieres';
 import { UtilisateursPage } from './pages/Utilisateurs';
 import { PointagePage } from './pages/Pointage';
+import { AbsencesPage } from './pages/Absences';
 import './i18n';
 
 export default function App() {
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/matieres" element={<MatieresPage />} />
           <Route path="/utilisateurs" element={<UtilisateursPage />} />
           <Route path="/pointage" element={<PointagePage />} />
+          <Route path="/absences" element={<AbsencesPage />} />
           <Route path="/parametres" element={<ParametresPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>

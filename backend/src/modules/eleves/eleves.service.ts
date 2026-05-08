@@ -79,6 +79,63 @@ export async function getEleve(id: string, etablissement_id: string) {
   return eleve;
 }
 
+export async function getProgressionEleve(id: string, etablissement_id: string) {
+  const eleve = await prisma.eleve.findFirst({
+    where: { id, etablissement_id },
+    select: { id: true, nom_fr: true, prenom_fr: true, matricule: true, sexe: true },
+  });
+  if (!eleve) throw new Error('Élève introuvable');
+
+  const inscriptions = await prisma.inscription.findMany({
+    where: { eleve_id: id },
+    include: {
+      annee_scolaire: true,
+      classe_fr: { select: { id: true, nom_fr: true, filiere: true, niveau: true } },
+      classe_ar: { select: { id: true, nom_fr: true, filiere: true, niveau: true } },
+    },
+    orderBy: { annee_scolaire: { date_debut: 'asc' } },
+  });
+
+  const anneeIds = inscriptions.map(i => i.annee_scolaire_id);
+  const bulletinsAnnuels = await prisma.bulletin.findMany({
+    where: { eleve_id: id, periode: 0, annee_scolaire_id: { in: anneeIds } },
+    select: {
+      id: true, annee_scolaire_id: true, filiere: true,
+      moyenne: true, rang: true, appreciation: true,
+    },
+  });
+
+  const absencesParAnnee = await prisma.absenceEleve.groupBy({
+    by: ['annee_scolaire_id', 'statut'],
+    where: { eleve_id: id },
+    _count: { statut: true },
+  });
+
+  const bulletinByAnnee = new Map<string, typeof bulletinsAnnuels>();
+  for (const b of bulletinsAnnuels) {
+    if (!bulletinByAnnee.has(b.annee_scolaire_id)) bulletinByAnnee.set(b.annee_scolaire_id, []);
+    bulletinByAnnee.get(b.annee_scolaire_id)!.push(b);
+  }
+
+  const absencesByAnnee = new Map<string, { absents: number; presents: number }>();
+  for (const a of absencesParAnnee) {
+    if (!absencesByAnnee.has(a.annee_scolaire_id)) absencesByAnnee.set(a.annee_scolaire_id, { absents: 0, presents: 0 });
+    const s = absencesByAnnee.get(a.annee_scolaire_id)!;
+    if (a.statut === 'absent') s.absents += a._count.statut;
+    if (a.statut === 'present') s.presents += a._count.statut;
+  }
+
+  const progression = inscriptions.map(insc => ({
+    annee_scolaire: insc.annee_scolaire,
+    classe_fr: insc.classe_fr,
+    classe_ar: insc.classe_ar,
+    bulletins: bulletinByAnnee.get(insc.annee_scolaire_id) ?? [],
+    absences: absencesByAnnee.get(insc.annee_scolaire_id) ?? { absents: 0, presents: 0 },
+  }));
+
+  return { eleve, progression };
+}
+
 async function genererMatricule(etablissement_id: string): Promise<string> {
   const annee = new Date().getFullYear();
   const count = await prisma.eleve.count({ where: { etablissement_id, matricule: { startsWith: `DG-${annee}-` } } });
