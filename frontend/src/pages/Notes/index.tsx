@@ -16,7 +16,11 @@ interface Note { id: string; eleve_id: string; valeur: number; commentaire?: str
 export function NotesPage() {
   const { t } = useTranslation();
   const api = useApi();
-  const canEdit = useAuthStore(s => ['admin', 'directeur', 'gestionnaire'].includes(s.user?.role ?? ''));
+  const userRole = useAuthStore(s => s.user?.role ?? '');
+  const canEdit = ['admin', 'directeur', 'gestionnaire'].includes(userRole);
+  const isProfesseur = userRole === 'professeur';
+  // IDs des élèves ayant déjà une note enregistrée (chargée depuis l'API)
+  const [existingNoteIds, setExistingNoteIds] = useState<Set<string>>(new Set());
 
   const [annees, setAnnees] = useState<AnneeScolaire[]>([]);
   const [classes, setClasses] = useState<Classe[]>([]);
@@ -52,12 +56,15 @@ export function NotesPage() {
 
   useEffect(() => {
     if (!classeId || !matiereId || !anneeId) return;
+    setExistingNoteIds(new Set());
     setLoading(true);
     api.get<Note[]>(`/api/v1/notes?classe_id=${classeId}&matiere_id=${matiereId}&periode=${periode}&annee_scolaire_id=${anneeId}`)
       .then((data) => {
         const map: Record<string, string> = {};
-        data.forEach((n) => { map[n.eleve_id] = String(n.valeur); });
+        const ids = new Set<string>();
+        data.forEach((n) => { map[n.eleve_id] = String(n.valeur); ids.add(n.eleve_id); });
         setNotes(map);
+        setExistingNoteIds(ids);
       })
       .catch(() => null)
       .finally(() => setLoading(false));
@@ -139,9 +146,9 @@ export function NotesPage() {
               {eleves.length} élève(s)
             </span>
             <div className="flex items-center gap-3">
-              {!canEdit && (
-                <span className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-1.5 rounded-lg">
-                  Consultation uniquement — modification réservée à la gestion
+              {isProfesseur && (
+                <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-3 py-1.5 rounded-lg">
+                  Ajout uniquement — les notes déjà saisies ne peuvent pas être modifiées
                 </span>
               )}
               {success && (
@@ -149,7 +156,7 @@ export function NotesPage() {
                   ✓ Notes enregistrées
                 </span>
               )}
-              {canEdit && (
+              {(canEdit || isProfesseur) && (
                 <Button onClick={handleSave} loading={saving} disabled={eleves.length === 0}>
                   {t('note.enregistrer_tout')}
                 </Button>
@@ -178,21 +185,36 @@ export function NotesPage() {
                       {eleve.prenom_fr} {eleve.nom_fr}
                     </td>
                     <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        min={matMin}
-                        max={matMax}
-                        step="0.25"
-                        value={notes[eleve.id] ?? ''}
-                        onChange={(e) => canEdit && setNotes((prev) => ({ ...prev, [eleve.id]: e.target.value }))}
-                        readOnly={!canEdit}
-                        className={`w-24 px-3 py-1.5 rounded-lg border text-sm focus:outline-none ${
-                          canEdit
-                            ? 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500'
-                            : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed'
-                        }`}
-                        placeholder="—"
-                      />
+                      {(() => {
+                        const noteExists = existingNoteIds.has(eleve.id);
+                        // Professeur : lecture seule si la note existe déjà
+                        const fieldReadOnly = isProfesseur && noteExists;
+                        // Lecture seule totale si ni gestionnaire ni professeur pouvant ajouter
+                        const totalReadOnly = !canEdit && !isProfesseur;
+                        const isReadOnly = fieldReadOnly || totalReadOnly;
+                        return (
+                          <div className="relative inline-flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              min={matMin}
+                              max={matMax}
+                              step="0.25"
+                              value={notes[eleve.id] ?? ''}
+                              onChange={(e) => !isReadOnly && setNotes((prev) => ({ ...prev, [eleve.id]: e.target.value }))}
+                              readOnly={isReadOnly}
+                              className={`w-24 px-3 py-1.5 rounded-lg border text-sm focus:outline-none ${
+                                isReadOnly
+                                  ? 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed'
+                                  : 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500'
+                              }`}
+                              placeholder="—"
+                            />
+                            {fieldReadOnly && (
+                              <span title="Note déjà saisie — modification non autorisée" className="text-slate-400 dark:text-slate-500 text-xs select-none">🔒</span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
                   </tr>
                 ))}

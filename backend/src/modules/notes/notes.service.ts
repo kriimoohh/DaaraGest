@@ -28,12 +28,11 @@ export async function listerNotes(
   });
 }
 
-export async function bulkUpsertNotes(notes: NoteItem[]) {
+export async function bulkUpsertNotes(notes: NoteItem[], insertOnly = false) {
   if (notes.length === 0) return [];
   const results: unknown[] = [];
 
   for (const note of notes) {
-    // Valider la note par rapport aux limites de la matière
     const matiere = await prisma.matiere.findUnique({ where: { id: note.matiere_id } });
     if (matiere) {
       const noteMax = Number(matiere.note_max);
@@ -46,15 +45,23 @@ export async function bulkUpsertNotes(notes: NoteItem[]) {
       }
     }
 
-    const result = await prisma.note.upsert({
-      where: {
-        eleve_id_matiere_id_periode_annee_scolaire_id: {
-          eleve_id: note.eleve_id,
-          matiere_id: note.matiere_id,
-          periode: note.periode,
-          annee_scolaire_id: note.annee_scolaire_id,
-        },
+    const uniqueKey = {
+      eleve_id_matiere_id_periode_annee_scolaire_id: {
+        eleve_id: note.eleve_id,
+        matiere_id: note.matiere_id,
+        periode: note.periode,
+        annee_scolaire_id: note.annee_scolaire_id,
       },
+    };
+
+    // En mode insertOnly (professeur), ignorer les notes qui existent déjà
+    if (insertOnly) {
+      const existing = await prisma.note.findUnique({ where: uniqueKey });
+      if (existing) continue;
+    }
+
+    const result = await prisma.note.upsert({
+      where: uniqueKey,
       create: {
         eleve_id: note.eleve_id, matiere_id: note.matiere_id,
         periode: note.periode, annee_scolaire_id: note.annee_scolaire_id,
