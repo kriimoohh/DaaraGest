@@ -28,7 +28,7 @@ export async function login(identifiant: string, mot_de_passe: string) {
     etablissement_id: utilisateur.etablissement_id,
     langue: utilisateur.langue,
     theme: utilisateur.theme,
-    doit_changer_mdp: utilisateur.doit_changer_mdp,
+    doit_changer_mdp: utilisateur.must_change_password,
   };
 
   return {
@@ -61,6 +61,17 @@ export async function changePassword(id: string, ancien: string, nouveau: string
     where: { id },
     data: { mot_de_passe: hash, must_change_password: false },
   });
+
+  const payload: JwtPayload = {
+    id: utilisateur.id,
+    role: utilisateur.role.libelle_fr,
+    etablissement_id: utilisateur.etablissement_id,
+    langue: utilisateur.langue,
+    theme: utilisateur.theme,
+    doit_changer_mdp: false,
+  };
+
+  return { payload };
 }
 
 export async function updateProfil(id: string, data: { nom_fr?: string; langue?: string; theme?: string }) {
@@ -86,7 +97,7 @@ export async function getMe(id: string) {
     theme: utilisateur.theme,
     role: utilisateur.role.libelle_fr,
     etablissement_id: utilisateur.etablissement_id,
-    doit_changer_mdp: utilisateur.doit_changer_mdp,
+    doit_changer_mdp: utilisateur.must_change_password,
     etablissement: {
       id: utilisateur.etablissement.id,
       nom_fr: utilisateur.etablissement.nom_fr,
