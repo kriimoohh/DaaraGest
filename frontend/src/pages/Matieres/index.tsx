@@ -125,8 +125,8 @@ export function MatieresPage() {
       />
 
       {/* Bandeau guide filière */}
-      <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl text-sm text-blue-800 dark:text-blue-300 flex items-start gap-3">
-        <span className="text-lg shrink-0">ℹ️</span>
+      <div style={{ padding: 16, background: 'var(--info-soft)', border: '1px solid var(--info-border)', borderRadius: 'var(--r-lg)', fontSize: 13, color: 'var(--info)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <span style={{ fontSize: 16, flexShrink: 0 }}>ℹ️</span>
         <div>
           <strong>Configuration des notes par filière :</strong> chaque matière possède sa propre plage de notation (Note Max / Note Min).
           Les matières arabes peuvent avoir une notation différente des matières françaises (ex. sur 10 au lieu de 20).
@@ -146,44 +146,46 @@ export function MatieresPage() {
         />
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="card">
         {loading ? (
-          <div className="p-8 text-center text-slate-500">Chargement...</div>
+          <div className="empty">Chargement...</div>
         ) : matieres.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="text-4xl mb-3">📚</div>
-            <p className="text-slate-500">Aucune matière trouvée.</p>
+          <div className="empty" style={{ flexDirection: 'column', gap: 8 }}>
+            <span style={{ fontSize: 36 }}>📚</span>
+            <p>Aucune matière trouvée.</p>
           </div>
         ) : (
-          <table className="w-full">
-            <thead className="bg-slate-50 dark:bg-slate-700/50">
-              <tr>
-                {['Nom FR', 'Nom AR', 'Filière', 'Coefficient', 'Note Max', 'Note Min', 'Actions'].map((h) => (
-                  <th key={h} className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {matieres.map((m) => (
-                <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{m.nom_fr}</td>
-                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300" dir="rtl">{m.nom_ar}</td>
-                  <td className="px-4 py-3">
-                    <Badge label={m.filiere} variant={m.filiere === 'FR' ? 'info' : 'warning'} />
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{m.coeff_defaut}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-300">{m.note_max}</td>
-                  <td className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400">{m.note_min}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="ghost" onClick={() => openEdit(m)}>{t('actions.modifier')}</Button>
-                      {isAdmin && <Button size="sm" variant="danger" onClick={() => setConfirm(m)}>{t('actions.supprimer')}</Button>}
-                    </div>
-                  </td>
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  {['Nom FR', 'Nom AR', 'Filière', 'Coefficient', 'Note Max', 'Note Min', 'Actions'].map((h) => (
+                    <th key={h}>{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {matieres.map((m) => (
+                  <tr key={m.id}>
+                    <td>{m.nom_fr}</td>
+                    <td dir="rtl">{m.nom_ar}</td>
+                    <td>
+                      <Badge label={m.filiere} variant={m.filiere === 'FR' ? 'info' : 'warning'} />
+                    </td>
+                    <td>{m.coeff_defaut}</td>
+                    <td>{m.note_max}</td>
+                    <td>{m.note_min}</td>
+                    <td>
+                      <div className="row">
+                        <Button size="sm" variant="ghost" onClick={() => openEdit(m)}>{t('actions.modifier')}</Button>
+                        {isAdmin && <Button size="sm" variant="danger" onClick={() => setConfirm(m)}>{t('actions.supprimer')}</Button>}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
@@ -244,7 +246,7 @@ export function MatieresPage() {
               onChange={(e) => setForm((f) => ({ ...f, ordre_bulletin: e.target.value }))}
             />
           </div>
-          <div className="flex justify-end gap-3 pt-2">
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
             <Button variant="secondary" onClick={() => setModal(false)}>{t('actions.annuler')}</Button>
             <Button onClick={handleSave} loading={saving}>{t('actions.enregistrer')}</Button>
           </div>

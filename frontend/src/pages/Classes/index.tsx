@@ -534,7 +534,7 @@ export function ClassesPage() {
       render: (row) => {
         const c = row as unknown as Classe;
         return (
-          <div className="flex items-center gap-1.5">
+          <div className="row" style={{ gap: 6 }}>
             <Button size="sm" variant="secondary" onClick={() => openListeEleves(c)}>Liste élèves</Button>
             <Button size="sm" variant="ghost" onClick={() => openEdit(c)}>{t('actions.modifier')}</Button>
             {isAdmin && <Button size="sm" variant="danger" onClick={() => setConfirmDelete(c)}>{t('actions.supprimer')}</Button>}
@@ -582,8 +582,8 @@ export function ClassesPage() {
             onChange={(e) => setAnneeFilter(e.target.value)}
           />
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          <span className="text-xs text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap">Toutes les classes :</span>
+        <div className="row" style={{ marginInlineStart: 'auto' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-4)', fontWeight: 500, whiteSpace: 'nowrap' }}>Toutes les classes :</span>
           <Button
             size="sm"
             variant="secondary"
@@ -667,7 +667,7 @@ export function ClassesPage() {
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-2">
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
             <Button variant="secondary" onClick={() => setModalOpen(false)}>
               Annuler
             </Button>
@@ -695,53 +695,42 @@ export function ClassesPage() {
         size="xl"
       >
         {listeLoading ? (
-          <div className="py-12 text-center text-slate-400">Chargement...</div>
+          <div className="empty">Chargement...</div>
         ) : listeData ? (
-          <div className="space-y-4">
-            {/* En-tête info + actions */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-slate-500 dark:text-slate-400">
-                  Année scolaire :
-                  <span className="font-semibold text-slate-700 dark:text-slate-200 ml-1">
-                    {typeof listeData.classe.annee_scolaire === 'object'
-                      ? listeData.classe.annee_scolaire.libelle
-                      : '—'}
-                  </span>
-                </span>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-600/20">
-                  {listeData.total} élève{listeData.total > 1 ? 's' : ''}
-                </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-3)' }}>
+                Année scolaire :
+                <strong style={{ color: 'var(--text)', marginInlineStart: 4 }}>
+                  {typeof listeData.classe.annee_scolaire === 'object'
+                    ? listeData.classe.annee_scolaire.libelle
+                    : '—'}
+                </strong>
+              </span>
+              <span className="badge badge-success">
+                {listeData.total} élève{listeData.total > 1 ? 's' : ''}
+              </span>
+              <div className="row" style={{ marginInlineStart: 'auto' }}>
+                <Button size="sm" variant="secondary" onClick={downloadCsv} icon={<span>⬇</span>}>CSV</Button>
+                <Button size="sm" variant="secondary" onClick={imprimerListe} icon={<span>🖨</span>}>Imprimer</Button>
+                <Button size="sm" variant="secondary" onClick={telechargerPdfListe} loading={pdfLoading} icon={<span>⬇</span>}>PDF</Button>
               </div>
-              <Button size="sm" variant="secondary" onClick={downloadCsv} icon={<span>⬇</span>}>
-                CSV
-              </Button>
-              <Button size="sm" variant="secondary" onClick={imprimerListe} icon={<span>🖨</span>}>
-                Imprimer
-              </Button>
-              <Button size="sm" variant="secondary" onClick={telechargerPdfListe} loading={pdfLoading} icon={<span>⬇</span>}>
-                PDF
-              </Button>
             </div>
 
-            {/* Recherche rapide */}
             <input
               type="text"
               value={listeSearch}
               onChange={e => setListeSearch(e.target.value)}
               placeholder="Filtrer par nom, prénom ou matricule..."
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+              className="input"
             />
 
-            {/* Tableau */}
-            <div className="overflow-auto max-h-[50vh] rounded-xl border border-slate-200 dark:border-slate-700">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+            <div style={{ overflow: 'auto', maxHeight: '50vh', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)' }}>
+              <table className="tbl">
+                <thead>
                   <tr>
                     {['N°', 'Matricule', 'Nom', 'Prénom', 'Sexe', 'Date de naissance', 'Parent / Téléphone'].map(h => (
-                      <th key={h} className="px-3 py-2.5 text-start text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
-                        {h}
-                      </th>
+                      <th key={h}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -757,26 +746,20 @@ export function ClassesPage() {
                       );
                     })
                     .map(e => (
-                      <tr key={e.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                        <td className="px-3 py-2.5 text-slate-400 dark:text-slate-500 text-xs">{e.rang}</td>
-                        <td className="px-3 py-2.5 font-mono text-xs text-slate-600 dark:text-slate-400">{e.matricule}</td>
-                        <td className="px-3 py-2.5 font-medium text-slate-700 dark:text-slate-200">{e.nom_fr}</td>
-                        <td className="px-3 py-2.5 text-slate-700 dark:text-slate-300">{e.prenom_fr}</td>
-                        <td className="px-3 py-2.5">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${
-                            e.sexe === 'M'
-                              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 ring-1 ring-blue-600/20'
-                              : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 ring-1 ring-amber-600/20'
-                          }`}>
+                      <tr key={e.id}>
+                        <td style={{ color: 'var(--text-4)' }}>{e.rang}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{e.matricule}</td>
+                        <td>{e.nom_fr}</td>
+                        <td>{e.prenom_fr}</td>
+                        <td>
+                          <span className={`badge ${e.sexe === 'M' ? 'badge-info' : 'badge-warning'}`}>
                             {e.sexe === 'M' ? 'M' : 'F'}
                           </span>
                         </td>
-                        <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400 whitespace-nowrap">
-                          {e.date_naissance ? new Date(e.date_naissance).toLocaleDateString('fr-FR') : '—'}
-                        </td>
-                        <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400">
+                        <td>{e.date_naissance ? new Date(e.date_naissance).toLocaleDateString('fr-FR') : '—'}</td>
+                        <td>
                           {e.parents?.[0] ? (
-                            <span>{e.parents[0].nom_fr} <span className="text-slate-400">·</span> {e.parents[0].telephone}</span>
+                            <span>{e.parents[0].nom_fr} · {e.parents[0].telephone}</span>
                           ) : '—'}
                         </td>
                       </tr>
@@ -788,11 +771,11 @@ export function ClassesPage() {
                 const q = listeSearch.toLowerCase();
                 return e.nom_fr.toLowerCase().includes(q) || e.prenom_fr.toLowerCase().includes(q) || e.matricule.toLowerCase().includes(q);
               }).length === 0 && (
-                <div className="py-10 text-center text-slate-400 dark:text-slate-500 text-sm">Aucun élève trouvé</div>
+                <div className="empty">Aucun élève trouvé</div>
               )}
             </div>
 
-            <div className="flex justify-end pt-1">
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <Button variant="secondary" onClick={() => { setListeModal(null); setListeData(null); }}>Fermer</Button>
             </div>
           </div>
