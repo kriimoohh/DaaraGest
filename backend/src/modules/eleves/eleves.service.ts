@@ -96,6 +96,7 @@ export async function creerEleve(etablissement_id: string, data: EleveInput) {
       nom_fr: eleveData.nom_fr,
       prenom_fr: eleveData.prenom_fr,
       date_naissance: new Date(eleveData.date_naissance),
+      lieu_naissance: eleveData.lieu_naissance,
       sexe: eleveData.sexe,
       photo_url: eleveData.photo_url,
       parents: parents && parents.length > 0
@@ -117,6 +118,7 @@ export async function modifierEleve(id: string, etablissement_id: string, data: 
       nom_fr: data.nom_fr,
       prenom_fr: data.prenom_fr,
       date_naissance: new Date(data.date_naissance),
+      lieu_naissance: data.lieu_naissance,
       sexe: data.sexe,
       photo_url: data.photo_url,
     },

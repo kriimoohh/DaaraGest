@@ -39,6 +39,7 @@ interface Eleve {
   nom_fr: string;
   prenom_fr: string;
   date_naissance: string;
+  lieu_naissance?: string;
   sexe: 'M' | 'F';
   actif: boolean;
   photo_url?: string;
@@ -69,6 +70,7 @@ interface EleveFormData {
   nom_fr: string;
   prenom_fr: string;
   date_naissance: string;
+  lieu_naissance: string;
   sexe: string;
   parent_nom_fr: string;
   parent_lien: string;
@@ -84,6 +86,7 @@ const EMPTY_FORM: EleveFormData = {
   nom_fr: '',
   prenom_fr: '',
   date_naissance: '',
+  lieu_naissance: '',
   sexe: '',
   parent_nom_fr: '',
   parent_lien: '',
@@ -432,6 +435,7 @@ export function ElevesPage() {
       nom_fr: eleve.nom_fr,
       prenom_fr: eleve.prenom_fr,
       date_naissance: eleve.date_naissance ? eleve.date_naissance.slice(0, 10) : '',
+      lieu_naissance: eleve.lieu_naissance ?? '',
       sexe: eleve.sexe,
       parent_nom_fr: eleve.parents[0]?.nom_fr ?? '',
       parent_lien: eleve.parents[0]?.lien ?? '',
@@ -459,6 +463,7 @@ export function ElevesPage() {
         nom_fr: form.nom_fr,
         prenom_fr: form.prenom_fr,
         date_naissance: form.date_naissance || undefined,
+        lieu_naissance: form.lieu_naissance || undefined,
         sexe: form.sexe,
         parent: form.parent_nom_fr
           ? { nom_fr: form.parent_nom_fr, lien: form.parent_lien, telephone: form.parent_telephone }
@@ -811,12 +816,20 @@ export function ElevesPage() {
               error={formErrors.prenom_fr}
             />
           </div>
-          <Input
-            label={t('eleve.date_naissance')}
-            type="date"
-            value={form.date_naissance}
-            onChange={(e) => setField('date_naissance', e.target.value)}
-          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label={t('eleve.date_naissance')}
+              type="date"
+              value={form.date_naissance}
+              onChange={(e) => setField('date_naissance', e.target.value)}
+            />
+            <Input
+              label="Lieu de naissance"
+              value={form.lieu_naissance}
+              onChange={(e) => setField('lieu_naissance', e.target.value)}
+              placeholder="Ex : Dakar"
+            />
+          </div>
           <hr className="border-slate-200 dark:border-slate-700" />
           <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('eleve.parent')}</h3>
           <div className="grid grid-cols-2 gap-4">
@@ -854,143 +867,136 @@ export function ElevesPage() {
         <Modal
           isOpen={!!ficheModal}
           onClose={() => setFicheModal(null)}
-          title={`Fiche — ${ficheModal.prenom_fr} ${ficheModal.nom_fr}`}
+          title=""
           size="lg"
         >
-          <div className="space-y-6">
-            {/* Photo */}
-            <div className="flex flex-col items-center gap-2">
-              <input
-                ref={photoInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={e => { if (e.target.files?.[0]) handlePhotoUpload(e.target.files[0]); e.target.value = ''; }}
-              />
-              <button
-                type="button"
-                onClick={() => photoInputRef.current?.click()}
-                disabled={photoSaving}
-                className="group relative w-24 h-24 rounded-full overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow hover:border-emerald-400 transition-colors"
-              >
-                {ficheModal.photo_url ? (
-                  <img src={ficheModal.photo_url} alt={`${ficheModal.prenom_fr} ${ficheModal.nom_fr}`} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-3xl text-slate-400">
-                    {ficheModal.prenom_fr[0]}{ficheModal.nom_fr[0]}
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                  <span className="text-white text-xs font-medium">{photoSaving ? '…' : '📷'}</span>
+          <input ref={photoInputRef} type="file" accept="image/*" className="hidden"
+            onChange={e => { if (e.target.files?.[0]) handlePhotoUpload(e.target.files[0]); e.target.value = ''; }} />
+
+          <div className="space-y-0">
+            {/* ── En-tête identité ── */}
+            <div className="flex items-center gap-5 pb-5 border-b border-slate-100 dark:border-slate-800">
+              {/* Avatar cliquable */}
+              <button type="button" onClick={() => photoInputRef.current?.click()} disabled={photoSaving}
+                className="group relative shrink-0 w-20 h-20 rounded-2xl overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-sm hover:border-emerald-400 transition-colors">
+                {ficheModal.photo_url
+                  ? <img src={ficheModal.photo_url} alt="" className="w-full h-full object-cover" />
+                  : <div className="w-full h-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-2xl font-bold text-white">
+                      {ficheModal.prenom_fr[0]}{ficheModal.nom_fr[0]}
+                    </div>
+                }
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-2xl">
+                  <span className="text-white text-xs">{photoSaving ? '…' : '📷'}</span>
                 </div>
               </button>
-              <p className="text-xs text-slate-400 dark:text-slate-500">Cliquer pour changer la photo</p>
+
+              {/* Nom + badges */}
+              <div className="flex-1 min-w-0">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">
+                  {ficheModal.prenom_fr} <span className="uppercase">{ficheModal.nom_fr}</span>
+                </h2>
+                <p className="font-mono text-sm text-slate-400 dark:text-slate-500 mt-0.5">{ficheModal.matricule}</p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <Badge label={ficheModal.actif ? 'Actif' : 'Inactif'} variant={ficheModal.actif ? 'success' : 'neutral'} />
+                  <Badge label={ficheModal.sexe === 'M' ? 'Masculin' : 'Féminin'} variant={ficheModal.sexe === 'M' ? 'info' : 'warning'} />
+                </div>
+              </div>
             </div>
 
-            {/* Informations personnelles */}
-            <section>
-              <h3 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
+            {/* ── Informations personnelles ── */}
+            <div className="py-5 border-b border-slate-100 dark:border-slate-800">
+              <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">
                 Informations personnelles
-              </h3>
-              <dl className="grid grid-cols-2 gap-x-8 gap-y-4">
-                <FicheRow label="Matricule" value={ficheModal.matricule} />
-                <FicheRow
-                  label="Statut"
-                  value={
-                    <Badge
-                      label={ficheModal.actif ? 'Actif' : 'Inactif'}
-                      variant={ficheModal.actif ? 'success' : 'neutral'}
-                    />
-                  }
-                />
+              </p>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-3">
                 <FicheRow label="Nom" value={ficheModal.nom_fr} />
                 <FicheRow label="Prénom" value={ficheModal.prenom_fr} />
-                <FicheRow
-                  label="Sexe"
-                  value={
-                    <Badge
-                      label={ficheModal.sexe === 'M' ? 'Masculin' : 'Féminin'}
-                      variant={ficheModal.sexe === 'M' ? 'info' : 'warning'}
-                    />
-                  }
-                />
                 <FicheRow label="Date de naissance" value={formatDate(ficheModal.date_naissance)} />
-              </dl>
-            </section>
+                <FicheRow label="Lieu de naissance" value={ficheModal.lieu_naissance || '—'} />
+                <FicheRow label="Sexe" value={ficheModal.sexe === 'M' ? 'Masculin' : 'Féminin'} />
+                <FicheRow label="Matricule" value={<span className="font-mono text-sm">{ficheModal.matricule}</span>} />
+              </div>
+            </div>
 
-            {/* Parent / Tuteur */}
+            {/* ── Parent(s) / Tuteur(s) ── */}
             {ficheModal.parents.length > 0 && (
-              <section>
-                <h3 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
-                  Parent / Tuteur
-                </h3>
-                <div className="space-y-4">
+              <div className="py-5 border-b border-slate-100 dark:border-slate-800">
+                <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">
+                  Parent{ficheModal.parents.length > 1 ? 's' : ''} / Tuteur{ficheModal.parents.length > 1 ? 's' : ''}
+                </p>
+                <div className="space-y-3">
                   {ficheModal.parents.map((p, i) => (
-                    <dl key={i} className="grid grid-cols-2 gap-x-8 gap-y-3 px-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-                      <FicheRow label="Nom (FR)" value={p.nom_fr} />
-                      <FicheRow label="Nom (AR)" value={p.nom_ar || '—'} />
-                      <FicheRow label="Lien" value={p.lien} />
-                      <FicheRow label="Téléphone" value={p.telephone || '—'} />
-                      <FicheRow label="Email" value={p.email || '—'} />
-                      <FicheRow label="Adresse" value={p.adresse || '—'} />
-                    </dl>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Inscriptions */}
-            {ficheModal.inscriptions?.length > 0 && (
-              <section>
-                <h3 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
-                  Inscriptions
-                </h3>
-                <div className="space-y-2">
-                  {ficheModal.inscriptions.map(insc => (
-                    <div
-                      key={insc.id}
-                      className="flex flex-wrap items-center gap-3 px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-lg text-sm"
-                    >
-                      <span className="font-semibold text-slate-700 dark:text-slate-200 min-w-[90px]">
-                        {insc.annee_scolaire.libelle}
-                      </span>
-                      {insc.classe_fr && (
-                        <span className="text-slate-500 dark:text-slate-400">
-                          FR : <span className="font-medium text-slate-700 dark:text-slate-200">{insc.classe_fr.nom_fr}</span>
-                        </span>
-                      )}
-                      {insc.classe_ar && (
-                        <span className="text-slate-500 dark:text-slate-400">
-                          AR : <span className="font-medium text-slate-700 dark:text-slate-200">{insc.classe_ar.nom_fr}</span>
-                        </span>
-                      )}
-                      <Badge
-                        label={insc.statut}
-                        variant={insc.statut === 'actif' ? 'success' : 'neutral'}
-                      />
+                    <div key={i} className="rounded-xl bg-slate-50 dark:bg-slate-800/60 p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{p.nom_fr}</span>
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 capitalize">{p.lien}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                        <FicheRow label="Téléphone" value={p.telephone || '—'} />
+                        <FicheRow label="Email" value={p.email || '—'} />
+                        {p.adresse && <FicheRow label="Adresse" value={p.adresse} />}
+                        {p.nom_ar && <FicheRow label="Nom (AR)" value={p.nom_ar} />}
+                      </div>
                     </div>
                   ))}
                 </div>
-              </section>
+              </div>
+            )}
+            {ficheModal.parents.length === 0 && (
+              <div className="py-5 border-b border-slate-100 dark:border-slate-800">
+                <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Parent / Tuteur</p>
+                <p className="text-sm text-slate-400 dark:text-slate-500 italic">Aucun parent enregistré</p>
+              </div>
             )}
 
-            <div className="flex justify-between items-center pt-1">
+            {/* ── Scolarité (inscriptions) ── */}
+            <div className="py-5">
+              <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Scolarité</p>
+              {ficheModal.inscriptions?.length > 0 ? (
+                <div className="space-y-2">
+                  {ficheModal.inscriptions.map(insc => (
+                    <div key={insc.id}
+                      className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-sm">
+                      <span className="font-semibold text-slate-800 dark:text-slate-100 min-w-[100px]">{insc.annee_scolaire.libelle}</span>
+                      <div className="flex flex-wrap gap-2 flex-1">
+                        {insc.classe_fr && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 ring-1 ring-blue-200 dark:ring-blue-800">
+                            FR — {insc.classe_fr.nom_fr}
+                          </span>
+                        )}
+                        {insc.classe_ar && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-200 dark:ring-emerald-800">
+                            AR — {insc.classe_ar.nom_fr}
+                          </span>
+                        )}
+                        {!insc.classe_fr && !insc.classe_ar && (
+                          <span className="text-xs text-slate-400 italic">Aucune classe assignée</span>
+                        )}
+                      </div>
+                      <Badge label={insc.statut} variant={insc.statut === 'actif' ? 'success' : 'neutral'} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400 dark:text-slate-500 italic">Aucune inscription</p>
+              )}
+            </div>
+
+            {/* ── Actions ── */}
+            <div className="flex justify-between items-center pt-3 border-t border-slate-100 dark:border-slate-800">
               {isGestion && (
-                <Button
-                  variant={ficheModal.actif ? 'danger' : 'primary'}
+                <Button variant={ficheModal.actif ? 'danger' : 'primary'}
                   loading={toggleLoading === ficheModal.id}
-                  onClick={() => handleToggleActif(ficheModal)}
-                >
-                  {ficheModal.actif ? 'Désactiver l\'élève' : 'Réactiver l\'élève'}
+                  onClick={() => handleToggleActif(ficheModal)}>
+                  {ficheModal.actif ? "Désactiver l'élève" : "Réactiver l'élève"}
                 </Button>
               )}
-              <div className="flex gap-3 ml-auto">
-                <Button
-                  variant="secondary"
-                  onClick={() => { setFicheModal(null); openEdit(ficheModal); }}
-                >
-                  Modifier
-                </Button>
+              <div className="flex gap-2 ml-auto">
+                {isGestion && (
+                  <Button variant="secondary" onClick={() => { setFicheModal(null); openEdit(ficheModal); }}>
+                    Modifier
+                  </Button>
+                )}
                 <Button variant="secondary" onClick={() => setFicheModal(null)}>Fermer</Button>
               </div>
             </div>
