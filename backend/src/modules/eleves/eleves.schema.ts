@@ -12,9 +12,7 @@ export const parentSchema = z.object({
 export const eleveSchema = z.object({
   matricule: z.string().optional(),
   nom_fr: z.string().min(1),
-  nom_ar: z.string().default(''),
   prenom_fr: z.string().min(1),
-  prenom_ar: z.string().default(''),
   date_naissance: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   sexe: z.enum(['M', 'F']),
   photo_url: z.string().url().optional(),

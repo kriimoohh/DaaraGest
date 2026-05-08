@@ -16,8 +16,6 @@ export async function listerProfesseurs(etablissement_id: string, page = 1, sear
     where.OR = [
       { nom_fr: { contains: search, mode: 'insensitive' } },
       { nom_ar: { contains: search, mode: 'insensitive' } },
-      { prenom_fr: { contains: search, mode: 'insensitive' } },
-      { prenom_ar: { contains: search, mode: 'insensitive' } },
       { identifiant: { contains: search, mode: 'insensitive' } },
     ];
   }
@@ -63,8 +61,6 @@ export async function creerProfesseur(etablissement_id: string, data: Professeur
       role_id: roleProf.id,
       nom_fr: data.nom_fr,
       nom_ar: data.nom_ar,
-      prenom_fr: data.prenom_fr,
-      prenom_ar: data.prenom_ar,
       identifiant: data.identifiant,
       mot_de_passe: hashedPassword,
     },
@@ -95,15 +91,13 @@ export async function modifierProfesseur(id: string, etablissement_id: string, d
 
   const updateTasks: Promise<unknown>[] = [];
 
-  if (data.nom_fr || data.nom_ar || data.prenom_fr || data.prenom_ar) {
+  if (data.nom_fr || data.nom_ar) {
     updateTasks.push(
       prisma.utilisateur.update({
         where: { id: professeur.utilisateur_id },
         data: {
           nom_fr: data.nom_fr,
           nom_ar: data.nom_ar,
-          prenom_fr: data.prenom_fr,
-          prenom_ar: data.prenom_ar,
         },
       })
     );

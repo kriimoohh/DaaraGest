@@ -24,7 +24,6 @@ export async function listerPaiementsEleves(
   if (search) {
     eleveWhere.OR = [
       { nom_fr: { contains: search, mode: 'insensitive' } },
-      { prenom_fr: { contains: search, mode: 'insensitive' } },
       { matricule: { contains: search, mode: 'insensitive' } },
     ];
   }
@@ -43,7 +42,7 @@ export async function listerPaiementsEleves(
       skip,
       take: limit,
       include: {
-        eleve: { select: { id: true, nom_fr: true, nom_ar: true, prenom_fr: true, prenom_ar: true, matricule: true } },
+        eleve: { select: { id: true, nom_fr: true, matricule: true } },
       },
       orderBy: { created_at: 'desc' },
     }),
@@ -95,7 +94,7 @@ export async function listerPaiementsProfesseurs(
       include: {
         professeur: {
           include: {
-            utilisateur: { select: { nom_fr: true, nom_ar: true, prenom_fr: true, prenom_ar: true } },
+            utilisateur: { select: { nom_fr: true, nom_ar: true } },
           },
         },
       },
@@ -224,7 +223,6 @@ export async function getReliquats(
         select: {
           id: true,
           nom_fr: true,
-          prenom_fr: true,
           matricule: true,
           paiements: { where: { type: 'mensualite', annee: { in: anneesUtilisees } } },
         },
@@ -237,7 +235,7 @@ export async function getReliquats(
       const payes = insc.eleve.paiements.map(p => `${p.mois}-${p.annee}`);
       const manquants = moisScolaireAnnee.filter(({ mois, annee }) => !payes.includes(`${mois}-${annee}`));
       return {
-        eleve: { id: insc.eleve.id, nom_fr: insc.eleve.nom_fr, prenom_fr: insc.eleve.prenom_fr, matricule: insc.eleve.matricule },
+        eleve: { id: insc.eleve.id, nom_fr: insc.eleve.nom_fr, matricule: insc.eleve.matricule },
         nb_mois_dus: manquants.length,
         mois_manquants: manquants,
         montant_du: manquants.length * montantMensualite,

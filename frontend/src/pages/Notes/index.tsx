@@ -8,7 +8,7 @@ import { toast } from '../../store/toastStore';
 import { useAuthStore } from '../../store/authStore';
 
 interface AnneeScolaire { id: string; libelle: string; active: boolean; }
-interface Classe { id: string; nom_fr: string; nom_ar: string; filiere: string; }
+interface Classe { id: string; nom_fr: string; filiere: string; }
 interface Matiere { id: string; nom_fr: string; nom_ar: string; filiere: string; note_max: number; note_min: number; }
 interface Eleve { id: string; nom_fr: string; prenom_fr: string; matricule: string; }
 interface Note { id: string; eleve_id: string; valeur: number; commentaire?: string; }

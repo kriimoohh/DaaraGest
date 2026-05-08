@@ -26,8 +26,6 @@ interface EleveInClasse {
   matricule: string;
   nom_fr: string;
   prenom_fr: string;
-  nom_ar: string;
-  prenom_ar: string;
   sexe: 'M' | 'F';
   date_naissance: string;
   parents: { nom_fr: string; lien: string; telephone: string }[];
