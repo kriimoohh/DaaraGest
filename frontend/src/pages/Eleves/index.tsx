@@ -35,8 +35,6 @@ interface Eleve {
   matricule: string;
   nom_fr: string;
   prenom_fr: string;
-  nom_ar: string;
-  prenom_ar: string;
   date_naissance: string;
   sexe: 'M' | 'F';
   actif: boolean;
@@ -67,8 +65,6 @@ interface EleveFormData {
   matricule: string;
   nom_fr: string;
   prenom_fr: string;
-  nom_ar: string;
-  prenom_ar: string;
   date_naissance: string;
   sexe: string;
   parent_nom_fr: string;
@@ -84,8 +80,6 @@ const EMPTY_FORM: EleveFormData = {
   matricule: '',
   nom_fr: '',
   prenom_fr: '',
-  nom_ar: '',
-  prenom_ar: '',
   date_naissance: '',
   sexe: '',
   parent_nom_fr: '',
@@ -381,8 +375,6 @@ export function ElevesPage() {
       matricule: eleve.matricule,
       nom_fr: eleve.nom_fr,
       prenom_fr: eleve.prenom_fr,
-      nom_ar: eleve.nom_ar,
-      prenom_ar: eleve.prenom_ar,
       date_naissance: eleve.date_naissance ? eleve.date_naissance.slice(0, 10) : '',
       sexe: eleve.sexe,
       parent_nom_fr: eleve.parents[0]?.nom_fr ?? '',
@@ -410,8 +402,6 @@ export function ElevesPage() {
         ...(form.matricule ? { matricule: form.matricule } : {}),
         nom_fr: form.nom_fr,
         prenom_fr: form.prenom_fr,
-        nom_ar: form.nom_ar,
-        prenom_ar: form.prenom_ar,
         date_naissance: form.date_naissance || undefined,
         sexe: form.sexe,
         parent: form.parent_nom_fr
@@ -562,8 +552,6 @@ export function ElevesPage() {
         matricule:        col(r, 'MATRICULE', 'matricule') || undefined,
         nom_fr:           col(r, 'NOM', 'nom_fr', 'Nom'),
         prenom_fr:        col(r, 'PRENOM(S)', 'PRENOMS', 'prenom_fr', 'Prénom', 'PRENOM'),
-        nom_ar:           col(r, 'nom_ar', 'NOM_AR') || undefined,
-        prenom_ar:        col(r, 'prenom_ar', 'PRENOM_AR') || undefined,
         date_naissance:   convertDate(col(r, 'DATE_NAISSANCE', 'date_naissance', 'Date de naissance', 'DATE NAISSANCE')),
         sexe:             (col(r, 'SEXE', 'sexe', 'Sexe') || 'M') as 'M' | 'F',
         parent_nom_fr:    col(r, 'parent_nom_fr', 'Parent', 'PARENT', 'NOM_PARENT') || undefined,
@@ -725,18 +713,6 @@ export function ElevesPage() {
               error={formErrors.prenom_fr}
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Nom (AR)"
-              value={form.nom_ar}
-              onChange={(e) => setField('nom_ar', e.target.value)}
-            />
-            <Input
-              label="Prénom (AR)"
-              value={form.prenom_ar}
-              onChange={(e) => setField('prenom_ar', e.target.value)}
-            />
-          </div>
           <Input
             label={t('eleve.date_naissance')}
             type="date"
@@ -800,10 +776,8 @@ export function ElevesPage() {
                     />
                   }
                 />
-                <FicheRow label="Nom (FR)" value={ficheModal.nom_fr} />
-                <FicheRow label="Prénom (FR)" value={ficheModal.prenom_fr} />
-                <FicheRow label="Nom (AR)" value={ficheModal.nom_ar || '—'} />
-                <FicheRow label="Prénom (AR)" value={ficheModal.prenom_ar || '—'} />
+                <FicheRow label="Nom" value={ficheModal.nom_fr} />
+                <FicheRow label="Prénom" value={ficheModal.prenom_fr} />
                 <FicheRow
                   label="Sexe"
                   value={
@@ -993,7 +967,7 @@ export function ElevesPage() {
               <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-700 dark:text-blue-300">
                 <p className="font-semibold mb-1">Format attendu — colonnes CSV :</p>
                 <code className="text-xs block bg-blue-100 dark:bg-blue-900/40 p-2 rounded mt-1">
-                  nom_fr, prenom_fr, nom_ar, prenom_ar, date_naissance, sexe, parent_nom_fr, parent_lien, parent_telephone
+                  nom_fr, prenom_fr, date_naissance, sexe, parent_nom_fr, parent_lien, parent_telephone
                 </code>
                 <p className="mt-2 text-xs opacity-80">sexe: M ou F · parent_lien: pere, mere ou tuteur · date_naissance: YYYY-MM-DD</p>
               </div>

@@ -2,7 +2,6 @@
 CREATE TABLE "Etablissement" (
     "id" TEXT NOT NULL,
     "nom_fr" TEXT NOT NULL,
-    "nom_ar" TEXT NOT NULL,
     "adresse" TEXT,
     "telephone" TEXT,
     "logo_url" TEXT,
@@ -18,7 +17,6 @@ CREATE TABLE "Etablissement" (
 CREATE TABLE "Role" (
     "id" TEXT NOT NULL,
     "libelle_fr" TEXT NOT NULL,
-    "libelle_ar" TEXT NOT NULL,
     "permissions" JSONB NOT NULL DEFAULT '{}',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -32,8 +30,6 @@ CREATE TABLE "Utilisateur" (
     "role_id" TEXT NOT NULL,
     "nom_fr" TEXT NOT NULL,
     "nom_ar" TEXT NOT NULL,
-    "prenom_fr" TEXT NOT NULL,
-    "prenom_ar" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "mot_de_passe" TEXT NOT NULL,
     "langue" TEXT NOT NULL DEFAULT 'fr',
@@ -190,9 +186,7 @@ CREATE TABLE "Eleve" (
     "etablissement_id" TEXT NOT NULL,
     "matricule" TEXT NOT NULL,
     "nom_fr" TEXT NOT NULL,
-    "nom_ar" TEXT NOT NULL,
     "prenom_fr" TEXT NOT NULL,
-    "prenom_ar" TEXT NOT NULL,
     "date_naissance" DATE NOT NULL,
     "sexe" TEXT NOT NULL,
     "photo_url" TEXT,

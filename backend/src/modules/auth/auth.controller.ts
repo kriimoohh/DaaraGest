@@ -47,9 +47,9 @@ export async function changePasswordHandler(request: FastifyRequest, reply: Fast
 
 export async function updateProfilHandler(request: FastifyRequest, reply: FastifyReply) {
   const { id } = request.user as JwtPayload;
-  const { nom_fr, prenom_fr, langue, theme } = request.body as Record<string, string>;
+  const { nom_fr, langue, theme } = request.body as Record<string, string>;
   try {
-    const updated = await updateProfil(id, { nom_fr, prenom_fr, langue, theme });
+    const updated = await updateProfil(id, { nom_fr, langue, theme });
     return reply.send(updated);
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
