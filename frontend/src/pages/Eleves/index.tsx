@@ -154,7 +154,9 @@ export function ElevesPage() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [filterSexe, setFilterSexe] = useState('');
   const [filterStatut, setFilterStatut] = useState('');
+  const [filterClasse, setFilterClasse] = useState('');
   const [limit, setLimit] = useState(20);
+  const [allClasses, setAllClasses] = useState<{ id: string; nom_fr: string; filiere: string }[]>([]);
 
   // Edit/Create modal
   const [modalOpen, setModalOpen] = useState(false);
@@ -166,6 +168,8 @@ export function ElevesPage() {
   // Fiche complète modal
   const [ficheModal, setFicheModal] = useState<EleveFiche | null>(null);
   const [ficheLoading, setFicheLoading] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoSaving, setPhotoSaving] = useState(false);
 
   // Delete
   const [confirmDelete, setConfirmDelete] = useState<Eleve | null>(null);
@@ -199,6 +203,12 @@ export function ElevesPage() {
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
+  useEffect(() => {
+    api.get<{ id: string; nom_fr: string; filiere: string }[]>('/api/v1/classes?limit=200')
+      .then(res => setAllClasses(Array.isArray(res) ? res : []))
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const fetchEleves = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -213,6 +223,7 @@ export function ElevesPage() {
       if (filterSexe) params.set('sexe', filterSexe);
       if (filterStatut === 'actif') params.set('actif', 'true');
       if (filterStatut === 'inactif') params.set('actif', 'false');
+      if (filterClasse) params.set('classe_id', filterClasse);
       const res = await api.get<ElevesResponse>(`/api/v1/eleves?${params}`);
       setEleves(res.data);
       setTotal(res.total);
@@ -223,12 +234,12 @@ export function ElevesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, limit, sortBy, sortDir, filterSexe, filterStatut]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [page, search, limit, sortBy, sortDir, filterSexe, filterStatut, filterClasse]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetchEleves(); }, [fetchEleves]);
 
   // Reset to page 1 when any filter/sort changes
-  useEffect(() => { setPage(1); }, [search, filterSexe, filterStatut, limit, sortBy, sortDir]);
+  useEffect(() => { setPage(1); }, [search, filterSexe, filterStatut, filterClasse, limit, sortBy, sortDir]);
 
   // ── Sort handler ───────────────────────────────────────────────────────────
 
@@ -626,6 +637,26 @@ export function ElevesPage() {
     }
   };
 
+  // ── Photo upload ──────────────────────────────────────────────────────────
+
+  const handlePhotoUpload = (file: File) => {
+    if (!ficheModal) return;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const base64 = ev.target?.result as string;
+      setPhotoSaving(true);
+      try {
+        await api.put(`/api/v1/eleves/${ficheModal.id}`, { photo_url: base64 });
+        setFicheModal(f => f ? { ...f, photo_url: base64 } : f);
+        toast.success('Photo mise à jour');
+        fetchEleves();
+      } catch (err) {
+        toast.error((err as Error).message || 'Erreur upload photo');
+      } finally { setPhotoSaving(false); }
+    };
+    reader.readAsDataURL(file);
+  };
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -690,6 +721,18 @@ export function ElevesPage() {
             />
           </div>
 
+          <div className="w-48">
+            <Select
+              label="Classe"
+              value={filterClasse}
+              onChange={e => setFilterClasse(e.target.value)}
+              options={[
+                { value: '', label: 'Toutes les classes' },
+                ...allClasses.map(c => ({ value: c.id, label: `${c.nom_fr} (${c.filiere})` })),
+              ]}
+            />
+          </div>
+
           <div className="w-28">
             <Select
               label="Par page"
@@ -699,12 +742,12 @@ export function ElevesPage() {
             />
           </div>
 
-          {(filterSexe || filterStatut || search) && (
+          {(filterSexe || filterStatut || filterClasse || search) && (
             <div className="flex items-end">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { setSearch(''); setFilterSexe(''); setFilterStatut(''); }}
+                onClick={() => { setSearch(''); setFilterSexe(''); setFilterStatut(''); setFilterClasse(''); }}
               >
                 Réinitialiser
               </Button>
@@ -815,16 +858,34 @@ export function ElevesPage() {
           size="lg"
         >
           <div className="space-y-6">
-            {/* Photo + en-tête */}
-            {ficheModal.photo_url && (
-              <div className="flex justify-center">
-                <img
-                  src={ficheModal.photo_url}
-                  alt={`${ficheModal.prenom_fr} ${ficheModal.nom_fr}`}
-                  className="w-24 h-24 rounded-full object-cover border-2 border-slate-200 dark:border-slate-700 shadow"
-                />
-              </div>
-            )}
+            {/* Photo */}
+            <div className="flex flex-col items-center gap-2">
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={e => { if (e.target.files?.[0]) handlePhotoUpload(e.target.files[0]); e.target.value = ''; }}
+              />
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                disabled={photoSaving}
+                className="group relative w-24 h-24 rounded-full overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow hover:border-emerald-400 transition-colors"
+              >
+                {ficheModal.photo_url ? (
+                  <img src={ficheModal.photo_url} alt={`${ficheModal.prenom_fr} ${ficheModal.nom_fr}`} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-3xl text-slate-400">
+                    {ficheModal.prenom_fr[0]}{ficheModal.nom_fr[0]}
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <span className="text-white text-xs font-medium">{photoSaving ? '…' : '📷'}</span>
+                </div>
+              </button>
+              <p className="text-xs text-slate-400 dark:text-slate-500">Cliquer pour changer la photo</p>
+            </div>
 
             {/* Informations personnelles */}
             <section>

@@ -15,7 +15,7 @@ export const eleveSchema = z.object({
   prenom_fr: z.string().min(1),
   date_naissance: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   sexe: z.enum(['M', 'F']),
-  photo_url: z.string().url().optional(),
+  photo_url: z.string().optional(),
   parents: z.array(parentSchema).optional(),
 });
 
