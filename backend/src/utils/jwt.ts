@@ -4,4 +4,5 @@ export interface JwtPayload {
   etablissement_id: string;
   langue: string;
   theme: string;
+  doit_changer_mdp: boolean;
 }

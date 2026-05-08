@@ -1,4 +1,5 @@
 import prisma from '../../config/database';
+import { logAction } from '../../utils/audit';
 import { EleveInput, InscriptionInput } from './eleves.schema';
 
 const VALID_SORT_FIELDS = ['nom_fr', 'prenom_fr', 'matricule', 'sexe', 'date_naissance'];
@@ -138,37 +139,54 @@ export async function getProgressionEleve(id: string, etablissement_id: string) 
 
 async function genererMatricule(etablissement_id: string): Promise<string> {
   const annee = new Date().getFullYear();
-  const count = await prisma.eleve.count({ where: { etablissement_id, matricule: { startsWith: `DG-${annee}-` } } });
-  return `DG-${annee}-${String(count + 1).padStart(3, '0')}`;
+  const prefix = `DG-${annee}-`;
+  const result = await prisma.$queryRaw<{ max_num: number | null }[]>`
+    SELECT MAX(CAST(SUBSTRING(matricule FROM ${prefix.length + 1}) AS INTEGER)) AS max_num
+    FROM "Eleve"
+    WHERE etablissement_id = ${etablissement_id}
+    AND matricule ~ ${`^DG-${annee}-[0-9]+$`}
+  `;
+  const lastNum = result[0]?.max_num ?? 0;
+  return `${prefix}${String(lastNum + 1).padStart(3, '0')}`;
 }
 
-export async function creerEleve(etablissement_id: string, data: EleveInput) {
-  const matricule = data.matricule || await genererMatricule(etablissement_id);
-  const { parents, ...eleveData } = { ...data, matricule };
+export async function creerEleve(etablissement_id: string, data: EleveInput, acteurId: string) {
+  const { parents, ...eleveData } = data;
 
-  return prisma.eleve.create({
-    data: {
-      etablissement_id,
-      matricule: eleveData.matricule,
-      nom_fr: eleveData.nom_fr,
-      prenom_fr: eleveData.prenom_fr,
-      date_naissance: new Date(eleveData.date_naissance),
-      lieu_naissance: eleveData.lieu_naissance,
-      sexe: eleveData.sexe,
-      photo_url: eleveData.photo_url,
-      parents: parents && parents.length > 0
-        ? { create: parents }
-        : undefined,
-    },
-    include: { parents: true },
-  });
+  // Réessayer jusqu'à 3 fois en cas de collision de matricule (contrainte unique)
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const matricule = data.matricule || await genererMatricule(etablissement_id);
+    try {
+      const eleve = await prisma.eleve.create({
+        data: {
+          etablissement_id,
+          matricule,
+          nom_fr: eleveData.nom_fr,
+          prenom_fr: eleveData.prenom_fr,
+          date_naissance: new Date(eleveData.date_naissance),
+          lieu_naissance: eleveData.lieu_naissance,
+          sexe: eleveData.sexe,
+          photo_url: eleveData.photo_url,
+          parents: parents && parents.length > 0 ? { create: parents } : undefined,
+        },
+        include: { parents: true },
+      });
+      await logAction(etablissement_id, acteurId, 'CREATE', 'Eleve', eleve.id, { matricule: eleve.matricule, nom: `${eleve.nom_fr} ${eleve.prenom_fr}` });
+      return eleve;
+    } catch (err) {
+      // P2002 = violation contrainte unique Prisma → réessayer si matricule auto-généré
+      if (!data.matricule && (err as { code?: string }).code === 'P2002' && attempt < 2) continue;
+      throw err;
+    }
+  }
+  throw new Error('Impossible de générer un matricule unique après 3 tentatives');
 }
 
-export async function modifierEleve(id: string, etablissement_id: string, data: Omit<EleveInput, 'parents'>) {
+export async function modifierEleve(id: string, etablissement_id: string, data: Omit<EleveInput, 'parents'>, acteurId: string) {
   const existing = await prisma.eleve.findFirst({ where: { id, etablissement_id } });
   if (!existing) throw new Error('Élève introuvable');
 
-  return prisma.eleve.update({
+  const eleve = await prisma.eleve.update({
     where: { id },
     data: {
       matricule: data.matricule,
@@ -180,13 +198,17 @@ export async function modifierEleve(id: string, etablissement_id: string, data: 
       photo_url: data.photo_url,
     },
   });
+  await logAction(etablissement_id, acteurId, 'UPDATE', 'Eleve', id, { nom: `${eleve.nom_fr} ${eleve.prenom_fr}` });
+  return eleve;
 }
 
-export async function supprimerEleve(id: string, etablissement_id: string) {
+export async function supprimerEleve(id: string, etablissement_id: string, acteurId: string) {
   const existing = await prisma.eleve.findFirst({ where: { id, etablissement_id } });
   if (!existing) throw new Error('Élève introuvable');
 
-  return prisma.eleve.update({ where: { id }, data: { actif: false } });
+  const eleve = await prisma.eleve.update({ where: { id }, data: { actif: false } });
+  await logAction(etablissement_id, acteurId, 'DELETE', 'Eleve', id, { matricule: existing.matricule });
+  return eleve;
 }
 
 export async function toggleActifEleve(id: string, etablissement_id: string) {
@@ -203,7 +225,7 @@ export interface ImportRow {
   parent_nom_fr?: string; parent_lien?: string; parent_telephone?: string;
 }
 
-export async function importerEleves(etablissement_id: string, rows: ImportRow[]) {
+export async function importerEleves(etablissement_id: string, rows: ImportRow[], acteurId: string) {
   const created: string[] = [];
   const errors: { ligne: number; message: string }[] = [];
 
@@ -214,27 +236,37 @@ export async function importerEleves(etablissement_id: string, rows: ImportRow[]
       if (!row.prenom_fr?.trim()) throw new Error('prenom_fr requis');
       if (!['M', 'F'].includes(row.sexe)) throw new Error('sexe invalide (M ou F)');
 
-      const matricule = await genererMatricule(etablissement_id);
       const parent = row.parent_nom_fr
         ? [{ nom_fr: row.parent_nom_fr, lien: (row.parent_lien || 'pere') as 'pere' | 'mere' | 'tuteur', telephone: row.parent_telephone || '' }]
         : undefined;
 
-      await prisma.eleve.create({
-        data: {
-          etablissement_id,
-          matricule,
-          nom_fr: row.nom_fr.trim(),
-          prenom_fr: row.prenom_fr.trim(),
-          date_naissance: row.date_naissance ? new Date(row.date_naissance) : new Date('2010-01-01'),
-          sexe: row.sexe,
-          lieu_naissance: row.lieu_naissance?.trim() || null,
-          parents: parent ? { create: parent } : undefined,
-        },
-      });
-      created.push(matricule);
+      // Retry sur collision matricule
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const matricule = await genererMatricule(etablissement_id);
+        try {
+          await prisma.eleve.create({
+            data: {
+              etablissement_id, matricule,
+              nom_fr: row.nom_fr.trim(), prenom_fr: row.prenom_fr.trim(),
+              date_naissance: row.date_naissance ? new Date(row.date_naissance) : new Date('2010-01-01'),
+              sexe: row.sexe, lieu_naissance: row.lieu_naissance?.trim() || null,
+              parents: parent ? { create: parent } : undefined,
+            },
+          });
+          created.push(matricule);
+          break;
+        } catch (err) {
+          if ((err as { code?: string }).code === 'P2002' && attempt < 2) continue;
+          throw err;
+        }
+      }
     } catch (err) {
       errors.push({ ligne: i + 2, message: (err as Error).message });
     }
+  }
+
+  if (created.length > 0) {
+    await logAction(etablissement_id, acteurId, 'CREATE', 'Eleve', 'bulk', { count: created.length });
   }
   return { total: rows.length, created: created.length, errors };
 }
@@ -261,7 +293,7 @@ export async function bulkDesactiverEleves(ids: string[], etablissement_id: stri
   });
 }
 
-export async function bulkSupprimerEleves(ids: string[], etablissement_id: string) {
+export async function bulkSupprimerEleves(ids: string[], etablissement_id: string, acteurId: string) {
   const validIds = await prisma.eleve.findMany({
     where: { id: { in: ids }, etablissement_id },
     select: { id: true },
@@ -278,6 +310,7 @@ export async function bulkSupprimerEleves(ids: string[], etablissement_id: strin
     prisma.eleve.deleteMany({ where: { id: { in: validIds } } }),
   ]);
 
+  await logAction(etablissement_id, acteurId, 'DELETE', 'Eleve', 'bulk', { ids: validIds, count: validIds.length });
   return { count: validIds.length };
 }
 
