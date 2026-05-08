@@ -14,8 +14,8 @@ const sections = [
     label: 'Principal',
     labelAr: 'الرئيسية',
     items: [
-      { key: 'dashboard',        path: '/dashboard',        icon: '⊞', roles: ['admin', 'directeur', 'gestionnaire', 'caissier', 'professeur', 'pointeur'] },
-      { key: 'eleves',           path: '/eleves',            icon: '🎓', roles: ['admin', 'directeur', 'gestionnaire', 'caissier'] },
+      { key: 'dashboard',        path: '/dashboard',        icon: '⊞', roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité', 'professeur', 'pointeur'] },
+      { key: 'eleves',           path: '/eleves',            icon: '🎓', roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'] },
       { key: 'professeurs',      path: '/professeurs',       icon: '👨‍🏫', roles: ['admin', 'directeur', 'gestionnaire'] },
       { key: 'classes',          path: '/classes',           icon: '🏫', roles: ['admin', 'directeur', 'gestionnaire', 'professeur'] },
     ],
@@ -35,7 +35,7 @@ const sections = [
     labelAr: 'الإدارة',
     items: [
       { key: 'pointage',         path: '/pointage',          icon: '📌', roles: ['admin', 'directeur', 'gestionnaire', 'pointeur'] },
-      { key: 'finances',         path: '/finances',          icon: '💰', roles: ['admin', 'gestionnaire', 'caissier'] },
+      { key: 'finances',         path: '/finances',          icon: '💰', roles: ['admin', 'gestionnaire', 'agent de scolarité'] },
       { key: 'utilisateurs',     path: '/utilisateurs',      icon: '👥', roles: ['admin'] },
       { key: 'parametres',       path: '/parametres',        icon: '⚙️', roles: ['admin'] },
     ],

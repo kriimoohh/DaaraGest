@@ -77,6 +77,7 @@ export async function modifierUtilisateur(
   if (!existing) throw new Error('Utilisateur introuvable');
 
   const updateData: Record<string, unknown> = {};
+  if (data.identifiant) updateData.identifiant = data.identifiant;
   if (data.nom_fr) updateData.nom_fr = data.nom_fr;
   if (data.nom_ar) updateData.nom_ar = data.nom_ar;
   if (data.email !== undefined) updateData.email = data.email;

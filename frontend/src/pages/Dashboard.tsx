@@ -185,11 +185,11 @@ export function Dashboard() {
             .filter((l) => {
               const role = storedUser?.role ?? '';
               const allowed: Record<string, string[]> = {
-                eleves:      ['admin','directeur','caissier'],
+                eleves:      ['admin','directeur','agent de scolarité'],
                 classes:     ['admin','directeur','professeur'],
                 notes:       ['admin','directeur','professeur'],
                 bulletins:   ['admin','directeur','professeur'],
-                finances:    ['admin','directeur','caissier'],
+                finances:    ['admin','directeur','agent de scolarité'],
                 pointage:    ['admin','directeur','pointeur'],
                 professeurs: ['admin','directeur'],
               };
