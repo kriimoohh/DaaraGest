@@ -142,6 +142,7 @@ export async function toggleActifEleve(id: string, etablissement_id: string) {
 export interface ImportRow {
   nom_fr: string; prenom_fr: string;
   date_naissance?: string; sexe: 'M' | 'F';
+  lieu_naissance?: string;
   parent_nom_fr?: string; parent_lien?: string; parent_telephone?: string;
 }
 
@@ -169,6 +170,7 @@ export async function importerEleves(etablissement_id: string, rows: ImportRow[]
           prenom_fr: row.prenom_fr.trim(),
           date_naissance: row.date_naissance ? new Date(row.date_naissance) : new Date('2010-01-01'),
           sexe: row.sexe,
+          lieu_naissance: row.lieu_naissance?.trim() || null,
           parents: parent ? { create: parent } : undefined,
         },
       });
