@@ -7,9 +7,11 @@ import {
   creerEleve,
   modifierEleve,
   supprimerEleve,
+  toggleActifEleve,
   inscrireEleve,
   importerEleves,
   bulkDesactiverEleves,
+  bulkSupprimerEleves,
   bulkInscrireEleves,
   ImportRow,
 } from './eleves.service';
@@ -91,6 +93,19 @@ export async function supprimerHandler(
   }
 }
 
+export async function toggleActifHandler(
+  request: FastifyRequest, reply: FastifyReply
+) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { id } = request.params as { id: string };
+  try {
+    const data = await toggleActifEleve(id, etablissement_id);
+    return reply.send(data);
+  } catch (err) {
+    return reply.status(404).send({ error: (err as Error).message });
+  }
+}
+
 export async function inscrireHandler(
   request: FastifyRequest, reply: FastifyReply
 ) {
@@ -116,6 +131,20 @@ export async function bulkDesactiverHandler(request: FastifyRequest, reply: Fast
   }
   try {
     const result = await bulkDesactiverEleves(body.ids, etablissement_id);
+    return reply.send({ count: result.count });
+  } catch (err) {
+    return reply.status(500).send({ error: (err as Error).message });
+  }
+}
+
+export async function bulkSupprimerHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const body = request.body as { ids: string[] };
+  if (!Array.isArray(body?.ids) || body.ids.length === 0) {
+    return reply.status(400).send({ error: 'ids[] requis et non vide' });
+  }
+  try {
+    const result = await bulkSupprimerEleves(body.ids, etablissement_id);
     return reply.send({ count: result.count });
   } catch (err) {
     return reply.status(500).send({ error: (err as Error).message });
