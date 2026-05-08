@@ -48,7 +48,14 @@ export async function listerEleves(
       where,
       skip,
       take: limit,
-      include: { parents: true },
+      include: {
+        parents: true,
+        inscriptions: {
+          include: { classe_fr: true, classe_ar: true, annee_scolaire: true },
+          orderBy: { date_inscription: 'desc' },
+          take: 1,
+        },
+      },
       orderBy: { [orderField]: orderDir },
     }),
   ]);
