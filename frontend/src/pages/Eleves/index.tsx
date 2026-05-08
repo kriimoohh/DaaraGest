@@ -180,6 +180,8 @@ export function ElevesPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [confirmBulkSupprimer, setConfirmBulkSupprimer] = useState(false);
+  const [bulkSupprimant, setBulkSupprimant] = useState(false);
   const [bulkInscModal, setBulkInscModal] = useState(false);
   const [bulkInscForm, setBulkInscForm] = useState({ annee_scolaire_id: '', classe_fr_id: '', classe_ar_id: '' });
   const [bulkInscSaving, setBulkInscSaving] = useState(false);
@@ -276,6 +278,21 @@ export function ElevesPage() {
       toast.error((err as Error).message || 'Erreur lors de la désactivation');
     } finally {
       setBulkDeleting(false);
+    }
+  }
+
+  async function handleBulkSupprimer() {
+    setBulkSupprimant(true);
+    try {
+      const res = await api.post<{ count: number }>('/api/v1/eleves/bulk-supprimer', { ids: [...selectedIds] });
+      toast.success(`${res.count} élève(s) supprimé(s) définitivement`);
+      setSelectedIds(new Set());
+      setConfirmBulkSupprimer(false);
+      fetchEleves();
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur lors de la suppression');
+    } finally {
+      setBulkSupprimant(false);
     }
   }
 
@@ -982,6 +999,16 @@ export function ElevesPage() {
         message={`Désactiver ${selectedIds.size} élève(s) sélectionné(s) ?`}
       />
 
+      {/* ── Confirmation suppression définitive bulk ────────────────────────── */}
+      <ConfirmModal
+        isOpen={confirmBulkSupprimer}
+        onClose={() => setConfirmBulkSupprimer(false)}
+        onConfirm={handleBulkSupprimer}
+        loading={bulkSupprimant}
+        title="Suppression définitive"
+        message={`Supprimer définitivement ${selectedIds.size} élève(s) ? Cette action est irréversible et effacera toutes leurs données (inscriptions, paiements, notes, bulletins).`}
+      />
+
       {/* ── Modal inscription bulk ───────────────────────────────────────────── */}
       <Modal
         isOpen={bulkInscModal}
@@ -1031,9 +1058,14 @@ export function ElevesPage() {
             Inscrire
           </Button>
           {isAdmin && (
-            <Button size="sm" variant="danger" onClick={() => setConfirmBulkDelete(true)}>
-              Désactiver
-            </Button>
+            <>
+              <Button size="sm" variant="danger" onClick={() => setConfirmBulkDelete(true)}>
+                Désactiver
+              </Button>
+              <Button size="sm" variant="danger" onClick={() => setConfirmBulkSupprimer(true)}>
+                Supprimer définitivement
+              </Button>
+            </>
           )}
           <div className="w-px h-5 bg-slate-200 dark:bg-slate-700" />
           <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
