@@ -17,7 +17,7 @@ import { toast } from '../../store/toastStore';
 
 interface Stats { total_encaisse_eleves: number; nb_paiements_eleves: number; total_paye_professeurs: number; }
 
-interface EleveSimple { id: string; nom_fr: string; matricule: string; }
+interface EleveSimple { id: string; nom_fr: string; prenom_fr: string; matricule: string; }
 
 interface PaiementEleve {
   id: string; type: string; montant: number; mois?: number; annee?: number;
@@ -115,7 +115,7 @@ function EleveSearchPicker({ eleves, selected, onChange }: EleveSearchPickerProp
           {selected.map(e => (
             <span key={e.id}
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700">
-              {e.nom_fr} <span className="font-mono text-emerald-600 dark:text-emerald-400">({e.matricule})</span>
+              {e.prenom_fr} {e.nom_fr} <span className="font-mono text-emerald-600 dark:text-emerald-400">({e.matricule})</span>
               <button onClick={() => remove(e.id)} className="ml-0.5 hover:text-red-500 transition-colors">×</button>
             </span>
           ))}
@@ -142,7 +142,7 @@ function EleveSearchPicker({ eleves, selected, onChange }: EleveSearchPickerProp
                   onClick={() => toggle(e)}
                   className={`w-full text-left px-3.5 py-2 text-sm flex items-center justify-between gap-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors ${sel ? 'bg-emerald-50 dark:bg-emerald-900/20' : ''}`}>
                   <span className={sel ? 'font-medium text-emerald-700 dark:text-emerald-300' : 'text-slate-800 dark:text-slate-200'}>
-                    {e.nom_fr}
+                    {e.prenom_fr} {e.nom_fr}
                   </span>
                   <span className="font-mono text-xs text-slate-400">{e.matricule}</span>
                   {sel && <span className="text-emerald-500 text-xs shrink-0">✓</span>}
@@ -600,7 +600,7 @@ export function FinancesPage() {
                     <tbody>
                       {paiements.map(p => (
                         <tr key={p.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                          <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{p.eleve.nom_fr}</td>
+                          <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{p.eleve.prenom_fr} {p.eleve.nom_fr}</td>
                           <td className="px-4 py-3 font-mono text-xs text-slate-500">{p.eleve.matricule}</td>
                           <td className="px-4 py-3"><Badge label={TYPE_LABELS[p.type] ?? p.type} variant="info" /></td>
                           <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white">{formatMontant(p.montant)}</td>
@@ -664,7 +664,7 @@ export function FinancesPage() {
         {editTarget && (
           <div className="space-y-4">
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Élève : <span className="font-medium text-slate-900 dark:text-white">{editTarget.eleve.nom_fr}</span>
+              Élève : <span className="font-medium text-slate-900 dark:text-white">{editTarget.eleve.prenom_fr} {editTarget.eleve.nom_fr}</span>
               <span className="font-mono text-xs text-slate-400 ml-2">({editTarget.eleve.matricule})</span>
             </p>
             <div className="grid grid-cols-2 gap-4">
@@ -696,7 +696,7 @@ export function FinancesPage() {
         onConfirm={handleDelete}
         loading={deleting}
         title="Supprimer le paiement"
-        message={deleteTarget ? `Supprimer le paiement de ${formatMontant(deleteTarget.montant)} pour ${deleteTarget.eleve.nom_fr} ? Cette action est irréversible.` : ''}
+        message={deleteTarget ? `Supprimer le paiement de ${formatMontant(deleteTarget.montant)} pour ${deleteTarget.eleve.prenom_fr} ${deleteTarget.eleve.nom_fr} ? Cette action est irréversible.` : ''}
       />
     </div>
   );
