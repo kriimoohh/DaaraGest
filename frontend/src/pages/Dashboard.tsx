@@ -35,7 +35,7 @@ export function Dashboard() {
   const [stats, setStats] = useState<Stats>({ nb_eleves: 0, nb_professeurs: 0, nb_classes: 0, paiements_mois: 0 });
   const [statsMois, setStatsMois] = useState<StatsMois | null>(null);
   const [statsMensuels, setStatsMensuels] = useState<MoisStat[]>([]);
-  const [etablissement, setEtablissement] = useState<{ nom_fr: string; nom_ar: string } | null>(null);
+  const [etablissement, setEtablissement] = useState<{ nom_fr: string } | null>(null);
 
   useEffect(() => {
     Promise.allSettled([
@@ -43,7 +43,7 @@ export function Dashboard() {
       api.get<{ total: number }>('/api/v1/professeurs?limit=1'),
       api.get<unknown[]>('/api/v1/classes'),
       api.get<StatsMois>('/api/v1/finances/stats'),
-      api.get<{ nom_fr: string; nom_ar: string }>('/api/v1/parametres'),
+      api.get<{ nom_fr: string }>('/api/v1/parametres'),
       api.get<MoisStat[]>('/api/v1/finances/stats-mensuels'),
     ]).then(([eleves, profs, classes, finances, etab, mensuels]) => {
       setStats({
@@ -53,16 +53,14 @@ export function Dashboard() {
         paiements_mois: finances.status  === 'fulfilled' ? (finances.value as StatsMois).nb_paiements_eleves : 0,
       });
       if (finances.status === 'fulfilled') setStatsMois(finances.value as StatsMois);
-      if (etab.status === 'fulfilled') setEtablissement(etab.value as { nom_fr: string; nom_ar: string });
+      if (etab.status === 'fulfilled') setEtablissement(etab.value as { nom_fr: string });
       if (mensuels.status === 'fulfilled') setStatsMensuels(mensuels.value as MoisStat[]);
     });
   }, []);
 
   const isAr = i18n.language === 'ar';
-  const displayName = isAr
-    ? `${user?.prenom_ar ?? ''} ${user?.nom_ar ?? ''}`
-    : `${user?.prenom_fr ?? ''} ${user?.nom_fr ?? ''}`;
-  const schoolName = isAr ? etablissement?.nom_ar : etablissement?.nom_fr;
+  const displayName = user?.nom_fr ?? '';
+  const schoolName = etablissement?.nom_fr;
   const hour = new Date().getHours();
   const greeting = isAr
     ? (hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء الخير' : 'مساء الخير')

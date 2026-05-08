@@ -14,14 +14,14 @@ import { ConfirmModal } from '../../components/ui/ConfirmModal';
 
 interface Role { id: string; libelle_fr: string; }
 interface Utilisateur {
-  id: string; identifiant: string; nom_fr: string; prenom_fr: string;
-  nom_ar: string; prenom_ar: string; email?: string; langue: string;
+  id: string; identifiant: string; nom_fr: string;
+  nom_ar: string; email?: string; langue: string;
   actif: boolean; role: { libelle_fr: string; };
 }
 
 const EMPTY_FORM = {
-  identifiant: '', mot_de_passe: '', nom_fr: '', prenom_fr: '',
-  nom_ar: '', prenom_ar: '', email: '', role_id: '', langue: 'fr',
+  identifiant: '', mot_de_passe: '', nom_fr: '',
+  nom_ar: '', email: '', role_id: '', langue: 'fr',
 };
 
 export function UtilisateursPage() {
@@ -76,16 +76,16 @@ export function UtilisateursPage() {
     setEdit(u);
     setForm({
       identifiant: u.identifiant, mot_de_passe: '',
-      nom_fr: u.nom_fr, prenom_fr: u.prenom_fr,
-      nom_ar: u.nom_ar, prenom_ar: u.prenom_ar,
+      nom_fr: u.nom_fr,
+      nom_ar: u.nom_ar,
       email: u.email ?? '', role_id: '', langue: u.langue,
     });
     setModal(true);
   };
 
   const handleSave = async () => {
-    if (!form.identifiant || !form.nom_fr || !form.prenom_fr) {
-      toast.error('Identifiant, nom et prénom sont requis');
+    if (!form.identifiant || !form.nom_fr) {
+      toast.error('Identifiant et nom sont requis');
       return;
     }
     if (!edit && !form.mot_de_passe) {
@@ -95,8 +95,8 @@ export function UtilisateursPage() {
     setSaving(true);
     try {
       const payload: Record<string, string> = {
-        identifiant: form.identifiant, nom_fr: form.nom_fr, prenom_fr: form.prenom_fr,
-        nom_ar: form.nom_ar, prenom_ar: form.prenom_ar, langue: form.langue,
+        identifiant: form.identifiant, nom_fr: form.nom_fr,
+        nom_ar: form.nom_ar, langue: form.langue,
       };
       if (form.email) payload.email = form.email;
       if (!edit && form.mot_de_passe) payload.mot_de_passe = form.mot_de_passe;
@@ -199,7 +199,7 @@ export function UtilisateursPage() {
                 <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
                   <td className="px-4 py-3 font-mono text-sm text-slate-700 dark:text-slate-300">{u.identifiant}</td>
                   <td className="px-4 py-3">
-                    <div className="font-medium text-sm text-slate-900 dark:text-white">{u.prenom_fr} {u.nom_fr}</div>
+                    <div className="font-medium text-sm text-slate-900 dark:text-white">{u.nom_fr}</div>
                   </td>
                   <td className="px-4 py-3">
                     <Badge label={u.role.libelle_fr.charAt(0).toUpperCase() + u.role.libelle_fr.slice(1)} variant={roleVariant(u.role.libelle_fr)} />
@@ -228,14 +228,11 @@ export function UtilisateursPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input label={t('common.nom_fr')} value={form.nom_fr} onChange={(e) => setForm((f) => ({ ...f, nom_fr: e.target.value }))} />
-            <Input label={t('common.prenom_fr')} value={form.prenom_fr} onChange={(e) => setForm((f) => ({ ...f, prenom_fr: e.target.value }))} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
             <Input label={t('auth.identifiant')} value={form.identifiant} onChange={(e) => setForm((f) => ({ ...f, identifiant: e.target.value }))} />
-            {!edit && (
-              <Input label={t('auth.password')} type="password" value={form.mot_de_passe} onChange={(e) => setForm((f) => ({ ...f, mot_de_passe: e.target.value }))} />
-            )}
           </div>
+          {!edit && (
+            <Input label={t('auth.password')} type="password" value={form.mot_de_passe} onChange={(e) => setForm((f) => ({ ...f, mot_de_passe: e.target.value }))} />
+          )}
           <div className="grid grid-cols-2 gap-4">
             {!edit && (
               <Select

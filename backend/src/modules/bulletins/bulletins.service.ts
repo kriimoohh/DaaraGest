@@ -37,7 +37,7 @@ export async function listerBulletins(
   return prisma.bulletin.findMany({
     where,
     include: {
-      eleve: { select: { id: true, nom_fr: true, nom_ar: true, prenom_fr: true, prenom_ar: true, matricule: true } },
+      eleve: { select: { id: true, nom_fr: true, prenom_fr: true, matricule: true } },
       annee_scolaire: true,
     },
     orderBy: [{ periode: 'asc' }, { rang: 'asc' }],
@@ -184,9 +184,9 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
   const { generateBulletinHtml, generateBulletinAnnuelHtml } = await import('./bulletin.template');
 
   const base = {
-    etablissement_nom_fr: etab.nom_fr, etablissement_nom_ar: etab.nom_ar,
+    etablissement_nom_fr: etab.nom_fr, etablissement_nom_ar: '',
     eleve_nom_fr: `${data.eleve.prenom_fr} ${data.eleve.nom_fr}`,
-    eleve_nom_ar: `${data.eleve.prenom_ar} ${data.eleve.nom_ar}`,
+    eleve_nom_ar: '',
     eleve_matricule: data.eleve.matricule, annee_libelle: data.annee_scolaire.libelle,
     moyenne: data.moyenne !== null ? Number(data.moyenne) : null, rang: data.rang,
     appreciation: data.appreciation, devise: etab.devise,
@@ -283,9 +283,9 @@ export async function genererPdfClasse(
 
     pages.push(generateBulletinHtml({
       type: filiere as 'FR' | 'AR' | 'COMBINE', periode: bulletin.periode,
-      etablissement_nom_fr: etab.nom_fr, etablissement_nom_ar: etab.nom_ar,
+      etablissement_nom_fr: etab.nom_fr, etablissement_nom_ar: '',
       eleve_nom_fr: `${bulletin.eleve.prenom_fr} ${bulletin.eleve.nom_fr}`,
-      eleve_nom_ar: `${bulletin.eleve.prenom_ar} ${bulletin.eleve.nom_ar}`,
+      eleve_nom_ar: '',
       eleve_matricule: bulletin.eleve.matricule, annee_libelle: bulletin.annee_scolaire.libelle,
       moyenne: bulletin.moyenne !== null ? Number(bulletin.moyenne) : null,
       rang: bulletin.rang, appreciation: bulletin.appreciation, devise: etab.devise,

@@ -10,7 +10,6 @@ datasource db {
 model Etablissement {
   id          String   @id @default(uuid())
   nom_fr      String
-  nom_ar      String
   adresse     String?
   telephone   String?
   logo_url    String?
@@ -30,7 +29,6 @@ model Etablissement {
 model Role {
   id          String   @id @default(uuid())
   libelle_fr  String   @unique
-  libelle_ar  String
   permissions Json     @default("{}")
   created_at  DateTime @default(now())
 
@@ -43,8 +41,6 @@ model Utilisateur {
   role_id          String
   nom_fr           String
   nom_ar           String
-  prenom_fr        String
-  prenom_ar        String
   identifiant      String    @unique
   email            String?
   mot_de_passe     String
@@ -232,9 +228,7 @@ model Eleve {
   etablissement_id String
   matricule        String   @unique
   nom_fr           String
-  nom_ar           String
   prenom_fr        String
-  prenom_ar        String
   date_naissance   DateTime @db.Date
   sexe             String
   photo_url        String?

@@ -17,9 +17,7 @@ import { Pagination } from '../../components/ui/Pagination';
 interface Professeur {
   id: string;
   nom_fr: string;
-  prenom_fr: string;
   nom_ar: string;
-  prenom_ar: string;
   identifiant: string;
   specialite_fr: string;
   telephone: string;
@@ -35,9 +33,7 @@ interface ProfesseursResponse {
 
 interface ProfesseurFormData {
   nom_fr: string;
-  prenom_fr: string;
   nom_ar: string;
-  prenom_ar: string;
   identifiant: string;
   mot_de_passe: string;
   specialite_fr: string;
@@ -48,7 +44,7 @@ interface ProfesseurFormData {
 type FormErrors = Partial<Record<keyof ProfesseurFormData, string>>;
 
 const EMPTY_FORM: ProfesseurFormData = {
-  nom_fr: '', prenom_fr: '', nom_ar: '', prenom_ar: '',
+  nom_fr: '', nom_ar: '',
   identifiant: '', mot_de_passe: '', specialite_fr: '', telephone: '', type_contrat: '',
 };
 
@@ -58,8 +54,7 @@ const LIMIT = 20;
 
 function validate(form: ProfesseurFormData, isEdit: boolean): FormErrors {
   const errors: FormErrors = {};
-  if (!form.nom_fr.trim()) errors.nom_fr = 'Le nom (FR) est requis';
-  if (!form.prenom_fr.trim()) errors.prenom_fr = 'Le prénom (FR) est requis';
+  if (!form.nom_fr.trim()) errors.nom_fr = 'Le nom est requis';
   if (!form.identifiant.trim()) errors.identifiant = "L'identifiant est requis";
   if (!isEdit && !form.mot_de_passe.trim()) errors.mot_de_passe = 'Le mot de passe est requis';
   if (!form.type_contrat) errors.type_contrat = 'Le type de contrat est requis';
@@ -115,8 +110,8 @@ export function ProfesseursPage() {
   function openEdit(prof: Professeur) {
     setEditTarget(prof);
     setForm({
-      nom_fr: prof.nom_fr, prenom_fr: prof.prenom_fr,
-      nom_ar: prof.nom_ar, prenom_ar: prof.prenom_ar,
+      nom_fr: prof.nom_fr,
+      nom_ar: prof.nom_ar,
       identifiant: prof.identifiant, mot_de_passe: '',
       specialite_fr: prof.specialite_fr, telephone: prof.telephone,
       type_contrat: prof.type_contrat,
@@ -136,8 +131,8 @@ export function ProfesseursPage() {
     setSubmitting(true);
     try {
       const payload: Record<string, unknown> = {
-        nom_fr: form.nom_fr, prenom_fr: form.prenom_fr,
-        nom_ar: form.nom_ar, prenom_ar: form.prenom_ar,
+        nom_fr: form.nom_fr,
+        nom_ar: form.nom_ar,
         identifiant: form.identifiant, specialite_fr: form.specialite_fr,
         telephone: form.telephone, type_contrat: form.type_contrat,
       };
@@ -180,7 +175,7 @@ export function ProfesseursPage() {
       header: 'Nom',
       render: (row) => {
         const p = row as unknown as Professeur;
-        return `${p.prenom_fr} ${p.nom_fr}`;
+        return p.nom_fr;
       },
     },
     { key: 'identifiant', header: 'Identifiant' },
@@ -248,10 +243,7 @@ export function ProfesseursPage() {
           size="lg"
         >
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <Input label={t('common.nom_fr')} value={form.nom_fr} onChange={(e) => setField('nom_fr', e.target.value)} error={formErrors.nom_fr} />
-              <Input label={t('common.prenom_fr')} value={form.prenom_fr} onChange={(e) => setField('prenom_fr', e.target.value)} error={formErrors.prenom_fr} />
-            </div>
+            <Input label={t('common.nom_fr')} value={form.nom_fr} onChange={(e) => setField('nom_fr', e.target.value)} error={formErrors.nom_fr} />
 
             <div className="grid grid-cols-2 gap-4">
               <Input label={t('auth.identifiant')} value={form.identifiant} onChange={(e) => setField('identifiant', e.target.value)} error={formErrors.identifiant} />
@@ -290,7 +282,7 @@ export function ProfesseursPage() {
         onClose={() => setConfirmDelete(null)}
         onConfirm={handleDelete}
         loading={deleting}
-        message={`Désactiver le professeur "${confirmDelete?.prenom_fr ?? ''} ${confirmDelete?.nom_fr ?? ''}" ?`}
+        message={`Désactiver le professeur "${confirmDelete?.nom_fr ?? ''}" ?`}
       />
     </>
   );

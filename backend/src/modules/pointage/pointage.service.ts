@@ -40,7 +40,7 @@ export async function listerPresences(
       include: {
         professeur: {
           include: {
-            utilisateur: { select: { nom_fr: true, prenom_fr: true, nom_ar: true, prenom_ar: true } },
+            utilisateur: { select: { nom_fr: true } },
           },
         },
       },
@@ -55,7 +55,7 @@ export async function getPresencesDuJour(etablissement_id: string, date: string)
   const professeurs = await prisma.professeur.findMany({
     where: { utilisateur: { etablissement_id, actif: true } },
     include: {
-      utilisateur: { select: { id: true, nom_fr: true, prenom_fr: true, nom_ar: true, prenom_ar: true } },
+      utilisateur: { select: { id: true, nom_fr: true } },
       presences: { where: { date: new Date(date) } },
     },
     orderBy: { utilisateur: { nom_fr: 'asc' } },
@@ -64,9 +64,6 @@ export async function getPresencesDuJour(etablissement_id: string, date: string)
   return professeurs.map(p => ({
     professeur_id: p.id,
     nom_fr: p.utilisateur.nom_fr,
-    prenom_fr: p.utilisateur.prenom_fr,
-    nom_ar: p.utilisateur.nom_ar,
-    prenom_ar: p.utilisateur.prenom_ar,
     presence: p.presences[0] ?? null,
   }));
 }
@@ -92,7 +89,7 @@ export async function upsertPresence(etablissement_id: string, data: PresenceInp
     where: { professeur_id_date: { professeur_id: data.professeur_id, date } },
     create: { professeur_id: data.professeur_id, date, ...payload },
     update: payload,
-    include: { professeur: { include: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } } } },
+    include: { professeur: { include: { utilisateur: { select: { nom_fr: true } } } } },
   });
 }
 
@@ -130,7 +127,7 @@ export async function getStatsMois(etablissement_id: string, mois: number, annee
   const professeurs = await prisma.professeur.findMany({
     where: { utilisateur: { etablissement_id, actif: true } },
     include: {
-      utilisateur: { select: { nom_fr: true, prenom_fr: true } },
+      utilisateur: { select: { nom_fr: true } },
       presences: { where: { date: { gte: debut, lte: fin } } },
     },
     orderBy: { utilisateur: { nom_fr: 'asc' } },
@@ -145,7 +142,6 @@ export async function getStatsMois(etablissement_id: string, mois: number, annee
     return {
       professeur_id: p.id,
       nom_fr: p.utilisateur.nom_fr,
-      prenom_fr: p.utilisateur.prenom_fr,
       total_jours: total,
       presents,
       absents,

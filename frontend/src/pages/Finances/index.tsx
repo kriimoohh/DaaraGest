@@ -18,25 +18,25 @@ interface Stats { total_encaisse_eleves: number; nb_paiements_eleves: number; to
 interface PaiementEleve {
   id: string; type: string; montant: number; mois?: number; annee?: number;
   recu_numero?: string; created_at: string; statut: string;
-  eleve: { nom_fr: string; prenom_fr: string; matricule: string; };
+  eleve: { nom_fr: string; matricule: string; };
 }
 
 interface Reliquat {
-  eleve: { id: string; nom_fr: string; prenom_fr: string; matricule: string; };
+  eleve: { id: string; nom_fr: string; matricule: string; };
   nb_mois_dus: number;
   mois_manquants: { mois: number; annee: number }[];
   montant_du: number;
 }
 
 interface ProfesseurSimple {
-  id: string; nom_fr: string; prenom_fr: string;
+  id: string; nom_fr: string;
   professeur: { id: string; salaire_base: string | null } | null;
 }
 
 interface PaiementProf {
   id: string; mois: number; annee: number; montant_brut: number;
   retenues: number; net_a_payer: number; statut: string; created_at: string;
-  professeur: { utilisateur: { nom_fr: string; prenom_fr: string; }; };
+  professeur: { utilisateur: { nom_fr: string; }; };
 }
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
@@ -140,7 +140,7 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
               {paiements.map(p => (
                 <tr key={p.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30">
                   <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
-                    {p.professeur.utilisateur.prenom_fr} {p.professeur.utilisateur.nom_fr}
+                    {p.professeur.utilisateur.nom_fr}
                   </td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{MOIS[p.mois-1]} {p.annee}</td>
                   <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{formatMontant(Number(p.montant_brut))}</td>
@@ -169,7 +169,7 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
               const net = brut && retenues ? String(parseFloat(brut) - parseFloat(retenues)) : brut;
               setForm(f => ({ ...f, professeur_id: profId, montant_brut: brut, retenues, net_a_payer: net }));
             }}
-            options={[{ value: '', label: t('common.selectionner') }, ...profs.filter(p => p.professeur).map(p => ({ value: p.professeur!.id, label: `${p.prenom_fr} ${p.nom_fr}` }))]} />
+            options={[{ value: '', label: t('common.selectionner') }, ...profs.filter(p => p.professeur).map(p => ({ value: p.professeur!.id, label: p.nom_fr }))]} />
           <div className="grid grid-cols-2 gap-4">
             <Select label={t('common.mois')} value={form.mois} onChange={(e) => setForm(f => ({ ...f, mois: e.target.value }))}
               options={MOIS.map((m, i) => ({ value: String(i + 1), label: m }))} />
@@ -204,7 +204,7 @@ export function FinancesPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [paiements, setPaiements] = useState<PaiementEleve[]>([]);
   const [reliquats, setReliquats] = useState<Reliquat[]>([]);
-  const [eleves, setEleves] = useState<{ id: string; nom_fr: string; prenom_fr: string; matricule: string }[]>([]);
+  const [eleves, setEleves] = useState<{ id: string; nom_fr: string; matricule: string }[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -413,7 +413,7 @@ export function FinancesPage() {
                     <tbody>
                       {reliquats.map(r => (
                         <tr key={r.eleve.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-red-50/50 dark:hover:bg-red-900/10">
-                          <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{r.eleve.prenom_fr} {r.eleve.nom_fr}</td>
+                          <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{r.eleve.nom_fr}</td>
                           <td className="px-4 py-3 font-mono text-xs text-slate-500">{r.eleve.matricule}</td>
                           <td className="px-4 py-3"><Badge label={String(r.nb_mois_dus)} variant="error" /></td>
                           <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400">
@@ -443,7 +443,7 @@ export function FinancesPage() {
                     <tbody>
                       {paiements.map(p => (
                         <tr key={p.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                          <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{p.eleve.prenom_fr} {p.eleve.nom_fr}</td>
+                          <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{p.eleve.nom_fr}</td>
                           <td className="px-4 py-3 font-mono text-xs text-slate-500">{p.eleve.matricule}</td>
                           <td className="px-4 py-3"><Badge label={TYPE_LABELS[p.type] ?? p.type} variant="info" /></td>
                           <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white">{formatMontant(p.montant)}</td>
@@ -468,7 +468,7 @@ export function FinancesPage() {
       <Modal isOpen={modal} onClose={() => setModal(false)} title={t('finance.nouveau_paiement')} size="md">
         <div className="space-y-4">
           <Select label={t('nav.eleves')} value={form.eleve_id} onChange={e => setForm(f => ({ ...f, eleve_id: e.target.value }))}
-            options={[{ value: '', label: t('finance.selectionner_eleve') }, ...eleves.map(e => ({ value: e.id, label: `${e.prenom_fr} ${e.nom_fr} (${e.matricule})` }))]} />
+            options={[{ value: '', label: t('finance.selectionner_eleve') }, ...eleves.map(e => ({ value: e.id, label: `${e.nom_fr} (${e.matricule})` }))]} />
           <div className="grid grid-cols-2 gap-4">
             <Select label={t('finance.type')} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
               options={TYPES_PAIEMENT} />
