@@ -73,10 +73,13 @@ function EleveSearchPicker({ eleves, selected, onChange }: EleveSearchPickerProp
   const containerRef = useRef<HTMLDivElement>(null);
 
   const filtered = query.trim()
-    ? eleves.filter(e =>
-        e.nom_fr.toLowerCase().includes(query.toLowerCase()) ||
-        e.matricule.toLowerCase().includes(query.toLowerCase())
-      ).slice(0, 30)
+    ? eleves.filter(e => {
+        const q = query.toLowerCase();
+        return e.nom_fr.toLowerCase().includes(q) ||
+               e.prenom_fr.toLowerCase().includes(q) ||
+               `${e.prenom_fr} ${e.nom_fr}`.toLowerCase().includes(q) ||
+               e.matricule.toLowerCase().includes(q);
+      }).slice(0, 30)
     : eleves.slice(0, 30);
 
   const selectedIds = new Set(selected.map(e => e.id));
