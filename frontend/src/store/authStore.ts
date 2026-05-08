@@ -10,6 +10,7 @@ export interface AuthUser {
   theme: string;
   role: string;
   etablissement_id: string;
+  must_change_password?: boolean;
 }
 
 interface AuthState {
