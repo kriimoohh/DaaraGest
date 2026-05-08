@@ -46,10 +46,11 @@ model Utilisateur {
   mot_de_passe     String
   langue           String    @default("fr")
   theme            String    @default("light")
-  actif            Boolean   @default(true)
-  last_login       DateTime?
-  created_at       DateTime  @default(now())
-  updated_at       DateTime  @updatedAt
+  actif              Boolean   @default(true)
+  doit_changer_mdp   Boolean   @default(false)
+  last_login         DateTime?
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
   role          Role          @relation(fields: [role_id], references: [id])
@@ -306,6 +307,20 @@ model Note {
   eleve          Eleve         @relation(fields: [eleve_id], references: [id])
 
   @@unique([eleve_id, matiere_id, periode, annee_scolaire_id])
+}
+
+model AuditLog {
+  id               String   @id @default(uuid())
+  etablissement_id String
+  utilisateur_id   String
+  action           String   // 'CREATE' | 'UPDATE' | 'DELETE'
+  entite           String   // 'PaiementEleve', 'Eleve', 'Utilisateur', 'Note', ...
+  entite_id        String
+  details          Json?
+  created_at       DateTime @default(now())
+
+  @@index([etablissement_id, created_at])
+  @@index([entite, entite_id])
 }
 
 model Bulletin {

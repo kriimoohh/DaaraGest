@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import prisma from '../../config/database';
+import { JwtPayload } from '../../utils/jwt';
 
 export async function login(identifiant: string, mot_de_passe: string) {
   const utilisateur = await prisma.utilisateur.findUnique({
@@ -21,14 +22,17 @@ export async function login(identifiant: string, mot_de_passe: string) {
     data: { last_login: new Date() },
   });
 
+  const payload: JwtPayload = {
+    id: utilisateur.id,
+    role: utilisateur.role.libelle_fr,
+    etablissement_id: utilisateur.etablissement_id,
+    langue: utilisateur.langue,
+    theme: utilisateur.theme,
+    doit_changer_mdp: utilisateur.doit_changer_mdp,
+  };
+
   return {
-    payload: {
-      id: utilisateur.id,
-      role: utilisateur.role.libelle_fr,
-      etablissement_id: utilisateur.etablissement_id,
-      langue: utilisateur.langue,
-      theme: utilisateur.theme,
-    },
+    payload,
     user: {
       id: utilisateur.id,
       nom_fr: utilisateur.nom_fr,
@@ -38,18 +42,36 @@ export async function login(identifiant: string, mot_de_passe: string) {
       theme: utilisateur.theme,
       role: utilisateur.role.libelle_fr,
       etablissement_id: utilisateur.etablissement_id,
+      doit_changer_mdp: utilisateur.doit_changer_mdp,
     },
   };
 }
 
 export async function changePassword(id: string, ancien: string, nouveau: string) {
-  const utilisateur = await prisma.utilisateur.findUnique({ where: { id } });
+  const utilisateur = await prisma.utilisateur.findUnique({
+    where: { id },
+    include: { role: true },
+  });
   if (!utilisateur) throw new Error('Utilisateur introuvable');
   const valid = await bcrypt.compare(ancien, utilisateur.mot_de_passe);
   if (!valid) throw new Error('Mot de passe actuel incorrect');
   if (nouveau.length < 8) throw new Error('Le nouveau mot de passe doit contenir au moins 8 caractères');
   const hash = await bcrypt.hash(nouveau, 10);
-  await prisma.utilisateur.update({ where: { id }, data: { mot_de_passe: hash } });
+  const updated = await prisma.utilisateur.update({
+    where: { id },
+    data: { mot_de_passe: hash, doit_changer_mdp: false },
+    include: { role: true },
+  });
+
+  const payload: JwtPayload = {
+    id: updated.id,
+    role: updated.role.libelle_fr,
+    etablissement_id: updated.etablissement_id,
+    langue: updated.langue,
+    theme: updated.theme,
+    doit_changer_mdp: false,
+  };
+  return { payload };
 }
 
 export async function updateProfil(id: string, data: { nom_fr?: string; langue?: string; theme?: string }) {
@@ -75,6 +97,7 @@ export async function getMe(id: string) {
     theme: utilisateur.theme,
     role: utilisateur.role.libelle_fr,
     etablissement_id: utilisateur.etablissement_id,
+    doit_changer_mdp: utilisateur.doit_changer_mdp,
     etablissement: {
       id: utilisateur.etablissement.id,
       nom_fr: utilisateur.etablissement.nom_fr,

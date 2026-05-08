@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
+import prisma from './config/database';
 import { authRoutes } from './modules/auth/auth.routes';
 import { anneeScolaireRoutes } from './modules/annees-scolaires/annees-scolaires.routes';
 import { matiereRoutes } from './modules/matieres/matieres.routes';
@@ -37,11 +38,20 @@ async function build() {
   await fastify.register(jwt, { secret: JWT_SECRET });
 
   await fastify.register(rateLimit, {
-    global: false,
-    errorResponseBuilder: () => ({ error: 'Trop de tentatives. Réessayez dans 1 minute.' }),
+    global: true,
+    max: 100,
+    timeWindow: '15 minutes',
+    errorResponseBuilder: () => ({ error: 'Trop de requêtes. Réessayez dans quelques minutes.' }),
   });
 
-  fastify.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
+  fastify.get('/health', async (_req, reply) => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      return reply.send({ status: 'ok', db: 'ok', timestamp: new Date().toISOString() });
+    } catch {
+      return reply.status(503).send({ status: 'error', db: 'unreachable', timestamp: new Date().toISOString() });
+    }
+  });
 
   await fastify.register(
     async (api) => {

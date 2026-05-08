@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import prisma from '../../config/database';
+import { logAction } from '../../utils/audit';
 import { UtilisateurInput, ResetPasswordInput } from './utilisateurs.schema';
 
 export async function listerRoles() {
@@ -40,13 +41,11 @@ export async function listerUtilisateurs(
     }),
   ]);
 
-  // Remove password from response
   const sanitized = items.map(({ mot_de_passe: _, ...u }) => u);
-
   return { total, page, limit, data: sanitized };
 }
 
-export async function creerUtilisateur(etablissement_id: string, data: UtilisateurInput) {
+export async function creerUtilisateur(etablissement_id: string, data: UtilisateurInput, acteurId: string) {
   const hashedPassword = await bcrypt.hash(data.mot_de_passe, 10);
 
   const utilisateur = await prisma.utilisateur.create({
@@ -60,8 +59,13 @@ export async function creerUtilisateur(etablissement_id: string, data: Utilisate
       mot_de_passe: hashedPassword,
       langue: data.langue ?? 'fr',
       theme: data.theme ?? 'light',
+      doit_changer_mdp: true, // Forcer le changement à la première connexion
     },
     include: { role: true },
+  });
+
+  await logAction(etablissement_id, acteurId, 'CREATE', 'Utilisateur', utilisateur.id, {
+    identifiant: utilisateur.identifiant, role: utilisateur.role.libelle_fr,
   });
 
   const { mot_de_passe: _, ...result } = utilisateur;
@@ -71,7 +75,8 @@ export async function creerUtilisateur(etablissement_id: string, data: Utilisate
 export async function modifierUtilisateur(
   id: string,
   etablissement_id: string,
-  data: Partial<UtilisateurInput>
+  data: Partial<UtilisateurInput>,
+  acteurId: string
 ) {
   const existing = await prisma.utilisateur.findFirst({ where: { id, etablissement_id } });
   if (!existing) throw new Error('Utilisateur introuvable');
@@ -91,18 +96,21 @@ export async function modifierUtilisateur(
     include: { role: true },
   });
 
+  await logAction(etablissement_id, acteurId, 'UPDATE', 'Utilisateur', id, { changes: updateData });
+
   const { mot_de_passe: _, ...result } = utilisateur;
   return result;
 }
 
-export async function supprimerUtilisateur(id: string, etablissement_id: string) {
+export async function supprimerUtilisateur(id: string, etablissement_id: string, acteurId: string) {
   const existing = await prisma.utilisateur.findFirst({ where: { id, etablissement_id } });
   if (!existing) throw new Error('Utilisateur introuvable');
 
+  await logAction(etablissement_id, acteurId, 'DELETE', 'Utilisateur', id, { identifiant: existing.identifiant });
   return prisma.utilisateur.update({ where: { id }, data: { actif: false } });
 }
 
-export async function resetPassword(id: string, etablissement_id: string, data: ResetPasswordInput) {
+export async function resetPassword(id: string, etablissement_id: string, data: ResetPasswordInput, acteurId: string) {
   const existing = await prisma.utilisateur.findFirst({ where: { id, etablissement_id } });
   if (!existing) throw new Error('Utilisateur introuvable');
 
@@ -110,8 +118,10 @@ export async function resetPassword(id: string, etablissement_id: string, data: 
 
   await prisma.utilisateur.update({
     where: { id },
-    data: { mot_de_passe: hashedPassword },
+    data: { mot_de_passe: hashedPassword, doit_changer_mdp: true },
   });
+
+  await logAction(etablissement_id, acteurId, 'UPDATE', 'Utilisateur', id, { action: 'reset_password' });
 
   return { message: 'Mot de passe réinitialisé avec succès' };
 }

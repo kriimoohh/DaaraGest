@@ -29,12 +29,12 @@ async function main() {
   console.log('✅ Établissement');
 
   const roles = [
-    { id: 'role-admin',        libelle_fr: 'admin' },
-    { id: 'role-directeur',    libelle_fr: 'directeur' },
-    { id: 'role-gestionnaire', libelle_fr: 'gestionnaire' },
-    { id: 'role-caissier',     libelle_fr: 'agent de scolarité' },
-    { id: 'role-professeur',   libelle_fr: 'professeur' },
-    { id: 'role-pointeur',     libelle_fr: 'pointeur' },
+    { id: 'role-admin',         libelle_fr: 'admin' },
+    { id: 'role-directeur',     libelle_fr: 'directeur' },
+    { id: 'role-gestionnaire',  libelle_fr: 'gestionnaire' },
+    { id: 'role-caissier',      libelle_fr: 'agent de scolarité' },
+    { id: 'role-professeur',    libelle_fr: 'professeur' },
+    { id: 'role-pointeur',      libelle_fr: 'pointeur' },
   ];
   for (const r of roles) {
     await prisma.role.upsert({ where: { id: r.id }, update: { libelle_fr: r.libelle_fr }, create: r });
@@ -51,16 +51,17 @@ async function main() {
   const hash = await bcrypt.hash('Admin123!', 10);
   await prisma.utilisateur.upsert({
     where: { identifiant: 'admin' },
-    update: { mot_de_passe: hash },
+    update: { mot_de_passe: hash, doit_changer_mdp: true },
     create: {
       id: 'user-admin', identifiant: 'admin', mot_de_passe: hash,
       role_id: 'role-admin', etablissement_id: 'etablissement-default',
       nom_fr: 'Administrateur',
       nom_ar: 'مدير',
       langue: 'fr', theme: 'light',
+      doit_changer_mdp: true,
     },
   });
-  console.log('✅ Admin (admin / Admin123!)');
+  console.log('✅ Admin (admin / Admin123!) — changement de mot de passe requis à la première connexion');
 
   const matieres = [
     { id: 'mat-francais',  nom_fr: 'Français',            nom_ar: 'اللغة الفرنسية',    filiere: 'FR', coeff_defaut: new Prisma.Decimal(3), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 1 },

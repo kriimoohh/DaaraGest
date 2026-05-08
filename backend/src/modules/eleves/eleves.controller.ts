@@ -49,13 +49,13 @@ export async function getHandler(
 }
 
 export async function creerHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { etablissement_id } = request.user as JwtPayload;
+  const { etablissement_id, id: acteurId } = request.user as JwtPayload;
   const parsed = eleveSchema.safeParse(request.body);
   if (!parsed.success) {
     return reply.status(400).send({ error: parsed.error.errors[0].message });
   }
   try {
-    const data = await creerEleve(etablissement_id, parsed.data);
+    const data = await creerEleve(etablissement_id, parsed.data, acteurId);
     return reply.status(201).send(data);
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
@@ -65,7 +65,7 @@ export async function creerHandler(request: FastifyRequest, reply: FastifyReply)
 export async function modifierHandler(
   request: FastifyRequest, reply: FastifyReply
 ) {
-  const { etablissement_id } = request.user as JwtPayload;
+  const { etablissement_id, id: acteurId } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
   const parsed = eleveSchema.safeParse(request.body);
   if (!parsed.success) {
@@ -73,7 +73,7 @@ export async function modifierHandler(
   }
   try {
     const { parents: _, ...eleveData } = parsed.data;
-    const data = await modifierEleve(id, etablissement_id, eleveData);
+    const data = await modifierEleve(id, etablissement_id, eleveData, acteurId);
     return reply.send(data);
   } catch (err) {
     return reply.status(404).send({ error: (err as Error).message });
@@ -83,10 +83,10 @@ export async function modifierHandler(
 export async function supprimerHandler(
   request: FastifyRequest, reply: FastifyReply
 ) {
-  const { etablissement_id } = request.user as JwtPayload;
+  const { etablissement_id, id: acteurId } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
   try {
-    await supprimerEleve(id, etablissement_id);
+    await supprimerEleve(id, etablissement_id, acteurId);
     return reply.status(204).send();
   } catch (err) {
     return reply.status(404).send({ error: (err as Error).message });
@@ -138,13 +138,13 @@ export async function bulkDesactiverHandler(request: FastifyRequest, reply: Fast
 }
 
 export async function bulkSupprimerHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { etablissement_id } = request.user as JwtPayload;
+  const { etablissement_id, id: acteurId } = request.user as JwtPayload;
   const body = request.body as { ids: string[] };
   if (!Array.isArray(body?.ids) || body.ids.length === 0) {
     return reply.status(400).send({ error: 'ids[] requis et non vide' });
   }
   try {
-    const result = await bulkSupprimerEleves(body.ids, etablissement_id);
+    const result = await bulkSupprimerEleves(body.ids, etablissement_id, acteurId);
     return reply.send({ count: result.count });
   } catch (err) {
     return reply.status(500).send({ error: (err as Error).message });
@@ -170,7 +170,7 @@ export async function bulkInscrireHandler(request: FastifyRequest, reply: Fastif
 }
 
 export async function importHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { etablissement_id } = request.user as JwtPayload;
+  const { etablissement_id, id: acteurId } = request.user as JwtPayload;
   const body = request.body as { rows: ImportRow[] };
   if (!Array.isArray(body?.rows) || body.rows.length === 0) {
     return reply.status(400).send({ error: 'rows[] requis et non vide' });
@@ -179,7 +179,7 @@ export async function importHandler(request: FastifyRequest, reply: FastifyReply
     return reply.status(400).send({ error: 'Maximum 1000 élèves par import' });
   }
   try {
-    return reply.status(201).send(await importerEleves(etablissement_id, body.rows));
+    return reply.status(201).send(await importerEleves(etablissement_id, body.rows, acteurId));
   } catch (err) {
     return reply.status(500).send({ error: (err as Error).message });
   }
