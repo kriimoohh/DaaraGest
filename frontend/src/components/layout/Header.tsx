@@ -38,9 +38,7 @@ export function Header() {
 
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-slate-700 dark:text-slate-300 hidden sm:block">
-          {i18n.language === 'ar'
-            ? `${user?.prenom_ar ?? ''} ${user?.nom_ar ?? ''}`
-            : `${user?.prenom_fr ?? ''} ${user?.nom_fr ?? ''}`}
+          {user?.nom_fr ?? ''}
         </span>
         <button
           onClick={signOut}

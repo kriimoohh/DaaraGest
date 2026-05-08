@@ -24,9 +24,7 @@ export async function listerEleves(
   if (search) {
     where.OR = [
       { nom_fr: { contains: search, mode: 'insensitive' } },
-      { nom_ar: { contains: search, mode: 'insensitive' } },
       { prenom_fr: { contains: search, mode: 'insensitive' } },
-      { prenom_ar: { contains: search, mode: 'insensitive' } },
       { matricule: { contains: search, mode: 'insensitive' } },
     ];
   }
@@ -96,9 +94,7 @@ export async function creerEleve(etablissement_id: string, data: EleveInput) {
       etablissement_id,
       matricule: eleveData.matricule,
       nom_fr: eleveData.nom_fr,
-      nom_ar: eleveData.nom_ar,
       prenom_fr: eleveData.prenom_fr,
-      prenom_ar: eleveData.prenom_ar,
       date_naissance: new Date(eleveData.date_naissance),
       sexe: eleveData.sexe,
       photo_url: eleveData.photo_url,
@@ -119,9 +115,7 @@ export async function modifierEleve(id: string, etablissement_id: string, data: 
     data: {
       matricule: data.matricule,
       nom_fr: data.nom_fr,
-      nom_ar: data.nom_ar,
       prenom_fr: data.prenom_fr,
-      prenom_ar: data.prenom_ar,
       date_naissance: new Date(data.date_naissance),
       sexe: data.sexe,
       photo_url: data.photo_url,
@@ -144,7 +138,7 @@ export async function toggleActifEleve(id: string, etablissement_id: string) {
 }
 
 export interface ImportRow {
-  nom_fr: string; prenom_fr: string; nom_ar?: string; prenom_ar?: string;
+  nom_fr: string; prenom_fr: string;
   date_naissance?: string; sexe: 'M' | 'F';
   parent_nom_fr?: string; parent_lien?: string; parent_telephone?: string;
 }
@@ -171,8 +165,6 @@ export async function importerEleves(etablissement_id: string, rows: ImportRow[]
           matricule,
           nom_fr: row.nom_fr.trim(),
           prenom_fr: row.prenom_fr.trim(),
-          nom_ar: row.nom_ar?.trim() ?? '',
-          prenom_ar: row.prenom_ar?.trim() ?? '',
           date_naissance: row.date_naissance ? new Date(row.date_naissance) : new Date('2010-01-01'),
           sexe: row.sexe,
           parents: parent ? { create: parent } : undefined,

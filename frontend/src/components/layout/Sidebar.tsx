@@ -48,7 +48,7 @@ export function Sidebar() {
   const api = useApi();
   const role = user?.role ?? '';
   const isAr = i18n.language === 'ar';
-  const initials = `${user?.prenom_fr?.[0] ?? ''}${user?.nom_fr?.[0] ?? ''}`.toUpperCase();
+  const initials = `${user?.nom_fr?.[0] ?? ''}`.toUpperCase();
 
   const [profilOpen, setProfilOpen] = useState(false);
   const [tab, setTab] = useState<'info' | 'password'>('info');
@@ -178,7 +178,7 @@ export function Sidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate text-white">
-              {user?.prenom_fr} {user?.nom_fr}
+              {user?.nom_fr}
             </p>
             <p className="text-xs capitalize" style={{ color: '#64748B' }}>{role}</p>
           </div>
@@ -207,7 +207,7 @@ export function Sidebar() {
                   {initials || '?'}
                 </div>
                 <div>
-                  <p className="font-semibold text-slate-900 dark:text-white text-lg">{user?.prenom_fr} {user?.nom_fr}</p>
+                  <p className="font-semibold text-slate-900 dark:text-white text-lg">{user?.nom_fr}</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400 capitalize">{role}</p>
                   <p className="text-xs font-mono text-slate-400 dark:text-slate-500">@{user?.identifiant}</p>
                 </div>

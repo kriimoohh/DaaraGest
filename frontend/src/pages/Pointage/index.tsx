@@ -13,8 +13,7 @@ import { toast } from '../../store/toastStore';
 
 interface ProfJour {
   professeur_id: string;
-  nom_fr: string; prenom_fr: string;
-  nom_ar: string; prenom_ar: string;
+  nom_fr: string;
   presence: PresenceRecord | null;
 }
 
@@ -28,11 +27,11 @@ interface PresenceHistorique {
   id: string; date: string; statut: string;
   heure_arrivee: string | null; heure_depart: string | null;
   heures_prevues: number | null; heures_reelles: number | null; motif: string | null;
-  professeur: { utilisateur: { nom_fr: string; prenom_fr: string } };
+  professeur: { utilisateur: { nom_fr: string } };
 }
 
 interface StatProf {
-  professeur_id: string; nom_fr: string; prenom_fr: string;
+  professeur_id: string; nom_fr: string;
   total_jours: number; presents: number; absents: number;
   retards: number; conges: number; taux_presence: number | null;
 }
@@ -188,7 +187,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
                 return (
                   <tr key={p.professeur_id} className={`border-b border-slate-100 dark:border-slate-800 last:border-0 transition-colors ${s.statut === 'absent' ? 'bg-red-50/40 dark:bg-red-900/10' : s.statut === 'present' ? 'bg-emerald-50/40 dark:bg-emerald-900/10' : s.statut === 'retard' ? 'bg-amber-50/40 dark:bg-amber-900/10' : ''}`}>
                     <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
-                      {p.prenom_fr} {p.nom_fr}
+                      {p.nom_fr}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1 flex-wrap">
@@ -327,7 +326,7 @@ function Historique({ api }: { api: ReturnType<typeof useApi> }) {
                     {new Date(r.date).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' })}
                   </td>
                   <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
-                    {r.professeur.utilisateur.prenom_fr} {r.professeur.utilisateur.nom_fr}
+                    {r.professeur.utilisateur.nom_fr}
                   </td>
                   <td className="px-4 py-3"><Badge label={statutLabel(r.statut)} variant={statutBadge(r.statut)} /></td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">{r.heure_arrivee ?? '—'}</td>
@@ -416,7 +415,7 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
             <tbody>
               {stats.map(s => (
                 <tr key={s.professeur_id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{s.prenom_fr} {s.nom_fr}</td>
+                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{s.nom_fr}</td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{s.total_jours}</td>
                   <td className="px-4 py-3 text-emerald-600 dark:text-emerald-400 font-semibold">{s.presents}</td>
                   <td className="px-4 py-3 text-red-500 dark:text-red-400 font-semibold">{s.absents}</td>

@@ -33,8 +33,6 @@ export async function login(identifiant: string, mot_de_passe: string) {
       id: utilisateur.id,
       nom_fr: utilisateur.nom_fr,
       nom_ar: utilisateur.nom_ar,
-      prenom_fr: utilisateur.prenom_fr,
-      prenom_ar: utilisateur.prenom_ar,
       identifiant: utilisateur.identifiant,
       langue: utilisateur.langue,
       theme: utilisateur.theme,
@@ -54,7 +52,7 @@ export async function changePassword(id: string, ancien: string, nouveau: string
   await prisma.utilisateur.update({ where: { id }, data: { mot_de_passe: hash } });
 }
 
-export async function updateProfil(id: string, data: { nom_fr?: string; prenom_fr?: string; langue?: string; theme?: string }) {
+export async function updateProfil(id: string, data: { nom_fr?: string; langue?: string; theme?: string }) {
   return prisma.utilisateur.update({ where: { id }, data });
 }
 
@@ -72,8 +70,6 @@ export async function getMe(id: string) {
     id: utilisateur.id,
     nom_fr: utilisateur.nom_fr,
     nom_ar: utilisateur.nom_ar,
-    prenom_fr: utilisateur.prenom_fr,
-    prenom_ar: utilisateur.prenom_ar,
     identifiant: utilisateur.identifiant,
     langue: utilisateur.langue,
     theme: utilisateur.theme,
@@ -82,7 +78,6 @@ export async function getMe(id: string) {
     etablissement: {
       id: utilisateur.etablissement.id,
       nom_fr: utilisateur.etablissement.nom_fr,
-      nom_ar: utilisateur.etablissement.nom_ar,
     },
   };
 }

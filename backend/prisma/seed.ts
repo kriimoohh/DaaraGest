@@ -24,7 +24,6 @@ async function main() {
     where: { id: 'etablissement-default' },
     update: {
       nom_fr: 'École Franco Arabe Cheikh Abdoul Ahad Mbacké',
-      nom_ar: 'مدرسة الشيخ عبد الأحد مبكي الفرنسية العربية',
       adresse: 'Guédiawaye, Dakar, Sénégal',
       telephone: '+221 33 820 12 34',
       devise: 'FCFA',
@@ -32,7 +31,6 @@ async function main() {
     create: {
       id: 'etablissement-default',
       nom_fr: 'École Franco Arabe Cheikh Abdoul Ahad Mbacké',
-      nom_ar: 'مدرسة الشيخ عبد الأحد مبكي الفرنسية العربية',
       adresse: 'Guédiawaye, Dakar, Sénégal',
       telephone: '+221 33 820 12 34',
       devise: 'FCFA',
@@ -71,8 +69,8 @@ async function main() {
       mot_de_passe: await bcrypt.hash('Admin123!', 10),
       role_id: 'role-admin',
       etablissement_id: 'etablissement-default',
-      nom_fr: 'Administrateur', prenom_fr: 'Super',
-      nom_ar: 'مدير', prenom_ar: 'سوبر',
+      nom_fr: 'Administrateur',
+      nom_ar: 'مدير',
       langue: 'fr', theme: 'light',
     },
   });
@@ -112,19 +110,19 @@ async function main() {
   // Utilisateurs test
   const testUsers = [
     { id: 'user-directeur',  identifiant: 'directeur',  mot_de_passe: await bcrypt.hash('Directeur123!', 10), role_id: 'role-directeur',
-      nom_fr: 'Diop', prenom_fr: 'Moussa', nom_ar: 'ديوب', prenom_ar: 'موسى' },
+      nom_fr: 'Diop', nom_ar: 'ديوب' },
     { id: 'user-caissier',   identifiant: 'caissier',   mot_de_passe: await bcrypt.hash('Caissier123!', 10),  role_id: 'role-caissier',
-      nom_fr: 'Sow', prenom_fr: 'Aminata', nom_ar: 'ساو', prenom_ar: 'أمينتا' },
+      nom_fr: 'Sow', nom_ar: 'ساو' },
     { id: 'user-prof1',      identifiant: 'prof.fall',  mot_de_passe: await bcrypt.hash('Prof123!', 10),      role_id: 'role-professeur',
-      nom_fr: 'Fall', prenom_fr: 'Abdoulaye', nom_ar: 'فال', prenom_ar: 'عبدالله' },
+      nom_fr: 'Fall', nom_ar: 'فال' },
     { id: 'user-prof2',      identifiant: 'prof.diallo',mot_de_passe: await bcrypt.hash('Prof123!', 10),      role_id: 'role-professeur',
-      nom_fr: 'Diallo', prenom_fr: 'Fatou', nom_ar: 'ديالو', prenom_ar: 'فاطو' },
+      nom_fr: 'Diallo', nom_ar: 'ديالو' },
     { id: 'user-prof3',      identifiant: 'prof.ahmed', mot_de_passe: await bcrypt.hash('Prof123!', 10),      role_id: 'role-professeur',
-      nom_fr: 'Ahmed', prenom_fr: 'Sheikh', nom_ar: 'أحمد', prenom_ar: 'شيخ' },
+      nom_fr: 'Ahmed', nom_ar: 'أحمد' },
     { id: 'user-prof4',      identifiant: 'prof.ndiaye',mot_de_passe: await bcrypt.hash('Prof123!', 10),      role_id: 'role-professeur',
-      nom_fr: 'Ndiaye', prenom_fr: 'Ibrahima', nom_ar: 'نجاي', prenom_ar: 'إبراهيم' },
+      nom_fr: 'Ndiaye', nom_ar: 'نجاي' },
     { id: 'user-pointeur',   identifiant: 'pointeur',   mot_de_passe: await bcrypt.hash('Pointeur123!', 10),  role_id: 'role-pointeur',
-      nom_fr: 'Ba', prenom_fr: 'Oumar', nom_ar: 'با', prenom_ar: 'عمر' },
+      nom_fr: 'Ba', nom_ar: 'با' },
   ];
   for (const u of testUsers) {
     await prisma.utilisateur.upsert({
@@ -158,10 +156,10 @@ async function main() {
 
   // Classes
   const classes = [
-    { id: 'classe-cm1-fr', nom_fr: 'CM1 Français',  nom_ar: 'السنة الخامسة ابتدائي', filiere: 'FR', niveau: 'CM1', capacite: 35, annee_scolaire_id: 'annee-2024-2025' },
-    { id: 'classe-cm2-fr', nom_fr: 'CM2 Français',  nom_ar: 'السنة السادسة ابتدائي', filiere: 'FR', niveau: 'CM2', capacite: 30, annee_scolaire_id: 'annee-2024-2025' },
-    { id: 'classe-5ar',    nom_fr: '5ème Arabe',    nom_ar: 'الصف الخامس',           filiere: 'AR', niveau: '5ème', capacite: 30, annee_scolaire_id: 'annee-2024-2025' },
-    { id: 'classe-6ar',    nom_fr: '6ème Arabe',    nom_ar: 'الصف السادس',           filiere: 'AR', niveau: '6ème', capacite: 25, annee_scolaire_id: 'annee-2024-2025' },
+    { id: 'classe-cm1-fr', nom_fr: 'CM1 Français', filiere: 'FR', niveau: 'CM1', capacite: 35, annee_scolaire_id: 'annee-2024-2025' },
+    { id: 'classe-cm2-fr', nom_fr: 'CM2 Français', filiere: 'FR', niveau: 'CM2', capacite: 30, annee_scolaire_id: 'annee-2024-2025' },
+    { id: 'classe-5ar',    nom_fr: '5ème Arabe',   filiere: 'AR', niveau: '5ème', capacite: 30, annee_scolaire_id: 'annee-2024-2025' },
+    { id: 'classe-6ar',    nom_fr: '6ème Arabe',   filiere: 'AR', niveau: '6ème', capacite: 25, annee_scolaire_id: 'annee-2024-2025' },
   ];
   for (const cl of classes) {
     await prisma.classe.upsert({ where: { id: cl.id }, update: {}, create: { ...cl, etablissement_id: 'etablissement-default' } });
@@ -197,8 +195,8 @@ async function main() {
       update: {},
       create: {
         id: e.id, etablissement_id: 'etablissement-default',
-        matricule: e.matricule, nom_fr: e.nom_fr, nom_ar: e.nom_fr,
-        prenom_fr: e.prenom_fr, prenom_ar: e.prenom_fr,
+        matricule: e.matricule, nom_fr: e.nom_fr,
+        prenom_fr: e.prenom_fr,
         sexe: e.sexe, date_naissance: new Date(e.dn),
         parents: { create: { nom_fr: e.parent.nom, lien: e.parent.lien, telephone: e.parent.tel } },
       },

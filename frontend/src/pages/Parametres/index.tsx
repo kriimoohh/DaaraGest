@@ -7,7 +7,7 @@ import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
 
 interface Etablissement {
-  id: string; nom_fr: string; nom_ar: string; adresse?: string; telephone?: string; devise: string;
+  id: string; nom_fr: string; adresse?: string; telephone?: string; devise: string;
 }
 interface ConfigNotes {
   note_max: number; note_min: number; nb_periodes: number; arrondi: number; chiffres_arabes: boolean; montant_mensualite: number;
@@ -37,7 +37,7 @@ export function ParametresPage() {
     setSaving('etab');
     try {
       await api.put('/api/v1/parametres', {
-        nom_fr: etab.nom_fr, nom_ar: etab.nom_ar, adresse: etab.adresse,
+        nom_fr: etab.nom_fr, adresse: etab.adresse,
         telephone: etab.telephone, devise: etab.devise,
       });
       setSuccess('etab');
@@ -74,10 +74,7 @@ export function ParametresPage() {
         </div>
         {etab && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <Input label={t('common.nom_fr')} value={etab.nom_fr} onChange={(e) => setEtab((p) => p ? { ...p, nom_fr: e.target.value } : p)} />
-              <Input label={t('common.nom_ar')} value={etab.nom_ar} onChange={(e) => setEtab((p) => p ? { ...p, nom_ar: e.target.value } : p)} />
-            </div>
+            <Input label={t('common.nom_fr')} value={etab.nom_fr} onChange={(e) => setEtab((p) => p ? { ...p, nom_fr: e.target.value } : p)} />
             <div className="grid grid-cols-2 gap-4">
               <Input label={t('common.adresse')} value={etab.adresse ?? ''} onChange={(e) => setEtab((p) => p ? { ...p, adresse: e.target.value } : p)} />
               <Input label={t('common.telephone')} value={etab.telephone ?? ''} onChange={(e) => setEtab((p) => p ? { ...p, telephone: e.target.value } : p)} />
