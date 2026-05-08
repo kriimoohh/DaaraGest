@@ -3,7 +3,7 @@ import { authMiddleware } from '../../middlewares/auth.middleware';
 import { requireRole } from '../../middlewares/role.middleware';
 import {
   listerHandler, getHandler, creerHandler, modifierHandler, supprimerHandler,
-  inscrireHandler, importHandler, bulkDesactiverHandler, bulkInscrireHandler,
+  toggleActifHandler, inscrireHandler, importHandler, bulkDesactiverHandler, bulkInscrireHandler,
 } from './eleves.controller';
 
 const lecture        = requireRole('admin', 'directeur', 'gestionnaire', 'caissier', 'professeur');
@@ -19,5 +19,6 @@ export async function eleveRoutes(fastify: FastifyInstance) {
   fastify.get('/:id',                 { preHandler: [authMiddleware, lecture] }, getHandler);
   fastify.put('/:id',                 { preHandler: [authMiddleware, gestion] }, modifierHandler);
   fastify.delete('/:id',              { preHandler: [authMiddleware, adminSeulement] }, supprimerHandler);
+  fastify.patch('/:id/toggle-actif',  { preHandler: [authMiddleware, gestion] }, toggleActifHandler);
   fastify.post('/:id/inscrire',       { preHandler: [authMiddleware, gestion] }, inscrireHandler);
 }

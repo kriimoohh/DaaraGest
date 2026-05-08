@@ -134,6 +134,7 @@ function FicheRow({ label, value }: { label: string; value: React.ReactNode }) {
 export function ElevesPage() {
   const { t } = useTranslation();
   const isAdmin = useAuthStore(s => s.user?.role === 'admin');
+  const isGestion = useAuthStore(s => ['admin', 'directeur', 'gestionnaire'].includes(s.user?.role ?? ''));
   const SEXE_OPTIONS = [
     { value: 'M', label: t('eleve.masculin') },
     { value: 'F', label: t('eleve.feminin') },
@@ -324,6 +325,27 @@ export function ElevesPage() {
     }
   }
 
+  // ── Toggle actif ───────────────────────────────────────────────────────────
+
+  const [toggleLoading, setToggleLoading] = useState<string | null>(null);
+
+  async function handleToggleActif(eleve: Eleve) {
+    setToggleLoading(eleve.id);
+    try {
+      await api.patch(`/api/v1/eleves/${eleve.id}/toggle-actif`, {});
+      toast.success(eleve.actif ? 'Élève désactivé' : 'Élève réactivé');
+      fetchEleves();
+      if (ficheModal?.id === eleve.id) {
+        const updated = await api.get<EleveFiche>(`/api/v1/eleves/${eleve.id}`);
+        setFicheModal(updated);
+      }
+    } catch {
+      toast.error('Impossible de modifier le statut');
+    } finally {
+      setToggleLoading(null);
+    }
+  }
+
   // ── CRUD ───────────────────────────────────────────────────────────────────
 
   const handleDelete = async () => {
@@ -511,7 +533,7 @@ export function ElevesPage() {
     {
       key: 'actions',
       header: 'Actions',
-      width: '240px',
+      width: '280px',
       render: (row) => {
         const e = row as unknown as Eleve;
         return (
@@ -521,6 +543,16 @@ export function ElevesPage() {
             </Button>
             <Button size="sm" variant="ghost" onClick={() => openEdit(e)}>{t('actions.modifier')}</Button>
             <Button size="sm" variant="secondary" onClick={() => openInscription(e)}>{t('actions.inscrire')}</Button>
+            {isGestion && (
+              <Button
+                size="sm"
+                variant={e.actif ? 'danger' : 'primary'}
+                loading={toggleLoading === e.id}
+                onClick={() => handleToggleActif(e)}
+              >
+                {e.actif ? 'Désactiver' : 'Réactiver'}
+              </Button>
+            )}
             {isAdmin && <Button size="sm" variant="danger" onClick={() => setConfirmDelete(e)}>{t('actions.supprimer')}</Button>}
           </div>
         );
@@ -887,14 +919,25 @@ export function ElevesPage() {
               </section>
             )}
 
-            <div className="flex justify-end gap-3 pt-1">
-              <Button
-                variant="secondary"
-                onClick={() => { setFicheModal(null); openEdit(ficheModal); }}
-              >
-                Modifier
-              </Button>
-              <Button variant="secondary" onClick={() => setFicheModal(null)}>Fermer</Button>
+            <div className="flex justify-between items-center pt-1">
+              {isGestion && (
+                <Button
+                  variant={ficheModal.actif ? 'danger' : 'primary'}
+                  loading={toggleLoading === ficheModal.id}
+                  onClick={() => handleToggleActif(ficheModal)}
+                >
+                  {ficheModal.actif ? 'Désactiver l\'élève' : 'Réactiver l\'élève'}
+                </Button>
+              )}
+              <div className="flex gap-3 ml-auto">
+                <Button
+                  variant="secondary"
+                  onClick={() => { setFicheModal(null); openEdit(ficheModal); }}
+                >
+                  Modifier
+                </Button>
+                <Button variant="secondary" onClick={() => setFicheModal(null)}>Fermer</Button>
+              </div>
             </div>
           </div>
         </Modal>

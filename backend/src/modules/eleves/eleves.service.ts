@@ -136,6 +136,13 @@ export async function supprimerEleve(id: string, etablissement_id: string) {
   return prisma.eleve.update({ where: { id }, data: { actif: false } });
 }
 
+export async function toggleActifEleve(id: string, etablissement_id: string) {
+  const existing = await prisma.eleve.findFirst({ where: { id, etablissement_id } });
+  if (!existing) throw new Error('Élève introuvable');
+
+  return prisma.eleve.update({ where: { id }, data: { actif: !existing.actif } });
+}
+
 export interface ImportRow {
   nom_fr: string; prenom_fr: string; nom_ar?: string; prenom_ar?: string;
   date_naissance?: string; sexe: 'M' | 'F';

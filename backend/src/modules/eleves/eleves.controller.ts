@@ -7,6 +7,7 @@ import {
   creerEleve,
   modifierEleve,
   supprimerEleve,
+  toggleActifEleve,
   inscrireEleve,
   importerEleves,
   bulkDesactiverEleves,
@@ -86,6 +87,19 @@ export async function supprimerHandler(
   try {
     await supprimerEleve(id, etablissement_id);
     return reply.status(204).send();
+  } catch (err) {
+    return reply.status(404).send({ error: (err as Error).message });
+  }
+}
+
+export async function toggleActifHandler(
+  request: FastifyRequest, reply: FastifyReply
+) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { id } = request.params as { id: string };
+  try {
+    const data = await toggleActifEleve(id, etablissement_id);
+    return reply.send(data);
   } catch (err) {
     return reply.status(404).send({ error: (err as Error).message });
   }
