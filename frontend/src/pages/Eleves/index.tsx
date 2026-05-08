@@ -131,7 +131,7 @@ function FicheRow({ label, value }: { label: string; value: React.ReactNode }) {
 export function ElevesPage() {
   const { t } = useTranslation();
   const isAdmin = useAuthStore(s => s.user?.role === 'admin');
-  const isGestion = useAuthStore(s => ['admin', 'directeur', 'gestionnaire'].includes(s.user?.role ?? ''));
+  const isGestion = useAuthStore(s => ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'].includes(s.user?.role ?? ''));
   const canInscrire = useAuthStore(s => ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'].includes(s.user?.role ?? ''));
   const SEXE_OPTIONS = [
     { value: 'M', label: t('eleve.masculin') },

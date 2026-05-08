@@ -8,7 +8,7 @@ import {
 } from './eleves.controller';
 
 const lecture        = requireRole('admin', 'directeur', 'gestionnaire', 'agent de scolarité', 'professeur');
-const gestion        = requireRole('admin', 'directeur', 'gestionnaire');
+const gestion        = requireRole('admin', 'directeur', 'gestionnaire', 'agent de scolarité');
 const inscription    = requireRole('admin', 'directeur', 'gestionnaire', 'agent de scolarité');
 const adminSeulement = requireRole('admin');
 
