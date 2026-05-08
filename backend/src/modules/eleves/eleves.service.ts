@@ -1,19 +1,25 @@
 import prisma from '../../config/database';
 import { EleveInput, InscriptionInput } from './eleves.schema';
 
+const VALID_SORT_FIELDS = ['nom_fr', 'prenom_fr', 'matricule', 'sexe', 'date_naissance'];
+
 export async function listerEleves(
   etablissement_id: string,
   page = 1,
   limit = 20,
   search?: string,
   classe_id?: string,
-  actif?: boolean
+  actif?: boolean,
+  sexe?: string,
+  sortBy = 'nom_fr',
+  sortDir: 'asc' | 'desc' = 'asc'
 ) {
   const skip = (page - 1) * limit;
 
   const where: Record<string, unknown> = { etablissement_id };
 
   if (actif !== undefined) where.actif = actif;
+  if (sexe) where.sexe = sexe;
 
   if (search) {
     where.OR = [
@@ -33,6 +39,9 @@ export async function listerEleves(
     };
   }
 
+  const orderField = VALID_SORT_FIELDS.includes(sortBy) ? sortBy : 'nom_fr';
+  const orderDir = sortDir === 'desc' ? 'desc' : 'asc';
+
   const [total, items] = await Promise.all([
     prisma.eleve.count({ where }),
     prisma.eleve.findMany({
@@ -40,7 +49,7 @@ export async function listerEleves(
       skip,
       take: limit,
       include: { parents: true },
-      orderBy: [{ nom_fr: 'asc' }, { prenom_fr: 'asc' }],
+      orderBy: { [orderField]: orderDir },
     }),
   ]);
 

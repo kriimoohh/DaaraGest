@@ -17,6 +17,7 @@ import { Pagination } from '../../components/ui/Pagination';
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 interface Parent {
+  id?: string;
   nom_fr: string;
   lien: string;
   telephone: string;
@@ -31,10 +32,21 @@ interface Eleve {
   prenom_ar: string;
   date_naissance: string;
   sexe: 'M' | 'F';
-  statut: 'actif' | 'inactif';
-  classe_fr?: string;
-  classe_ar?: string;
-  parent?: Parent;
+  actif: boolean;
+  photo_url?: string;
+  parents: Parent[];
+}
+
+interface Inscription {
+  id: string;
+  statut: string;
+  annee_scolaire: { libelle: string };
+  classe_fr?: { nom_fr: string };
+  classe_ar?: { nom_fr: string };
+}
+
+interface EleveFiche extends Eleve {
+  inscriptions: Inscription[];
 }
 
 interface ElevesResponse {
@@ -73,9 +85,11 @@ const EMPTY_FORM: EleveFormData = {
   parent_telephone: '',
 };
 
-// Options définies dans le composant via t() pour la traduction
-
-const LIMIT = 20;
+const PAGE_SIZE_OPTIONS = [
+  { value: '10', label: '10' },
+  { value: '20', label: '20' },
+  { value: '50', label: '50' },
+];
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -86,6 +100,22 @@ function validate(form: EleveFormData, isEdit: boolean): FormErrors {
   if (!form.prenom_fr.trim()) errors.prenom_fr = 'Le prénom (FR) est requis';
   if (!form.sexe) errors.sexe = 'Le sexe est requis';
   return errors;
+}
+
+function formatDate(iso: string | undefined): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('fr-FR');
+}
+
+// ── Sub-component ──────────────────────────────────────────────────────────────
+
+function FicheRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div>
+      <dt className="text-xs text-slate-400 dark:text-slate-500">{label}</dt>
+      <dd className="text-sm font-medium text-slate-700 dark:text-slate-200 mt-0.5">{value ?? '—'}</dd>
+    </div>
+  );
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -103,6 +133,7 @@ export function ElevesPage() {
   ];
   const api = useApi();
 
+  // List state
   const [eleves, setEleves] = useState<Eleve[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -110,11 +141,23 @@ export function ElevesPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Sort & filter state
+  const [sortBy, setSortBy] = useState('nom_fr');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [filterSexe, setFilterSexe] = useState('');
+  const [filterStatut, setFilterStatut] = useState('');
+  const [limit, setLimit] = useState(20);
+
+  // Edit/Create modal
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Eleve | null>(null);
   const [form, setForm] = useState<EleveFormData>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
+
+  // Fiche complète modal
+  const [ficheModal, setFicheModal] = useState<EleveFiche | null>(null);
+  const [ficheLoading, setFicheLoading] = useState(false);
 
   // Delete
   const [confirmDelete, setConfirmDelete] = useState<Eleve | null>(null);
@@ -129,17 +172,27 @@ export function ElevesPage() {
 
   // Inscription
   const [inscModal, setInscModal] = useState<Eleve | null>(null);
-  const [annees, setAnnees] = useState<{id:string;libelle:string}[]>([]);
-  const [classesDisp, setClassesDisp] = useState<{id:string;nom_fr:string;filiere:string}[]>([]);
-  const [inscForm, setInscForm] = useState({ annee_scolaire_id:'', classe_fr_id:'', classe_ar_id:'' });
+  const [annees, setAnnees] = useState<{ id: string; libelle: string }[]>([]);
+  const [classesDisp, setClassesDisp] = useState<{ id: string; nom_fr: string; filiere: string }[]>([]);
+  const [inscForm, setInscForm] = useState({ annee_scolaire_id: '', classe_fr_id: '', classe_ar_id: '' });
   const [inscSaving, setInscSaving] = useState(false);
+
+  // ── Fetch ──────────────────────────────────────────────────────────────────
 
   const fetchEleves = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+        sortBy,
+        sortDir,
+      });
       if (search) params.set('search', search);
+      if (filterSexe) params.set('sexe', filterSexe);
+      if (filterStatut === 'actif') params.set('actif', 'true');
+      if (filterStatut === 'inactif') params.set('actif', 'false');
       const res = await api.get<ElevesResponse>(`/api/v1/eleves?${params}`);
       setEleves(res.data);
       setTotal(res.total);
@@ -150,7 +203,39 @@ export function ElevesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [page, search, limit, sortBy, sortDir, filterSexe, filterStatut]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { fetchEleves(); }, [fetchEleves]);
+
+  // Reset to page 1 when any filter/sort changes
+  useEffect(() => { setPage(1); }, [search, filterSexe, filterStatut, limit, sortBy, sortDir]);
+
+  // ── Sort handler ───────────────────────────────────────────────────────────
+
+  function handleSort(key: string) {
+    if (sortBy === key) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(key);
+      setSortDir('asc');
+    }
+  }
+
+  // ── Fiche ──────────────────────────────────────────────────────────────────
+
+  async function openFiche(eleve: Eleve) {
+    setFicheLoading(true);
+    try {
+      const data = await api.get<EleveFiche>(`/api/v1/eleves/${eleve.id}`);
+      setFicheModal(data);
+    } catch {
+      toast.error('Impossible de charger la fiche');
+    } finally {
+      setFicheLoading(false);
+    }
+  }
+
+  // ── CRUD ───────────────────────────────────────────────────────────────────
 
   const handleDelete = async () => {
     if (!confirmDelete) return;
@@ -172,8 +257,8 @@ export function ElevesPage() {
     setInscForm({ annee_scolaire_id: '', classe_fr_id: '', classe_ar_id: '' });
     try {
       const [ans, cls] = await Promise.all([
-        api.get<{id:string;libelle:string}[]>('/api/v1/annees-scolaires'),
-        api.get<{id:string;nom_fr:string;filiere:string}[]>('/api/v1/classes'),
+        api.get<{ id: string; libelle: string }[]>('/api/v1/annees-scolaires'),
+        api.get<{ id: string; nom_fr: string; filiere: string }[]>('/api/v1/classes'),
       ]);
       setAnnees(ans);
       setClassesDisp(cls);
@@ -197,15 +282,6 @@ export function ElevesPage() {
     }
   };
 
-  useEffect(() => {
-    fetchEleves();
-  }, [fetchEleves]);
-
-  // Reset page when search changes
-  useEffect(() => {
-    setPage(1);
-  }, [search]);
-
   function openAdd() {
     setEditTarget(null);
     setForm(EMPTY_FORM);
@@ -221,11 +297,11 @@ export function ElevesPage() {
       prenom_fr: eleve.prenom_fr,
       nom_ar: eleve.nom_ar,
       prenom_ar: eleve.prenom_ar,
-      date_naissance: eleve.date_naissance,
+      date_naissance: eleve.date_naissance ? eleve.date_naissance.slice(0, 10) : '',
       sexe: eleve.sexe,
-      parent_nom_fr: eleve.parent?.nom_fr ?? '',
-      parent_lien: eleve.parent?.lien ?? '',
-      parent_telephone: eleve.parent?.telephone ?? '',
+      parent_nom_fr: eleve.parents[0]?.nom_fr ?? '',
+      parent_lien: eleve.parents[0]?.lien ?? '',
+      parent_telephone: eleve.parents[0]?.telephone ?? '',
     });
     setFormErrors({});
     setModalOpen(true);
@@ -265,46 +341,50 @@ export function ElevesPage() {
       setModalOpen(false);
       fetchEleves();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors de l\'enregistrement');
+      setError(err instanceof Error ? err.message : "Erreur lors de l'enregistrement");
     } finally {
       setSubmitting(false);
     }
   }
 
+  // ── Columns ────────────────────────────────────────────────────────────────
+
   const columns: Column<Record<string, unknown>>[] = [
-    { key: 'matricule', header: 'Matricule', width: '120px' },
+    { key: 'matricule', header: 'Matricule', width: '140px', sortable: true },
+    { key: 'nom_fr', header: 'Nom', sortable: true },
+    { key: 'prenom_fr', header: 'Prénom', sortable: true },
     {
-      key: 'nom_fr',
-      header: 'Nom complet',
-      render: (row) => {
-        const e = row as unknown as Eleve;
-        return `${e.prenom_fr} ${e.nom_fr}`;
-      },
-    },
-    { key: 'classe_fr', header: 'Classe FR' },
-    { key: 'classe_ar', header: 'Classe AR' },
-    {
-      key: 'statut',
-      header: 'Statut',
-      width: '100px',
+      key: 'sexe',
+      header: 'Sexe',
+      width: '90px',
+      sortable: true,
       render: (row) => {
         const e = row as unknown as Eleve;
         return (
           <Badge
-            label={e.statut === 'actif' ? t('common.actif') : t('common.inactif')}
-            variant={e.statut === 'actif' ? 'success' : 'neutral'}
+            label={e.sexe === 'M' ? 'Masculin' : 'Féminin'}
+            variant={e.sexe === 'M' ? 'info' : 'warning'}
           />
         );
       },
     },
     {
+      key: 'date_naissance',
+      header: 'Date de naissance',
+      sortable: true,
+      render: (row) => formatDate((row as unknown as Eleve).date_naissance),
+    },
+    {
       key: 'actions',
       header: 'Actions',
-      width: '160px',
+      width: '240px',
       render: (row) => {
         const e = row as unknown as Eleve;
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <Button size="sm" variant="secondary" onClick={() => openFiche(e)} loading={ficheLoading}>
+              Fiche
+            </Button>
             <Button size="sm" variant="ghost" onClick={() => openEdit(e)}>{t('actions.modifier')}</Button>
             <Button size="sm" variant="secondary" onClick={() => openInscription(e)}>{t('actions.inscrire')}</Button>
             <Button size="sm" variant="danger" onClick={() => setConfirmDelete(e)}>{t('actions.supprimer')}</Button>
@@ -314,20 +394,18 @@ export function ElevesPage() {
     },
   ];
 
+  // ── CSV Import helpers ─────────────────────────────────────────────────────
+
   const handleCsvFile = (file: File) => {
     setImportResult(null);
     Papa.parse<Record<string, string>>(file, {
       header: true, skipEmptyLines: true,
       encoding: 'UTF-8',
-      complete: (result) => {
-        setImportRows(result.data);
-        setImportModal(true);
-      },
+      complete: (result) => { setImportRows(result.data); setImportModal(true); },
       error: () => toast.error('Fichier CSV invalide'),
     });
   };
 
-  // Convertit DD/MM/YYYY → YYYY-MM-DD
   const convertDate = (d: string): string => {
     if (!d) return '';
     const parts = d.trim().split('/');
@@ -337,7 +415,6 @@ export function ElevesPage() {
     return d;
   };
 
-  // Résolution flexible des colonnes (insensible à la casse et variantes)
   const col = (r: Record<string, string>, ...keys: string[]): string => {
     for (const k of keys) {
       const found = Object.keys(r).find(rk => rk.trim().toLowerCase() === k.toLowerCase());
@@ -351,75 +428,134 @@ export function ElevesPage() {
     setImporting(true);
     try {
       const rows = importRows.map(r => ({
-        matricule:    col(r, 'MATRICULE', 'matricule') || undefined,
-        nom_fr:       col(r, 'NOM', 'nom_fr', 'Nom'),
-        prenom_fr:    col(r, 'PRENOM(S)', 'PRENOMS', 'prenom_fr', 'Prénom', 'PRENOM'),
-        nom_ar:       col(r, 'nom_ar', 'NOM_AR') || undefined,
-        prenom_ar:    col(r, 'prenom_ar', 'PRENOM_AR') || undefined,
-        date_naissance: convertDate(col(r, 'DATE_NAISSANCE', 'date_naissance', 'Date de naissance', 'DATE NAISSANCE')),
-        sexe: (col(r, 'SEXE', 'sexe', 'Sexe') || 'M') as 'M' | 'F',
-        parent_nom_fr: col(r, 'parent_nom_fr', 'Parent', 'PARENT', 'NOM_PARENT') || undefined,
-        parent_lien:   col(r, 'parent_lien', 'LIEN', 'lien') || 'pere',
+        matricule:        col(r, 'MATRICULE', 'matricule') || undefined,
+        nom_fr:           col(r, 'NOM', 'nom_fr', 'Nom'),
+        prenom_fr:        col(r, 'PRENOM(S)', 'PRENOMS', 'prenom_fr', 'Prénom', 'PRENOM'),
+        nom_ar:           col(r, 'nom_ar', 'NOM_AR') || undefined,
+        prenom_ar:        col(r, 'prenom_ar', 'PRENOM_AR') || undefined,
+        date_naissance:   convertDate(col(r, 'DATE_NAISSANCE', 'date_naissance', 'Date de naissance', 'DATE NAISSANCE')),
+        sexe:             (col(r, 'SEXE', 'sexe', 'Sexe') || 'M') as 'M' | 'F',
+        parent_nom_fr:    col(r, 'parent_nom_fr', 'Parent', 'PARENT', 'NOM_PARENT') || undefined,
+        parent_lien:      col(r, 'parent_lien', 'LIEN', 'lien') || 'pere',
         parent_telephone: col(r, 'parent_telephone', 'Téléphone', 'TELEPHONE', 'TEL') || undefined,
       }));
       const result = await api.post<{ created: number; errors: { ligne: number; message: string }[] }>(
         '/api/v1/eleves/import', { rows }
       );
       setImportResult(result);
-      if (result.created > 0) { fetchEleves(); }
+      if (result.created > 0) fetchEleves();
       toast.success(`${result.created} élève(s) importé(s)`);
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur lors de l\'import');
-    } finally { setImporting(false); }
+      toast.error((err as Error).message || "Erreur lors de l'import");
+    } finally {
+      setImporting(false);
+    }
   };
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <>
-    <div className="p-6">
-      <PageHeader
-        title="Élèves"
-        subtitle="Gestion des élèves inscrits"
-        action={
-          <div className="flex gap-2">
-            <input ref={fileInputRef} type="file" accept=".csv" className="hidden"
-              onChange={e => { if (e.target.files?.[0]) handleCsvFile(e.target.files[0]); e.target.value = ''; }} />
-            <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>
-              ⬆ Importer CSV
-            </Button>
-            <Button onClick={openAdd} icon={<span>+</span>}>
-              {t('eleve.ajouter')}
-            </Button>
-          </div>
-        }
-      />
-
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
-          {error}
-        </div>
-      )}
-
-      <div className="mb-4 max-w-sm">
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder="Rechercher par nom ou matricule..."
+      <div className="p-6">
+        <PageHeader
+          title="Élèves"
+          subtitle="Gestion des élèves inscrits"
+          action={
+            <div className="flex gap-2">
+              <input ref={fileInputRef} type="file" accept=".csv" className="hidden"
+                onChange={e => { if (e.target.files?.[0]) handleCsvFile(e.target.files[0]); e.target.value = ''; }} />
+              <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>
+                ⬆ Importer CSV
+              </Button>
+              <Button onClick={openAdd} icon={<span>+</span>}>
+                {t('eleve.ajouter')}
+              </Button>
+            </div>
+          }
         />
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Barre de recherche, filtres et taille de page */}
+        <div className="mb-4 flex flex-wrap gap-3 items-end">
+          <div className="flex-1 min-w-[200px] max-w-sm">
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Rechercher par nom ou matricule..."
+            />
+          </div>
+
+          <div className="w-36">
+            <Select
+              label="Sexe"
+              value={filterSexe}
+              onChange={e => setFilterSexe(e.target.value)}
+              options={[
+                { value: '', label: 'Tous' },
+                { value: 'M', label: 'Masculin' },
+                { value: 'F', label: 'Féminin' },
+              ]}
+            />
+          </div>
+
+          <div className="w-36">
+            <Select
+              label="Statut"
+              value={filterStatut}
+              onChange={e => setFilterStatut(e.target.value)}
+              options={[
+                { value: '', label: 'Tous' },
+                { value: 'actif', label: 'Actif' },
+                { value: 'inactif', label: 'Inactif' },
+              ]}
+            />
+          </div>
+
+          <div className="w-28">
+            <Select
+              label="Par page"
+              value={String(limit)}
+              onChange={e => setLimit(Number(e.target.value))}
+              options={PAGE_SIZE_OPTIONS}
+            />
+          </div>
+
+          {(filterSexe || filterStatut || search) && (
+            <div className="flex items-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setSearch(''); setFilterSexe(''); setFilterStatut(''); }}
+              >
+                Réinitialiser
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <Table
+          columns={columns}
+          data={eleves as unknown as Record<string, unknown>[]}
+          loading={loading}
+          emptyMessage="Aucun élève trouvé"
+          sortKey={sortBy}
+          sortDir={sortDir}
+          onSort={handleSort}
+        />
+
+        <Pagination page={page} total={total} limit={limit} onChange={setPage} />
       </div>
 
-      <Table
-        columns={columns}
-        data={eleves as unknown as Record<string, unknown>[]}
-        loading={loading}
-        emptyMessage="Aucun élève trouvé"
-      />
-
-      <Pagination page={page} total={total} limit={LIMIT} onChange={setPage} />
-
+      {/* ── Modal Ajouter / Modifier ─────────────────────────────────────────── */}
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editTarget ? 'Modifier l\'élève' : 'Ajouter un élève'}
+        title={editTarget ? "Modifier l'élève" : 'Ajouter un élève'}
         size="lg"
       >
         <div className="space-y-4">
@@ -444,7 +580,6 @@ export function ElevesPage() {
             options={SEXE_OPTIONS}
             placeholder="Choisir..."
           />
-
           <div className="grid grid-cols-2 gap-4">
             <Input
               label={t('common.nom_fr')}
@@ -459,18 +594,26 @@ export function ElevesPage() {
               error={formErrors.prenom_fr}
             />
           </div>
-
-
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Nom (AR)"
+              value={form.nom_ar}
+              onChange={(e) => setField('nom_ar', e.target.value)}
+            />
+            <Input
+              label="Prénom (AR)"
+              value={form.prenom_ar}
+              onChange={(e) => setField('prenom_ar', e.target.value)}
+            />
+          </div>
           <Input
             label={t('eleve.date_naissance')}
             type="date"
             value={form.date_naissance}
             onChange={(e) => setField('date_naissance', e.target.value)}
           />
-
           <hr className="border-slate-200 dark:border-slate-700" />
           <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('eleve.parent')}</h3>
-
           <div className="grid grid-cols-2 gap-4">
             <Input
               label={t('common.nom_fr')}
@@ -485,7 +628,6 @@ export function ElevesPage() {
               placeholder="Choisir..."
             />
           </div>
-
           <Input
             label={t('common.telephone')}
             type="tel"
@@ -493,22 +635,125 @@ export function ElevesPage() {
             onChange={(e) => setField('parent_telephone', e.target.value)}
             placeholder="77 000 00 00"
           />
-
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={() => setModalOpen(false)}>
-              Annuler
-            </Button>
+            <Button variant="secondary" onClick={() => setModalOpen(false)}>Annuler</Button>
             <Button onClick={handleSubmit} loading={submitting}>
               {editTarget ? 'Modifier' : 'Ajouter'}
             </Button>
           </div>
         </div>
       </Modal>
-    </div>
 
-      {/* Modal inscription */}
+      {/* ── Modal Fiche complète ─────────────────────────────────────────────── */}
+      {ficheModal && (
+        <Modal
+          isOpen={!!ficheModal}
+          onClose={() => setFicheModal(null)}
+          title={`Fiche — ${ficheModal.prenom_fr} ${ficheModal.nom_fr}`}
+          size="lg"
+        >
+          <div className="space-y-6">
+            {/* Informations personnelles */}
+            <section>
+              <h3 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
+                Informations personnelles
+              </h3>
+              <dl className="grid grid-cols-2 gap-x-8 gap-y-4">
+                <FicheRow label="Matricule" value={ficheModal.matricule} />
+                <FicheRow
+                  label="Statut"
+                  value={
+                    <Badge
+                      label={ficheModal.actif ? 'Actif' : 'Inactif'}
+                      variant={ficheModal.actif ? 'success' : 'neutral'}
+                    />
+                  }
+                />
+                <FicheRow label="Nom (FR)" value={ficheModal.nom_fr} />
+                <FicheRow label="Prénom (FR)" value={ficheModal.prenom_fr} />
+                <FicheRow label="Nom (AR)" value={ficheModal.nom_ar || '—'} />
+                <FicheRow label="Prénom (AR)" value={ficheModal.prenom_ar || '—'} />
+                <FicheRow
+                  label="Sexe"
+                  value={
+                    <Badge
+                      label={ficheModal.sexe === 'M' ? 'Masculin' : 'Féminin'}
+                      variant={ficheModal.sexe === 'M' ? 'info' : 'warning'}
+                    />
+                  }
+                />
+                <FicheRow label="Date de naissance" value={formatDate(ficheModal.date_naissance)} />
+              </dl>
+            </section>
+
+            {/* Parent / Tuteur */}
+            {ficheModal.parents.length > 0 && (
+              <section>
+                <h3 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
+                  Parent / Tuteur
+                </h3>
+                {ficheModal.parents.map((p, i) => (
+                  <dl key={i} className="grid grid-cols-3 gap-x-8 gap-y-4">
+                    <FicheRow label="Nom" value={p.nom_fr} />
+                    <FicheRow label="Lien" value={p.lien} />
+                    <FicheRow label="Téléphone" value={p.telephone || '—'} />
+                  </dl>
+                ))}
+              </section>
+            )}
+
+            {/* Inscriptions */}
+            {ficheModal.inscriptions?.length > 0 && (
+              <section>
+                <h3 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
+                  Inscriptions
+                </h3>
+                <div className="space-y-2">
+                  {ficheModal.inscriptions.map(insc => (
+                    <div
+                      key={insc.id}
+                      className="flex flex-wrap items-center gap-3 px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-lg text-sm"
+                    >
+                      <span className="font-semibold text-slate-700 dark:text-slate-200 min-w-[90px]">
+                        {insc.annee_scolaire.libelle}
+                      </span>
+                      {insc.classe_fr && (
+                        <span className="text-slate-500 dark:text-slate-400">
+                          FR : <span className="font-medium text-slate-700 dark:text-slate-200">{insc.classe_fr.nom_fr}</span>
+                        </span>
+                      )}
+                      {insc.classe_ar && (
+                        <span className="text-slate-500 dark:text-slate-400">
+                          AR : <span className="font-medium text-slate-700 dark:text-slate-200">{insc.classe_ar.nom_fr}</span>
+                        </span>
+                      )}
+                      <Badge
+                        label={insc.statut}
+                        variant={insc.statut === 'actif' ? 'success' : 'neutral'}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <div className="flex justify-end gap-3 pt-1">
+              <Button
+                variant="secondary"
+                onClick={() => { setFicheModal(null); openEdit(ficheModal); }}
+              >
+                Modifier
+              </Button>
+              <Button variant="secondary" onClick={() => setFicheModal(null)}>Fermer</Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Modal Inscription ────────────────────────────────────────────────── */}
       {inscModal && (
-        <Modal isOpen={!!inscModal} onClose={() => setInscModal(null)} title={`Inscrire ${inscModal.prenom_fr} ${inscModal.nom_fr}`} size="md">
+        <Modal isOpen={!!inscModal} onClose={() => setInscModal(null)}
+          title={`Inscrire ${inscModal.prenom_fr} ${inscModal.nom_fr}`} size="md">
           <div className="space-y-4">
             <Select label={t('classe.annee_scolaire')} value={inscForm.annee_scolaire_id}
               onChange={(e) => setInscForm(f => ({ ...f, annee_scolaire_id: e.target.value }))}
@@ -527,13 +772,21 @@ export function ElevesPage() {
         </Modal>
       )}
 
-      <ConfirmModal isOpen={!!confirmDelete} onClose={() => setConfirmDelete(null)}
-        onConfirm={handleDelete} loading={deleting}
-        message={`Désactiver l'élève "${confirmDelete?.prenom_fr} ${confirmDelete?.nom_fr}" ?`} />
+      <ConfirmModal
+        isOpen={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        onConfirm={handleDelete}
+        loading={deleting}
+        message={`Désactiver l'élève "${confirmDelete?.prenom_fr} ${confirmDelete?.nom_fr}" ?`}
+      />
 
-      {/* Modal Import CSV */}
-      <Modal isOpen={importModal} onClose={() => { setImportModal(false); setImportRows([]); setImportResult(null); }}
-        title="Importer des élèves (CSV)" size="lg">
+      {/* ── Modal Import CSV ─────────────────────────────────────────────────── */}
+      <Modal
+        isOpen={importModal}
+        onClose={() => { setImportModal(false); setImportRows([]); setImportResult(null); }}
+        title="Importer des élèves (CSV)"
+        size="lg"
+      >
         <div className="space-y-4">
           {!importResult ? (
             <>

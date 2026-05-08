@@ -16,14 +16,17 @@ export async function listerHandler(
   request: FastifyRequest, reply: FastifyReply
 ) {
   const { etablissement_id } = request.user as JwtPayload;
-  const { page, limit, search, classe_id, actif } = request.query as Record<string, string | undefined>;
+  const { page, limit, search, classe_id, actif, sexe, sortBy, sortDir } = request.query as Record<string, string | undefined>;
   const data = await listerEleves(
     etablissement_id,
     page ? parseInt(page) : 1,
     limit ? parseInt(limit) : 20,
     search,
     classe_id,
-    actif !== undefined ? actif === 'true' : undefined
+    actif !== undefined ? actif === 'true' : undefined,
+    sexe,
+    sortBy,
+    sortDir as 'asc' | 'desc' | undefined
   );
   return reply.send(data);
 }
