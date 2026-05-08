@@ -806,6 +806,8 @@ html[dir="rtl"] .app { grid-template-columns: 1fr var(--sidebar-w); direction: r
   .sb-backdrop.is-open { display: block; }
 }
 
+.sb-backdrop { position: fixed; }
+
 .tb-burger { display: none; }
 @media (max-width: 640px) {
   .tb-burger {
