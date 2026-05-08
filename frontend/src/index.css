@@ -37,9 +37,14 @@
   --danger-soft: oklch(0.95 0.03 25);
   --danger-text: oklch(0.45 0.18 25);
 
-  --info:      oklch(0.55 0.10 240);
-  --info-soft: oklch(0.95 0.025 240);
-  --info-text: oklch(0.42 0.10 240);
+  --info:        oklch(0.55 0.10 240);
+  --info-soft:   oklch(0.95 0.025 240);
+  --info-text:   oklch(0.42 0.10 240);
+  --info-border: oklch(0.82 0.06 240);
+
+  --danger-border:  oklch(0.82 0.09 25);
+  --success-border: oklch(0.82 0.06 155);
+  --warning-border: oklch(0.82 0.09 80);
 
   /* Radii */
   --r-xs: 4px;
@@ -88,8 +93,13 @@
   --warning-text: oklch(0.82 0.13 80);
   --danger-soft: oklch(0.28 0.07 25);
   --danger-text: oklch(0.75 0.16 25);
-  --info-soft: oklch(0.28 0.05 240);
-  --info-text: oklch(0.78 0.10 240);
+  --info-soft:   oklch(0.28 0.05 240);
+  --info-text:   oklch(0.78 0.10 240);
+  --info-border: oklch(0.42 0.08 240);
+
+  --danger-border:  oklch(0.42 0.12 25);
+  --success-border: oklch(0.42 0.08 155);
+  --warning-border: oklch(0.42 0.10 80);
 }
 
 * { box-sizing: border-box; }
