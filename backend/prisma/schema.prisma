@@ -230,6 +230,7 @@ model Eleve {
   nom_fr           String
   prenom_fr        String
   date_naissance   DateTime @db.Date
+  lieu_naissance   String?
   sexe             String
   photo_url        String?
   actif            Boolean  @default(true)
