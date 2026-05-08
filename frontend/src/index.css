@@ -1,8 +1,7 @@
-@tailwind base;
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500&family=Noto+Naskh+Arabic:wght@400;500;600&display=swap');
+
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500&family=Noto+Naskh+Arabic:wght@400;500;600&display=swap');
 
 :root {
   /* Surfaces (light) */
@@ -806,6 +805,8 @@ html[dir="rtl"] .app { grid-template-columns: 1fr var(--sidebar-w); direction: r
   }
   .sb-backdrop.is-open { display: block; }
 }
+
+.sb-backdrop { position: fixed; }
 
 .tb-burger { display: none; }
 @media (max-width: 640px) {
