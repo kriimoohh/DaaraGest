@@ -7,7 +7,7 @@ import {
   statsHandler, reliquatsHandler, statsMensuelsHandler,
 } from './finances.controller';
 
-const caisse   = requireRole('admin', 'gestionnaire', 'caissier');
+const caisse   = requireRole('admin', 'gestionnaire', 'agent de scolarité');
 const gestion  = requireRole('admin', 'gestionnaire');
 
 export async function financesRoutes(fastify: FastifyInstance) {

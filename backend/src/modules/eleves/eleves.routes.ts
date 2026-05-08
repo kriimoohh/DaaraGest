@@ -7,9 +7,9 @@ import {
   bulkDesactiverHandler, bulkSupprimerHandler, bulkInscrireHandler,
 } from './eleves.controller';
 
-const lecture        = requireRole('admin', 'directeur', 'gestionnaire', 'caissier', 'professeur');
+const lecture        = requireRole('admin', 'directeur', 'gestionnaire', 'agent de scolarité', 'professeur');
 const gestion        = requireRole('admin', 'directeur', 'gestionnaire');
-const inscription    = requireRole('admin', 'directeur', 'gestionnaire', 'caissier');
+const inscription    = requireRole('admin', 'directeur', 'gestionnaire', 'agent de scolarité');
 const adminSeulement = requireRole('admin');
 
 export async function eleveRoutes(fastify: FastifyInstance) {
