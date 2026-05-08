@@ -20,8 +20,11 @@ import { Pagination } from '../../components/ui/Pagination';
 interface Parent {
   id?: string;
   nom_fr: string;
+  nom_ar?: string;
   lien: string;
   telephone: string;
+  email?: string;
+  adresse?: string;
 }
 
 interface EleveInscription {
@@ -784,6 +787,17 @@ export function ElevesPage() {
           size="lg"
         >
           <div className="space-y-6">
+            {/* Photo + en-tête */}
+            {ficheModal.photo_url && (
+              <div className="flex justify-center">
+                <img
+                  src={ficheModal.photo_url}
+                  alt={`${ficheModal.prenom_fr} ${ficheModal.nom_fr}`}
+                  className="w-24 h-24 rounded-full object-cover border-2 border-slate-200 dark:border-slate-700 shadow"
+                />
+              </div>
+            )}
+
             {/* Informations personnelles */}
             <section>
               <h3 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
@@ -823,13 +837,18 @@ export function ElevesPage() {
                 <h3 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
                   Parent / Tuteur
                 </h3>
-                {ficheModal.parents.map((p, i) => (
-                  <dl key={i} className="grid grid-cols-3 gap-x-8 gap-y-4">
-                    <FicheRow label="Nom" value={p.nom_fr} />
-                    <FicheRow label="Lien" value={p.lien} />
-                    <FicheRow label="Téléphone" value={p.telephone || '—'} />
-                  </dl>
-                ))}
+                <div className="space-y-4">
+                  {ficheModal.parents.map((p, i) => (
+                    <dl key={i} className="grid grid-cols-2 gap-x-8 gap-y-3 px-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                      <FicheRow label="Nom (FR)" value={p.nom_fr} />
+                      <FicheRow label="Nom (AR)" value={p.nom_ar || '—'} />
+                      <FicheRow label="Lien" value={p.lien} />
+                      <FicheRow label="Téléphone" value={p.telephone || '—'} />
+                      <FicheRow label="Email" value={p.email || '—'} />
+                      <FicheRow label="Adresse" value={p.adresse || '—'} />
+                    </dl>
+                  ))}
+                </div>
               </section>
             )}
 
