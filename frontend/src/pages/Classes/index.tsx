@@ -227,6 +227,104 @@ export function ClassesPage() {
     }
   }
 
+  function downloadPdf() {
+    if (!listeData) return;
+    const { classe, eleves } = listeData;
+    const anneeLabel = typeof classe.annee_scolaire === 'object' ? classe.annee_scolaire.libelle : '';
+    const filiereLabel = classe.filiere === 'FR' ? 'Filière Française' : 'Filière Arabe';
+    const dateImpression = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    const rows = eleves.map(e => `
+      <tr>
+        <td>${e.rang}</td>
+        <td class="mono">${e.matricule}</td>
+        <td>${e.nom_fr}</td>
+        <td>${e.prenom_fr}</td>
+        <td class="center">${e.sexe === 'M' ? 'M' : 'F'}</td>
+        <td>${e.date_naissance ? new Date(e.date_naissance).toLocaleDateString('fr-FR') : '—'}</td>
+        <td>${e.parents?.[0]?.nom_fr ?? '—'}</td>
+        <td class="mono">${e.parents?.[0]?.telephone ?? '—'}</td>
+      </tr>`).join('');
+
+    const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Liste ${classe.nom_fr} — ${anneeLabel}</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; color: #1a1a1a; padding: 20mm 15mm; }
+    .header { text-align: center; margin-bottom: 18px; border-bottom: 2px solid #10B981; padding-bottom: 12px; }
+    .header h1 { font-size: 18px; font-weight: 700; color: #10B981; letter-spacing: 0.5px; }
+    .header h2 { font-size: 14px; font-weight: 600; margin-top: 4px; }
+    .meta { display: flex; justify-content: space-between; font-size: 10px; color: #555; margin-top: 6px; }
+    .badge { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 10px; font-weight: 600;
+      background: ${classe.filiere === 'FR' ? '#dbeafe' : '#d1fae5'}; color: ${classe.filiere === 'FR' ? '#1e40af' : '#065f46'}; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    thead tr { background: #10B981; color: white; }
+    thead th { padding: 7px 6px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+    tbody tr:nth-child(even) { background: #f0fdf4; }
+    tbody tr:hover { background: #d1fae5; }
+    td { padding: 5px 6px; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
+    td:first-child { text-align: center; color: #6b7280; font-size: 10px; font-weight: 600; }
+    .mono { font-family: monospace; font-size: 10px; color: #374151; }
+    .center { text-align: center; }
+    .footer { margin-top: 20px; display: flex; justify-content: space-between; font-size: 9px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 8px; }
+    .signature { margin-top: 40px; display: flex; justify-content: flex-end; }
+    .signature-box { text-align: center; font-size: 10px; color: #374151; }
+    .signature-line { border-top: 1px solid #374151; width: 160px; margin: 30px auto 4px; }
+    @media print { body { padding: 10mm 12mm; } @page { size: A4; margin: 0; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>DaaraGest</h1>
+    <h2>Liste des élèves — ${classe.nom_fr}</h2>
+    <div class="meta">
+      <span>Année scolaire : <strong>${anneeLabel}</strong></span>
+      <span class="badge">${filiereLabel}</span>
+      <span>Niveau : <strong>${classe.niveau || '—'}</strong></span>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:32px">N°</th>
+        <th>Matricule</th>
+        <th>Nom</th>
+        <th>Prénom</th>
+        <th style="width:36px">Sexe</th>
+        <th>Date de naissance</th>
+        <th>Parent / Tuteur</th>
+        <th>Téléphone</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+
+  <div class="footer">
+    <span>Total : <strong>${listeData.total} élève${listeData.total > 1 ? 's' : ''}</strong></span>
+    <span>Imprimé le ${dateImpression}</span>
+  </div>
+
+  <div class="signature">
+    <div class="signature-box">
+      <div class="signature-line"></div>
+      Signature du responsable
+    </div>
+  </div>
+
+  <script>window.onload = () => { window.print(); }</script>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank');
+    if (!win) { toast.error('Autoriser les popups pour télécharger le PDF'); return; }
+    win.document.write(html);
+    win.document.close();
+  }
+
   function downloadCsv() {
     if (!listeData) return;
     const { classe, eleves } = listeData;
@@ -455,13 +553,11 @@ export function ClassesPage() {
                   {listeData.total} élève{listeData.total > 1 ? 's' : ''}
                 </span>
               </div>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={downloadCsv}
-                icon={<span>⬇</span>}
-              >
-                Télécharger CSV
+              <Button size="sm" variant="secondary" onClick={downloadCsv} icon={<span>⬇</span>}>
+                CSV
+              </Button>
+              <Button size="sm" variant="secondary" onClick={downloadPdf} icon={<span>🖨</span>}>
+                PDF / Imprimer
               </Button>
             </div>
 
