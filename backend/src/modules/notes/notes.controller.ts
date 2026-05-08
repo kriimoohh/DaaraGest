@@ -23,14 +23,14 @@ export async function listerHandler(
 }
 
 export async function bulkUpsertHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { role } = request.user as JwtPayload;
+  const { role, id: acteurId, etablissement_id } = request.user as JwtPayload;
   const parsed = bulkNotesSchema.safeParse(request.body);
   if (!parsed.success) {
     return reply.status(400).send({ error: parsed.error.errors[0].message });
   }
   try {
     const insertOnly = role === 'professeur';
-    const data = await bulkUpsertNotes(parsed.data.notes, insertOnly);
+    const data = await bulkUpsertNotes(parsed.data.notes, insertOnly, acteurId, etablissement_id);
     return reply.send({ count: data.length, notes: data });
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });

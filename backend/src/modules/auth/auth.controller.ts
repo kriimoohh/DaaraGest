@@ -38,8 +38,10 @@ export async function changePasswordHandler(request: FastifyRequest, reply: Fast
     return reply.status(400).send({ error: 'Les deux champs mot de passe sont requis' });
   }
   try {
-    await changePassword(id, ancien_mot_de_passe, nouveau_mot_de_passe);
-    return reply.send({ message: 'Mot de passe modifié avec succès' });
+    const { payload } = await changePassword(id, ancien_mot_de_passe, nouveau_mot_de_passe);
+    // Émettre un nouveau token avec doit_changer_mdp: false
+    const token = await reply.jwtSign(payload, { expiresIn: process.env.JWT_EXPIRES_IN ?? '7d' });
+    return reply.send({ message: 'Mot de passe modifié avec succès', token });
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
   }

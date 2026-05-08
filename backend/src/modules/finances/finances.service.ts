@@ -1,4 +1,5 @@
 import prisma from '../../config/database';
+import { logAction } from '../../utils/audit';
 import { PaiementEleveInput, BulkPaiementEleveInput, UpdatePaiementEleveInput, PaiementProfesseurInput } from './finances.schema';
 
 function genererRecu(): string {
@@ -51,11 +52,11 @@ export async function listerPaiementsEleves(
   return { total, page, limit, data: items };
 }
 
-export async function creerPaiementEleve(etablissement_id: string, data: PaiementEleveInput) {
+export async function creerPaiementEleve(etablissement_id: string, data: PaiementEleveInput, acteurId: string) {
   const eleve = await prisma.eleve.findFirst({ where: { id: data.eleve_id, etablissement_id } });
   if (!eleve) throw new Error('Élève introuvable');
 
-  return prisma.paiementEleve.create({
+  const paiement = await prisma.paiementEleve.create({
     data: {
       eleve_id: data.eleve_id,
       inscription_id: data.inscription_id,
@@ -67,9 +68,13 @@ export async function creerPaiementEleve(etablissement_id: string, data: Paiemen
     },
     include: { eleve: true },
   });
+  await logAction(etablissement_id, acteurId, 'CREATE', 'PaiementEleve', paiement.id, {
+    eleve_id: data.eleve_id, type: data.type, montant: String(data.montant), recu: paiement.recu_numero,
+  });
+  return paiement;
 }
 
-export async function bulkCreerPaiementEleve(etablissement_id: string, data: BulkPaiementEleveInput) {
+export async function bulkCreerPaiementEleve(etablissement_id: string, data: BulkPaiementEleveInput, acteurId: string) {
   const eleves = await prisma.eleve.findMany({
     where: { id: { in: data.eleve_ids }, etablissement_id },
     select: { id: true },
@@ -92,16 +97,19 @@ export async function bulkCreerPaiementEleve(etablissement_id: string, data: Bul
       })
     )
   );
+  await logAction(etablissement_id, acteurId, 'CREATE', 'PaiementEleve', 'bulk', {
+    count: created.length, type: data.type, montant: String(data.montant),
+  });
   return { count: created.length, paiements: created };
 }
 
-export async function modifierPaiementEleve(id: string, etablissement_id: string, data: UpdatePaiementEleveInput) {
+export async function modifierPaiementEleve(id: string, etablissement_id: string, data: UpdatePaiementEleveInput, acteurId: string) {
   const existing = await prisma.paiementEleve.findFirst({
     where: { id, eleve: { etablissement_id } },
   });
   if (!existing) throw new Error('Paiement introuvable');
 
-  return prisma.paiementEleve.update({
+  const paiement = await prisma.paiementEleve.update({
     where: { id },
     data: {
       ...(data.type !== undefined && { type: data.type }),
@@ -112,14 +120,19 @@ export async function modifierPaiementEleve(id: string, etablissement_id: string
     },
     include: { eleve: { select: { id: true, nom_fr: true, matricule: true } } },
   });
+  await logAction(etablissement_id, acteurId, 'UPDATE', 'PaiementEleve', id, { changes: data });
+  return paiement;
 }
 
-export async function supprimerPaiementEleve(id: string, etablissement_id: string) {
+export async function supprimerPaiementEleve(id: string, etablissement_id: string, acteurId: string) {
   const existing = await prisma.paiementEleve.findFirst({
     where: { id, eleve: { etablissement_id } },
   });
   if (!existing) throw new Error('Paiement introuvable');
   await prisma.paiementEleve.delete({ where: { id } });
+  await logAction(etablissement_id, acteurId, 'DELETE', 'PaiementEleve', id, {
+    eleve_id: existing.eleve_id, montant: String(existing.montant), recu: existing.recu_numero,
+  });
 }
 
 export async function listerPaiementsProfesseurs(
@@ -158,13 +171,13 @@ export async function listerPaiementsProfesseurs(
   return { total, page, limit, data: items };
 }
 
-export async function creerPaiementProfesseur(etablissement_id: string, data: PaiementProfesseurInput) {
+export async function creerPaiementProfesseur(etablissement_id: string, data: PaiementProfesseurInput, acteurId: string) {
   const professeur = await prisma.professeur.findFirst({
     where: { id: data.professeur_id, utilisateur: { etablissement_id } },
   });
   if (!professeur) throw new Error('Professeur introuvable');
 
-  return prisma.paiementProfesseur.create({
+  const paiement = await prisma.paiementProfesseur.create({
     data: {
       professeur_id: data.professeur_id,
       mois: data.mois,
@@ -176,6 +189,10 @@ export async function creerPaiementProfesseur(etablissement_id: string, data: Pa
       heures_reelles: data.heures_reelles,
     },
   });
+  await logAction(etablissement_id, acteurId, 'CREATE', 'PaiementProfesseur', paiement.id, {
+    professeur_id: data.professeur_id, mois: data.mois, annee: data.annee, net: String(data.net_a_payer),
+  });
+  return paiement;
 }
 
 export async function getStatsMensuels(etablissement_id: string, nbMois = 6) {

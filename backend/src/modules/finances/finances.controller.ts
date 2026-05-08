@@ -28,44 +28,44 @@ export async function listerPaiementsElevesHandler(request: FastifyRequest, repl
 }
 
 export async function creerPaiementEleveHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { etablissement_id } = request.user as JwtPayload;
+  const { etablissement_id, id: acteurId } = request.user as JwtPayload;
   const parsed = paiementEleveSchema.safeParse(request.body);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
   try {
-    return reply.status(201).send(await creerPaiementEleve(etablissement_id, parsed.data));
+    return reply.status(201).send(await creerPaiementEleve(etablissement_id, parsed.data, acteurId));
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
   }
 }
 
 export async function bulkCreerPaiementEleveHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { etablissement_id } = request.user as JwtPayload;
+  const { etablissement_id, id: acteurId } = request.user as JwtPayload;
   const parsed = bulkPaiementEleveSchema.safeParse(request.body);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
   try {
-    return reply.status(201).send(await bulkCreerPaiementEleve(etablissement_id, parsed.data));
+    return reply.status(201).send(await bulkCreerPaiementEleve(etablissement_id, parsed.data, acteurId));
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
   }
 }
 
 export async function modifierPaiementEleveHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { etablissement_id } = request.user as JwtPayload;
+  const { etablissement_id, id: acteurId } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
   const parsed = updatePaiementEleveSchema.safeParse(request.body);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
   try {
-    return reply.send(await modifierPaiementEleve(id, etablissement_id, parsed.data));
+    return reply.send(await modifierPaiementEleve(id, etablissement_id, parsed.data, acteurId));
   } catch (err) {
     return reply.status(404).send({ error: (err as Error).message });
   }
 }
 
 export async function supprimerPaiementEleveHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { etablissement_id } = request.user as JwtPayload;
+  const { etablissement_id, id: acteurId } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
   try {
-    await supprimerPaiementEleve(id, etablissement_id);
+    await supprimerPaiementEleve(id, etablissement_id, acteurId);
     return reply.status(204).send();
   } catch (err) {
     return reply.status(404).send({ error: (err as Error).message });
@@ -85,11 +85,11 @@ export async function listerPaiementsProfesseursHandler(request: FastifyRequest,
 }
 
 export async function creerPaiementProfesseurHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { etablissement_id } = request.user as JwtPayload;
+  const { etablissement_id, id: acteurId } = request.user as JwtPayload;
   const parsed = paiementProfesseurSchema.safeParse(request.body);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
   try {
-    return reply.status(201).send(await creerPaiementProfesseur(etablissement_id, parsed.data));
+    return reply.status(201).send(await creerPaiementProfesseur(etablissement_id, parsed.data, acteurId));
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
   }
