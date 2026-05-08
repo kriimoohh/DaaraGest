@@ -550,7 +550,7 @@ export function ElevesPage() {
               Fiche
             </Button>
             <Button size="sm" variant="ghost" onClick={() => openEdit(e)}>{t('actions.modifier')}</Button>
-            <Button size="sm" variant="secondary" onClick={() => openInscription(e)}>{t('actions.inscrire')}</Button>
+            {canInscrire && <Button size="sm" variant="secondary" onClick={() => openInscription(e)}>{t('actions.inscrire')}</Button>}
             {isGestion && (
               <Button
                 size="sm"
@@ -1029,9 +1029,11 @@ export function ElevesPage() {
             {selectedIds.size} élève{selectedIds.size > 1 ? 's' : ''} sélectionné{selectedIds.size > 1 ? 's' : ''}
           </span>
           <div className="w-px h-5 bg-slate-200 dark:bg-slate-700" />
-          <Button size="sm" variant="secondary" onClick={openBulkInscription}>
-            Inscrire
-          </Button>
+          {canInscrire && (
+            <Button size="sm" variant="secondary" onClick={openBulkInscription}>
+              Inscrire
+            </Button>
+          )}
           {isAdmin && (
             <>
               <Button size="sm" variant="danger" onClick={() => setConfirmBulkDelete(true)}>
