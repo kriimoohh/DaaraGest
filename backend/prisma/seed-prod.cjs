@@ -14,7 +14,6 @@ async function main() {
     where: { id: 'etablissement-default' },
     update: {
       nom_fr: 'École Franco Arabe Cheikh Abdoul Ahad Mbacké',
-      nom_ar: 'مدرسة الشيخ عبد الأحد مبكي الفرنسية العربية',
       adresse: 'Guédiawaye, Dakar, Sénégal',
       telephone: '+221 33 820 12 34',
       devise: 'FCFA',
@@ -22,7 +21,6 @@ async function main() {
     create: {
       id: 'etablissement-default',
       nom_fr: 'École Franco Arabe Cheikh Abdoul Ahad Mbacké',
-      nom_ar: 'مدرسة الشيخ عبد الأحد مبكي الفرنسية العربية',
       adresse: 'Guédiawaye, Dakar, Sénégal',
       telephone: '+221 33 820 12 34',
       devise: 'FCFA',
@@ -31,15 +29,15 @@ async function main() {
   console.log('✅ Établissement');
 
   const roles = [
-    { id: 'role-admin',        libelle_fr: 'admin',              libelle_ar: 'مدير النظام' },
-    { id: 'role-directeur',    libelle_fr: 'directeur',          libelle_ar: 'المدير' },
-    { id: 'role-gestionnaire', libelle_fr: 'gestionnaire',       libelle_ar: 'المسيّر' },
-    { id: 'role-caissier',     libelle_fr: 'agent de scolarité', libelle_ar: 'عون التمدرس' },
-    { id: 'role-professeur',   libelle_fr: 'professeur',         libelle_ar: 'الأستاذ' },
-    { id: 'role-pointeur',     libelle_fr: 'pointeur',           libelle_ar: 'مسجّل الحضور' },
+    { id: 'role-admin',        libelle_fr: 'admin' },
+    { id: 'role-directeur',    libelle_fr: 'directeur' },
+    { id: 'role-gestionnaire', libelle_fr: 'gestionnaire' },
+    { id: 'role-caissier',     libelle_fr: 'agent de scolarité' },
+    { id: 'role-professeur',   libelle_fr: 'professeur' },
+    { id: 'role-pointeur',     libelle_fr: 'pointeur' },
   ];
   for (const r of roles) {
-    await prisma.role.upsert({ where: { id: r.id }, update: { libelle_fr: r.libelle_fr, libelle_ar: r.libelle_ar }, create: r });
+    await prisma.role.upsert({ where: { id: r.id }, update: { libelle_fr: r.libelle_fr }, create: r });
   }
   console.log('✅ Rôles');
 
@@ -57,8 +55,8 @@ async function main() {
     create: {
       id: 'user-admin', identifiant: 'admin', mot_de_passe: hash,
       role_id: 'role-admin', etablissement_id: 'etablissement-default',
-      nom_fr: 'Administrateur', prenom_fr: 'Super',
-      nom_ar: 'مدير', prenom_ar: 'سوبر',
+      nom_fr: 'Administrateur',
+      nom_ar: 'مدير',
       langue: 'fr', theme: 'light',
     },
   });
