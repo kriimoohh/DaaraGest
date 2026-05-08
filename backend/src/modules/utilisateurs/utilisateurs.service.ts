@@ -59,7 +59,7 @@ export async function creerUtilisateur(etablissement_id: string, data: Utilisate
       mot_de_passe: hashedPassword,
       langue: data.langue ?? 'fr',
       theme: data.theme ?? 'light',
-      doit_changer_mdp: true, // Forcer le changement à la première connexion
+      must_change_password: true, // Forcer le changement à la première connexion
     },
     include: { role: true },
   });
@@ -118,7 +118,7 @@ export async function resetPassword(id: string, etablissement_id: string, data: 
 
   await prisma.utilisateur.update({
     where: { id },
-    data: { mot_de_passe: hashedPassword, doit_changer_mdp: true },
+    data: { mot_de_passe: hashedPassword, must_change_password: true },
   });
 
   await logAction(etablissement_id, acteurId, 'UPDATE', 'Utilisateur', id, { action: 'reset_password' });
