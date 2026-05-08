@@ -105,11 +105,11 @@ export function NotesPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <>
       <PageHeader title={t('note.saisie')} />
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="card-pad" style={{ marginBottom: 16 }}>
+        <div className="grid-4">
           <Select
             label={t('classe.annee_scolaire')}
             value={anneeId}
@@ -140,19 +140,19 @@ export function NotesPage() {
       </div>
 
       {classeId && matiereId && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-          <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+        <div className="card">
+          <div className="card-hd" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
               {eleves.length} élève(s)
             </span>
-            <div className="flex items-center gap-3">
+            <div className="row" style={{ gap: 12 }}>
               {isProfesseur && (
-                <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-3 py-1.5 rounded-lg">
+                <span style={{ fontSize: 12, color: 'var(--info)', background: 'var(--info-soft)', border: '1px solid var(--info-border)', padding: '4px 10px', borderRadius: 'var(--r-md)' }}>
                   Ajout uniquement — les notes déjà saisies ne peuvent pas être modifiées
                 </span>
               )}
               {success && (
-                <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                <span style={{ fontSize: 13, color: 'var(--success)', fontWeight: 500 }}>
                   ✓ Notes enregistrées
                 </span>
               )}
@@ -165,64 +165,59 @@ export function NotesPage() {
           </div>
 
           {loading ? (
-            <div className="p-8 text-center text-slate-500">Chargement...</div>
+            <div className="empty">Chargement...</div>
           ) : eleves.length === 0 ? (
-            <div className="p-8 text-center text-slate-500">Aucun élève dans cette classe</div>
+            <div className="empty">Aucun élève dans cette classe</div>
           ) : (
-            <table className="w-full">
-              <thead className="bg-slate-50 dark:bg-slate-700/50">
-                <tr>
-                  <th className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Matricule</th>
-                  <th className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Élève</th>
-                  <th className="text-start px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase w-32">Note /{matMax}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                {eleves.map((eleve) => (
-                  <tr key={eleve.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                    <td className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400 font-mono">{eleve.matricule}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-white">
-                      {eleve.prenom_fr} {eleve.nom_fr}
-                    </td>
-                    <td className="px-4 py-3">
-                      {(() => {
-                        const noteExists = existingNoteIds.has(eleve.id);
-                        // Professeur : lecture seule si la note existe déjà
-                        const fieldReadOnly = isProfesseur && noteExists;
-                        // Lecture seule totale si ni gestionnaire ni professeur pouvant ajouter
-                        const totalReadOnly = !canEdit && !isProfesseur;
-                        const isReadOnly = fieldReadOnly || totalReadOnly;
-                        return (
-                          <div className="relative inline-flex items-center gap-1.5">
-                            <input
-                              type="number"
-                              min={matMin}
-                              max={matMax}
-                              step="0.25"
-                              value={notes[eleve.id] ?? ''}
-                              onChange={(e) => !isReadOnly && setNotes((prev) => ({ ...prev, [eleve.id]: e.target.value }))}
-                              readOnly={isReadOnly}
-                              className={`w-24 px-3 py-1.5 rounded-lg border text-sm focus:outline-none ${
-                                isReadOnly
-                                  ? 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed'
-                                  : 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500'
-                              }`}
-                              placeholder="—"
-                            />
-                            {fieldReadOnly && (
-                              <span title="Note déjà saisie — modification non autorisée" className="text-slate-400 dark:text-slate-500 text-xs select-none">🔒</span>
-                            )}
-                          </div>
-                        );
-                      })()}
-                    </td>
+            <div className="tbl-wrap">
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th>Matricule</th>
+                    <th>Élève</th>
+                    <th style={{ width: 128 }}>Note /{matMax}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {eleves.map((eleve) => (
+                    <tr key={eleve.id}>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{eleve.matricule}</td>
+                      <td>{eleve.prenom_fr} {eleve.nom_fr}</td>
+                      <td>
+                        {(() => {
+                          const noteExists = existingNoteIds.has(eleve.id);
+                          const fieldReadOnly = isProfesseur && noteExists;
+                          const totalReadOnly = !canEdit && !isProfesseur;
+                          const isReadOnly = fieldReadOnly || totalReadOnly;
+                          return (
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                              <input
+                                type="number"
+                                min={matMin}
+                                max={matMax}
+                                step="0.25"
+                                value={notes[eleve.id] ?? ''}
+                                onChange={(e) => !isReadOnly && setNotes((prev) => ({ ...prev, [eleve.id]: e.target.value }))}
+                                readOnly={isReadOnly}
+                                className="input"
+                                style={{ width: 96, padding: '4px 10px', cursor: isReadOnly ? 'not-allowed' : undefined, opacity: isReadOnly ? 0.6 : 1 }}
+                                placeholder="—"
+                              />
+                              {fieldReadOnly && (
+                                <span title="Note déjà saisie — modification non autorisée" style={{ fontSize: 12, color: 'var(--text-4)' }}>🔒</span>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}
-    </div>
+    </>
   );
 }

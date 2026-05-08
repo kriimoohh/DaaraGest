@@ -8,6 +8,7 @@ export function useTheme() {
   const theme = (user?.theme as 'light' | 'dark' | undefined) ?? globalTheme;
 
   useEffect(() => {
+    document.documentElement.dataset.theme = theme === 'dark' ? 'dark' : 'light';
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 

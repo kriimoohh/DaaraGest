@@ -64,37 +64,37 @@ export function ParametresPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <>
       <PageHeader title={t('parametre.titre')} />
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-slate-900 dark:text-white">{t('parametre.etablissement')}</h3>
-          {success === 'etab' && <span className="text-sm text-emerald-600">✓ Enregistré</span>}
+      <div className="card-pad" style={{ marginBottom: 16 }}>
+        <div className="card-hd" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', marginBottom: 14 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{t('parametre.etablissement')}</h3>
+          {success === 'etab' && <span style={{ fontSize: 13, color: 'var(--success-text)' }}>✓ Enregistré</span>}
         </div>
         {etab && (
-          <div className="space-y-4">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <Input label={t('common.nom_fr')} value={etab.nom_fr} onChange={(e) => setEtab((p) => p ? { ...p, nom_fr: e.target.value } : p)} />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid-2">
               <Input label={t('common.adresse')} value={etab.adresse ?? ''} onChange={(e) => setEtab((p) => p ? { ...p, adresse: e.target.value } : p)} />
               <Input label={t('common.telephone')} value={etab.telephone ?? ''} onChange={(e) => setEtab((p) => p ? { ...p, telephone: e.target.value } : p)} />
             </div>
             <Input label={t('common.devise')} value={etab.devise} onChange={(e) => setEtab((p) => p ? { ...p, devise: e.target.value } : p)} />
-            <div className="flex justify-end">
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <Button onClick={saveEtab} loading={saving === 'etab'}>{t('actions.enregistrer')}</Button>
             </div>
           </div>
         )}
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-slate-900 dark:text-white">{t('parametre.config_notes')}</h3>
-          {success === 'notes' && <span className="text-sm text-emerald-600">✓ Enregistré</span>}
+      <div className="card-pad">
+        <div className="card-hd" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', marginBottom: 14 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{t('parametre.config_notes')}</h3>
+          {success === 'notes' && <span style={{ fontSize: 13, color: 'var(--success-text)' }}>✓ Enregistré</span>}
         </div>
         {config && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div className="grid-3">
               <Input
                 label={t('parametre.note_max')}
                 type="number"
@@ -120,24 +120,23 @@ export function ParametresPage() {
               value={String(config.montant_mensualite ?? 7500)}
               onChange={(e) => setConfig((p) => p ? { ...p, montant_mensualite: parseFloat(e.target.value) } : p)}
             />
-            <div className="flex items-center gap-3">
+            <div className="row" style={{ gap: 12 }}>
               <input
                 type="checkbox"
                 id="chiffres_arabes"
                 checked={config.chiffres_arabes}
                 onChange={(e) => setConfig((p) => p ? { ...p, chiffres_arabes: e.target.checked } : p)}
-                className="w-4 h-4 accent-emerald-600"
               />
-              <label htmlFor="chiffres_arabes" className="text-sm text-slate-700 dark:text-slate-300">
+              <label htmlFor="chiffres_arabes" style={{ fontSize: 13, color: 'var(--text-2)' }}>
                 Utiliser les chiffres arabes (٠١٢٣٤٥٦٧٨٩)
               </label>
             </div>
-            <div className="flex justify-end">
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <Button onClick={saveConfig} loading={saving === 'notes'}>{t('actions.enregistrer')}</Button>
             </div>
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }

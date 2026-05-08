@@ -206,8 +206,7 @@ export function ProfesseursPage() {
 
   return (
     <>
-      <div className="p-6">
-        <PageHeader
+      <PageHeader
           title="Professeurs"
           subtitle="Gestion du corps enseignant"
           action={
@@ -218,7 +217,7 @@ export function ProfesseursPage() {
         />
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
+          <div style={{ padding: '12px 14px', background: 'var(--danger-soft)', borderRadius: 'var(--r-md)', fontSize: 13, color: 'var(--danger-text)', marginBottom: 16 }}>
             {error}
           </div>
         )}
@@ -236,22 +235,22 @@ export function ProfesseursPage() {
 
         <Pagination page={page} total={total} limit={LIMIT} onChange={setPage} />
 
-        <Modal
+      <Modal
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
           title={editTarget ? 'Modifier le professeur' : 'Ajouter un professeur'}
           size="lg"
         >
-          <div className="space-y-4">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <Input label={t('common.nom_fr')} value={form.nom_fr} onChange={(e) => setField('nom_fr', e.target.value)} error={formErrors.nom_fr} />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid-2">
               <Input label={t('auth.identifiant')} value={form.identifiant} onChange={(e) => setField('identifiant', e.target.value)} error={formErrors.identifiant} />
               {!editTarget && (
                 <Input label={t('auth.password')} type="password" value={form.mot_de_passe} onChange={(e) => setField('mot_de_passe', e.target.value)} error={formErrors.mot_de_passe} />
               )}
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid-2">
               <Input label={t('professeur.specialite')} value={form.specialite_fr} onChange={(e) => setField('specialite_fr', e.target.value)} />
               <Input label={t('common.telephone')} type="tel" value={form.telephone} onChange={(e) => setField('telephone', e.target.value)} />
             </div>
@@ -267,7 +266,7 @@ export function ProfesseursPage() {
               ]}
               placeholder="Choisir..."
             />
-            <div className="flex justify-end gap-3 pt-2">
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
               <Button variant="secondary" onClick={() => setModalOpen(false)}>{t('actions.annuler')}</Button>
               <Button onClick={handleSubmit} loading={submitting}>
                 {editTarget ? 'Modifier' : 'Ajouter'}
@@ -275,7 +274,6 @@ export function ProfesseursPage() {
             </div>
           </div>
         </Modal>
-      </div>
 
       <ConfirmModal
         isOpen={!!confirmDelete}
