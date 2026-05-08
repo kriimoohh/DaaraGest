@@ -1,28 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { SearchInput } from '../../components/ui/SearchInput';
 import { Pagination } from '../../components/ui/Pagination';
 import { useApi } from '../../hooks/useApi';
+import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface Stats { total_encaisse_eleves: number; nb_paiements_eleves: number; total_paye_professeurs: number; }
 
+interface EleveSimple { id: string; nom_fr: string; matricule: string; }
+
 interface PaiementEleve {
   id: string; type: string; montant: number; mois?: number; annee?: number;
   recu_numero?: string; created_at: string; statut: string;
-  eleve: { nom_fr: string; matricule: string; };
+  eleve: EleveSimple;
 }
 
 interface Reliquat {
-  eleve: { id: string; nom_fr: string; matricule: string; };
+  eleve: EleveSimple;
   nb_mois_dus: number;
   mois_manquants: { mois: number; annee: number }[];
   montant_du: number;
@@ -48,13 +52,109 @@ const FILTER_TYPES = [
   { value: 'inscription', label: 'Inscriptions' },
   { value: 'autre', label: 'Autres' },
 ];
-
 const FILTER_STATUTS = [
   { value: '', label: 'Tous statuts' },
   { value: 'paye', label: 'Payés', activeClass: 'bg-emerald-500 text-white' },
   { value: 'impaye', label: 'Non payés', activeClass: 'bg-amber-500 text-white' },
   { value: 'reliquat', label: 'Manquants', activeClass: 'bg-red-500 text-white', icon: '🔴' },
 ];
+
+// ─── EleveSearchPicker ────────────────────────────────────────────────────────
+
+interface EleveSearchPickerProps {
+  eleves: EleveSimple[];
+  selected: EleveSimple[];
+  onChange: (selected: EleveSimple[]) => void;
+}
+
+function EleveSearchPicker({ eleves, selected, onChange }: EleveSearchPickerProps) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const filtered = query.trim()
+    ? eleves.filter(e =>
+        e.nom_fr.toLowerCase().includes(query.toLowerCase()) ||
+        e.matricule.toLowerCase().includes(query.toLowerCase())
+      ).slice(0, 30)
+    : eleves.slice(0, 30);
+
+  const selectedIds = new Set(selected.map(e => e.id));
+
+  function toggle(eleve: EleveSimple) {
+    if (selectedIds.has(eleve.id)) {
+      onChange(selected.filter(e => e.id !== eleve.id));
+    } else {
+      onChange([...selected, eleve]);
+    }
+  }
+
+  function remove(id: string) {
+    onChange(selected.filter(e => e.id !== id));
+  }
+
+  useEffect(() => {
+    function onClickOutside(ev: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(ev.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
+
+  return (
+    <div ref={containerRef} className="flex flex-col gap-2">
+      <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+        Élèves sélectionnés ({selected.length})
+      </label>
+
+      {/* chips */}
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1">
+          {selected.map(e => (
+            <span key={e.id}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700">
+              {e.nom_fr} <span className="font-mono text-emerald-600 dark:text-emerald-400">({e.matricule})</span>
+              <button onClick={() => remove(e.id)} className="ml-0.5 hover:text-red-500 transition-colors">×</button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* search input */}
+      <div className="relative">
+        <input
+          value={query}
+          onChange={e => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          placeholder="Rechercher par nom ou matricule…"
+          className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3.5 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+        />
+        {open && filtered.length > 0 && (
+          <div className="absolute z-50 mt-1 w-full max-h-52 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg">
+            {filtered.map(e => {
+              const sel = selectedIds.has(e.id);
+              return (
+                <button
+                  key={e.id}
+                  type="button"
+                  onClick={() => toggle(e)}
+                  className={`w-full text-left px-3.5 py-2 text-sm flex items-center justify-between gap-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors ${sel ? 'bg-emerald-50 dark:bg-emerald-900/20' : ''}`}>
+                  <span className={sel ? 'font-medium text-emerald-700 dark:text-emerald-300' : 'text-slate-800 dark:text-slate-200'}>
+                    {e.nom_fr}
+                  </span>
+                  <span className="font-mono text-xs text-slate-400">{e.matricule}</span>
+                  {sel && <span className="text-emerald-500 text-xs shrink-0">✓</span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 // ─── ProfsTab ─────────────────────────────────────────────────────────────────
 
@@ -116,8 +216,7 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
       <div className="flex flex-wrap gap-3 items-end">
         <Select value={moisF} onChange={(e) => setMoisF(e.target.value)}
           options={MOIS.map((m, i) => ({ value: String(i + 1), label: m }))} />
-        <Input label="" type="number" value={anneeF} onChange={(e) => setAnneeF(e.target.value)}
-          className="w-24" />
+        <Input label="" type="number" value={anneeF} onChange={(e) => setAnneeF(e.target.value)} className="w-24" />
         <Button onClick={() => charger()} variant="secondary" loading={loading}>Charger</Button>
         <Button onClick={() => setModal(true)}>+ Ajouter paiement</Button>
       </div>
@@ -139,9 +238,7 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
             <tbody>
               {paiements.map(p => (
                 <tr key={p.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
-                    {p.professeur.utilisateur.nom_fr}
-                  </td>
+                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{p.professeur.utilisateur.nom_fr}</td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{MOIS[p.mois-1]} {p.annee}</td>
                   <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{formatMontant(Number(p.montant_brut))}</td>
                   <td className="px-4 py-3 text-red-500 dark:text-red-400 text-xs">-{formatMontant(Number(p.retenues))}</td>
@@ -198,13 +295,14 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
 export function FinancesPage() {
   const { t } = useTranslation();
   const api = useApi();
+  const isAdmin = useAuthStore(s => s.user?.role === 'admin');
   const now = new Date();
 
   const [tab, setTab] = useState<'eleves' | 'profs'>('eleves');
   const [stats, setStats] = useState<Stats | null>(null);
   const [paiements, setPaiements] = useState<PaiementEleve[]>([]);
   const [reliquats, setReliquats] = useState<Reliquat[]>([]);
-  const [eleves, setEleves] = useState<{ id: string; nom_fr: string; matricule: string }[]>([]);
+  const [allEleves, setAllEleves] = useState<EleveSimple[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -213,13 +311,24 @@ export function FinancesPage() {
   const [mois, setMois] = useState('');
   const [annee, setAnnee] = useState(String(now.getFullYear()));
   const [loading, setLoading] = useState(false);
+
+  // Modal création (multi-élèves)
   const [modal, setModal] = useState(false);
   const [saving, setSaving] = useState(false);
-
+  const [selectedEleves, setSelectedEleves] = useState<EleveSimple[]>([]);
   const [form, setForm] = useState({
-    eleve_id: '', type: 'mensualite', montant: '',
+    type: 'mensualite', montant: '',
     mois: String(now.getMonth() + 1), annee: String(now.getFullYear()),
   });
+
+  // Modal édition (admin)
+  const [editTarget, setEditTarget] = useState<PaiementEleve | null>(null);
+  const [editForm, setEditForm] = useState({ type: '', montant: '', mois: '', annee: '', statut: '' });
+  const [editSaving, setEditSaving] = useState(false);
+
+  // Modal suppression (admin)
+  const [deleteTarget, setDeleteTarget] = useState<PaiementEleve | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const formatMontant = (v: number) => new Intl.NumberFormat('fr-FR').format(v) + ' FCFA';
   const isReliquat = filterStatut === 'reliquat';
@@ -238,7 +347,7 @@ export function FinancesPage() {
 
   useEffect(() => {
     api.get<Stats>('/api/v1/finances/stats').then(setStats).catch(() => {});
-    api.get<{ data: typeof eleves }>('/api/v1/eleves?limit=300').then(r => setEleves(r.data ?? [])).catch(() => {});
+    api.get<{ data: EleveSimple[] }>('/api/v1/eleves?limit=500').then(r => setAllEleves(r.data ?? [])).catch(() => {});
   }, []);
 
   const charger = async () => {
@@ -269,25 +378,79 @@ export function FinancesPage() {
   useEffect(() => { if (tab === 'eleves') charger(); }, [page, search, filterType, filterStatut, mois, annee, tab]);
   useEffect(() => { setPage(1); }, [search, filterType, filterStatut, mois, annee]);
 
+  function openModal() {
+    setSelectedEleves([]);
+    setForm({ type: 'mensualite', montant: '', mois: String(now.getMonth() + 1), annee: String(now.getFullYear()) });
+    setModal(true);
+  }
+
   const handleSave = async () => {
-    if (!form.eleve_id || !form.montant) { toast.error('Élève et montant requis'); return; }
+    if (selectedEleves.length === 0 || !form.montant) {
+      toast.error('Sélectionnez au moins un élève et saisissez un montant');
+      return;
+    }
     setSaving(true);
     try {
-      await api.post('/api/v1/finances/paiements-eleves', {
-        eleve_id: form.eleve_id,
+      const payload = {
+        eleve_ids: selectedEleves.map(e => e.id),
         type: form.type,
         montant: parseFloat(form.montant),
         mois: parseInt(form.mois),
         annee: parseInt(form.annee),
-      });
-      toast.success('Paiement enregistré');
+      };
+      const res = await api.post<{ count: number }>('/api/v1/finances/paiements-eleves/bulk', payload);
+      toast.success(`${res.count} paiement(s) enregistré(s)`);
       setModal(false);
-      setForm({ eleve_id: '', type: 'mensualite', montant: '', mois: String(now.getMonth()+1), annee: String(now.getFullYear()) });
       charger();
       api.get<Stats>('/api/v1/finances/stats').then(setStats).catch(() => {});
     } catch (err) {
       toast.error((err as Error).message || 'Erreur');
     } finally { setSaving(false); }
+  };
+
+  function openEdit(p: PaiementEleve) {
+    setEditTarget(p);
+    setEditForm({
+      type: p.type,
+      montant: String(p.montant),
+      mois: String(p.mois ?? ''),
+      annee: String(p.annee ?? ''),
+      statut: p.statut,
+    });
+  }
+
+  const handleEdit = async () => {
+    if (!editTarget) return;
+    setEditSaving(true);
+    try {
+      await api.put(`/api/v1/finances/paiements-eleves/${editTarget.id}`, {
+        type: editForm.type,
+        montant: parseFloat(editForm.montant),
+        mois: editForm.mois ? parseInt(editForm.mois) : undefined,
+        annee: editForm.annee ? parseInt(editForm.annee) : undefined,
+        statut: editForm.statut,
+      });
+      toast.success('Paiement modifié');
+      setEditTarget(null);
+      charger();
+      api.get<Stats>('/api/v1/finances/stats').then(setStats).catch(() => {});
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    } finally { setEditSaving(false); }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/api/v1/finances/paiements-eleves/${deleteTarget.id}`);
+      toast.success('Paiement supprimé');
+      setDeleteTarget(null);
+      charger();
+      api.get<Stats>('/api/v1/finances/stats').then(setStats).catch(() => {});
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    } finally { setDeleting(false); }
   };
 
   return (
@@ -330,10 +493,10 @@ export function FinancesPage() {
             <div className="flex-1">
               <SearchInput value={search} onChange={setSearch} placeholder="Rechercher un élève..." />
             </div>
-            <Button onClick={() => setModal(true)}>+ Paiement</Button>
+            <Button onClick={openModal}>+ Paiement</Button>
           </div>
 
-          {/* Ligne 2 : Type de paiement (désactivé en mode reliquats) */}
+          {/* Ligne 2 : Type */}
           {!isReliquat && (
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0 w-14">Type :</span>
@@ -363,11 +526,6 @@ export function FinancesPage() {
                 {f.icon && `${f.icon} `}{f.label}
               </button>
             ))}
-            {isReliquat && (
-              <span className="text-xs text-slate-400 dark:text-slate-500 italic ms-2">
-                — Élèves sans paiement enregistré pour la période
-              </span>
-            )}
           </div>
 
           {/* Ligne 4 : Période */}
@@ -378,7 +536,7 @@ export function FinancesPage() {
             <Input label="" type="number" value={annee} onChange={e => setAnnee(e.target.value)} className="w-28" />
           </div>
 
-          {/* Reliquats view */}
+          {/* Reliquats */}
           {isReliquat ? (
             loading ? <div className="p-8 text-center text-slate-500">Chargement...</div> :
             reliquats.length === 0 ? (
@@ -388,7 +546,6 @@ export function FinancesPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                {/* Summary */}
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 flex items-center gap-3">
                   <span className="text-2xl">🔴</span>
                   <div>
@@ -435,7 +592,7 @@ export function FinancesPage() {
                   <table className="w-full text-sm">
                     <thead className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
                       <tr>
-                        {['Élève', 'Matricule', 'Type', 'Montant', 'Période', 'N° Reçu', 'Statut'].map(h => (
+                        {['Élève', 'Matricule', 'Type', 'Montant', 'Période', 'N° Reçu', 'Statut', ...(isAdmin ? ['Actions'] : [])].map(h => (
                           <th key={h} className="px-4 py-3 text-start text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>
                         ))}
                       </tr>
@@ -450,6 +607,14 @@ export function FinancesPage() {
                           <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{p.mois ? `${MOIS[p.mois-1]} ${p.annee}` : '—'}</td>
                           <td className="px-4 py-3 font-mono text-xs text-slate-500">{p.recu_numero ?? '—'}</td>
                           <td className="px-4 py-3"><Badge label={STATUT_LABELS[p.statut] ?? p.statut} variant={p.statut === 'paye' ? 'success' : 'warning'} /></td>
+                          {isAdmin && (
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-1">
+                                <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>Modifier</Button>
+                                <Button size="sm" variant="danger" onClick={() => setDeleteTarget(p)}>Supprimer</Button>
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -464,11 +629,14 @@ export function FinancesPage() {
 
       {tab === 'profs' && <ProfsTab api={api} formatMontant={formatMontant} />}
 
-      {/* Modal paiement élève */}
-      <Modal isOpen={modal} onClose={() => setModal(false)} title={t('finance.nouveau_paiement')} size="md">
+      {/* Modal création paiement — multi-élèves */}
+      <Modal isOpen={modal} onClose={() => setModal(false)} title={t('finance.nouveau_paiement')} size="lg">
         <div className="space-y-4">
-          <Select label={t('nav.eleves')} value={form.eleve_id} onChange={e => setForm(f => ({ ...f, eleve_id: e.target.value }))}
-            options={[{ value: '', label: t('finance.selectionner_eleve') }, ...eleves.map(e => ({ value: e.id, label: `${e.nom_fr} (${e.matricule})` }))]} />
+          <EleveSearchPicker
+            eleves={allEleves}
+            selected={selectedEleves}
+            onChange={setSelectedEleves}
+          />
           <div className="grid grid-cols-2 gap-4">
             <Select label={t('finance.type')} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
               options={TYPES_PAIEMENT} />
@@ -484,10 +652,52 @@ export function FinancesPage() {
           <p className="text-xs text-slate-500 dark:text-slate-400 italic">{t('finance.recu_auto')}</p>
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="secondary" onClick={() => setModal(false)}>{t('actions.annuler')}</Button>
-            <Button onClick={handleSave} loading={saving}>{t('actions.enregistrer')}</Button>
+            <Button onClick={handleSave} loading={saving} disabled={selectedEleves.length === 0}>
+              Enregistrer {selectedEleves.length > 1 ? `(${selectedEleves.length} élèves)` : ''}
+            </Button>
           </div>
         </div>
       </Modal>
+
+      {/* Modal édition paiement (admin) */}
+      <Modal isOpen={!!editTarget} onClose={() => setEditTarget(null)} title="Modifier le paiement" size="md">
+        {editTarget && (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Élève : <span className="font-medium text-slate-900 dark:text-white">{editTarget.eleve.nom_fr}</span>
+              <span className="font-mono text-xs text-slate-400 ml-2">({editTarget.eleve.matricule})</span>
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <Select label={t('finance.type')} value={editForm.type} onChange={e => setEditForm(f => ({ ...f, type: e.target.value }))}
+                options={TYPES_PAIEMENT} />
+              <Input label={`${t('finance.montant')} (FCFA)`} type="number" value={editForm.montant}
+                onChange={e => setEditForm(f => ({ ...f, montant: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <Select label={t('common.mois')} value={editForm.mois} onChange={e => setEditForm(f => ({ ...f, mois: e.target.value }))}
+                options={[{ value: '', label: '—' }, ...MOIS.map((m, i) => ({ value: String(i+1), label: m }))]} />
+              <Input label={t('common.annee')} type="number" value={editForm.annee}
+                onChange={e => setEditForm(f => ({ ...f, annee: e.target.value }))} />
+              <Select label="Statut" value={editForm.statut} onChange={e => setEditForm(f => ({ ...f, statut: e.target.value }))}
+                options={[{ value: 'paye', label: t('finance.paye') }, { value: 'impaye', label: t('finance.impaye') }]} />
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="secondary" onClick={() => setEditTarget(null)}>{t('actions.annuler')}</Button>
+              <Button onClick={handleEdit} loading={editSaving}>{t('actions.enregistrer')}</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Confirmation suppression (admin) */}
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        loading={deleting}
+        title="Supprimer le paiement"
+        message={deleteTarget ? `Supprimer le paiement de ${formatMontant(deleteTarget.montant)} pour ${deleteTarget.eleve.nom_fr} ? Cette action est irréversible.` : ''}
+      />
     </div>
   );
 }
