@@ -57,3 +57,42 @@ export async function supprimerClasse(id: string, etablissement_id: string) {
 
   return prisma.classe.update({ where: { id }, data: { active: false } });
 }
+
+export async function listerElevesDeClasse(
+  classe_id: string,
+  etablissement_id: string,
+  annee_scolaire_id?: string
+) {
+  const classe = await prisma.classe.findFirst({
+    where: { id: classe_id, etablissement_id },
+    include: { annee_scolaire: true },
+  });
+  if (!classe) throw new Error('Classe introuvable');
+
+  const inscriptions = await prisma.inscription.findMany({
+    where: {
+      OR: [{ classe_fr_id: classe_id }, { classe_ar_id: classe_id }],
+      ...(annee_scolaire_id ? { annee_scolaire_id } : { annee_scolaire_id: classe.annee_scolaire_id }),
+      eleve: { etablissement_id, actif: true },
+    },
+    include: {
+      eleve: { include: { parents: true } },
+      annee_scolaire: true,
+      classe_fr: true,
+      classe_ar: true,
+    },
+    orderBy: [{ eleve: { nom_fr: 'asc' } }, { eleve: { prenom_fr: 'asc' } }],
+  });
+
+  return {
+    classe,
+    total: inscriptions.length,
+    eleves: inscriptions.map((i, idx) => ({
+      rang: idx + 1,
+      ...i.eleve,
+      annee_scolaire: i.annee_scolaire,
+      classe_fr: i.classe_fr,
+      classe_ar: i.classe_ar,
+    })),
+  };
+}

@@ -1,19 +1,25 @@
 import prisma from '../../config/database';
 import { EleveInput, InscriptionInput } from './eleves.schema';
 
+const VALID_SORT_FIELDS = ['nom_fr', 'prenom_fr', 'matricule', 'sexe', 'date_naissance'];
+
 export async function listerEleves(
   etablissement_id: string,
   page = 1,
   limit = 20,
   search?: string,
   classe_id?: string,
-  actif?: boolean
+  actif?: boolean,
+  sexe?: string,
+  sortBy = 'nom_fr',
+  sortDir: 'asc' | 'desc' = 'asc'
 ) {
   const skip = (page - 1) * limit;
 
   const where: Record<string, unknown> = { etablissement_id };
 
   if (actif !== undefined) where.actif = actif;
+  if (sexe) where.sexe = sexe;
 
   if (search) {
     where.OR = [
@@ -33,14 +39,24 @@ export async function listerEleves(
     };
   }
 
+  const orderField = VALID_SORT_FIELDS.includes(sortBy) ? sortBy : 'nom_fr';
+  const orderDir = sortDir === 'desc' ? 'desc' : 'asc';
+
   const [total, items] = await Promise.all([
     prisma.eleve.count({ where }),
     prisma.eleve.findMany({
       where,
       skip,
       take: limit,
-      include: { parents: true },
-      orderBy: [{ nom_fr: 'asc' }, { prenom_fr: 'asc' }],
+      include: {
+        parents: true,
+        inscriptions: {
+          include: { classe_fr: true, classe_ar: true, annee_scolaire: true },
+          orderBy: { date_inscription: 'desc' },
+          take: 1,
+        },
+      },
+      orderBy: { [orderField]: orderDir },
     }),
   ]);
 
@@ -175,5 +191,30 @@ export async function inscrireEleve(id: string, etablissement_id: string, data: 
       classe_ar_id: data.classe_ar_id,
     },
     include: { annee_scolaire: true, classe_fr: true, classe_ar: true },
+  });
+}
+
+export async function bulkDesactiverEleves(ids: string[], etablissement_id: string) {
+  return prisma.eleve.updateMany({
+    where: { id: { in: ids }, etablissement_id },
+    data: { actif: false },
+  });
+}
+
+export async function bulkInscrireEleves(ids: string[], etablissement_id: string, data: InscriptionInput) {
+  const existing = await prisma.eleve.findMany({
+    where: { id: { in: ids }, etablissement_id },
+    select: { id: true },
+  });
+  const validIds = existing.map(e => e.id);
+
+  return prisma.inscription.createMany({
+    data: validIds.map(eleve_id => ({
+      eleve_id,
+      annee_scolaire_id: data.annee_scolaire_id,
+      classe_fr_id: data.classe_fr_id ?? null,
+      classe_ar_id: data.classe_ar_id ?? null,
+    })),
+    skipDuplicates: true,
   });
 }

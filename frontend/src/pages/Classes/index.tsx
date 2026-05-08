@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback } from 'react';
 import { useApi } from '../../hooks/useApi';
+import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { PageHeader } from '../../components/ui/PageHeader';
@@ -17,6 +18,25 @@ import { Pagination } from '../../components/ui/Pagination';
 interface AnneeScolaire {
   id: string;
   libelle: string;
+}
+
+interface EleveInClasse {
+  rang: number;
+  id: string;
+  matricule: string;
+  nom_fr: string;
+  prenom_fr: string;
+  nom_ar: string;
+  prenom_ar: string;
+  sexe: 'M' | 'F';
+  date_naissance: string;
+  parents: { nom_fr: string; lien: string; telephone: string }[];
+}
+
+interface ListeElevesResponse {
+  classe: Classe & { annee_scolaire: AnneeScolaire };
+  total: number;
+  eleves: EleveInClasse[];
 }
 
 interface Classe {
@@ -68,6 +88,7 @@ function validate(form: ClasseFormData): FormErrors {
 export function ClassesPage() {
   const { t } = useTranslation();
   const api = useApi();
+  const isAdmin = useAuthStore(s => s.user?.role === 'admin');
 
   const [classes, setClasses] = useState<Classe[]>([]);
   const [total, setTotal] = useState(0);
@@ -86,6 +107,12 @@ export function ClassesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Classe | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Liste des élèves d'une classe
+  const [listeModal, setListeModal] = useState<Classe | null>(null);
+  const [listeData, setListeData] = useState<ListeElevesResponse | null>(null);
+  const [listeLoading, setListeLoading] = useState(false);
+  const [listeSearch, setListeSearch] = useState('');
 
   // Fetch annees scolaires once
   useEffect(() => {
@@ -186,6 +213,49 @@ export function ClassesPage() {
     }
   };
 
+  async function openListeEleves(classe: Classe) {
+    setListeModal(classe);
+    setListeSearch('');
+    setListeData(null);
+    setListeLoading(true);
+    try {
+      const data = await api.get<ListeElevesResponse>(`/api/v1/classes/${classe.id}/eleves`);
+      setListeData(data);
+    } catch (err) {
+      toast.error((err as Error).message || 'Impossible de charger la liste');
+      setListeModal(null);
+    } finally {
+      setListeLoading(false);
+    }
+  }
+
+  function downloadCsv() {
+    if (!listeData) return;
+    const { classe, eleves } = listeData;
+    const anneeLabel = typeof classe.annee_scolaire === 'object' ? classe.annee_scolaire.libelle : '';
+    const headers = ['N°', 'Matricule', 'Nom', 'Prénom', 'Sexe', 'Date de naissance', 'Parent', 'Téléphone'];
+    const rows = eleves.map(e => [
+      String(e.rang),
+      e.matricule,
+      e.nom_fr,
+      e.prenom_fr,
+      e.sexe === 'M' ? 'Masculin' : 'Féminin',
+      e.date_naissance ? new Date(e.date_naissance).toLocaleDateString('fr-FR') : '',
+      e.parents?.[0]?.nom_fr ?? '',
+      e.parents?.[0]?.telephone ?? '',
+    ]);
+    const csv = [headers, ...rows]
+      .map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `liste-${classe.nom_fr}-${anneeLabel}.csv`.replace(/\s+/g, '-');
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const anneeOptions = annees.map((a) => ({ value: a.id, label: a.libelle }));
   const anneeFilterOptions = [
     { value: '', label: t('classe.toutes_annees') },
@@ -227,10 +297,11 @@ export function ClassesPage() {
       render: (row) => {
         const c = row as unknown as Classe;
         return (
-          <>
+          <div className="flex items-center gap-1.5">
+            <Button size="sm" variant="secondary" onClick={() => openListeEleves(c)}>Liste élèves</Button>
             <Button size="sm" variant="ghost" onClick={() => openEdit(c)}>{t('actions.modifier')}</Button>
-            <Button size="sm" variant="danger" onClick={() => setConfirmDelete(c)}>{t('actions.supprimer')}</Button>
-          </>
+            {isAdmin && <Button size="sm" variant="danger" onClick={() => setConfirmDelete(c)}>{t('actions.supprimer')}</Button>}
+          </div>
         );
       },
     },
@@ -358,6 +429,119 @@ export function ClassesPage() {
       loading={deleting}
       message={`Supprimer la classe "${confirmDelete?.nom_fr}" ?`}
     />
+
+    {/* ── Modale liste des élèves ──────────────────────────────────────────── */}
+    {listeModal && (
+      <Modal
+        isOpen={!!listeModal}
+        onClose={() => { setListeModal(null); setListeData(null); }}
+        title={`Liste des élèves — ${listeModal.nom_fr}`}
+        size="xl"
+      >
+        {listeLoading ? (
+          <div className="py-12 text-center text-slate-400">Chargement...</div>
+        ) : listeData ? (
+          <div className="space-y-4">
+            {/* En-tête info + actions */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-slate-500 dark:text-slate-400">
+                  Année scolaire :
+                  <span className="font-semibold text-slate-700 dark:text-slate-200 ml-1">
+                    {typeof listeData.classe.annee_scolaire === 'object'
+                      ? listeData.classe.annee_scolaire.libelle
+                      : '—'}
+                  </span>
+                </span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-600/20">
+                  {listeData.total} élève{listeData.total > 1 ? 's' : ''}
+                </span>
+              </div>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={downloadCsv}
+                icon={<span>⬇</span>}
+              >
+                Télécharger CSV
+              </Button>
+            </div>
+
+            {/* Recherche rapide */}
+            <input
+              type="text"
+              value={listeSearch}
+              onChange={e => setListeSearch(e.target.value)}
+              placeholder="Filtrer par nom, prénom ou matricule..."
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+            />
+
+            {/* Tableau */}
+            <div className="overflow-auto max-h-[50vh] rounded-xl border border-slate-200 dark:border-slate-700">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                  <tr>
+                    {['N°', 'Matricule', 'Nom', 'Prénom', 'Sexe', 'Date de naissance', 'Parent / Téléphone'].map(h => (
+                      <th key={h} className="px-3 py-2.5 text-start text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {listeData.eleves
+                    .filter(e => {
+                      if (!listeSearch) return true;
+                      const q = listeSearch.toLowerCase();
+                      return (
+                        e.nom_fr.toLowerCase().includes(q) ||
+                        e.prenom_fr.toLowerCase().includes(q) ||
+                        e.matricule.toLowerCase().includes(q)
+                      );
+                    })
+                    .map(e => (
+                      <tr key={e.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                        <td className="px-3 py-2.5 text-slate-400 dark:text-slate-500 text-xs">{e.rang}</td>
+                        <td className="px-3 py-2.5 font-mono text-xs text-slate-600 dark:text-slate-400">{e.matricule}</td>
+                        <td className="px-3 py-2.5 font-medium text-slate-700 dark:text-slate-200">{e.nom_fr}</td>
+                        <td className="px-3 py-2.5 text-slate-700 dark:text-slate-300">{e.prenom_fr}</td>
+                        <td className="px-3 py-2.5">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${
+                            e.sexe === 'M'
+                              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 ring-1 ring-blue-600/20'
+                              : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 ring-1 ring-amber-600/20'
+                          }`}>
+                            {e.sexe === 'M' ? 'M' : 'F'}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                          {e.date_naissance ? new Date(e.date_naissance).toLocaleDateString('fr-FR') : '—'}
+                        </td>
+                        <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400">
+                          {e.parents?.[0] ? (
+                            <span>{e.parents[0].nom_fr} <span className="text-slate-400">·</span> {e.parents[0].telephone}</span>
+                          ) : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+              {listeData.eleves.filter(e => {
+                if (!listeSearch) return true;
+                const q = listeSearch.toLowerCase();
+                return e.nom_fr.toLowerCase().includes(q) || e.prenom_fr.toLowerCase().includes(q) || e.matricule.toLowerCase().includes(q);
+              }).length === 0 && (
+                <div className="py-10 text-center text-slate-400 dark:text-slate-500 text-sm">Aucun élève trouvé</div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <Button variant="secondary" onClick={() => { setListeModal(null); setListeData(null); }}>Fermer</Button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
+    )}
   </>
   );
 }

@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
 import { classeSchema } from './classes.schema';
-import { listerClasses, getClasse, creerClasse, modifierClasse, supprimerClasse } from './classes.service';
+import { listerClasses, getClasse, creerClasse, modifierClasse, supprimerClasse, listerElevesDeClasse } from './classes.service';
 
 export async function listerHandler(
   request: FastifyRequest, reply: FastifyReply
@@ -64,6 +64,20 @@ export async function supprimerHandler(
   try {
     await supprimerClasse(id, etablissement_id);
     return reply.status(204).send();
+  } catch (err) {
+    return reply.status(404).send({ error: (err as Error).message });
+  }
+}
+
+export async function listerElevesHandler(
+  request: FastifyRequest, reply: FastifyReply
+) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { id } = request.params as { id: string };
+  const { annee_scolaire_id } = request.query as Record<string, string | undefined>;
+  try {
+    const data = await listerElevesDeClasse(id, etablissement_id, annee_scolaire_id);
+    return reply.send(data);
   } catch (err) {
     return reply.status(404).send({ error: (err as Error).message });
   }
