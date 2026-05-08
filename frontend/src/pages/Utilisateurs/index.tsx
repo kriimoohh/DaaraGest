@@ -158,14 +158,14 @@ export function UtilisateursPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <>
       <PageHeader
         title="Utilisateurs"
         subtitle="Gérer les comptes utilisateurs"
         action={<Button onClick={openAdd}>+ Ajouter un utilisateur</Button>}
       />
 
-      <div className="flex gap-3 flex-wrap">
+      <div className="filter-row">
         <div className="flex-1 min-w-48">
           <SearchInput value={search} onChange={setSearch} placeholder="Rechercher..." />
         </div>
@@ -227,15 +227,15 @@ export function UtilisateursPage() {
 
       {/* Modal création/édition */}
       <Modal isOpen={modal} onClose={() => setModal(false)} title={edit ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur'} size="lg">
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="grid-2">
             <Input label={t('common.nom_fr')} value={form.nom_fr} onChange={(e) => setForm((f) => ({ ...f, nom_fr: e.target.value }))} />
             <Input label={t('auth.identifiant')} value={form.identifiant} onChange={(e) => setForm((f) => ({ ...f, identifiant: e.target.value }))} />
           </div>
           {!edit && (
             <Input label={t('auth.password')} type="password" value={form.mot_de_passe} onChange={(e) => setForm((f) => ({ ...f, mot_de_passe: e.target.value }))} />
           )}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid-2">
             {!edit && (
               <Select
                 label={t('utilisateur.role')}
@@ -261,7 +261,7 @@ export function UtilisateursPage() {
 
       {/* Modal reset password */}
       <Modal isOpen={!!resetModal} onClose={() => setResetModal(null)} title="Réinitialiser le mot de passe" size="sm">
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <p className="text-sm text-slate-600 dark:text-slate-400">
             Nouveau mot de passe pour <strong>{resetModal?.identifiant}</strong>
           </p>
@@ -281,6 +281,6 @@ export function UtilisateursPage() {
         title="Désactiver l'utilisateur"
         message={`Désactiver le compte de "${confirm?.identifiant}" ?`}
       />
-    </div>
+    </>
   );
 }

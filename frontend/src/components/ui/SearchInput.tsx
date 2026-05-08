@@ -1,11 +1,27 @@
-interface SearchInputProps { value: string; onChange: (v: string) => void; placeholder?: string; }
-export function SearchInput({ value, onChange, placeholder = "Rechercher..." }: SearchInputProps) {
+import React from 'react';
+
+interface SearchInputProps {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  style?: React.CSSProperties;
+}
+
+export function SearchInput({ value, onChange, placeholder = 'Rechercher…', style }: SearchInputProps) {
   return (
-    <div className="relative">
-      <span className="absolute inset-y-0 start-3.5 flex items-center text-slate-400 text-sm pointer-events-none">🔍</span>
-      <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-        className="w-full ps-9 pe-9 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all" />
-      {value && <button onClick={() => onChange("")} className="absolute inset-y-0 end-3 flex items-center text-slate-400 hover:text-slate-600 text-xs">✕</button>}
+    <div className="input-group" style={style}>
+      <span className="icon-left">
+        <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+        </svg>
+      </span>
+      <input
+        type="text"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="input"
+      />
     </div>
   );
 }

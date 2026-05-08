@@ -697,8 +697,7 @@ export function ElevesPage() {
 
   return (
     <>
-      <div className="p-6">
-        <PageHeader
+      <PageHeader
           title="Élèves"
           subtitle="Gestion des élèves inscrits"
           action={
@@ -734,13 +733,13 @@ export function ElevesPage() {
         />
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
+          <div style={{ padding: '12px 14px', background: 'var(--danger-soft)', borderRadius: 'var(--r-md)', fontSize: 13, color: 'var(--danger-text)', marginBottom: 16 }}>
             {error}
           </div>
         )}
 
         {/* Barre de recherche, filtres et taille de page */}
-        <div className="mb-4 flex flex-wrap gap-3 items-end">
+        <div className="filter-row">
           <div className="flex-1 min-w-[200px] max-w-sm">
             <SearchInput
               value={search}
@@ -820,7 +819,6 @@ export function ElevesPage() {
         />
 
         <Pagination page={page} total={total} limit={limit} onChange={setPage} />
-      </div>
 
       {/* ── Modal Ajouter / Modifier ─────────────────────────────────────────── */}
       <Modal
@@ -829,7 +827,7 @@ export function ElevesPage() {
         title={editTarget ? "Modifier l'élève" : 'Ajouter un élève'}
         size="lg"
       >
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {editTarget && (
             <Input
               label={t('eleve.matricule')}
@@ -851,7 +849,7 @@ export function ElevesPage() {
             options={SEXE_OPTIONS}
             placeholder="Choisir..."
           />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid-2">
             <Input
               label={t('common.nom_fr')}
               value={form.nom_fr}
@@ -865,7 +863,7 @@ export function ElevesPage() {
               error={formErrors.prenom_fr}
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid-2">
             <Input
               label={t('eleve.date_naissance')}
               type="date"
@@ -879,9 +877,9 @@ export function ElevesPage() {
               placeholder="Ex : Dakar"
             />
           </div>
-          <hr className="border-slate-200 dark:border-slate-700" />
-          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('eleve.parent')}</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="divider" />
+          <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>{t('eleve.parent')}</h3>
+          <div className="grid-2">
             <Input
               label={t('common.nom_fr')}
               value={form.parent_nom_fr}

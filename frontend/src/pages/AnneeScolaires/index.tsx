@@ -113,7 +113,7 @@ export function AnneeScolairesPage() {
   const fmt = (d: string) => new Date(d).toLocaleDateString('fr-FR');
 
   return (
-    <div className="space-y-6">
+    <>
       <PageHeader
         title="Années scolaires"
         subtitle="Gérer les années scolaires de l'établissement"
@@ -170,14 +170,14 @@ export function AnneeScolairesPage() {
       </div>
 
       <Modal isOpen={modal} onClose={() => setModal(false)} title={edit ? 'Modifier l\'année' : 'Nouvelle année scolaire'} size="md">
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <Input
             label={t('annee_scolaire.libelle')}
             value={form.libelle}
             onChange={(e) => setForm((f) => ({ ...f, libelle: e.target.value }))}
             placeholder="2025-2026"
           />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid-2">
             <Input
               label={t('annee_scolaire.date_debut')}
               type="date"
@@ -205,6 +205,6 @@ export function AnneeScolairesPage() {
         loading={deleting}
         message={`Supprimer l'année "${confirm?.libelle}" ?`}
       />
-    </div>
+    </>
   );
 }
