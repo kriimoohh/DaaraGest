@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
+import { useAuthStore } from '../../store/authStore';
 
 interface AnneeScolaire { id: string; libelle: string; active: boolean; }
 interface Classe { id: string; nom_fr: string; nom_ar: string; filiere: string; }
@@ -15,6 +16,7 @@ interface Note { id: string; eleve_id: string; valeur: number; commentaire?: str
 export function NotesPage() {
   const { t } = useTranslation();
   const api = useApi();
+  const canEdit = useAuthStore(s => ['admin', 'directeur', 'gestionnaire'].includes(s.user?.role ?? ''));
 
   const [annees, setAnnees] = useState<AnneeScolaire[]>([]);
   const [classes, setClasses] = useState<Classe[]>([]);
@@ -137,14 +139,21 @@ export function NotesPage() {
               {eleves.length} élève(s)
             </span>
             <div className="flex items-center gap-3">
+              {!canEdit && (
+                <span className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-1.5 rounded-lg">
+                  Consultation uniquement — modification réservée à la gestion
+                </span>
+              )}
               {success && (
                 <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
                   ✓ Notes enregistrées
                 </span>
               )}
-              <Button onClick={handleSave} loading={saving} disabled={eleves.length === 0}>
-                {t('note.enregistrer_tout')}
-              </Button>
+              {canEdit && (
+                <Button onClick={handleSave} loading={saving} disabled={eleves.length === 0}>
+                  {t('note.enregistrer_tout')}
+                </Button>
+              )}
             </div>
           </div>
 
@@ -175,8 +184,13 @@ export function NotesPage() {
                         max={matMax}
                         step="0.25"
                         value={notes[eleve.id] ?? ''}
-                        onChange={(e) => setNotes((prev) => ({ ...prev, [eleve.id]: e.target.value }))}
-                        className="w-24 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        onChange={(e) => canEdit && setNotes((prev) => ({ ...prev, [eleve.id]: e.target.value }))}
+                        readOnly={!canEdit}
+                        className={`w-24 px-3 py-1.5 rounded-lg border text-sm focus:outline-none ${
+                          canEdit
+                            ? 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500'
+                            : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed'
+                        }`}
                         placeholder="—"
                       />
                     </td>
