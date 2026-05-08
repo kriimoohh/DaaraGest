@@ -9,6 +9,8 @@ import {
   supprimerEleve,
   inscrireEleve,
   importerEleves,
+  bulkDesactiverEleves,
+  bulkInscrireEleves,
   ImportRow,
 } from './eleves.service';
 
@@ -103,6 +105,38 @@ export async function inscrireHandler(
     return reply.status(201).send(data);
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
+  }
+}
+
+export async function bulkDesactiverHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const body = request.body as { ids: string[] };
+  if (!Array.isArray(body?.ids) || body.ids.length === 0) {
+    return reply.status(400).send({ error: 'ids[] requis et non vide' });
+  }
+  try {
+    const result = await bulkDesactiverEleves(body.ids, etablissement_id);
+    return reply.send({ count: result.count });
+  } catch (err) {
+    return reply.status(500).send({ error: (err as Error).message });
+  }
+}
+
+export async function bulkInscrireHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { ids, ...inscData } = request.body as { ids: string[]; annee_scolaire_id: string; classe_fr_id?: string; classe_ar_id?: string };
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return reply.status(400).send({ error: 'ids[] requis et non vide' });
+  }
+  const parsed = inscriptionSchema.safeParse(inscData);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: parsed.error.errors[0].message });
+  }
+  try {
+    const result = await bulkInscrireEleves(ids, etablissement_id, parsed.data);
+    return reply.status(201).send({ count: result.count });
+  } catch (err) {
+    return reply.status(500).send({ error: (err as Error).message });
   }
 }
 

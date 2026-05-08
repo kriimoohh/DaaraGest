@@ -170,6 +170,16 @@ export function ElevesPage() {
   const [confirmDelete, setConfirmDelete] = useState<Eleve | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Sélection multiple
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkInscModal, setBulkInscModal] = useState(false);
+  const [bulkInscForm, setBulkInscForm] = useState({ annee_scolaire_id: '', classe_fr_id: '', classe_ar_id: '' });
+  const [bulkInscSaving, setBulkInscSaving] = useState(false);
+  const [bulkAnnees, setBulkAnnees] = useState<{ id: string; libelle: string }[]>([]);
+  const [bulkClasses, setBulkClasses] = useState<{ id: string; nom_fr: string; filiere: string }[]>([]);
+
   // Import CSV
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importModal, setImportModal] = useState(false);
@@ -225,6 +235,73 @@ export function ElevesPage() {
     } else {
       setSortBy(key);
       setSortDir('asc');
+    }
+  }
+
+  // ── Sélection ─────────────────────────────────────────────────────────────
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    const allIds = eleves.map(e => e.id);
+    const allSelected = allIds.every(id => selectedIds.has(id));
+    if (allSelected) {
+      setSelectedIds(prev => { const next = new Set(prev); allIds.forEach(id => next.delete(id)); return next; });
+    } else {
+      setSelectedIds(prev => { const next = new Set(prev); allIds.forEach(id => next.add(id)); return next; });
+    }
+  }
+
+  async function handleBulkDelete() {
+    setBulkDeleting(true);
+    try {
+      const res = await api.post<{ count: number }>('/api/v1/eleves/bulk-desactiver', { ids: [...selectedIds] });
+      toast.success(`${res.count} élève(s) désactivé(s)`);
+      setSelectedIds(new Set());
+      setConfirmBulkDelete(false);
+      fetchEleves();
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur lors de la désactivation');
+    } finally {
+      setBulkDeleting(false);
+    }
+  }
+
+  async function openBulkInscription() {
+    try {
+      const [ans, cls] = await Promise.all([
+        api.get<{ id: string; libelle: string }[]>('/api/v1/annees-scolaires'),
+        api.get<{ id: string; nom_fr: string; filiere: string }[]>('/api/v1/classes'),
+      ]);
+      setBulkAnnees(ans);
+      setBulkClasses(cls);
+    } catch { /**/ }
+    setBulkInscForm({ annee_scolaire_id: '', classe_fr_id: '', classe_ar_id: '' });
+    setBulkInscModal(true);
+  }
+
+  async function handleBulkInscrire() {
+    if (!bulkInscForm.annee_scolaire_id) { toast.error('Année scolaire requise'); return; }
+    setBulkInscSaving(true);
+    try {
+      const res = await api.post<{ count: number }>('/api/v1/eleves/bulk-inscrire', {
+        ids: [...selectedIds],
+        ...bulkInscForm,
+      });
+      toast.success(`${res.count} élève(s) inscrit(s) avec succès`);
+      setSelectedIds(new Set());
+      setBulkInscModal(false);
+      fetchEleves();
+    } catch (err) {
+      toast.error((err as Error).message || "Erreur lors de l'inscription");
+    } finally {
+      setBulkInscSaving(false);
     }
   }
 
@@ -356,7 +433,36 @@ export function ElevesPage() {
 
   // ── Columns ────────────────────────────────────────────────────────────────
 
+  const allPageSelected = eleves.length > 0 && eleves.every(e => selectedIds.has(e.id));
+  const somePageSelected = eleves.some(e => selectedIds.has(e.id));
+
   const columns: Column<Record<string, unknown>>[] = [
+    {
+      key: 'select',
+      header: '',
+      width: '44px',
+      headerRender: () => (
+        <input
+          type="checkbox"
+          checked={allPageSelected}
+          ref={el => { if (el) el.indeterminate = somePageSelected && !allPageSelected; }}
+          onChange={toggleSelectAll}
+          className="rounded border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+        />
+      ),
+      render: (row) => {
+        const e = row as unknown as Eleve;
+        return (
+          <input
+            type="checkbox"
+            checked={selectedIds.has(e.id)}
+            onChange={() => toggleSelect(e.id)}
+            onClick={ev => ev.stopPropagation()}
+            className="rounded border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+          />
+        );
+      },
+    },
     { key: 'matricule', header: 'Matricule', width: '140px', sortable: true },
     { key: 'nom_fr', header: 'Nom', sortable: true },
     { key: 'prenom_fr', header: 'Prénom', sortable: true },
@@ -802,6 +908,73 @@ export function ElevesPage() {
         loading={deleting}
         message={`Désactiver l'élève "${confirmDelete?.prenom_fr} ${confirmDelete?.nom_fr}" ?`}
       />
+
+      {/* ── Confirmation désactivation bulk ─────────────────────────────────── */}
+      <ConfirmModal
+        isOpen={confirmBulkDelete}
+        onClose={() => setConfirmBulkDelete(false)}
+        onConfirm={handleBulkDelete}
+        loading={bulkDeleting}
+        message={`Désactiver ${selectedIds.size} élève(s) sélectionné(s) ?`}
+      />
+
+      {/* ── Modal inscription bulk ───────────────────────────────────────────── */}
+      <Modal
+        isOpen={bulkInscModal}
+        onClose={() => setBulkInscModal(false)}
+        title={`Inscrire ${selectedIds.size} élève(s)`}
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Les {selectedIds.size} élèves sélectionnés seront inscrits dans les mêmes classes.
+          </p>
+          <Select
+            label="Année scolaire"
+            value={bulkInscForm.annee_scolaire_id}
+            onChange={e => setBulkInscForm(f => ({ ...f, annee_scolaire_id: e.target.value }))}
+            options={[{ value: '', label: 'Sélectionner...' }, ...bulkAnnees.map(a => ({ value: a.id, label: a.libelle }))]}
+          />
+          <Select
+            label="Classe FR"
+            value={bulkInscForm.classe_fr_id}
+            onChange={e => setBulkInscForm(f => ({ ...f, classe_fr_id: e.target.value }))}
+            options={[{ value: '', label: 'Aucune' }, ...bulkClasses.filter(c => c.filiere === 'FR').map(c => ({ value: c.id, label: c.nom_fr }))]}
+          />
+          <Select
+            label="Classe AR"
+            value={bulkInscForm.classe_ar_id}
+            onChange={e => setBulkInscForm(f => ({ ...f, classe_ar_id: e.target.value }))}
+            options={[{ value: '', label: 'Aucune' }, ...bulkClasses.filter(c => c.filiere === 'AR').map(c => ({ value: c.id, label: c.nom_fr }))]}
+          />
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="secondary" onClick={() => setBulkInscModal(false)}>Annuler</Button>
+            <Button onClick={handleBulkInscrire} loading={bulkInscSaving}>
+              Inscrire {selectedIds.size} élève(s)
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Barre d'actions flottante ────────────────────────────────────────── */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl px-5 py-3">
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">
+            {selectedIds.size} élève{selectedIds.size > 1 ? 's' : ''} sélectionné{selectedIds.size > 1 ? 's' : ''}
+          </span>
+          <div className="w-px h-5 bg-slate-200 dark:bg-slate-700" />
+          <Button size="sm" variant="secondary" onClick={openBulkInscription}>
+            Inscrire
+          </Button>
+          <Button size="sm" variant="danger" onClick={() => setConfirmBulkDelete(true)}>
+            Désactiver
+          </Button>
+          <div className="w-px h-5 bg-slate-200 dark:bg-slate-700" />
+          <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+            Annuler
+          </Button>
+        </div>
+      )}
 
       {/* ── Modal Import CSV ─────────────────────────────────────────────────── */}
       <Modal
