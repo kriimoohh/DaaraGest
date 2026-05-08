@@ -42,7 +42,7 @@ export async function listerPaiementsEleves(
       skip,
       take: limit,
       include: {
-        eleve: { select: { id: true, nom_fr: true, matricule: true } },
+        eleve: { select: { id: true, nom_fr: true, prenom_fr: true, matricule: true } },
       },
       orderBy: { created_at: 'desc' },
     }),
