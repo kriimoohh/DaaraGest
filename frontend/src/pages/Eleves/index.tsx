@@ -59,6 +59,19 @@ interface EleveFiche extends Eleve {
   inscriptions: Inscription[];
 }
 
+interface ProgressionAnnee {
+  annee_scolaire: { id: string; libelle: string };
+  classe_fr: { nom_fr: string } | null;
+  classe_ar: { nom_fr: string } | null;
+  bulletins: Array<{ filiere: string; moyenne: number | null; rang: number | null; appreciation: string | null }>;
+  absences: { absents: number; presents: number };
+}
+
+interface ProgressionData {
+  eleve: { id: string; nom_fr: string; prenom_fr: string; matricule: string };
+  progression: ProgressionAnnee[];
+}
+
 interface ElevesResponse {
   data: Eleve[];
   total: number;
@@ -173,6 +186,11 @@ export function ElevesPage() {
   const [ficheLoading, setFicheLoading] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [photoSaving, setPhotoSaving] = useState(false);
+
+  // Progression
+  const [progression, setProgression] = useState<ProgressionData | null>(null);
+  const [progressionLoading, setProgressionLoading] = useState(false);
+  const [showProgression, setShowProgression] = useState(false);
 
   // Delete
   const [confirmDelete, setConfirmDelete] = useState<Eleve | null>(null);
@@ -349,6 +367,19 @@ export function ElevesPage() {
       toast.error('Impossible de charger la fiche');
     } finally {
       setFicheLoading(false);
+    }
+  }
+
+  async function loadProgression(eleveId: string) {
+    setProgressionLoading(true);
+    setShowProgression(true);
+    try {
+      const data = await api.get<ProgressionData>(`/api/v1/eleves/${eleveId}/progression`);
+      setProgression(data);
+    } catch {
+      toast.error('Impossible de charger la progression');
+    } finally {
+      setProgressionLoading(false);
     }
   }
 
@@ -677,6 +708,24 @@ export function ElevesPage() {
               <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>
                 ⬆ Importer CSV
               </Button>
+              <Button variant="secondary" onClick={async () => {
+                try {
+                  const params = new URLSearchParams();
+                  if (search) params.set('search', search);
+                  const resp = await fetch(
+                    `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/api/v1/eleves/export-excel?${params}`,
+                    { headers: { Authorization: `Bearer ${useAuthStore.getState().token}` } }
+                  );
+                  if (!resp.ok) throw new Error('Erreur export');
+                  const blob = await resp.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a'); a.href = url; a.download = 'eleves.xlsx'; a.click();
+                  URL.revokeObjectURL(url);
+                  toast.success('Export Excel téléchargé');
+                } catch { toast.error('Erreur lors de l\'export'); }
+              }}>
+                ⬇ Excel
+              </Button>
               <Button onClick={openAdd} icon={<span>+</span>}>
                 {t('eleve.ajouter')}
               </Button>
@@ -979,6 +1028,55 @@ export function ElevesPage() {
                 </div>
               ) : (
                 <p className="text-sm text-slate-400 dark:text-slate-500 italic">Aucune inscription</p>
+              )}
+            </div>
+
+            {/* ── Progression pluriannuelle ── */}
+            <div className="py-5 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                  Progression pluriannuelle
+                </p>
+                <Button size="sm" variant="secondary"
+                  loading={progressionLoading}
+                  onClick={() => {
+                    if (showProgression) { setShowProgression(false); setProgression(null); }
+                    else loadProgression(ficheModal.id);
+                  }}>
+                  {showProgression ? 'Masquer' : 'Afficher la progression'}
+                </Button>
+              </div>
+              {showProgression && progression && (
+                <div className="space-y-2">
+                  {progression.progression.length === 0 ? (
+                    <p className="text-sm text-slate-400 italic">Aucune donnée de progression disponible</p>
+                  ) : progression.progression.map((p, i) => (
+                    <div key={i} className="rounded-xl bg-slate-50 dark:bg-slate-800/60 p-4">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="font-semibold text-slate-800 dark:text-slate-100 text-sm">{p.annee_scolaire.libelle}</span>
+                        <div className="flex gap-2 text-xs">
+                          {p.classe_fr && <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">FR — {p.classe_fr.nom_fr}</span>}
+                          {p.classe_ar && <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">AR — {p.classe_ar.nom_fr}</span>}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-4 text-xs text-slate-600 dark:text-slate-400">
+                        {p.bulletins.map((b, j) => (
+                          <div key={j} className="flex items-center gap-1">
+                            <span className="font-medium">{b.filiere} :</span>
+                            <span className={`font-bold ${b.moyenne !== null && b.moyenne >= 10 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+                              {b.moyenne !== null ? Number(b.moyenne).toFixed(2) : '—'}/20
+                            </span>
+                            {b.rang && <span className="text-slate-400">(rang {b.rang})</span>}
+                          </div>
+                        ))}
+                        {p.bulletins.length === 0 && <span className="italic text-slate-400">Aucun bulletin annuel</span>}
+                        <span className="ms-auto text-slate-400">
+                          {p.absences.absents > 0 ? `⚠ ${p.absences.absents} abs.` : ''}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
 

@@ -23,7 +23,8 @@
     "matieres": "المواد",
     "utilisateurs": "المستخدمون",
     "parametres": "الإعدادات",
-    "pointage": "الحضور"
+    "pointage": "الحضور",
+    "absences": "غيابات التلاميذ"
   },
   "theme": {
     "light": "الوضع الفاتح",
@@ -184,6 +185,18 @@
     "reset_mdp": "إعادة تعيين كلمة المرور",
     "ajouter": "إضافة مستخدم",
     "desactiver": "تعطيل المستخدم"
+  },
+  "absences": {
+    "titre": "غيابات التلاميذ",
+    "present": "حاضر",
+    "absent": "غائب",
+    "retard": "متأخر",
+    "dispense": "معفى",
+    "justifiee": "مبررة",
+    "non_justifiee": "غير مبررة",
+    "motif": "السبب",
+    "progression": "التطور",
+    "taux_presence": "نسبة الحضور"
   },
   "pointage": {
     "titre": "حضور الأساتذة",

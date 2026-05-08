@@ -23,7 +23,8 @@
     "matieres": "Matières",
     "utilisateurs": "Utilisateurs",
     "parametres": "Paramètres",
-    "pointage": "Pointage"
+    "pointage": "Pointage",
+    "absences": "Absences élèves"
   },
   "theme": {
     "light": "Mode clair",
@@ -184,6 +185,18 @@
     "reset_mdp": "Réinitialiser le mot de passe",
     "ajouter": "Ajouter un utilisateur",
     "desactiver": "Désactiver l'utilisateur"
+  },
+  "absences": {
+    "titre": "Absences des élèves",
+    "present": "Présent",
+    "absent": "Absent",
+    "retard": "Retard",
+    "dispense": "Dispensé",
+    "justifiee": "Justifiée",
+    "non_justifiee": "Non justifiée",
+    "motif": "Motif",
+    "progression": "Progression",
+    "taux_presence": "Taux de présence"
   },
   "pointage": {
     "titre": "Pointage des professeurs",

@@ -26,6 +26,9 @@ interface NoteDetail {
 }
 
 interface DetailBulletin extends Bulletin {
+  observation_fr: string | null;
+  observation_ar: string | null;
+  observation_prof: string | null;
   eleve: Bulletin['eleve'] & {
     inscriptions: { classe_fr: { nom_fr: string } | null; classe_ar: { nom_fr: string } | null; }[];
   };
@@ -447,7 +450,7 @@ export function BulletinsPage() {
         {loadingDetail && (
           <div className="py-16 text-center text-slate-400 dark:text-slate-500 text-sm">Chargement…</div>
         )}
-        {detail && !loadingDetail && <BulletinDetailContent detail={detail} downloading={downloading} onDownload={downloadPdf} onClose={() => setDetail(null)} />}
+        {detail && !loadingDetail && <BulletinDetailContent detail={detail} downloading={downloading} onDownload={downloadPdf} onClose={() => setDetail(null)} api={api} />}
       </Modal>
     </div>
   );
@@ -542,14 +545,36 @@ function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere
 }
 
 function BulletinDetailContent({
-  detail, downloading, onDownload, onClose,
+  detail, downloading, onDownload, onClose, api,
 }: {
   detail: DetailBulletin;
   downloading: string | null;
   onDownload: (b: DetailBulletin) => void;
   onClose: () => void;
+  api: ReturnType<typeof useApi>;
 }) {
   const { t } = useTranslation();
+  const { user } = useAuthStore();
+  const [obsFr, setObsFr] = useState(detail.observation_fr ?? '');
+  const [obsAr, setObsAr] = useState(detail.observation_ar ?? '');
+  const [obsProf, setObsProf] = useState(detail.observation_prof ?? '');
+  const [savingObs, setSavingObs] = useState(false);
+  const canEditObs = ['admin', 'directeur', 'professeur'].includes(user?.role ?? '');
+
+  const saveObservations = async () => {
+    setSavingObs(true);
+    try {
+      await api.patch(`/api/v1/bulletins/${detail.id}/observation`, {
+        observation_fr: obsFr || undefined,
+        observation_ar: obsAr || undefined,
+        observation_prof: obsProf || undefined,
+      });
+      toast.success('Observations enregistrées');
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    } finally { setSavingObs(false); }
+  };
+
   const moy = detail.moyenne !== null ? Number(detail.moyenne) : null;
   const isAnnuel = detail.periode === 0;
   const filieres: ('FR' | 'AR')[] = detail.filiere === 'COMBINE' ? ['FR', 'AR'] : [detail.filiere as 'FR' | 'AR'];
@@ -618,6 +643,59 @@ function BulletinDetailContent({
             </div>
           );
         })}
+      </div>
+
+      {/* Observations */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div className="px-4 py-2 text-xs font-semibold border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+          Observations
+        </div>
+        <div className="p-4 space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Observation du directeur (Français)</label>
+            <textarea
+              value={obsFr}
+              onChange={e => setObsFr(e.target.value)}
+              readOnly={!canEditObs}
+              rows={2}
+              maxLength={500}
+              placeholder={canEditObs ? "Saisir une observation…" : "Aucune observation"}
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none disabled:opacity-60"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">ملاحظة المدير (العربية)</label>
+            <textarea
+              value={obsAr}
+              onChange={e => setObsAr(e.target.value)}
+              readOnly={!canEditObs}
+              rows={2}
+              maxLength={500}
+              dir="rtl"
+              placeholder={canEditObs ? "أدخل ملاحظة…" : "لا توجد ملاحظة"}
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none disabled:opacity-60"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Observation du professeur</label>
+            <textarea
+              value={obsProf}
+              onChange={e => setObsProf(e.target.value)}
+              readOnly={!canEditObs}
+              rows={2}
+              maxLength={500}
+              placeholder={canEditObs ? "Saisir une observation du professeur…" : "Aucune observation"}
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none disabled:opacity-60"
+            />
+          </div>
+          {canEditObs && (
+            <div className="flex justify-end">
+              <Button size="sm" onClick={saveObservations} loading={savingObs}>
+                Enregistrer les observations
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Actions */}
