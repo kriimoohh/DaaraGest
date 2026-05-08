@@ -547,8 +547,7 @@ export function ClassesPage() {
 
   return (
     <>
-    <div className="p-6">
-      <PageHeader
+    <PageHeader
         title="Classes"
         subtitle="Gestion des classes et sections"
         action={
@@ -559,12 +558,12 @@ export function ClassesPage() {
       />
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
+        <div style={{ padding: '12px 14px', background: 'var(--danger-soft)', borderRadius: 'var(--r-md)', fontSize: 13, color: 'var(--danger-text)', marginBottom: 16 }}>
           {error}
         </div>
       )}
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="filter-row">
         <div className="w-48">
           <Select
             options={[
@@ -621,7 +620,7 @@ export function ClassesPage() {
         title={editTarget ? 'Modifier la classe' : 'Ajouter une classe'}
         size="md"
       >
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <Input
             label={t('common.nom_fr')}
             value={form.nom_fr}
@@ -629,7 +628,7 @@ export function ClassesPage() {
             error={formErrors.nom_fr}
           />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid-2">
             <Select
               label={t('classe.filiere')}
               value={form.filiere}
@@ -649,7 +648,7 @@ export function ClassesPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid-2">
             <Input
               label={t('classe.capacite')}
               type="number"
@@ -678,7 +677,6 @@ export function ClassesPage() {
           </div>
         </div>
       </Modal>
-    </div>
 
     <ConfirmModal
       isOpen={!!confirmDelete}

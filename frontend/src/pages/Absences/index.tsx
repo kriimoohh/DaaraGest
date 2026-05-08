@@ -461,13 +461,13 @@ export function AbsencesPage() {
   ];
 
   return (
-    <div className="space-y-5">
+    <>
       <PageHeader title="Absences des élèves" />
 
-      <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700">
+      <div className="tabs" style={{ marginBottom: 16 }}>
         {TABS.map(tb => (
           <button key={tb.key} onClick={() => setTab(tb.key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === tb.key ? 'border-[#10B981] text-[#10B981]' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>
+            className={`tab${tab === tb.key ? ' active' : ''}`}>
             {tb.label}
           </button>
         ))}
@@ -476,6 +476,6 @@ export function AbsencesPage() {
       {tab === 'saisie'     && <SaisieJour api={api} />}
       {tab === 'historique' && <Historique api={api} />}
       {tab === 'stats'      && <Statistiques api={api} />}
-    </div>
+    </>
   );
 }

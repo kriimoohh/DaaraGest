@@ -7,12 +7,14 @@ interface Props {
 export function ComingSoon({ pageKey }: Props) {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-col items-center justify-center h-64 gap-4 text-center">
-      <div className="text-5xl">🚧</div>
-      <h2 className="text-xl font-semibold text-slate-700 dark:text-slate-300">
+    <div className="empty" style={{ height: 260, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+      <svg width={40} height={40} viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--text-4)' }}>
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+      </svg>
+      <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 500, letterSpacing: '-0.01em', margin: 0 }}>
         {t(`nav.${pageKey}`)}
       </h2>
-      <p className="text-slate-500 dark:text-slate-400 text-sm">Module en cours de développement</p>
+      <p style={{ fontSize: 13, color: 'var(--text-3)' }}>Module en cours de développement</p>
     </div>
   );
 }

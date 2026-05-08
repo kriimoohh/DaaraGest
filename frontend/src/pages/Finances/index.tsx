@@ -258,7 +258,7 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
       <Pagination page={page} total={total} limit={20} onChange={setPage} />
 
       <Modal isOpen={modal} onClose={() => setModal(false)} title={t('finance.nouveau_paiement_prof')} size="md">
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <Select label={t('professeur.titre')} value={form.professeur_id}
             onChange={(e) => {
               const profId = e.target.value;
@@ -270,12 +270,12 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
               setForm(f => ({ ...f, professeur_id: profId, montant_brut: brut, retenues, net_a_payer: net }));
             }}
             options={[{ value: '', label: t('common.selectionner') }, ...profs.filter(p => p.professeur).map(p => ({ value: p.professeur!.id, label: p.nom_fr }))]} />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid-2">
             <Select label={t('common.mois')} value={form.mois} onChange={(e) => setForm(f => ({ ...f, mois: e.target.value }))}
               options={MOIS.map((m, i) => ({ value: String(i + 1), label: m }))} />
             <Input label={t('common.annee')} type="number" value={form.annee} onChange={(e) => setForm(f => ({ ...f, annee: e.target.value }))} />
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid-3">
             <Input label={t('finance.montant_brut')} type="number" value={form.montant_brut}
               onChange={(e) => { const v = e.target.value; const net = v && form.retenues ? String(parseFloat(v) - (parseFloat(form.retenues)||0)) : v; setForm(f => ({ ...f, montant_brut: v, net_a_payer: net })); }} />
             <Input label={t('finance.retenues')} type="number" value={form.retenues}
@@ -457,7 +457,7 @@ export function FinancesPage() {
   };
 
   return (
-    <div className="space-y-5">
+    <>
       <PageHeader title={t('finance.titre')} />
 
       {/* Stats */}
@@ -634,25 +634,25 @@ export function FinancesPage() {
 
       {/* Modal création paiement — multi-élèves */}
       <Modal isOpen={modal} onClose={() => setModal(false)} title={t('finance.nouveau_paiement')} size="lg">
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <EleveSearchPicker
             eleves={allEleves}
             selected={selectedEleves}
             onChange={setSelectedEleves}
           />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid-2">
             <Select label={t('finance.type')} value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
               options={TYPES_PAIEMENT} />
             <Input label={`${t('finance.montant')} (FCFA)`} type="number" value={form.montant}
               onChange={e => setForm(f => ({ ...f, montant: e.target.value }))} placeholder="0" />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid-2">
             <Select label={t('common.mois')} value={form.mois} onChange={e => setForm(f => ({ ...f, mois: e.target.value }))}
               options={MOIS.map((m, i) => ({ value: String(i+1), label: m }))} />
             <Input label={t('common.annee')} type="number" value={form.annee}
               onChange={e => setForm(f => ({ ...f, annee: e.target.value }))} />
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 italic">{t('finance.recu_auto')}</p>
+          <p className="muted" style={{ fontSize: 12, fontStyle: 'italic' }}>{t('finance.recu_auto')}</p>
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="secondary" onClick={() => setModal(false)}>{t('actions.annuler')}</Button>
             <Button onClick={handleSave} loading={saving} disabled={selectedEleves.length === 0}>
@@ -665,18 +665,18 @@ export function FinancesPage() {
       {/* Modal édition paiement (admin) */}
       <Modal isOpen={!!editTarget} onClose={() => setEditTarget(null)} title="Modifier le paiement" size="md">
         {editTarget && (
-          <div className="space-y-4">
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Élève : <span className="font-medium text-slate-900 dark:text-white">{editTarget.eleve.prenom_fr} {editTarget.eleve.nom_fr}</span>
-              <span className="font-mono text-xs text-slate-400 ml-2">({editTarget.eleve.matricule})</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
+              Élève : <strong style={{ color: 'var(--text)' }}>{editTarget.eleve.prenom_fr} {editTarget.eleve.nom_fr}</strong>
+              <span className="font-mono" style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 8 }}>({editTarget.eleve.matricule})</span>
             </p>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid-2">
               <Select label={t('finance.type')} value={editForm.type} onChange={e => setEditForm(f => ({ ...f, type: e.target.value }))}
                 options={TYPES_PAIEMENT} />
               <Input label={`${t('finance.montant')} (FCFA)`} type="number" value={editForm.montant}
                 onChange={e => setEditForm(f => ({ ...f, montant: e.target.value }))} />
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid-3">
               <Select label={t('common.mois')} value={editForm.mois} onChange={e => setEditForm(f => ({ ...f, mois: e.target.value }))}
                 options={[{ value: '', label: '—' }, ...MOIS.map((m, i) => ({ value: String(i+1), label: m }))]} />
               <Input label={t('common.annee')} type="number" value={editForm.annee}
@@ -701,6 +701,6 @@ export function FinancesPage() {
         title="Supprimer le paiement"
         message={deleteTarget ? `Supprimer le paiement de ${formatMontant(deleteTarget.montant)} pour ${deleteTarget.eleve.prenom_fr} ${deleteTarget.eleve.nom_fr} ? Cette action est irréversible.` : ''}
       />
-    </div>
+    </>
   );
 }

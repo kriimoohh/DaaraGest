@@ -258,12 +258,12 @@ export function BulletinsPage() {
   const sortedBulletins = [...bulletins].sort((a, b) => (a.rang ?? 999) - (b.rang ?? 999));
 
   return (
-    <div className="space-y-6">
+    <>
       <PageHeader title={t('bulletin.titre')} />
 
       {/* Filtres */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-4">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="card-pad" style={{ marginBottom: 16 }}>
+        <div className="grid-4" style={{ marginBottom: 12 }}>
           <Select label={t('classe.annee_scolaire')}
             value={anneeId} onChange={(e) => { setAnneeId(e.target.value); setClasseId(''); setBulletins([]); }}
             options={[{ value: '', label: t('common.selectionner') }, ...annees.map(a => ({ value: a.id, label: a.libelle }))]}
@@ -452,7 +452,7 @@ export function BulletinsPage() {
         )}
         {detail && !loadingDetail && <BulletinDetailContent detail={detail} downloading={downloading} onDownload={downloadPdf} onClose={() => setDetail(null)} api={api} />}
       </Modal>
-    </div>
+    </>
   );
 }
 

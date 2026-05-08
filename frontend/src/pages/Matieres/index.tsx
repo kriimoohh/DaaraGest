@@ -117,7 +117,7 @@ export function MatieresPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <>
       <PageHeader
         title="Matières"
         subtitle="Gérer les matières FR et AR"
@@ -134,7 +134,7 @@ export function MatieresPage() {
         </div>
       </div>
 
-      <div className="flex gap-3">
+      <div className="filter-row">
         <Select
           value={filiere}
           onChange={(e) => setFiliere(e.target.value)}
@@ -188,8 +188,8 @@ export function MatieresPage() {
       </div>
 
       <Modal isOpen={modal} onClose={() => setModal(false)} title={edit ? 'Modifier la matière' : 'Nouvelle matière'} size="md">
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="grid-2">
             <Input
               label={t('common.nom_fr')}
               value={form.nom_fr}
@@ -204,7 +204,7 @@ export function MatieresPage() {
               dir="rtl"
             />
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid-4">
             <Select
               label={t('classe.filiere')}
               value={form.filiere}
@@ -258,6 +258,6 @@ export function MatieresPage() {
         loading={deleting}
         message={`Désactiver la matière "${confirm?.nom_fr}" ?`}
       />
-    </div>
+    </>
   );
 }

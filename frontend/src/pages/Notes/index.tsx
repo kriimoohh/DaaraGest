@@ -105,11 +105,11 @@ export function NotesPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <>
       <PageHeader title={t('note.saisie')} />
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="card-pad" style={{ marginBottom: 16 }}>
+        <div className="grid-4">
           <Select
             label={t('classe.annee_scolaire')}
             value={anneeId}
@@ -140,8 +140,8 @@ export function NotesPage() {
       </div>
 
       {classeId && matiereId && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-          <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <div className="card">
+          <div className="card-hd" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
             <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
               {eleves.length} élève(s)
             </span>
@@ -223,6 +223,6 @@ export function NotesPage() {
           )}
         </div>
       )}
-    </div>
+    </>
   );
 }
