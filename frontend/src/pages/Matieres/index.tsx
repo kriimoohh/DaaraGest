@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { useApi } from '../../hooks/useApi';
+import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
@@ -27,6 +28,7 @@ const EMPTY = { nom_fr: '', nom_ar: '', filiere: 'FR', coeff_defaut: '1', note_m
 export function MatieresPage() {
   const { t } = useTranslation();
   const api = useApi();
+  const isAdmin = useAuthStore(s => s.user?.role === 'admin');
   const [matieres, setMatieres] = useState<Matiere[]>([]);
   const [filiere, setFiliere] = useState('');
   const [loading, setLoading] = useState(false);
@@ -165,7 +167,7 @@ export function MatieresPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <Button size="sm" variant="ghost" onClick={() => openEdit(m)}>{t('actions.modifier')}</Button>
-                      <Button size="sm" variant="danger" onClick={() => setConfirm(m)}>{t('actions.supprimer')}</Button>
+                      {isAdmin && <Button size="sm" variant="danger" onClick={() => setConfirm(m)}>{t('actions.supprimer')}</Button>}
                     </div>
                   </td>
                 </tr>

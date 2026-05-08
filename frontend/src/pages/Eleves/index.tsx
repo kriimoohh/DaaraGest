@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Papa from 'papaparse';
 import { useApi } from '../../hooks/useApi';
+import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { PageHeader } from '../../components/ui/PageHeader';
@@ -129,6 +130,7 @@ function FicheRow({ label, value }: { label: string; value: React.ReactNode }) {
 
 export function ElevesPage() {
   const { t } = useTranslation();
+  const isAdmin = useAuthStore(s => s.user?.role === 'admin');
   const SEXE_OPTIONS = [
     { value: 'M', label: t('eleve.masculin') },
     { value: 'F', label: t('eleve.feminin') },
@@ -516,7 +518,7 @@ export function ElevesPage() {
             </Button>
             <Button size="sm" variant="ghost" onClick={() => openEdit(e)}>{t('actions.modifier')}</Button>
             <Button size="sm" variant="secondary" onClick={() => openInscription(e)}>{t('actions.inscrire')}</Button>
-            <Button size="sm" variant="danger" onClick={() => setConfirmDelete(e)}>{t('actions.supprimer')}</Button>
+            {isAdmin && <Button size="sm" variant="danger" onClick={() => setConfirmDelete(e)}>{t('actions.supprimer')}</Button>}
           </div>
         );
       },
@@ -966,9 +968,11 @@ export function ElevesPage() {
           <Button size="sm" variant="secondary" onClick={openBulkInscription}>
             Inscrire
           </Button>
-          <Button size="sm" variant="danger" onClick={() => setConfirmBulkDelete(true)}>
-            Désactiver
-          </Button>
+          {isAdmin && (
+            <Button size="sm" variant="danger" onClick={() => setConfirmBulkDelete(true)}>
+              Désactiver
+            </Button>
+          )}
           <div className="w-px h-5 bg-slate-200 dark:bg-slate-700" />
           <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
             Annuler

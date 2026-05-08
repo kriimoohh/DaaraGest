@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { useApi } from '../../hooks/useApi';
+import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
@@ -22,6 +23,7 @@ const EMPTY = { libelle: '', date_debut: '', date_fin: '' };
 export function AnneeScolairesPage() {
   const { t } = useTranslation();
   const api = useApi();
+  const isAdmin = useAuthStore(s => s.user?.role === 'admin');
   const [annees, setAnnees] = useState<AnneeScolaire[]>([]);
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState(false);
@@ -157,7 +159,7 @@ export function AnneeScolairesPage() {
                         </Button>
                       )}
                       <Button size="sm" variant="ghost" onClick={() => openEdit(a)}>{t('actions.modifier')}</Button>
-                      <Button size="sm" variant="danger" onClick={() => setConfirm(a)}>{t('actions.supprimer')}</Button>
+                      {isAdmin && <Button size="sm" variant="danger" onClick={() => setConfirm(a)}>{t('actions.supprimer')}</Button>}
                     </div>
                   </td>
                 </tr>

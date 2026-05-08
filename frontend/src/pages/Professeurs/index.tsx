@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback } from 'react';
 import { useApi } from '../../hooks/useApi';
+import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { PageHeader } from '../../components/ui/PageHeader';
@@ -68,6 +69,7 @@ function validate(form: ProfesseurFormData, isEdit: boolean): FormErrors {
 export function ProfesseursPage() {
   const { t } = useTranslation();
   const api = useApi();
+  const isAdmin = useAuthStore(s => s.user?.role === 'admin');
 
   const [profs, setProfs] = useState<Professeur[]>([]);
   const [total, setTotal] = useState(0);
@@ -200,7 +202,7 @@ export function ProfesseursPage() {
         return (
           <>
             <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>{t('actions.modifier')}</Button>
-            <Button size="sm" variant="danger" onClick={() => setConfirmDelete(p)}>{t('actions.supprimer')}</Button>
+            {isAdmin && <Button size="sm" variant="danger" onClick={() => setConfirmDelete(p)}>{t('actions.supprimer')}</Button>}
           </>
         );
       },
