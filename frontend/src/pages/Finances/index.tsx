@@ -573,7 +573,7 @@ export function FinancesPage() {
                     <tbody>
                       {reliquats.map(r => (
                         <tr key={r.eleve.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-red-50/50 dark:hover:bg-red-900/10">
-                          <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{r.eleve.nom_fr}</td>
+                          <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{r.eleve.prenom_fr} {r.eleve.nom_fr}</td>
                           <td className="px-4 py-3 font-mono text-xs text-slate-500">{r.eleve.matricule}</td>
                           <td className="px-4 py-3"><Badge label={String(r.nb_mois_dus)} variant="error" /></td>
                           <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400">
