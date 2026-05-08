@@ -620,11 +620,11 @@ export function ElevesPage() {
     setImporting(true);
     try {
       const rows = importRows.map(r => ({
-        matricule:        col(r, 'MATRICULE', 'matricule') || undefined,
         nom_fr:           col(r, 'NOM', 'nom_fr', 'Nom'),
         prenom_fr:        col(r, 'PRENOM(S)', 'PRENOMS', 'prenom_fr', 'Prénom', 'PRENOM'),
         date_naissance:   convertDate(col(r, 'DATE_NAISSANCE', 'date_naissance', 'Date de naissance', 'DATE NAISSANCE')),
         sexe:             (col(r, 'SEXE', 'sexe', 'Sexe') || 'M') as 'M' | 'F',
+        lieu_naissance:   col(r, 'LIEU_NAISSANCE', 'lieu_naissance', 'Lieu de naissance', 'LIEU NAISSANCE') || undefined,
         parent_nom_fr:    col(r, 'parent_nom_fr', 'Parent', 'PARENT', 'NOM_PARENT') || undefined,
         parent_lien:      col(r, 'parent_lien', 'LIEN', 'lien') || 'pere',
         parent_telephone: col(r, 'parent_telephone', 'Téléphone', 'TELEPHONE', 'TEL') || undefined,
@@ -1133,9 +1133,9 @@ export function ElevesPage() {
               <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-700 dark:text-blue-300">
                 <p className="font-semibold mb-1">Format attendu — colonnes CSV :</p>
                 <code className="text-xs block bg-blue-100 dark:bg-blue-900/40 p-2 rounded mt-1">
-                  nom_fr, prenom_fr, date_naissance, sexe, parent_nom_fr, parent_lien, parent_telephone
+                  nom_fr, prenom_fr, date_naissance, sexe, lieu_naissance, parent_nom_fr, parent_lien, parent_telephone
                 </code>
-                <p className="mt-2 text-xs opacity-80">sexe: M ou F · parent_lien: pere, mere ou tuteur · date_naissance: YYYY-MM-DD</p>
+                <p className="mt-2 text-xs opacity-80">sexe: M ou F · parent_lien: pere, mere ou tuteur · date_naissance: YYYY-MM-DD · lieu_naissance: optionnel</p>
               </div>
               <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-auto max-h-64">
                 <table className="w-full text-xs">
