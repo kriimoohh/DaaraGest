@@ -42,7 +42,7 @@ export async function login(identifiant: string, mot_de_passe: string) {
       theme: utilisateur.theme,
       role: utilisateur.role.libelle_fr,
       etablissement_id: utilisateur.etablissement_id,
-      doit_changer_mdp: utilisateur.doit_changer_mdp,
+      must_change_password: utilisateur.must_change_password,
     },
   };
 }
@@ -57,21 +57,10 @@ export async function changePassword(id: string, ancien: string, nouveau: string
   if (!valid) throw new Error('Mot de passe actuel incorrect');
   if (nouveau.length < 8) throw new Error('Le nouveau mot de passe doit contenir au moins 8 caractères');
   const hash = await bcrypt.hash(nouveau, 10);
-  const updated = await prisma.utilisateur.update({
+  await prisma.utilisateur.update({
     where: { id },
-    data: { mot_de_passe: hash, doit_changer_mdp: false },
-    include: { role: true },
+    data: { mot_de_passe: hash, must_change_password: false },
   });
-
-  const payload: JwtPayload = {
-    id: updated.id,
-    role: updated.role.libelle_fr,
-    etablissement_id: updated.etablissement_id,
-    langue: updated.langue,
-    theme: updated.theme,
-    doit_changer_mdp: false,
-  };
-  return { payload };
 }
 
 export async function updateProfil(id: string, data: { nom_fr?: string; langue?: string; theme?: string }) {

@@ -4,6 +4,7 @@ import { eleveSchema, inscriptionSchema } from './eleves.schema';
 import {
   listerEleves,
   getEleve,
+  getProgressionEleve,
   creerEleve,
   modifierEleve,
   supprimerEleve,
@@ -43,6 +44,36 @@ export async function getHandler(
   try {
     const data = await getEleve(id, etablissement_id);
     return reply.send(data);
+  } catch (err) {
+    return reply.status(404).send({ error: (err as Error).message });
+  }
+}
+
+export async function exportExcelHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { search, classe_id, actif, sexe } = request.query as Record<string, string | undefined>;
+  try {
+    const { data } = await listerEleves(
+      etablissement_id, 1, 10000, search, classe_id,
+      actif !== undefined ? actif === 'true' : undefined,
+      sexe, 'nom_fr', 'asc',
+    );
+    const { exportElevesExcel } = await import('../../utils/excel');
+    const buffer = await exportElevesExcel(data);
+    reply
+      .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      .header('Content-Disposition', 'attachment; filename="eleves.xlsx"')
+      .send(buffer);
+  } catch (err) {
+    return reply.status(500).send({ error: (err as Error).message });
+  }
+}
+
+export async function progressionHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { id } = request.params as { id: string };
+  try {
+    return reply.send(await getProgressionEleve(id, etablissement_id));
   } catch (err) {
     return reply.status(404).send({ error: (err as Error).message });
   }
