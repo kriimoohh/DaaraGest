@@ -1,5 +1,5 @@
 import prisma from '../../config/database';
-import { PaiementEleveInput, PaiementProfesseurInput } from './finances.schema';
+import { PaiementEleveInput, BulkPaiementEleveInput, UpdatePaiementEleveInput, PaiementProfesseurInput } from './finances.schema';
 
 function genererRecu(): string {
   const now = new Date();
@@ -67,6 +67,59 @@ export async function creerPaiementEleve(etablissement_id: string, data: Paiemen
     },
     include: { eleve: true },
   });
+}
+
+export async function bulkCreerPaiementEleve(etablissement_id: string, data: BulkPaiementEleveInput) {
+  const eleves = await prisma.eleve.findMany({
+    where: { id: { in: data.eleve_ids }, etablissement_id },
+    select: { id: true },
+  });
+  if (eleves.length === 0) throw new Error('Aucun élève valide trouvé');
+
+  const created = await Promise.all(
+    eleves.map(e =>
+      prisma.paiementEleve.create({
+        data: {
+          eleve_id: e.id,
+          inscription_id: data.inscription_id,
+          type: data.type,
+          montant: data.montant,
+          mois: data.mois,
+          annee: data.annee,
+          recu_numero: genererRecu(),
+        },
+        include: { eleve: { select: { id: true, nom_fr: true, matricule: true } } },
+      })
+    )
+  );
+  return { count: created.length, paiements: created };
+}
+
+export async function modifierPaiementEleve(id: string, etablissement_id: string, data: UpdatePaiementEleveInput) {
+  const existing = await prisma.paiementEleve.findFirst({
+    where: { id, eleve: { etablissement_id } },
+  });
+  if (!existing) throw new Error('Paiement introuvable');
+
+  return prisma.paiementEleve.update({
+    where: { id },
+    data: {
+      ...(data.type !== undefined && { type: data.type }),
+      ...(data.montant !== undefined && { montant: data.montant }),
+      ...(data.mois !== undefined && { mois: data.mois }),
+      ...(data.annee !== undefined && { annee: data.annee }),
+      ...(data.statut !== undefined && { statut: data.statut }),
+    },
+    include: { eleve: { select: { id: true, nom_fr: true, matricule: true } } },
+  });
+}
+
+export async function supprimerPaiementEleve(id: string, etablissement_id: string) {
+  const existing = await prisma.paiementEleve.findFirst({
+    where: { id, eleve: { etablissement_id } },
+  });
+  if (!existing) throw new Error('Paiement introuvable');
+  await prisma.paiementEleve.delete({ where: { id } });
 }
 
 export async function listerPaiementsProfesseurs(
