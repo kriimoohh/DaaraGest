@@ -59,33 +59,33 @@ function moyenneVariant(m: number | null): 'success' | 'error' | 'warning' | 'ne
   return 'error';
 }
 
-function moyenneClass(m: number | null) {
-  if (m === null) return 'text-slate-400 dark:text-slate-500';
-  if (m >= 14) return 'text-emerald-600 dark:text-emerald-400';
-  if (m >= 10) return 'text-amber-600 dark:text-amber-400';
-  return 'text-red-600 dark:text-red-400';
+function moyenneColor(m: number | null): string {
+  if (m === null) return 'var(--text-4)';
+  if (m >= 14) return 'var(--success)';
+  if (m >= 10) return 'var(--warning)';
+  return 'var(--danger)';
 }
 
 function filiereChip(f: string) {
-  const map: Record<string, { bg: string; text: string; label: string }> = {
-    FR:      { bg: 'bg-blue-100 dark:bg-blue-900/40',    text: 'text-blue-700 dark:text-blue-300',    label: 'FR' },
-    AR:      { bg: 'bg-amber-100 dark:bg-amber-900/40',  text: 'text-amber-700 dark:text-amber-300',  label: 'AR' },
-    COMBINE: { bg: 'bg-emerald-100 dark:bg-emerald-900/40', text: 'text-emerald-700 dark:text-emerald-300', label: 'FR+AR' },
+  const map: Record<string, { bg: string; color: string; label: string }> = {
+    FR:      { bg: '#dbeafe', color: '#1d4ed8', label: 'FR' },
+    AR:      { bg: '#fef3c7', color: '#b45309', label: 'AR' },
+    COMBINE: { bg: '#d1fae5', color: '#065f46', label: 'FR+AR' },
   };
-  const s = map[f] ?? { bg: 'bg-slate-100 dark:bg-slate-700', text: 'text-slate-600 dark:text-slate-400', label: f };
+  const s = map[f] ?? { bg: 'var(--bg-2)', color: 'var(--text-3)', label: f };
   return (
-    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${s.bg} ${s.text}`}>
+    <span style={{ display: 'inline-block', padding: '1px 8px', borderRadius: 999, fontSize: 12, fontWeight: 600, background: s.bg, color: s.color }}>
       {s.label}
     </span>
   );
 }
 
 function RangMedal({ rang }: { rang: number | null }) {
-  if (rang === null) return <span className="text-slate-400 dark:text-slate-500">—</span>;
-  if (rang === 1) return <span className="text-amber-500 font-bold text-base">🥇 1er</span>;
-  if (rang === 2) return <span className="text-slate-500 font-bold">🥈 2ème</span>;
-  if (rang === 3) return <span className="text-amber-700 font-bold">🥉 3ème</span>;
-  return <span className="font-semibold text-slate-700 dark:text-slate-300">{rang}ème</span>;
+  if (rang === null) return <span style={{ color: 'var(--text-4)' }}>—</span>;
+  if (rang === 1) return <span style={{ color: '#f59e0b', fontWeight: 700, fontSize: 15 }}>🥇 1er</span>;
+  if (rang === 2) return <span style={{ color: 'var(--text-3)', fontWeight: 700 }}>🥈 2ème</span>;
+  if (rang === 3) return <span style={{ color: '#b45309', fontWeight: 700 }}>🥉 3ème</span>;
+  return <span style={{ fontWeight: 600, color: 'var(--text-2)' }}>{rang}ème</span>;
 }
 
 function ClasseStats({ bulletins }: { bulletins: Bulletin[] }) {
@@ -98,28 +98,28 @@ function ClasseStats({ bulletins }: { bulletins: Bulletin[] }) {
   const reussite = avecMoy.filter(b => Number(b.moyenne!) >= 10).length;
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-center">
-        <div className={`text-2xl font-bold ${moyenneClass(moyClasse)}`}>
+    <div className="grid-4" style={{ marginBottom: 16 }}>
+      <div className="card" style={{ padding: 16, textAlign: 'center' }}>
+        <div style={{ fontSize: 22, fontWeight: 700, color: moyenneColor(moyClasse) }}>
           {moyClasse.toFixed(2)}
         </div>
-        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Moyenne classe</div>
+        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>Moyenne classe</div>
       </div>
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-center">
-        <div className="text-2xl font-bold text-slate-800 dark:text-white">{bulletins.length}</div>
-        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Élèves</div>
+      <div className="card" style={{ padding: 16, textAlign: 'center' }}>
+        <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>{bulletins.length}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>Élèves</div>
       </div>
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-center">
-        <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+      <div className="card" style={{ padding: 16, textAlign: 'center' }}>
+        <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--success)' }}>
           {avecMoy.length > 0 ? Math.round((reussite / avecMoy.length) * 100) : 0}%
         </div>
-        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Taux de réussite</div>
+        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>Taux de réussite</div>
       </div>
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-center">
-        <div className="text-sm font-semibold text-amber-600 dark:text-amber-400 truncate">
+      <div className="card" style={{ padding: 16, textAlign: 'center' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--warning)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {meilleur ? `${meilleur.eleve.prenom_fr} ${meilleur.eleve.nom_fr}` : '—'}
         </div>
-        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">1er de classe</div>
+        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>1er de classe</div>
       </div>
     </div>
   );
@@ -285,7 +285,7 @@ export function BulletinsPage() {
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="filter-row">
           <Button variant="secondary" onClick={charger} loading={loading} disabled={!anneeId}>
             {t('bulletin.charger')}
           </Button>
@@ -299,16 +299,28 @@ export function BulletinsPage() {
           )}
 
           {bulletins.length > 0 && (
-            <div className="ms-auto flex rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden">
+            <div style={{ marginInlineStart: 'auto', display: 'flex', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
               <button
                 onClick={() => setView('cards')}
-                className={`px-3 py-1.5 text-sm transition-colors ${view === 'cards' ? 'bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                style={{
+                  padding: '4px 12px', fontSize: 13,
+                  background: view === 'cards' ? 'var(--text)' : 'transparent',
+                  color: view === 'cards' ? 'var(--bg)' : 'var(--text-3)',
+                  fontWeight: view === 'cards' ? 600 : 400,
+                  border: 'none', cursor: 'pointer',
+                }}
               >
                 ▦ Cartes
               </button>
               <button
                 onClick={() => setView('table')}
-                className={`px-3 py-1.5 text-sm transition-colors ${view === 'table' ? 'bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                style={{
+                  padding: '4px 12px', fontSize: 13,
+                  background: view === 'table' ? 'var(--text)' : 'transparent',
+                  color: view === 'table' ? 'var(--bg)' : 'var(--text-3)',
+                  fontWeight: view === 'table' ? 600 : 400,
+                  border: 'none', cursor: 'pointer',
+                }}
               >
                 ☰ Tableau
               </button>
@@ -322,61 +334,62 @@ export function BulletinsPage() {
 
       {/* Vue cartes */}
       {bulletins.length > 0 && view === 'cards' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid-4">
           {sortedBulletins.map(b => {
             const moy = b.moyenne !== null ? Number(b.moyenne) : null;
+            const barColor = moy === null ? 'var(--border)' : moy >= 14 ? 'var(--success)' : moy >= 10 ? 'var(--warning)' : 'var(--danger)';
             return (
-              <div key={b.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              <div key={b.id} className="card" style={{ overflow: 'hidden' }}>
                 {/* Barre de couleur selon la moyenne */}
-                <div className={`h-1.5 w-full ${moy === null ? 'bg-slate-300 dark:bg-slate-600' : moy >= 14 ? 'bg-emerald-500' : moy >= 10 ? 'bg-amber-500' : 'bg-red-500'}`} />
+                <div style={{ height: 6, background: barColor }} />
 
-                <div className="p-4 space-y-3">
+                <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {/* En-tête élève */}
-                  <div className="flex items-start justify-between gap-2">
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                     <div>
-                      <div className="font-semibold text-slate-900 dark:text-white text-sm leading-tight">
+                      <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: 13, lineHeight: 1.3 }}>
                         {b.eleve.prenom_fr} {b.eleve.nom_fr}
                       </div>
-                      <div className="text-xs font-mono text-slate-400 dark:text-slate-500 mt-0.5">{b.eleve.matricule}</div>
+                      <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-4)', marginTop: 2 }}>{b.eleve.matricule}</div>
                     </div>
                     <RangMedal rang={b.rang} />
                   </div>
 
                   {/* Badges filière + période */}
-                  <div className="flex items-center gap-2">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {filiereChip(b.filiere)}
-                    <span className="text-xs text-slate-400 dark:text-slate-500">
+                    <span style={{ fontSize: 12, color: 'var(--text-4)' }}>
                       {b.periode === 0 ? 'Annuel' : `Trimestre ${b.periode}`}
                     </span>
                   </div>
 
                   {/* Moyenne */}
-                  <div className="flex items-end justify-between">
+                  <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
                     <div>
-                      <div className={`text-3xl font-bold ${moyenneClass(moy)}`}>
+                      <div style={{ fontSize: 28, fontWeight: 700, color: moyenneColor(moy) }}>
                         {moy !== null ? moy.toFixed(2) : 'N/A'}
                       </div>
-                      <div className="text-xs text-slate-400 dark:text-slate-500">/20</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-4)' }}>/20</div>
                     </div>
                     {b.appreciation && (
-                      <div className="text-xs text-slate-500 dark:text-slate-400 text-end max-w-[120px] leading-snug italic">
+                      <div style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'end', maxWidth: 120, lineHeight: 1.4, fontStyle: 'italic' }}>
                         {b.appreciation}
                       </div>
                     )}
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2 pt-1 border-t border-slate-100 dark:border-slate-700">
+                  <div style={{ display: 'flex', gap: 8, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
                     <button
                       onClick={() => openDetail(b)}
-                      className="flex-1 text-xs text-center py-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                      style={{ flex: 1, fontSize: 12, textAlign: 'center', padding: '6px 0', borderRadius: 'var(--r-md)', color: 'var(--text-3)', background: 'transparent', border: 'none', cursor: 'pointer' }}
                     >
                       Détail
                     </button>
                     <button
                       onClick={() => downloadPdf(b)}
                       disabled={downloading === b.id}
-                      className="flex-1 text-xs text-center py-1.5 rounded-lg bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-white transition-colors disabled:opacity-50 font-medium"
+                      style={{ flex: 1, fontSize: 12, textAlign: 'center', padding: '6px 0', borderRadius: 'var(--r-md)', background: 'var(--text)', color: 'var(--bg)', border: 'none', cursor: 'pointer', fontWeight: 500, opacity: downloading === b.id ? 0.5 : 1 }}
                     >
                       {downloading === b.id ? '…' : '⬇ PDF'}
                     </button>
@@ -390,12 +403,12 @@ export function BulletinsPage() {
 
       {/* Vue tableau */}
       {bulletins.length > 0 && view === 'table' && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="card tbl-wrap">
+          <table className="tbl">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50">
+              <tr>
                 {['Rang', 'Élève', 'Matricule', 'Filière', 'Période', 'Moyenne', 'Appréciation', 'Actions'].map(h => (
-                  <th key={h} className="px-4 py-3 text-start text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>
+                  <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -403,25 +416,25 @@ export function BulletinsPage() {
               {sortedBulletins.map(b => {
                 const moy = b.moyenne !== null ? Number(b.moyenne) : null;
                 return (
-                  <tr key={b.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                    <td className="px-4 py-3"><RangMedal rang={b.rang} /></td>
-                    <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{b.eleve.prenom_fr} {b.eleve.nom_fr}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-slate-500 dark:text-slate-400">{b.eleve.matricule}</td>
-                    <td className="px-4 py-3">{filiereChip(b.filiere)}</td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400 text-xs">
+                  <tr key={b.id}>
+                    <td><RangMedal rang={b.rang} /></td>
+                    <td style={{ fontWeight: 500, color: 'var(--text)' }}>{b.eleve.prenom_fr} {b.eleve.nom_fr}</td>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-3)' }}>{b.eleve.matricule}</td>
+                    <td>{filiereChip(b.filiere)}</td>
+                    <td style={{ color: 'var(--text-3)', fontSize: 12 }}>
                       {b.periode === 0 ? 'Annuel' : `T${b.periode}`}
                     </td>
-                    <td className="px-4 py-3">
+                    <td>
                       <Badge
                         label={moy !== null ? `${moy.toFixed(2)}/20` : 'N/A'}
                         variant={moyenneVariant(moy)}
                       />
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 italic max-w-[180px] truncate">
+                    <td style={{ fontSize: 12, color: 'var(--text-3)', fontStyle: 'italic', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {b.appreciation ?? '—'}
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
+                    <td>
+                      <div className="row">
                         <Button variant="ghost" size="sm" onClick={() => openDetail(b)}>{t('actions.voir')}</Button>
                         <Button variant="secondary" size="sm" loading={downloading === b.id} onClick={() => downloadPdf(b)}>PDF</Button>
                       </div>
@@ -436,10 +449,10 @@ export function BulletinsPage() {
 
       {/* Vide */}
       {bulletins.length === 0 && !loading && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-16 text-center">
-          <div className="text-5xl mb-4">📋</div>
-          <p className="text-slate-500 dark:text-slate-400">{t('bulletin.aucun')}</p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+        <div className="card empty" style={{ padding: 64 }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
+          <p style={{ color: 'var(--text-3)' }}>{t('bulletin.aucun')}</p>
+          <p style={{ fontSize: 12, color: 'var(--text-4)', marginTop: 8 }}>
             Sélectionnez une année scolaire et cliquez sur Charger
           </p>
         </div>
@@ -448,7 +461,7 @@ export function BulletinsPage() {
       {/* Modal détail */}
       <Modal isOpen={!!detail || loadingDetail} onClose={() => setDetail(null)} title={t('bulletin.detail')} size="lg">
         {loadingDetail && (
-          <div className="py-16 text-center text-slate-400 dark:text-slate-500 text-sm">Chargement…</div>
+          <div style={{ padding: '64px 0', textAlign: 'center', color: 'var(--text-4)', fontSize: 13 }}>Chargement…</div>
         )}
         {detail && !loadingDetail && <BulletinDetailContent detail={detail} downloading={downloading} onDownload={downloadPdf} onClose={() => setDetail(null)} api={api} />}
       </Modal>
@@ -459,11 +472,11 @@ export function BulletinsPage() {
 // ─── Contenu modal détail ─────────────────────────────────────────────────────
 
 function noteColor(valeur: number | string | null, noteMax: number | string): string {
-  if (valeur === null) return 'text-slate-400 dark:text-slate-500';
+  if (valeur === null) return 'var(--text-4)';
   const ratio = Number(valeur) / Number(noteMax);
-  if (ratio >= 0.7) return 'text-emerald-600 dark:text-emerald-400 font-semibold';
-  if (ratio >= 0.5) return 'text-amber-600 dark:text-amber-400 font-semibold';
-  return 'text-red-600 dark:text-red-400 font-semibold';
+  if (ratio >= 0.7) return 'var(--success)';
+  if (ratio >= 0.5) return 'var(--warning)';
+  return 'var(--danger)';
 }
 
 function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere: string; isAnnuel: boolean }) {
@@ -471,24 +484,24 @@ function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere
 
   if (!isAnnuel) {
     return (
-      <table className="w-full text-sm">
+      <table className="tbl">
         <thead>
-          <tr className="border-b border-slate-200 dark:border-slate-700">
-            <th className="py-2 text-start text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Matière ({filiere})</th>
-            <th className="py-2 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase w-14">Coeff</th>
-            <th className="py-2 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase w-24">Note / Max</th>
+          <tr>
+            <th style={{ textAlign: 'start' }}>Matière ({filiere})</th>
+            <th style={{ textAlign: 'center', width: 56 }}>Coeff</th>
+            <th style={{ textAlign: 'center', width: 96 }}>Note / Max</th>
           </tr>
         </thead>
         <tbody>
           {notes.map((n, i) => (
-            <tr key={i} className="border-b border-slate-100 dark:border-slate-800 last:border-0">
-              <td className="py-2 text-slate-800 dark:text-slate-200">{n.matiere.nom_fr}</td>
-              <td className="py-2 text-center text-slate-500 dark:text-slate-400 text-xs">{n.matiere.coeff_defaut}</td>
-              <td className="py-2 text-center">
-                <span className={noteColor(n.valeur, n.matiere.note_max)}>
+            <tr key={i}>
+              <td style={{ color: 'var(--text-2)' }}>{n.matiere.nom_fr}</td>
+              <td style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>{n.matiere.coeff_defaut}</td>
+              <td style={{ textAlign: 'center' }}>
+                <span style={{ color: noteColor(n.valeur, n.matiere.note_max), fontWeight: n.valeur !== null ? 600 : 400 }}>
                   {n.valeur !== null ? Number(n.valeur).toFixed(1) : '—'}
                 </span>
-                <span className="text-slate-400 dark:text-slate-500 text-xs">/{Number(n.matiere.note_max)}</span>
+                <span style={{ color: 'var(--text-4)', fontSize: 12 }}>/{Number(n.matiere.note_max)}</span>
               </td>
             </tr>
           ))}
@@ -513,28 +526,28 @@ function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere
   });
 
   return (
-    <table className="w-full text-sm">
+    <table className="tbl">
       <thead>
-        <tr className="border-b border-slate-200 dark:border-slate-700">
-          <th className="py-2 text-start text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Matière ({filiere})</th>
-          <th className="py-2 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase w-10">Coeff</th>
+        <tr>
+          <th style={{ textAlign: 'start' }}>Matière ({filiere})</th>
+          <th style={{ textAlign: 'center', width: 40 }}>Coeff</th>
           {['T1', 'T2', 'T3'].map(t => (
-            <th key={t} className="py-2 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase w-14">{t}</th>
+            <th key={t} style={{ textAlign: 'center', width: 56 }}>{t}</th>
           ))}
-          <th className="py-2 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase w-16">Moy.</th>
+          <th style={{ textAlign: 'center', width: 64 }}>Moy.</th>
         </tr>
       </thead>
       <tbody>
         {rows.map((r, i) => (
-          <tr key={i} className="border-b border-slate-100 dark:border-slate-800 last:border-0">
-            <td className="py-2 text-slate-800 dark:text-slate-200">{r.nom_fr}</td>
-            <td className="py-2 text-center text-slate-400 dark:text-slate-500 text-xs">{r.coeff}</td>
+          <tr key={i}>
+            <td style={{ color: 'var(--text-2)' }}>{r.nom_fr}</td>
+            <td style={{ textAlign: 'center', color: 'var(--text-4)', fontSize: 12 }}>{r.coeff}</td>
             {r.vs.map((v, j) => (
-              <td key={j} className={`py-2 text-center text-xs ${noteColor(v, r.noteMax)}`}>
+              <td key={j} style={{ textAlign: 'center', fontSize: 12, color: noteColor(v, r.noteMax), fontWeight: v !== null ? 600 : 400 }}>
                 {v !== null ? v.toFixed(1) : '—'}
               </td>
             ))}
-            <td className={`py-2 text-center text-xs ${noteColor(r.moy, r.noteMax)}`}>
+            <td style={{ textAlign: 'center', fontSize: 12, color: noteColor(r.moy, r.noteMax), fontWeight: r.moy !== null ? 600 : 400 }}>
               {r.moy !== null ? r.moy.toFixed(2) : '—'}
             </td>
           </tr>
@@ -581,44 +594,46 @@ function BulletinDetailContent({
   const insc = detail.eleve.inscriptions?.[0];
   const classeNom = insc?.classe_fr?.nom_fr ?? insc?.classe_ar?.nom_fr ?? '—';
 
+  const bandeauBg = moy === null ? 'var(--bg-2)' : moy >= 14 ? '#d1fae5' : moy >= 10 ? '#fef3c7' : '#fee2e2';
+
   return (
-    <div className="space-y-5">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Bandeau moyenne + rang */}
-      <div className={`rounded-xl p-5 flex items-center justify-between gap-4 ${moy === null ? 'bg-slate-50 dark:bg-slate-700' : moy >= 14 ? 'bg-emerald-50 dark:bg-emerald-900/20' : moy >= 10 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
+      <div style={{ borderRadius: 'var(--r-lg)', padding: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, background: bandeauBg }}>
         <div>
-          <div className={`text-4xl font-bold ${moyenneClass(moy)}`}>
+          <div style={{ fontSize: 36, fontWeight: 700, color: moyenneColor(moy) }}>
             {moy !== null ? moy.toFixed(2) : 'N/A'}
-            <span className="text-base font-normal text-slate-400 dark:text-slate-500 ms-1">/20</span>
+            <span style={{ fontSize: 16, fontWeight: 400, color: 'var(--text-4)', marginInlineStart: 4 }}>/20</span>
           </div>
           {detail.appreciation && (
-            <div className="text-sm italic text-slate-600 dark:text-slate-300 mt-1">{detail.appreciation}</div>
+            <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--text-2)', marginTop: 4 }}>{detail.appreciation}</div>
           )}
         </div>
-        <div className="text-end">
+        <div style={{ textAlign: 'end' }}>
           <RangMedal rang={detail.rang} />
-          <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+          <div style={{ fontSize: 12, color: 'var(--text-4)', marginTop: 4 }}>
             {isAnnuel ? 'Bulletin Annuel' : `Trimestre ${detail.periode}`}
           </div>
         </div>
       </div>
 
       {/* Infos élève */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-        <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-          <div className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Élève</div>
-          <div className="font-semibold text-slate-900 dark:text-white">{detail.eleve.prenom_fr} {detail.eleve.nom_fr}</div>
-          <div className="font-mono text-xs text-slate-400 dark:text-slate-500">{detail.eleve.matricule}</div>
+      <div className="grid-3" style={{ fontSize: 13 }}>
+        <div style={{ padding: 12, background: 'var(--bg-2)', borderRadius: 'var(--r-md)' }}>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 2 }}>Élève</div>
+          <div style={{ fontWeight: 600, color: 'var(--text)' }}>{detail.eleve.prenom_fr} {detail.eleve.nom_fr}</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-4)' }}>{detail.eleve.matricule}</div>
         </div>
-        <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-          <div className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Classe</div>
-          <div className="font-semibold text-slate-900 dark:text-white">{classeNom}</div>
-          <div className="mt-1">{filiereChip(detail.filiere)}</div>
+        <div style={{ padding: 12, background: 'var(--bg-2)', borderRadius: 'var(--r-md)' }}>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 2 }}>Classe</div>
+          <div style={{ fontWeight: 600, color: 'var(--text)' }}>{classeNom}</div>
+          <div style={{ marginTop: 4 }}>{filiereChip(detail.filiere)}</div>
         </div>
-        <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-          <div className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Année scolaire</div>
-          <div className="font-semibold text-slate-900 dark:text-white">{detail.annee_scolaire.libelle}</div>
+        <div style={{ padding: 12, background: 'var(--bg-2)', borderRadius: 'var(--r-md)' }}>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 2 }}>Année scolaire</div>
+          <div style={{ fontWeight: 600, color: 'var(--text)' }}>{detail.annee_scolaire.libelle}</div>
           {detail.generated_at && (
-            <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+            <div style={{ fontSize: 12, color: 'var(--text-4)', marginTop: 4 }}>
               Généré le {new Date(detail.generated_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
             </div>
           )}
@@ -626,17 +641,19 @@ function BulletinDetailContent({
       </div>
 
       {/* Tables de notes par filière */}
-      <div className="space-y-4">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {filieres.map(f => {
           const notes = detail.notesByFiliere[f] ?? [];
+          const hdBg = f === 'FR' ? '#eff6ff' : '#fffbeb';
+          const hdColor = f === 'FR' ? '#1d4ed8' : '#b45309';
           return (
-            <div key={f} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <div className={`px-4 py-2 text-xs font-semibold border-b border-slate-200 dark:border-slate-700 ${f === 'FR' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300'}`}>
+            <div key={f} className="card" style={{ overflow: 'hidden' }}>
+              <div style={{ padding: '8px 16px', fontSize: 12, fontWeight: 600, borderBottom: '1px solid var(--border)', background: hdBg, color: hdColor }}>
                 {f === 'FR' ? t('classe.filiere_fr') : t('classe.filiere_ar')} — {notes.length} {t('matiere.titre').toLowerCase()}
               </div>
-              <div className="px-4 pb-3">
+              <div style={{ padding: '0 16px 12px' }}>
                 {notes.length === 0
-                  ? <p className="py-4 text-xs text-slate-400 dark:text-slate-500 text-center">{t('common.aucune_note')}</p>
+                  ? <p style={{ padding: '16px 0', fontSize: 12, color: 'var(--text-4)', textAlign: 'center' }}>{t('common.aucune_note')}</p>
                   : <NotesTable notes={notes} filiere={f} isAnnuel={isAnnuel} />
                 }
               </div>
@@ -646,13 +663,13 @@ function BulletinDetailContent({
       </div>
 
       {/* Observations */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-        <div className="px-4 py-2 text-xs font-semibold border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+      <div className="card" style={{ overflow: 'hidden' }}>
+        <div style={{ padding: '8px 16px', fontSize: 12, fontWeight: 600, borderBottom: '1px solid var(--border)', background: 'var(--bg-2)', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           Observations
         </div>
-        <div className="p-4 space-y-3">
+        <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
-            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Observation du directeur (Français)</label>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-3)', marginBottom: 4 }}>Observation du directeur (Français)</label>
             <textarea
               value={obsFr}
               onChange={e => setObsFr(e.target.value)}
@@ -660,11 +677,12 @@ function BulletinDetailContent({
               rows={2}
               maxLength={500}
               placeholder={canEditObs ? "Saisir une observation…" : "Aucune observation"}
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none disabled:opacity-60"
+              className="input"
+              style={{ width: '100%', resize: 'none' }}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">ملاحظة المدير (العربية)</label>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-3)', marginBottom: 4 }}>ملاحظة المدير (العربية)</label>
             <textarea
               value={obsAr}
               onChange={e => setObsAr(e.target.value)}
@@ -673,11 +691,12 @@ function BulletinDetailContent({
               maxLength={500}
               dir="rtl"
               placeholder={canEditObs ? "أدخل ملاحظة…" : "لا توجد ملاحظة"}
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none disabled:opacity-60"
+              className="input"
+              style={{ width: '100%', resize: 'none' }}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Observation du professeur</label>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-3)', marginBottom: 4 }}>Observation du professeur</label>
             <textarea
               value={obsProf}
               onChange={e => setObsProf(e.target.value)}
@@ -685,11 +704,12 @@ function BulletinDetailContent({
               rows={2}
               maxLength={500}
               placeholder={canEditObs ? "Saisir une observation du professeur…" : "Aucune observation"}
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none disabled:opacity-60"
+              className="input"
+              style={{ width: '100%', resize: 'none' }}
             />
           </div>
           {canEditObs && (
-            <div className="flex justify-end">
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <Button size="sm" onClick={saveObservations} loading={savingObs}>
                 Enregistrer les observations
               </Button>
@@ -699,7 +719,7 @@ function BulletinDetailContent({
       </div>
 
       {/* Actions */}
-      <div className="flex justify-end gap-3 pt-1">
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingTop: 4 }}>
         <Button variant="secondary" onClick={onClose}>Fermer</Button>
         <Button onClick={() => onDownload(detail)} loading={downloading === detail.id}>
           ⬇ Télécharger PDF

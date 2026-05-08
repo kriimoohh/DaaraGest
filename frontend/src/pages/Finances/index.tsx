@@ -107,35 +107,36 @@ function EleveSearchPicker({ eleves, selected, onChange }: EleveSearchPickerProp
   }, []);
 
   return (
-    <div ref={containerRef} className="flex flex-col gap-2">
-      <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">
+    <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         Élèves sélectionnés ({selected.length})
       </label>
 
       {/* chips */}
       {selected.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxHeight: 96, overflowY: 'auto', padding: 4 }}>
           {selected.map(e => (
             <span key={e.id}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700">
-              {e.prenom_fr} {e.nom_fr} <span className="font-mono text-emerald-600 dark:text-emerald-400">({e.matricule})</span>
-              <button onClick={() => remove(e.id)} className="ml-0.5 hover:text-red-500 transition-colors">×</button>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 999, fontSize: 12, background: '#d1fae5', color: '#065f46', border: '1px solid #6ee7b7' }}>
+              {e.prenom_fr} {e.nom_fr} <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--success)' }}>({e.matricule})</span>
+              <button onClick={() => remove(e.id)} style={{ marginLeft: 2, background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0 }}>×</button>
             </span>
           ))}
         </div>
       )}
 
       {/* search input */}
-      <div className="relative">
+      <div style={{ position: 'relative' }}>
         <input
           value={query}
           onChange={e => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           placeholder="Rechercher par nom ou matricule…"
-          className="w-full rounded-xl border border-slate-200 dark:border-slate-700 px-3.5 py-2.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+          className="input"
+          style={{ width: '100%' }}
         />
         {open && filtered.length > 0 && (
-          <div className="absolute z-50 mt-1 w-full max-h-52 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg">
+          <div style={{ position: 'absolute', zIndex: 50, marginTop: 4, width: '100%', maxHeight: 208, overflowY: 'auto', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}>
             {filtered.map(e => {
               const sel = selectedIds.has(e.id);
               return (
@@ -143,12 +144,12 @@ function EleveSearchPicker({ eleves, selected, onChange }: EleveSearchPickerProp
                   key={e.id}
                   type="button"
                   onClick={() => toggle(e)}
-                  className={`w-full text-left px-3.5 py-2 text-sm flex items-center justify-between gap-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors ${sel ? 'bg-emerald-50 dark:bg-emerald-900/20' : ''}`}>
-                  <span className={sel ? 'font-medium text-emerald-700 dark:text-emerald-300' : 'text-slate-800 dark:text-slate-200'}>
+                  style={{ width: '100%', textAlign: 'left', padding: '8px 14px', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: sel ? '#ecfdf5' : 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text)' }}>
+                  <span style={{ fontWeight: sel ? 500 : 400, color: sel ? '#065f46' : 'var(--text-2)' }}>
                     {e.prenom_fr} {e.nom_fr}
                   </span>
-                  <span className="font-mono text-xs text-slate-400">{e.matricule}</span>
-                  {sel && <span className="text-emerald-500 text-xs shrink-0">✓</span>}
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-4)' }}>{e.matricule}</span>
+                  {sel && <span style={{ color: 'var(--success)', fontSize: 12, flexShrink: 0 }}>✓</span>}
                 </button>
               );
             })}
@@ -215,8 +216,8 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-3 items-end">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="filter-row">
         <Select value={moisF} onChange={(e) => setMoisF(e.target.value)}
           options={MOIS.map((m, i) => ({ value: String(i + 1), label: m }))} />
         <Input label="" type="number" value={anneeF} onChange={(e) => setAnneeF(e.target.value)} className="w-24" />
@@ -225,28 +226,28 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
       </div>
 
       {paiements.length === 0 ? (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-8 text-center text-slate-500">
+        <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)' }}>
           Aucun paiement pour {MOIS[parseInt(moisF)-1]} {anneeF}
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
+        <div className="card tbl-wrap">
+          <table className="tbl">
+            <thead>
               <tr>
                 {['Professeur', 'Période', 'Brut', 'Retenues', 'Net à payer', 'Statut'].map(h => (
-                  <th key={h} className="px-4 py-3 text-start text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>
+                  <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {paiements.map(p => (
-                <tr key={p.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{p.professeur.utilisateur.nom_fr}</td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{MOIS[p.mois-1]} {p.annee}</td>
-                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{formatMontant(Number(p.montant_brut))}</td>
-                  <td className="px-4 py-3 text-red-500 dark:text-red-400 text-xs">-{formatMontant(Number(p.retenues))}</td>
-                  <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white">{formatMontant(Number(p.net_a_payer))}</td>
-                  <td className="px-4 py-3">
+                <tr key={p.id}>
+                  <td style={{ fontWeight: 500, color: 'var(--text)' }}>{p.professeur.utilisateur.nom_fr}</td>
+                  <td style={{ color: 'var(--text-3)' }}>{MOIS[p.mois-1]} {p.annee}</td>
+                  <td style={{ color: 'var(--text-2)' }}>{formatMontant(Number(p.montant_brut))}</td>
+                  <td style={{ color: 'var(--danger)', fontSize: 12 }}>-{formatMontant(Number(p.retenues))}</td>
+                  <td style={{ fontWeight: 600, color: 'var(--text)' }}>{formatMontant(Number(p.net_a_payer))}</td>
+                  <td>
                     <Badge label={p.statut === 'paye' ? t('finance.paye') : t('finance.impaye')} variant={p.statut === 'paye' ? 'success' : 'warning'} />
                   </td>
                 </tr>
@@ -283,7 +284,7 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
             <Input label={t('finance.net_a_payer')} type="number" value={form.net_a_payer}
               onChange={(e) => setForm(f => ({ ...f, net_a_payer: e.target.value }))} />
           </div>
-          <div className="flex justify-end gap-3 pt-2">
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
             <Button variant="secondary" onClick={() => setModal(false)}>{t('actions.annuler')}</Button>
             <Button onClick={handleSave} loading={saving}>{t('actions.enregistrer')}</Button>
           </div>
@@ -462,17 +463,17 @@ export function FinancesPage() {
 
       {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid-3">
           {[
-            { label: t('finance.total_mois'), value: formatMontant(Number(stats.total_encaisse_eleves)), icon: '💰', color: 'text-emerald-600' },
-            { label: t('finance.paiements_mois'), value: stats.nb_paiements_eleves, icon: '📄', color: 'text-blue-600' },
-            { label: t('finance.verse_profs'), value: formatMontant(Number(stats.total_paye_professeurs)), icon: '👨‍🏫', color: 'text-purple-600' },
+            { label: t('finance.total_mois'), value: formatMontant(Number(stats.total_encaisse_eleves)), icon: '💰', color: 'var(--success)' },
+            { label: t('finance.paiements_mois'), value: stats.nb_paiements_eleves, icon: '📄', color: 'var(--info)' },
+            { label: t('finance.verse_profs'), value: formatMontant(Number(stats.total_paye_professeurs)), icon: '👨‍🏫', color: 'var(--accent)' },
           ].map(s => (
-            <div key={s.label} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex items-center gap-3">
-              <span className="text-2xl">{s.icon}</span>
+            <div key={s.label} className="card" style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 22 }}>{s.icon}</span>
               <div>
-                <p className={`text-lg font-bold ${s.color}`}>{s.value}</p>
-                <p className="text-xs text-slate-500">{s.label}</p>
+                <p style={{ fontSize: 18, fontWeight: 700, color: s.color }}>{s.value}</p>
+                <p style={{ fontSize: 12, color: 'var(--text-3)' }}>{s.label}</p>
               </div>
             </div>
           ))}
@@ -480,148 +481,146 @@ export function FinancesPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700">
+      <div className="tabs">
         {(['eleves', 'profs'] as const).map(t2 => (
-          <button key={t2} onClick={() => setTab(t2)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t2 ? 'border-[#10B981] text-[#10B981]' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}>
+          <button key={t2} onClick={() => setTab(t2)} className={`tab${tab === t2 ? ' active' : ''}`}>
             {t2 === 'eleves' ? t('finance.paiements_eleves') : t('finance.paiements_profs')}
           </button>
         ))}
       </div>
 
       {tab === 'eleves' && (
-        <div className="space-y-3">
-          {/* Ligne 1 : Recherche + action */}
-          <div className="flex gap-3 items-center">
-            <div className="flex-1">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="filter-row">
+            <div style={{ flex: 1 }}>
               <SearchInput value={search} onChange={setSearch} placeholder="Rechercher un élève..." />
             </div>
             <Button onClick={openModal}>+ Paiement</Button>
           </div>
 
-          {/* Ligne 2 : Type */}
           {!isReliquat && (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0 w-14">Type :</span>
+            <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
+              <span style={{ fontSize: 12, color: 'var(--text-3)', flexShrink: 0 }}>Type :</span>
               {FILTER_TYPES.map(f => (
                 <button key={f.value} onClick={() => setFilterType(f.value)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                    filterType === f.value
-                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
-                      : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                  }`}>
+                  style={{
+                    padding: '4px 12px', borderRadius: 99, fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer',
+                    background: filterType === f.value ? 'var(--text)' : 'var(--bg-3)',
+                    color: filterType === f.value ? 'var(--bg)' : 'var(--text-3)',
+                  }}>
                   {f.label}
                 </button>
               ))}
             </div>
           )}
 
-          {/* Ligne 3 : Statut */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0 w-14">Statut :</span>
+          <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
+            <span style={{ fontSize: 12, color: 'var(--text-3)', flexShrink: 0 }}>Statut :</span>
             {FILTER_STATUTS.map(f => (
               <button key={f.value} onClick={() => setFilterStatut(f.value)}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                  filterStatut === f.value
-                    ? f.activeClass ?? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
-                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                }`}>
+                style={{
+                  padding: '4px 12px', borderRadius: 99, fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer',
+                  background: filterStatut === f.value ? 'var(--text)' : 'var(--bg-3)',
+                  color: filterStatut === f.value ? 'var(--bg)' : 'var(--text-3)',
+                }}>
                 {f.icon && `${f.icon} `}{f.label}
               </button>
             ))}
           </div>
 
-          {/* Ligne 4 : Période */}
-          <div className="flex gap-3 items-center">
-            <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0 w-14">Période :</span>
+          <div className="row" style={{ gap: 12 }}>
+            <span style={{ fontSize: 12, color: 'var(--text-3)', flexShrink: 0 }}>Période :</span>
             <Select value={mois} onChange={e => setMois(e.target.value)}
               options={[{ value: '', label: isReliquat ? 'Toute l\'année' : 'Tous les mois' }, ...MOIS.map((m, i) => ({ value: String(i+1), label: m }))]} />
-            <Input label="" type="number" value={annee} onChange={e => setAnnee(e.target.value)} className="w-28" />
+            <Input label="" type="number" value={annee} onChange={e => setAnnee(e.target.value)} />
           </div>
 
-          {/* Reliquats */}
           {isReliquat ? (
-            loading ? <div className="p-8 text-center text-slate-500">Chargement...</div> :
+            loading ? <div className="empty">Chargement...</div> :
             reliquats.length === 0 ? (
-              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-8 text-center">
-                <div className="text-3xl mb-2">✅</div>
-                <p className="text-slate-500">Aucun reliquat — tous les élèves sont à jour</p>
+              <div className="card empty" style={{ flexDirection: 'column', gap: 8, padding: 32 }}>
+                <span style={{ fontSize: 28 }}>✅</span>
+                <p>Aucun reliquat — tous les élèves sont à jour</p>
               </div>
             ) : (
-              <div className="space-y-2">
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 flex items-center gap-3">
-                  <span className="text-2xl">🔴</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ background: 'var(--danger-soft)', border: '1px solid var(--danger-border)', borderRadius: 'var(--r-lg)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 24 }}>🔴</span>
                   <div>
-                    <p className="font-semibold text-red-700 dark:text-red-400">
+                    <p style={{ fontWeight: 600, color: 'var(--danger)' }}>
                       {reliquats.length} élève(s) sans paiement
                       {mois ? ` pour ${MOIS[parseInt(mois)-1]} ${annee}` : ' (toute l\'année scolaire)'}
                     </p>
-                    <p className="text-sm text-red-600 dark:text-red-500">
+                    <p style={{ fontSize: 13, color: 'var(--danger)' }}>
                       Montant total dû : {formatMontant(reliquats.reduce((s, r) => s + r.montant_du, 0))}
                     </p>
                   </div>
                 </div>
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
-                      <tr>
-                        {['Élève', 'Matricule', 'Mois dus', 'Mois manquants', 'Montant dû'].map(h => (
-                          <th key={h} className="px-4 py-3 text-start text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {reliquats.map(r => (
-                        <tr key={r.eleve.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-red-50/50 dark:hover:bg-red-900/10">
-                          <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{r.eleve.prenom_fr} {r.eleve.nom_fr}</td>
-                          <td className="px-4 py-3 font-mono text-xs text-slate-500">{r.eleve.matricule}</td>
-                          <td className="px-4 py-3"><Badge label={String(r.nb_mois_dus)} variant="error" /></td>
-                          <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400">
-                            {r.mois_manquants.map(m => `${MOIS[m.mois-1]} ${m.annee}`).join(', ')}
-                          </td>
-                          <td className="px-4 py-3 font-semibold text-red-600 dark:text-red-400">{formatMontant(r.montant_du)}</td>
+                <div className="card">
+                  <div className="tbl-wrap">
+                    <table className="tbl">
+                      <thead>
+                        <tr>
+                          {['Élève', 'Matricule', 'Mois dus', 'Mois manquants', 'Montant dû'].map(h => (
+                            <th key={h}>{h}</th>
+                          ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {reliquats.map(r => (
+                          <tr key={r.eleve.id}>
+                            <td>{r.eleve.prenom_fr} {r.eleve.nom_fr}</td>
+                            <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{r.eleve.matricule}</td>
+                            <td><Badge label={String(r.nb_mois_dus)} variant="error" /></td>
+                            <td style={{ fontSize: 12 }}>
+                              {r.mois_manquants.map(m => `${MOIS[m.mois-1]} ${m.annee}`).join(', ')}
+                            </td>
+                            <td style={{ fontWeight: 600, color: 'var(--danger)' }}>{formatMontant(r.montant_du)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )
           ) : (
             <>
-              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                {loading ? <div className="p-8 text-center text-slate-500">Chargement...</div> :
-                paiements.length === 0 ? <div className="p-8 text-center text-slate-500">Aucun paiement trouvé</div> : (
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
-                      <tr>
-                        {['Élève', 'Matricule', 'Type', 'Montant', 'Période', 'N° Reçu', 'Statut', ...(isAdmin ? ['Actions'] : [])].map(h => (
-                          <th key={h} className="px-4 py-3 text-start text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paiements.map(p => (
-                        <tr key={p.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                          <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{p.eleve.prenom_fr} {p.eleve.nom_fr}</td>
-                          <td className="px-4 py-3 font-mono text-xs text-slate-500">{p.eleve.matricule}</td>
-                          <td className="px-4 py-3"><Badge label={TYPE_LABELS[p.type] ?? p.type} variant="info" /></td>
-                          <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white">{formatMontant(p.montant)}</td>
-                          <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{p.mois ? `${MOIS[p.mois-1]} ${p.annee}` : '—'}</td>
-                          <td className="px-4 py-3 font-mono text-xs text-slate-500">{p.recu_numero ?? '—'}</td>
-                          <td className="px-4 py-3"><Badge label={STATUT_LABELS[p.statut] ?? p.statut} variant={p.statut === 'paye' ? 'success' : 'warning'} /></td>
-                          {isAdmin && (
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-1">
-                                <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>Modifier</Button>
-                                <Button size="sm" variant="danger" onClick={() => setDeleteTarget(p)}>Supprimer</Button>
-                              </div>
-                            </td>
-                          )}
+              <div className="card">
+                {loading ? <div className="empty">Chargement...</div> :
+                paiements.length === 0 ? <div className="empty">Aucun paiement trouvé</div> : (
+                  <div className="tbl-wrap">
+                    <table className="tbl">
+                      <thead>
+                        <tr>
+                          {['Élève', 'Matricule', 'Type', 'Montant', 'Période', 'N° Reçu', 'Statut', ...(isAdmin ? ['Actions'] : [])].map(h => (
+                            <th key={h}>{h}</th>
+                          ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {paiements.map(p => (
+                          <tr key={p.id}>
+                            <td>{p.eleve.prenom_fr} {p.eleve.nom_fr}</td>
+                            <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{p.eleve.matricule}</td>
+                            <td><Badge label={TYPE_LABELS[p.type] ?? p.type} variant="info" /></td>
+                            <td style={{ fontWeight: 600 }}>{formatMontant(p.montant)}</td>
+                            <td>{p.mois ? `${MOIS[p.mois-1]} ${p.annee}` : '—'}</td>
+                            <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{p.recu_numero ?? '—'}</td>
+                            <td><Badge label={STATUT_LABELS[p.statut] ?? p.statut} variant={p.statut === 'paye' ? 'success' : 'warning'} /></td>
+                            {isAdmin && (
+                              <td>
+                                <div className="row" style={{ gap: 4 }}>
+                                  <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>Modifier</Button>
+                                  <Button size="sm" variant="danger" onClick={() => setDeleteTarget(p)}>Supprimer</Button>
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
               <Pagination page={page} total={total} limit={20} onChange={setPage} />
@@ -653,7 +652,7 @@ export function FinancesPage() {
               onChange={e => setForm(f => ({ ...f, annee: e.target.value }))} />
           </div>
           <p className="muted" style={{ fontSize: 12, fontStyle: 'italic' }}>{t('finance.recu_auto')}</p>
-          <div className="flex justify-end gap-3 pt-2">
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
             <Button variant="secondary" onClick={() => setModal(false)}>{t('actions.annuler')}</Button>
             <Button onClick={handleSave} loading={saving} disabled={selectedEleves.length === 0}>
               Enregistrer {selectedEleves.length > 1 ? `(${selectedEleves.length} élèves)` : ''}
@@ -684,7 +683,7 @@ export function FinancesPage() {
               <Select label="Statut" value={editForm.statut} onChange={e => setEditForm(f => ({ ...f, statut: e.target.value }))}
                 options={[{ value: 'paye', label: t('finance.paye') }, { value: 'impaye', label: t('finance.impaye') }]} />
             </div>
-            <div className="flex justify-end gap-3 pt-2">
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
               <Button variant="secondary" onClick={() => setEditTarget(null)}>{t('actions.annuler')}</Button>
               <Button onClick={handleEdit} loading={editSaving}>{t('actions.enregistrer')}</Button>
             </div>

@@ -80,7 +80,7 @@ export function ParametresPage() {
               <Input label={t('common.telephone')} value={etab.telephone ?? ''} onChange={(e) => setEtab((p) => p ? { ...p, telephone: e.target.value } : p)} />
             </div>
             <Input label={t('common.devise')} value={etab.devise} onChange={(e) => setEtab((p) => p ? { ...p, devise: e.target.value } : p)} />
-            <div className="flex justify-end">
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <Button onClick={saveEtab} loading={saving === 'etab'}>{t('actions.enregistrer')}</Button>
             </div>
           </div>
@@ -120,19 +120,18 @@ export function ParametresPage() {
               value={String(config.montant_mensualite ?? 7500)}
               onChange={(e) => setConfig((p) => p ? { ...p, montant_mensualite: parseFloat(e.target.value) } : p)}
             />
-            <div className="flex items-center gap-3">
+            <div className="row" style={{ gap: 12 }}>
               <input
                 type="checkbox"
                 id="chiffres_arabes"
                 checked={config.chiffres_arabes}
                 onChange={(e) => setConfig((p) => p ? { ...p, chiffres_arabes: e.target.checked } : p)}
-                className="w-4 h-4 accent-emerald-600"
               />
-              <label htmlFor="chiffres_arabes" className="text-sm text-slate-700 dark:text-slate-300">
+              <label htmlFor="chiffres_arabes" style={{ fontSize: 13, color: 'var(--text-2)' }}>
                 Utiliser les chiffres arabes (٠١٢٣٤٥٦٧٨٩)
               </label>
             </div>
-            <div className="flex justify-end">
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <Button onClick={saveConfig} loading={saving === 'notes'}>{t('actions.enregistrer')}</Button>
             </div>
           </div>

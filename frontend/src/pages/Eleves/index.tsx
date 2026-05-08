@@ -133,8 +133,8 @@ function formatDate(iso: string | undefined): string {
 function FicheRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <dt className="text-xs text-slate-400 dark:text-slate-500">{label}</dt>
-      <dd className="text-sm font-medium text-slate-700 dark:text-slate-200 mt-0.5">{value ?? '—'}</dd>
+      <dt style={{ fontSize: 12, color: 'var(--text-4)' }}>{label}</dt>
+      <dd style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-2)', marginTop: 2 }}>{value ?? '—'}</dd>
     </div>
   );
 }
@@ -531,7 +531,7 @@ export function ElevesPage() {
           checked={allPageSelected}
           ref={el => { if (el) el.indeterminate = somePageSelected && !allPageSelected; }}
           onChange={toggleSelectAll}
-          className="rounded border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+          style={{ cursor: 'pointer' }}
         />
       ),
       render: (row) => {
@@ -542,7 +542,7 @@ export function ElevesPage() {
             checked={selectedIds.has(e.id)}
             onChange={() => toggleSelect(e.id)}
             onClick={ev => ev.stopPropagation()}
-            className="rounded border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+            style={{ cursor: 'pointer' }}
           />
         );
       },
@@ -594,7 +594,7 @@ export function ElevesPage() {
       render: (row) => {
         const e = row as unknown as Eleve;
         return (
-          <div className="flex items-center gap-1.5">
+          <div className="row">
             <Button size="sm" variant="secondary" onClick={() => openFiche(e)} loading={ficheLoading}>
               Fiche
             </Button>
@@ -701,8 +701,8 @@ export function ElevesPage() {
           title="Élèves"
           subtitle="Gestion des élèves inscrits"
           action={
-            <div className="flex gap-2">
-              <input ref={fileInputRef} type="file" accept=".csv" className="hidden"
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input ref={fileInputRef} type="file" accept=".csv" style={{ display: 'none' }}
                 onChange={e => { if (e.target.files?.[0]) handleCsvFile(e.target.files[0]); e.target.value = ''; }} />
               <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>
                 ⬆ Importer CSV
@@ -740,7 +740,7 @@ export function ElevesPage() {
 
         {/* Barre de recherche, filtres et taille de page */}
         <div className="filter-row">
-          <div className="flex-1 min-w-[200px] max-w-sm">
+          <div style={{ flex: 1, minWidth: 200, maxWidth: 384 }}>
             <SearchInput
               value={search}
               onChange={setSearch}
@@ -748,7 +748,7 @@ export function ElevesPage() {
             />
           </div>
 
-          <div className="w-36">
+          <div style={{ width: 144 }}>
             <Select
               label="Sexe"
               value={filterSexe}
@@ -761,7 +761,7 @@ export function ElevesPage() {
             />
           </div>
 
-          <div className="w-36">
+          <div style={{ width: 144 }}>
             <Select
               label="Statut"
               value={filterStatut}
@@ -774,7 +774,7 @@ export function ElevesPage() {
             />
           </div>
 
-          <div className="w-48">
+          <div style={{ width: 192 }}>
             <Select
               label="Classe"
               value={filterClasse}
@@ -786,7 +786,7 @@ export function ElevesPage() {
             />
           </div>
 
-          <div className="w-28">
+          <div style={{ width: 112 }}>
             <Select
               label="Par page"
               value={String(limit)}
@@ -796,15 +796,13 @@ export function ElevesPage() {
           </div>
 
           {(filterSexe || filterStatut || filterClasse || search) && (
-            <div className="flex items-end">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => { setSearch(''); setFilterSexe(''); setFilterStatut(''); setFilterClasse(''); }}
-              >
-                Réinitialiser
-              </Button>
-            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setSearch(''); setFilterSexe(''); setFilterStatut(''); setFilterClasse(''); }}
+            >
+              Réinitialiser
+            </Button>
           )}
         </div>
 
@@ -837,7 +835,7 @@ export function ElevesPage() {
             />
           )}
           {!editTarget && (
-            <p className="text-xs text-slate-500 dark:text-slate-400 italic bg-slate-50 dark:bg-slate-700/50 px-3 py-2 rounded-lg">
+            <p style={{ fontSize: 12, color: 'var(--text-3)', fontStyle: 'italic', background: 'var(--bg-2)', padding: '8px 12px', borderRadius: 'var(--r-md)' }}>
               Le matricule sera généré automatiquement (format DG-YYYY-NNN).
             </p>
           )}
@@ -900,7 +898,7 @@ export function ElevesPage() {
             onChange={(e) => setField('parent_telephone', e.target.value)}
             placeholder="77 000 00 00"
           />
-          <div className="flex justify-end gap-3 pt-2">
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingTop: 8 }}>
             <Button variant="secondary" onClick={() => setModalOpen(false)}>Annuler</Button>
             <Button onClick={handleSubmit} loading={submitting}>
               {editTarget ? 'Modifier' : 'Ajouter'}
@@ -917,33 +915,33 @@ export function ElevesPage() {
           title=""
           size="lg"
         >
-          <input ref={photoInputRef} type="file" accept="image/*" className="hidden"
+          <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }}
             onChange={e => { if (e.target.files?.[0]) handlePhotoUpload(e.target.files[0]); e.target.value = ''; }} />
 
-          <div className="space-y-0">
+          <div>
             {/* ── En-tête identité ── */}
-            <div className="flex items-center gap-5 pb-5 border-b border-slate-100 dark:border-slate-800">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20, paddingBottom: 20, borderBottom: '1px solid var(--border)' }}>
               {/* Avatar cliquable */}
               <button type="button" onClick={() => photoInputRef.current?.click()} disabled={photoSaving}
-                className="group relative shrink-0 w-20 h-20 rounded-2xl overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-sm hover:border-emerald-400 transition-colors">
+                style={{ position: 'relative', flexShrink: 0, width: 80, height: 80, borderRadius: 16, overflow: 'hidden', border: '2px solid var(--border)', cursor: 'pointer' }}>
                 {ficheModal.photo_url
-                  ? <img src={ficheModal.photo_url} alt="" className="w-full h-full object-cover" />
-                  : <div className="w-full h-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-2xl font-bold text-white">
+                  ? <img src={ficheModal.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #34d399, #0d9488)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700, color: '#fff' }}>
                       {ficheModal.prenom_fr[0]}{ficheModal.nom_fr[0]}
                     </div>
                 }
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-2xl">
-                  <span className="text-white text-xs">{photoSaving ? '…' : '📷'}</span>
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ color: '#fff', fontSize: 12 }}>{photoSaving ? '…' : '📷'}</span>
                 </div>
               </button>
 
               {/* Nom + badges */}
-              <div className="flex-1 min-w-0">
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">
-                  {ficheModal.prenom_fr} <span className="uppercase">{ficheModal.nom_fr}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', lineHeight: 1.2 }}>
+                  {ficheModal.prenom_fr} <span style={{ textTransform: 'uppercase' }}>{ficheModal.nom_fr}</span>
                 </h2>
-                <p className="font-mono text-sm text-slate-400 dark:text-slate-500 mt-0.5">{ficheModal.matricule}</p>
-                <div className="flex flex-wrap gap-2 mt-2">
+                <p style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--text-4)', marginTop: 2 }}>{ficheModal.matricule}</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
                   <Badge label={ficheModal.actif ? 'Actif' : 'Inactif'} variant={ficheModal.actif ? 'success' : 'neutral'} />
                   <Badge label={ficheModal.sexe === 'M' ? 'Masculin' : 'Féminin'} variant={ficheModal.sexe === 'M' ? 'info' : 'warning'} />
                 </div>
@@ -951,11 +949,11 @@ export function ElevesPage() {
             </div>
 
             {/* ── Informations personnelles ── */}
-            <div className="py-5 border-b border-slate-100 dark:border-slate-800">
-              <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">
+            <div style={{ padding: '20px 0', borderBottom: '1px solid var(--border)' }}>
+              <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
                 Informations personnelles
               </p>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 24, rowGap: 12 }}>
                 <FicheRow label="Nom" value={ficheModal.nom_fr} />
                 <FicheRow label="Prénom" value={ficheModal.prenom_fr} />
                 <FicheRow label="Date de naissance" value={formatDate(ficheModal.date_naissance)} />
@@ -967,18 +965,18 @@ export function ElevesPage() {
 
             {/* ── Parent(s) / Tuteur(s) ── */}
             {ficheModal.parents.length > 0 && (
-              <div className="py-5 border-b border-slate-100 dark:border-slate-800">
-                <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">
+              <div style={{ padding: '20px 0', borderBottom: '1px solid var(--border)' }}>
+                <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
                   Parent{ficheModal.parents.length > 1 ? 's' : ''} / Tuteur{ficheModal.parents.length > 1 ? 's' : ''}
                 </p>
-                <div className="space-y-3">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {ficheModal.parents.map((p, i) => (
-                    <div key={i} className="rounded-xl bg-slate-50 dark:bg-slate-800/60 p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{p.nom_fr}</span>
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 capitalize">{p.lien}</span>
+                    <div key={i} style={{ borderRadius: 'var(--r-lg)', background: 'var(--bg-2)', padding: 16 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{p.nom_fr}</span>
+                        <span style={{ padding: '1px 8px', borderRadius: 999, fontSize: 12, fontWeight: 500, background: '#d1fae5', color: '#065f46', textTransform: 'capitalize' }}>{p.lien}</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 24, rowGap: 8 }}>
                         <FicheRow label="Téléphone" value={p.telephone || '—'} />
                         <FicheRow label="Email" value={p.email || '—'} />
                         {p.adresse && <FicheRow label="Adresse" value={p.adresse} />}
@@ -990,34 +988,34 @@ export function ElevesPage() {
               </div>
             )}
             {ficheModal.parents.length === 0 && (
-              <div className="py-5 border-b border-slate-100 dark:border-slate-800">
-                <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Parent / Tuteur</p>
-                <p className="text-sm text-slate-400 dark:text-slate-500 italic">Aucun parent enregistré</p>
+              <div style={{ padding: '20px 0', borderBottom: '1px solid var(--border)' }}>
+                <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Parent / Tuteur</p>
+                <p style={{ fontSize: 13, color: 'var(--text-4)', fontStyle: 'italic' }}>Aucun parent enregistré</p>
               </div>
             )}
 
             {/* ── Scolarité (inscriptions) ── */}
-            <div className="py-5">
-              <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Scolarité</p>
+            <div style={{ padding: '20px 0' }}>
+              <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Scolarité</p>
               {ficheModal.inscriptions?.length > 0 ? (
-                <div className="space-y-2">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {ficheModal.inscriptions.map(insc => (
                     <div key={insc.id}
-                      className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-sm">
-                      <span className="font-semibold text-slate-800 dark:text-slate-100 min-w-[100px]">{insc.annee_scolaire.libelle}</span>
-                      <div className="flex flex-wrap gap-2 flex-1">
+                      style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 'var(--r-lg)', background: 'var(--bg-2)', fontSize: 13 }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text)', minWidth: 100 }}>{insc.annee_scolaire.libelle}</span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, flex: 1 }}>
                         {insc.classe_fr && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 ring-1 ring-blue-200 dark:ring-blue-800">
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 10px', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 500, background: '#eff6ff', color: '#1d4ed8' }}>
                             FR — {insc.classe_fr.nom_fr}
                           </span>
                         )}
                         {insc.classe_ar && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-medium bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-200 dark:ring-emerald-800">
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 10px', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 500, background: '#d1fae5', color: '#065f46' }}>
                             AR — {insc.classe_ar.nom_fr}
                           </span>
                         )}
                         {!insc.classe_fr && !insc.classe_ar && (
-                          <span className="text-xs text-slate-400 italic">Aucune classe assignée</span>
+                          <span style={{ fontSize: 12, color: 'var(--text-4)', fontStyle: 'italic' }}>Aucune classe assignée</span>
                         )}
                       </div>
                       <Badge label={insc.statut} variant={insc.statut === 'actif' ? 'success' : 'neutral'} />
@@ -1025,14 +1023,14 @@ export function ElevesPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-slate-400 dark:text-slate-500 italic">Aucune inscription</p>
+                <p style={{ fontSize: 13, color: 'var(--text-4)', fontStyle: 'italic' }}>Aucune inscription</p>
               )}
             </div>
 
             {/* ── Progression pluriannuelle ── */}
-            <div className="py-5 border-t border-slate-100 dark:border-slate-800">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+            <div style={{ padding: '20px 0', borderTop: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   Progression pluriannuelle
                 </p>
                 <Button size="sm" variant="secondary"
@@ -1045,30 +1043,30 @@ export function ElevesPage() {
                 </Button>
               </div>
               {showProgression && progression && (
-                <div className="space-y-2">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {progression.progression.length === 0 ? (
-                    <p className="text-sm text-slate-400 italic">Aucune donnée de progression disponible</p>
+                    <p style={{ fontSize: 13, color: 'var(--text-4)', fontStyle: 'italic' }}>Aucune donnée de progression disponible</p>
                   ) : progression.progression.map((p, i) => (
-                    <div key={i} className="rounded-xl bg-slate-50 dark:bg-slate-800/60 p-4">
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className="font-semibold text-slate-800 dark:text-slate-100 text-sm">{p.annee_scolaire.libelle}</span>
-                        <div className="flex gap-2 text-xs">
-                          {p.classe_fr && <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">FR — {p.classe_fr.nom_fr}</span>}
-                          {p.classe_ar && <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">AR — {p.classe_ar.nom_fr}</span>}
+                    <div key={i} style={{ borderRadius: 'var(--r-lg)', background: 'var(--bg-2)', padding: 16 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+                        <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: 13 }}>{p.annee_scolaire.libelle}</span>
+                        <div style={{ display: 'flex', gap: 8, fontSize: 12 }}>
+                          {p.classe_fr && <span style={{ padding: '1px 8px', borderRadius: 999, background: '#dbeafe', color: '#1d4ed8' }}>FR — {p.classe_fr.nom_fr}</span>}
+                          {p.classe_ar && <span style={{ padding: '1px 8px', borderRadius: 999, background: '#fef3c7', color: '#b45309' }}>AR — {p.classe_ar.nom_fr}</span>}
                         </div>
                       </div>
-                      <div className="flex flex-wrap gap-4 text-xs text-slate-600 dark:text-slate-400">
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, fontSize: 12, color: 'var(--text-3)' }}>
                         {p.bulletins.map((b, j) => (
-                          <div key={j} className="flex items-center gap-1">
-                            <span className="font-medium">{b.filiere} :</span>
-                            <span className={`font-bold ${b.moyenne !== null && b.moyenne >= 10 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+                          <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span style={{ fontWeight: 500 }}>{b.filiere} :</span>
+                            <span style={{ fontWeight: 700, color: b.moyenne !== null && b.moyenne >= 10 ? 'var(--success)' : 'var(--danger)' }}>
                               {b.moyenne !== null ? Number(b.moyenne).toFixed(2) : '—'}/20
                             </span>
-                            {b.rang && <span className="text-slate-400">(rang {b.rang})</span>}
+                            {b.rang && <span style={{ color: 'var(--text-4)' }}>(rang {b.rang})</span>}
                           </div>
                         ))}
-                        {p.bulletins.length === 0 && <span className="italic text-slate-400">Aucun bulletin annuel</span>}
-                        <span className="ms-auto text-slate-400">
+                        {p.bulletins.length === 0 && <span style={{ fontStyle: 'italic', color: 'var(--text-4)' }}>Aucun bulletin annuel</span>}
+                        <span style={{ marginInlineStart: 'auto', color: 'var(--text-4)' }}>
                           {p.absences.absents > 0 ? `⚠ ${p.absences.absents} abs.` : ''}
                         </span>
                       </div>
@@ -1079,7 +1077,7 @@ export function ElevesPage() {
             </div>
 
             {/* ── Actions ── */}
-            <div className="flex justify-between items-center pt-3 border-t border-slate-100 dark:border-slate-800">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTop: '1px solid var(--border)' }}>
               {isGestion && (
                 <Button variant={ficheModal.actif ? 'danger' : 'primary'}
                   loading={toggleLoading === ficheModal.id}
@@ -1087,7 +1085,7 @@ export function ElevesPage() {
                   {ficheModal.actif ? "Désactiver l'élève" : "Réactiver l'élève"}
                 </Button>
               )}
-              <div className="flex gap-2 ml-auto">
+              <div style={{ display: 'flex', gap: 8, marginInlineStart: 'auto' }}>
                 {isGestion && (
                   <Button variant="secondary" onClick={() => { setFicheModal(null); openEdit(ficheModal); }}>
                     Modifier
@@ -1104,7 +1102,7 @@ export function ElevesPage() {
       {inscModal && (
         <Modal isOpen={!!inscModal} onClose={() => setInscModal(null)}
           title={`Inscrire ${inscModal.prenom_fr} ${inscModal.nom_fr}`} size="md">
-          <div className="space-y-4">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <Select label={t('classe.annee_scolaire')} value={inscForm.annee_scolaire_id}
               onChange={(e) => setInscForm(f => ({ ...f, annee_scolaire_id: e.target.value }))}
               options={[{ value: '', label: t('common.selectionner') }, ...annees.map(a => ({ value: a.id, label: a.libelle }))]} />
@@ -1114,7 +1112,7 @@ export function ElevesPage() {
             <Select label={t('eleve.classe_ar')} value={inscForm.classe_ar_id}
               onChange={(e) => setInscForm(f => ({ ...f, classe_ar_id: e.target.value }))}
               options={[{ value: '', label: t('common.aucune') }, ...classesDisp.filter(cl => cl.filiere === 'AR').map(cl => ({ value: cl.id, label: cl.nom_fr }))]} />
-            <div className="flex justify-end gap-3 pt-2">
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingTop: 8 }}>
               <Button variant="secondary" onClick={() => setInscModal(null)}>{t('actions.annuler')}</Button>
               <Button onClick={handleInscrire} loading={inscSaving}>{t('actions.inscrire')}</Button>
             </div>
@@ -1156,8 +1154,8 @@ export function ElevesPage() {
         title={`Inscrire ${selectedIds.size} élève(s)`}
         size="md"
       >
-        <div className="space-y-4">
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <p style={{ fontSize: 13, color: 'var(--text-3)' }}>
             Les {selectedIds.size} élèves sélectionnés seront inscrits dans les mêmes classes.
           </p>
           <Select
@@ -1178,7 +1176,7 @@ export function ElevesPage() {
             onChange={e => setBulkInscForm(f => ({ ...f, classe_ar_id: e.target.value }))}
             options={[{ value: '', label: 'Aucune' }, ...bulkClasses.filter(c => c.filiere === 'AR').map(c => ({ value: c.id, label: c.nom_fr }))]}
           />
-          <div className="flex justify-end gap-3 pt-2">
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingTop: 8 }}>
             <Button variant="secondary" onClick={() => setBulkInscModal(false)}>Annuler</Button>
             <Button onClick={handleBulkInscrire} loading={bulkInscSaving}>
               Inscrire {selectedIds.size} élève(s)
@@ -1189,11 +1187,11 @@ export function ElevesPage() {
 
       {/* ── Barre d'actions flottante ────────────────────────────────────────── */}
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl px-5 py-3">
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">
+        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 50, display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.2)', padding: '12px 20px' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
             {selectedIds.size} élève{selectedIds.size > 1 ? 's' : ''} sélectionné{selectedIds.size > 1 ? 's' : ''}
           </span>
-          <div className="w-px h-5 bg-slate-200 dark:bg-slate-700" />
+          <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
           {canInscrire && (
             <Button size="sm" variant="secondary" onClick={openBulkInscription}>
               Inscrire
@@ -1209,7 +1207,7 @@ export function ElevesPage() {
               </Button>
             </>
           )}
-          <div className="w-px h-5 bg-slate-200 dark:bg-slate-700" />
+          <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
           <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
             Annuler
           </Button>
@@ -1223,61 +1221,61 @@ export function ElevesPage() {
         title="Importer des élèves (CSV)"
         size="lg"
       >
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {!importResult ? (
             <>
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-700 dark:text-blue-300">
-                <p className="font-semibold mb-1">Format attendu — colonnes CSV :</p>
-                <code className="text-xs block bg-blue-100 dark:bg-blue-900/40 p-2 rounded mt-1">
+              <div style={{ padding: 12, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 'var(--r-md)', fontSize: 13, color: '#1d4ed8' }}>
+                <p style={{ fontWeight: 600, marginBottom: 4 }}>Format attendu — colonnes CSV :</p>
+                <code style={{ fontSize: 11, display: 'block', background: '#dbeafe', padding: 8, borderRadius: 'var(--r-sm)', marginTop: 4 }}>
                   nom_fr, prenom_fr, date_naissance, sexe, lieu_naissance, parent_nom_fr, parent_lien, parent_telephone
                 </code>
-                <p className="mt-2 text-xs opacity-80">sexe: M ou F · parent_lien: pere, mere ou tuteur · date_naissance: YYYY-MM-DD · lieu_naissance: optionnel</p>
+                <p style={{ marginTop: 8, fontSize: 11, opacity: 0.8 }}>sexe: M ou F · parent_lien: pere, mere ou tuteur · date_naissance: YYYY-MM-DD · lieu_naissance: optionnel</p>
               </div>
-              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-auto max-h-64">
-                <table className="w-full text-xs">
-                  <thead className="bg-slate-50 dark:bg-slate-700 sticky top-0">
+              <div className="card tbl-wrap" style={{ maxHeight: 256 }}>
+                <table className="tbl" style={{ fontSize: 12 }}>
+                  <thead>
                     <tr>{importRows[0] && Object.keys(importRows[0]).map(k => (
-                      <th key={k} className="px-3 py-2 text-start text-slate-600 dark:text-slate-400">{k}</th>
+                      <th key={k}>{k}</th>
                     ))}</tr>
                   </thead>
                   <tbody>
                     {importRows.slice(0, 10).map((row, i) => (
-                      <tr key={i} className="border-t border-slate-100 dark:border-slate-700">
+                      <tr key={i}>
                         {Object.values(row).map((v, j) => (
-                          <td key={j} className="px-3 py-1.5 text-slate-700 dark:text-slate-300">{v}</td>
+                          <td key={j}>{v}</td>
                         ))}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <p className="text-sm text-slate-500">{importRows.length} ligne(s) détectée(s){importRows.length > 10 ? ' (aperçu 10 premières)' : ''}.</p>
-              <div className="flex justify-end gap-3">
+              <p style={{ fontSize: 13, color: 'var(--text-3)' }}>{importRows.length} ligne(s) détectée(s){importRows.length > 10 ? ' (aperçu 10 premières)' : ''}.</p>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
                 <Button variant="secondary" onClick={() => { setImportModal(false); setImportRows([]); }}>{t('actions.annuler')}</Button>
                 <Button onClick={handleImport} loading={importing}>Importer {importRows.length} élève(s)</Button>
               </div>
             </>
           ) : (
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
-                <span className="text-3xl">✅</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: '#d1fae5', borderRadius: 'var(--r-lg)', border: '1px solid #6ee7b7' }}>
+                <span style={{ fontSize: 28 }}>✅</span>
                 <div>
-                  <p className="font-semibold text-emerald-700 dark:text-emerald-400">{importResult.created} élève(s) importé(s) avec succès</p>
+                  <p style={{ fontWeight: 600, color: '#065f46' }}>{importResult.created} élève(s) importé(s) avec succès</p>
                   {importResult.errors.length > 0 && (
-                    <p className="text-sm text-amber-600 dark:text-amber-400">{importResult.errors.length} ligne(s) ignorée(s)</p>
+                    <p style={{ fontSize: 13, color: 'var(--warning)' }}>{importResult.errors.length} ligne(s) ignorée(s)</p>
                   )}
                 </div>
               </div>
               {importResult.errors.length > 0 && (
-                <div className="space-y-1 max-h-40 overflow-auto">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 160, overflowY: 'auto' }}>
                   {importResult.errors.map((e, i) => (
-                    <div key={i} className="text-xs text-red-600 dark:text-red-400 px-3 py-1 bg-red-50 dark:bg-red-900/10 rounded">
+                    <div key={i} style={{ fontSize: 12, color: 'var(--danger)', padding: '4px 12px', background: '#fff1f2', borderRadius: 'var(--r-sm)' }}>
                       Ligne {e.ligne} : {e.message}
                     </div>
                   ))}
                 </div>
               )}
-              <div className="flex justify-end">
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <Button onClick={() => { setImportModal(false); setImportRows([]); setImportResult(null); }}>Fermer</Button>
               </div>
             </div>

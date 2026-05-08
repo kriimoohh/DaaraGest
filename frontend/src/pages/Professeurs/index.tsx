@@ -266,7 +266,7 @@ export function ProfesseursPage() {
               ]}
               placeholder="Choisir..."
             />
-            <div className="flex justify-end gap-3 pt-2">
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
               <Button variant="secondary" onClick={() => setModalOpen(false)}>{t('actions.annuler')}</Button>
               <Button onClick={handleSubmit} loading={submitting}>
                 {editTarget ? 'Modifier' : 'Ajouter'}

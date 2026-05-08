@@ -20,8 +20,8 @@ export function ConfirmModal({
 }: Props) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
-      <p className="text-slate-600 dark:text-slate-400 mb-6">{message}</p>
-      <div className="flex justify-end gap-3">
+      <p style={{ color: 'var(--text-3)', marginBottom: 24 }}>{message}</p>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
         <Button variant="secondary" onClick={onClose} disabled={loading}>
           Annuler
         </Button>
