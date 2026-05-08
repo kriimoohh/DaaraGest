@@ -308,9 +308,10 @@ export function ElevesPage() {
     if (!bulkInscForm.annee_scolaire_id) { toast.error('Année scolaire requise'); return; }
     setBulkInscSaving(true);
     try {
+      const inscData = Object.fromEntries(Object.entries(bulkInscForm).filter(([, v]) => v !== ''));
       const res = await api.post<{ count: number }>('/api/v1/eleves/bulk-inscrire', {
         ids: [...selectedIds],
-        ...bulkInscForm,
+        ...inscData,
       });
       toast.success(`${res.count} élève(s) inscrit(s) avec succès`);
       setSelectedIds(new Set());
@@ -395,7 +396,8 @@ export function ElevesPage() {
     }
     setInscSaving(true);
     try {
-      await api.post(`/api/v1/eleves/${inscModal.id}/inscrire`, inscForm);
+      const payload = Object.fromEntries(Object.entries(inscForm).filter(([, v]) => v !== ''));
+      await api.post(`/api/v1/eleves/${inscModal.id}/inscrire`, payload);
       toast.success('Élève inscrit avec succès');
       setInscModal(null);
     } catch (err) {

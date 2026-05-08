@@ -21,8 +21,8 @@ export const eleveSchema = z.object({
 
 export const inscriptionSchema = z.object({
   annee_scolaire_id: z.string().min(1),
-  classe_fr_id: z.string().min(1).optional(),
-  classe_ar_id: z.string().min(1).optional(),
+  classe_fr_id: z.string().optional().transform(v => (v && v.length > 0) ? v : undefined),
+  classe_ar_id: z.string().optional().transform(v => (v && v.length > 0) ? v : undefined),
 });
 
 export type EleveInput = z.infer<typeof eleveSchema>;
