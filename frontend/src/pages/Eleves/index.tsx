@@ -23,6 +23,12 @@ interface Parent {
   telephone: string;
 }
 
+interface EleveInscription {
+  classe_fr?: { nom_fr: string };
+  classe_ar?: { nom_fr: string };
+  annee_scolaire?: { libelle: string };
+}
+
 interface Eleve {
   id: string;
   matricule: string;
@@ -35,6 +41,7 @@ interface Eleve {
   actif: boolean;
   photo_url?: string;
   parents: Parent[];
+  inscriptions?: EleveInscription[];
 }
 
 interface Inscription {
@@ -373,6 +380,22 @@ export function ElevesPage() {
       header: 'Date de naissance',
       sortable: true,
       render: (row) => formatDate((row as unknown as Eleve).date_naissance),
+    },
+    {
+      key: 'classe_fr',
+      header: 'Classe FR',
+      render: (row) => {
+        const e = row as unknown as Eleve;
+        return e.inscriptions?.[0]?.classe_fr?.nom_fr ?? '—';
+      },
+    },
+    {
+      key: 'classe_ar',
+      header: 'Classe AR',
+      render: (row) => {
+        const e = row as unknown as Eleve;
+        return e.inscriptions?.[0]?.classe_ar?.nom_fr ?? '—';
+      },
     },
     {
       key: 'actions',
