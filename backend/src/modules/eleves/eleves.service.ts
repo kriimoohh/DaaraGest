@@ -208,6 +208,26 @@ export async function bulkDesactiverEleves(ids: string[], etablissement_id: stri
   });
 }
 
+export async function bulkSupprimerEleves(ids: string[], etablissement_id: string) {
+  const validIds = await prisma.eleve.findMany({
+    where: { id: { in: ids }, etablissement_id },
+    select: { id: true },
+  }).then(rows => rows.map(r => r.id));
+
+  if (validIds.length === 0) return { count: 0 };
+
+  await prisma.$transaction([
+    prisma.note.deleteMany({ where: { eleve_id: { in: validIds } } }),
+    prisma.bulletin.deleteMany({ where: { eleve_id: { in: validIds } } }),
+    prisma.paiementEleve.deleteMany({ where: { eleve_id: { in: validIds } } }),
+    prisma.inscription.deleteMany({ where: { eleve_id: { in: validIds } } }),
+    prisma.parent.deleteMany({ where: { eleve_id: { in: validIds } } }),
+    prisma.eleve.deleteMany({ where: { id: { in: validIds } } }),
+  ]);
+
+  return { count: validIds.length };
+}
+
 export async function bulkInscrireEleves(ids: string[], etablissement_id: string, data: InscriptionInput) {
   const existing = await prisma.eleve.findMany({
     where: { id: { in: ids }, etablissement_id },
