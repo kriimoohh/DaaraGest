@@ -233,6 +233,8 @@ export function ClassesPage() {
     const anneeLabel = typeof classe.annee_scolaire === 'object' ? classe.annee_scolaire.libelle : '';
     const filiereLabel = classe.filiere === 'FR' ? 'Filière Française' : 'Filière Arabe';
     const dateImpression = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+    const nbM = eleves.filter(e => e.sexe === 'M').length;
+    const nbF = eleves.filter(e => e.sexe === 'F').length;
 
     const rows = eleves.map(e => `
       <tr>
@@ -304,7 +306,11 @@ export function ClassesPage() {
   </table>
 
   <div class="footer">
-    <span>Total : <strong>${listeData.total} élève${listeData.total > 1 ? 's' : ''}</strong></span>
+    <span>
+      Total : <strong>${listeData.total} élève${listeData.total > 1 ? 's' : ''}</strong>
+      &nbsp;·&nbsp; Garçons : <strong>${nbM}</strong>
+      &nbsp;·&nbsp; Filles : <strong>${nbF}</strong>
+    </span>
     <span>Imprimé le ${dateImpression}</span>
   </div>
 
