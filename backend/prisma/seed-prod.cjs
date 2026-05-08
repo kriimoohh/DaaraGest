@@ -51,14 +51,14 @@ async function main() {
   const hash = await bcrypt.hash('Admin123!', 10);
   await prisma.utilisateur.upsert({
     where: { identifiant: 'admin' },
-    update: { mot_de_passe: hash, doit_changer_mdp: true },
+    update: { mot_de_passe: hash, must_change_password: true },
     create: {
       id: 'user-admin', identifiant: 'admin', mot_de_passe: hash,
       role_id: 'role-admin', etablissement_id: 'etablissement-default',
       nom_fr: 'Administrateur',
       nom_ar: 'مدير',
       langue: 'fr', theme: 'light',
-      doit_changer_mdp: true,
+      must_change_password: true,
     },
   });
   console.log('✅ Admin (admin / Admin123!) — changement de mot de passe requis à la première connexion');
