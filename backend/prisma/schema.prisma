@@ -313,6 +313,20 @@ model Note {
   @@unique([eleve_id, matiere_id, periode, annee_scolaire_id])
 }
 
+model AuditLog {
+  id               String   @id @default(uuid())
+  etablissement_id String
+  utilisateur_id   String
+  action           String   // 'CREATE' | 'UPDATE' | 'DELETE'
+  entite           String   // 'PaiementEleve', 'Eleve', 'Utilisateur', 'Note', ...
+  entite_id        String
+  details          Json?
+  created_at       DateTime @default(now())
+
+  @@index([etablissement_id, created_at])
+  @@index([entite, entite_id])
+}
+
 model Bulletin {
   id                String    @id @default(uuid())
   eleve_id          String

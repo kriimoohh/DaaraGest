@@ -1,4 +1,5 @@
 import prisma from '../../config/database';
+import { logAction } from '../../utils/audit';
 import { NoteItem } from './notes.schema';
 
 export async function listerNotes(
@@ -28,7 +29,7 @@ export async function listerNotes(
   });
 }
 
-export async function bulkUpsertNotes(notes: NoteItem[], insertOnly = false) {
+export async function bulkUpsertNotes(notes: NoteItem[], insertOnly = false, acteurId?: string, etablissement_id?: string) {
   if (notes.length === 0) return [];
   const results: unknown[] = [];
 
@@ -70,6 +71,12 @@ export async function bulkUpsertNotes(notes: NoteItem[], insertOnly = false) {
       update: { valeur: note.valeur, commentaire: note.commentaire },
     });
     results.push(result);
+  }
+
+  if (results.length > 0 && acteurId && etablissement_id) {
+    await logAction(etablissement_id, acteurId, insertOnly ? 'CREATE' : 'UPDATE', 'Note', 'bulk', {
+      count: results.length, insertOnly,
+    });
   }
   return results;
 }
