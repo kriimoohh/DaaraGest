@@ -15,13 +15,13 @@ import { ConfirmModal } from '../../components/ui/ConfirmModal';
 interface Role { id: string; libelle_fr: string; }
 interface Utilisateur {
   id: string; identifiant: string; nom_fr: string;
-  nom_ar: string; email?: string; langue: string;
+  prenom_fr?: string; email?: string; langue: string;
   actif: boolean; role: { libelle_fr: string; };
 }
 
 const EMPTY_FORM = {
-  identifiant: '', mot_de_passe: '', nom_fr: '',
-  nom_ar: '', email: '', role_id: '', langue: 'fr',
+  identifiant: '', mot_de_passe: '', nom_fr: '', prenom_fr: '',
+  email: '', role_id: '', langue: 'fr',
 };
 
 export function UtilisateursPage() {
@@ -76,8 +76,7 @@ export function UtilisateursPage() {
     setEdit(u);
     setForm({
       identifiant: u.identifiant, mot_de_passe: '',
-      nom_fr: u.nom_fr,
-      nom_ar: u.nom_ar,
+      nom_fr: u.nom_fr, prenom_fr: u.prenom_fr ?? '',
       email: u.email ?? '', role_id: '', langue: u.langue,
     });
     setModal(true);
@@ -85,7 +84,7 @@ export function UtilisateursPage() {
 
   const handleSave = async () => {
     if (!form.identifiant || !form.nom_fr) {
-      toast.error('Identifiant et nom sont requis');
+      toast.error('Identifiant et nom de famille sont requis');
       return;
     }
     if (!edit && !form.mot_de_passe) {
@@ -95,9 +94,9 @@ export function UtilisateursPage() {
     setSaving(true);
     try {
       const payload: Record<string, string> = {
-        identifiant: form.identifiant, nom_fr: form.nom_fr,
-        nom_ar: form.nom_ar, langue: form.langue,
+        identifiant: form.identifiant, nom_fr: form.nom_fr, langue: form.langue,
       };
+      if (form.prenom_fr) payload.prenom_fr = form.prenom_fr;
       if (form.email) payload.email = form.email;
       if (!edit && form.mot_de_passe) payload.mot_de_passe = form.mot_de_passe;
       if (!edit && form.role_id) payload.role_id = form.role_id;
@@ -192,7 +191,7 @@ export function UtilisateursPage() {
             <table className="tbl">
               <thead>
                 <tr>
-                  {['Identifiant', 'Nom', 'Rôle', 'Langue', 'Statut', 'Actions'].map((h) => (
+                  {['Identifiant', 'Prénom', 'Nom', 'Rôle', 'Langue', 'Statut', 'Actions'].map((h) => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>
@@ -201,6 +200,7 @@ export function UtilisateursPage() {
                 {users.map((u) => (
                   <tr key={u.id}>
                     <td style={{ fontFamily: 'var(--font-mono)' }}>{u.identifiant}</td>
+                    <td>{u.prenom_fr ?? <span style={{ color: 'var(--ink-3)', fontStyle: 'italic' }}>—</span>}</td>
                     <td>{u.nom_fr}</td>
                     <td>
                       <Badge label={u.role.libelle_fr.charAt(0).toUpperCase() + u.role.libelle_fr.slice(1)} variant={roleVariant(u.role.libelle_fr)} />
@@ -229,9 +229,10 @@ export function UtilisateursPage() {
       <Modal isOpen={modal} onClose={() => setModal(false)} title={edit ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur'} size="lg">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div className="grid-2">
+            <Input label="Prénom" value={form.prenom_fr} onChange={(e) => setForm((f) => ({ ...f, prenom_fr: e.target.value }))} />
             <Input label={t('common.nom_fr')} value={form.nom_fr} onChange={(e) => setForm((f) => ({ ...f, nom_fr: e.target.value }))} />
-            <Input label={t('auth.identifiant')} value={form.identifiant} onChange={(e) => setForm((f) => ({ ...f, identifiant: e.target.value }))} />
           </div>
+          <Input label={t('auth.identifiant')} value={form.identifiant} onChange={(e) => setForm((f) => ({ ...f, identifiant: e.target.value }))} />
           {!edit && (
             <Input label={t('auth.password')} type="password" value={form.mot_de_passe} onChange={(e) => setForm((f) => ({ ...f, mot_de_passe: e.target.value }))} />
           )}
