@@ -108,7 +108,7 @@ function EleveSearchPicker({ eleves, selected, onChange }: EleveSearchPickerProp
 
   return (
     <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         Élèves sélectionnés ({selected.length})
       </label>
 
@@ -117,7 +117,7 @@ function EleveSearchPicker({ eleves, selected, onChange }: EleveSearchPickerProp
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxHeight: 96, overflowY: 'auto', padding: 4 }}>
           {selected.map(e => (
             <span key={e.id}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 999, fontSize: 12, background: '#d1fae5', color: '#065f46', border: '1px solid #6ee7b7' }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 999, fontSize: 12, background: 'var(--success-soft)', color: 'var(--success-text)', border: '1px solid var(--success-border)' }}>
               {e.prenom_fr} {e.nom_fr} <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--success)' }}>({e.matricule})</span>
               <button onClick={() => remove(e.id)} style={{ marginLeft: 2, background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0 }}>×</button>
             </span>
@@ -136,7 +136,7 @@ function EleveSearchPicker({ eleves, selected, onChange }: EleveSearchPickerProp
           style={{ width: '100%' }}
         />
         {open && filtered.length > 0 && (
-          <div style={{ position: 'absolute', zIndex: 50, marginTop: 4, width: '100%', maxHeight: 208, overflowY: 'auto', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}>
+          <div style={{ position: 'absolute', zIndex: 50, marginTop: 4, width: '100%', maxHeight: 208, overflowY: 'auto', borderRadius: 'var(--r-lg)', border: '1px solid var(--rule)', background: 'var(--card)', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}>
             {filtered.map(e => {
               const sel = selectedIds.has(e.id);
               return (
@@ -144,11 +144,11 @@ function EleveSearchPicker({ eleves, selected, onChange }: EleveSearchPickerProp
                   key={e.id}
                   type="button"
                   onClick={() => toggle(e)}
-                  style={{ width: '100%', textAlign: 'left', padding: '8px 14px', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: sel ? '#ecfdf5' : 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text)' }}>
-                  <span style={{ fontWeight: sel ? 500 : 400, color: sel ? '#065f46' : 'var(--text-2)' }}>
+                  style={{ width: '100%', textAlign: 'left', padding: '8px 14px', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: sel ? 'var(--terra-soft)' : 'transparent', border: 'none', cursor: 'pointer', color: 'var(--ink)' }}>
+                  <span style={{ fontWeight: sel ? 500 : 400, color: sel ? 'var(--terra-ink)' : 'var(--ink-2)' }}>
                     {e.prenom_fr} {e.nom_fr}
                   </span>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-4)' }}>{e.matricule}</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-4)' }}>{e.matricule}</span>
                   {sel && <span style={{ color: 'var(--success)', fontSize: 12, flexShrink: 0 }}>✓</span>}
                 </button>
               );
@@ -226,7 +226,7 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
       </div>
 
       {paiements.length === 0 ? (
-        <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)' }}>
+        <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--ink-3)' }}>
           Aucun paiement pour {MOIS[parseInt(moisF)-1]} {anneeF}
         </div>
       ) : (
@@ -242,11 +242,11 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
             <tbody>
               {paiements.map(p => (
                 <tr key={p.id}>
-                  <td style={{ fontWeight: 500, color: 'var(--text)' }}>{p.professeur.utilisateur.nom_fr}</td>
-                  <td style={{ color: 'var(--text-3)' }}>{MOIS[p.mois-1]} {p.annee}</td>
-                  <td style={{ color: 'var(--text-2)' }}>{formatMontant(Number(p.montant_brut))}</td>
+                  <td style={{ fontWeight: 500, color: 'var(--ink)' }}>{p.professeur.utilisateur.nom_fr}</td>
+                  <td style={{ color: 'var(--ink-3)' }}>{MOIS[p.mois-1]} {p.annee}</td>
+                  <td style={{ color: 'var(--ink-2)' }}>{formatMontant(Number(p.montant_brut))}</td>
                   <td style={{ color: 'var(--danger)', fontSize: 12 }}>-{formatMontant(Number(p.retenues))}</td>
-                  <td style={{ fontWeight: 600, color: 'var(--text)' }}>{formatMontant(Number(p.net_a_payer))}</td>
+                  <td style={{ fontWeight: 600, color: 'var(--ink)' }}>{formatMontant(Number(p.net_a_payer))}</td>
                   <td>
                     <Badge label={p.statut === 'paye' ? t('finance.paye') : t('finance.impaye')} variant={p.statut === 'paye' ? 'success' : 'warning'} />
                   </td>
@@ -467,13 +467,13 @@ export function FinancesPage() {
           {[
             { label: t('finance.total_mois'), value: formatMontant(Number(stats.total_encaisse_eleves)), icon: '💰', color: 'var(--success)' },
             { label: t('finance.paiements_mois'), value: stats.nb_paiements_eleves, icon: '📄', color: 'var(--info)' },
-            { label: t('finance.verse_profs'), value: formatMontant(Number(stats.total_paye_professeurs)), icon: '👨‍🏫', color: 'var(--accent)' },
+            { label: t('finance.verse_profs'), value: formatMontant(Number(stats.total_paye_professeurs)), icon: '👨‍🏫', color: 'var(--terra)' },
           ].map(s => (
             <div key={s.label} className="card" style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ fontSize: 22 }}>{s.icon}</span>
               <div>
                 <p style={{ fontSize: 18, fontWeight: 700, color: s.color }}>{s.value}</p>
-                <p style={{ fontSize: 12, color: 'var(--text-3)' }}>{s.label}</p>
+                <p style={{ fontSize: 12, color: 'var(--ink-3)' }}>{s.label}</p>
               </div>
             </div>
           ))}
@@ -500,13 +500,13 @@ export function FinancesPage() {
 
           {!isReliquat && (
             <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
-              <span style={{ fontSize: 12, color: 'var(--text-3)', flexShrink: 0 }}>Type :</span>
+              <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>Type :</span>
               {FILTER_TYPES.map(f => (
                 <button key={f.value} onClick={() => setFilterType(f.value)}
                   style={{
                     padding: '4px 12px', borderRadius: 99, fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer',
-                    background: filterType === f.value ? 'var(--text)' : 'var(--bg-3)',
-                    color: filterType === f.value ? 'var(--bg)' : 'var(--text-3)',
+                    background: filterType === f.value ? 'var(--ink)' : 'var(--paper-3)',
+                    color: filterType === f.value ? 'var(--paper)' : 'var(--ink-3)',
                   }}>
                   {f.label}
                 </button>
@@ -515,13 +515,13 @@ export function FinancesPage() {
           )}
 
           <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-3)', flexShrink: 0 }}>Statut :</span>
+            <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>Statut :</span>
             {FILTER_STATUTS.map(f => (
               <button key={f.value} onClick={() => setFilterStatut(f.value)}
                 style={{
                   padding: '4px 12px', borderRadius: 99, fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer',
-                  background: filterStatut === f.value ? 'var(--text)' : 'var(--bg-3)',
-                  color: filterStatut === f.value ? 'var(--bg)' : 'var(--text-3)',
+                  background: filterStatut === f.value ? 'var(--ink)' : 'var(--paper-3)',
+                  color: filterStatut === f.value ? 'var(--paper)' : 'var(--ink-3)',
                 }}>
                 {f.icon && `${f.icon} `}{f.label}
               </button>
@@ -529,7 +529,7 @@ export function FinancesPage() {
           </div>
 
           <div className="row" style={{ gap: 12 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-3)', flexShrink: 0 }}>Période :</span>
+            <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>Période :</span>
             <Select value={mois} onChange={e => setMois(e.target.value)}
               options={[{ value: '', label: isReliquat ? 'Toute l\'année' : 'Tous les mois' }, ...MOIS.map((m, i) => ({ value: String(i+1), label: m }))]} />
             <Input label="" type="number" value={annee} onChange={e => setAnnee(e.target.value)} />
@@ -665,9 +665,9 @@ export function FinancesPage() {
       <Modal isOpen={!!editTarget} onClose={() => setEditTarget(null)} title="Modifier le paiement" size="md">
         {editTarget && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
-              Élève : <strong style={{ color: 'var(--text)' }}>{editTarget.eleve.prenom_fr} {editTarget.eleve.nom_fr}</strong>
-              <span className="font-mono" style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 8 }}>({editTarget.eleve.matricule})</span>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+              Élève : <strong style={{ color: 'var(--ink)' }}>{editTarget.eleve.prenom_fr} {editTarget.eleve.nom_fr}</strong>
+              <span className="font-mono" style={{ fontSize: 11, color: 'var(--ink-3)', marginLeft: 8 }}>({editTarget.eleve.matricule})</span>
             </p>
             <div className="grid-2">
               <Select label={t('finance.type')} value={editForm.type} onChange={e => setEditForm(f => ({ ...f, type: e.target.value }))}

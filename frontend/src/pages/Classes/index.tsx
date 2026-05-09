@@ -239,8 +239,8 @@ export function ClassesPage() {
     const dateImpression = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
     const nbM = eleves.filter(e => e.sexe === 'M').length;
     const nbF = total - nbM;
-    const badgeBg = classe.filiere === 'FR' ? '#dbeafe' : '#d1fae5';
-    const badgeColor = classe.filiere === 'FR' ? '#1e40af' : '#065f46';
+    const badgeBg = classe.filiere === 'FR' ? '#DDE2F1' : '#DCEBDF';
+    const badgeColor = classe.filiere === 'FR' ? '#1B254A' : '#2D5938';
 
     const rows = eleves.map(e => `
       <tr>
@@ -257,16 +257,16 @@ export function ClassesPage() {
     const css = `
       * { margin:0; padding:0; box-sizing:border-box; }
       body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; color: #1a1a1a; padding: 15mm; }
-      .header { text-align: center; margin-bottom: 18px; border-bottom: 2px solid #10B981; padding-bottom: 12px; }
-      .header h1 { font-size: 18px; font-weight: 700; color: #10B981; letter-spacing: 0.5px; }
+      .header { text-align: center; margin-bottom: 18px; border-bottom: 2px solid #B85433; padding-bottom: 12px; }
+      .header h1 { font-size: 18px; font-weight: 700; color: #B85433; letter-spacing: 0.5px; }
       .header h2 { font-size: 14px; font-weight: 600; margin-top: 4px; }
       .meta { display: flex; justify-content: space-between; font-size: 10px; color: #555; margin-top: 6px; }
       .badge { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 10px; font-weight: 600; background: ${badgeBg}; color: ${badgeColor}; }
       table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-      thead tr { background: #10B981; color: white; }
+      thead tr { background: #B85433; color: white; }
       thead th { padding: 7px 6px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
       tbody tr:nth-child(even) { background: #f0fdf4; }
-      tbody tr:hover { background: #d1fae5; }
+      tbody tr:hover { background: #DCEBDF; }
       td { padding: 5px 6px; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
       td:first-child { text-align: center; color: #6b7280; font-size: 10px; font-weight: 600; }
       .mono { font-family: monospace; font-size: 10px; color: #374151; }
@@ -390,13 +390,13 @@ export function ClassesPage() {
         body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; color: #1a1a1a; }
         .page { padding: 15mm; page-break-after: always; }
         .page:last-child { page-break-after: avoid; }
-        .header { text-align: center; margin-bottom: 18px; border-bottom: 2px solid #10B981; padding-bottom: 12px; }
-        .header h1 { font-size: 18px; font-weight: 700; color: #10B981; letter-spacing: 0.5px; }
+        .header { text-align: center; margin-bottom: 18px; border-bottom: 2px solid #B85433; padding-bottom: 12px; }
+        .header h1 { font-size: 18px; font-weight: 700; color: #B85433; letter-spacing: 0.5px; }
         .header h2 { font-size: 14px; font-weight: 600; margin-top: 4px; }
         .meta { display: flex; justify-content: space-between; font-size: 10px; color: #555; margin-top: 6px; }
         .badge { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 10px; font-weight: 600; }
         table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-        thead tr { background: #10B981; color: white; }
+        thead tr { background: #B85433; color: white; }
         thead th { padding: 7px 6px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
         tbody tr:nth-child(even) { background: #f0fdf4; }
         td { padding: 5px 6px; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
@@ -416,8 +416,8 @@ export function ClassesPage() {
         const dateImpression = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
         const nbM = eleves.filter(e => e.sexe === 'M').length;
         const nbF = total - nbM;
-        const badgeBg = classe.filiere === 'FR' ? '#dbeafe' : '#d1fae5';
-        const badgeColor = classe.filiere === 'FR' ? '#1e40af' : '#065f46';
+        const badgeBg = classe.filiere === 'FR' ? '#DDE2F1' : '#DCEBDF';
+        const badgeColor = classe.filiere === 'FR' ? '#1B254A' : '#2D5938';
         const rows = eleves.map(e => `
           <tr>
             <td>${e.rang}</td><td class="mono">${e.matricule}</td>
@@ -583,7 +583,7 @@ export function ClassesPage() {
           />
         </div>
         <div className="row" style={{ marginInlineStart: 'auto' }}>
-          <span style={{ fontSize: 12, color: 'var(--text-4)', fontWeight: 500, whiteSpace: 'nowrap' }}>Toutes les classes :</span>
+          <span style={{ fontSize: 12, color: 'var(--ink-4)', fontWeight: 500, whiteSpace: 'nowrap' }}>Toutes les classes :</span>
           <Button
             size="sm"
             variant="secondary"
@@ -699,9 +699,9 @@ export function ClassesPage() {
         ) : listeData ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-3)' }}>
+              <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>
                 Année scolaire :
-                <strong style={{ color: 'var(--text)', marginInlineStart: 4 }}>
+                <strong style={{ color: 'var(--ink)', marginInlineStart: 4 }}>
                   {typeof listeData.classe.annee_scolaire === 'object'
                     ? listeData.classe.annee_scolaire.libelle
                     : '—'}
@@ -725,7 +725,7 @@ export function ClassesPage() {
               className="input"
             />
 
-            <div style={{ overflow: 'auto', maxHeight: '50vh', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)' }}>
+            <div style={{ overflow: 'auto', maxHeight: '50vh', borderRadius: 'var(--r-lg)', border: '1px solid var(--rule)' }}>
               <table className="tbl">
                 <thead>
                   <tr>
@@ -747,7 +747,7 @@ export function ClassesPage() {
                     })
                     .map(e => (
                       <tr key={e.id}>
-                        <td style={{ color: 'var(--text-4)' }}>{e.rang}</td>
+                        <td style={{ color: 'var(--ink-4)' }}>{e.rang}</td>
                         <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{e.matricule}</td>
                         <td>{e.nom_fr}</td>
                         <td>{e.prenom_fr}</td>

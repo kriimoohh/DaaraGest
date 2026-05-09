@@ -69,7 +69,7 @@ export function ParametresPage() {
 
       <div className="card-pad" style={{ marginBottom: 16 }}>
         <div className="card-hd" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', marginBottom: 14 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{t('parametre.etablissement')}</h3>
+          <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>{t('parametre.etablissement')}</h3>
           {success === 'etab' && <span style={{ fontSize: 13, color: 'var(--success-text)' }}>✓ Enregistré</span>}
         </div>
         {etab && (
@@ -89,7 +89,7 @@ export function ParametresPage() {
 
       <div className="card-pad">
         <div className="card-hd" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', marginBottom: 14 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{t('parametre.config_notes')}</h3>
+          <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>{t('parametre.config_notes')}</h3>
           {success === 'notes' && <span style={{ fontSize: 13, color: 'var(--success-text)' }}>✓ Enregistré</span>}
         </div>
         {config && (
@@ -127,7 +127,7 @@ export function ParametresPage() {
                 checked={config.chiffres_arabes}
                 onChange={(e) => setConfig((p) => p ? { ...p, chiffres_arabes: e.target.checked } : p)}
               />
-              <label htmlFor="chiffres_arabes" style={{ fontSize: 13, color: 'var(--text-2)' }}>
+              <label htmlFor="chiffres_arabes" style={{ fontSize: 13, color: 'var(--ink-2)' }}>
                 Utiliser les chiffres arabes (٠١٢٣٤٥٦٧٨٩)
               </label>
             </div>
