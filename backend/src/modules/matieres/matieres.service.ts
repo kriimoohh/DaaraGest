@@ -15,7 +15,7 @@ export async function creerMatiere(etablissement_id: string, data: MatiereInput)
     data: {
       etablissement_id,
       nom_fr: data.nom_fr,
-      nom_ar: data.nom_ar,
+      nom_ar: data.nom_ar ?? '',
       filiere: data.filiere,
       coeff_defaut: data.coeff_defaut ?? 1,
       note_max: data.note_max ?? Number(config?.note_max ?? 20),
@@ -32,7 +32,7 @@ export async function modifierMatiere(id: string, etablissement_id: string, data
     where: { id },
     data: {
       nom_fr: data.nom_fr,
-      nom_ar: data.nom_ar,
+      nom_ar: data.nom_ar ?? '',
       filiere: data.filiere,
       coeff_defaut: data.coeff_defaut,
       note_max: data.note_max,
