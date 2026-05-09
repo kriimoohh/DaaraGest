@@ -65,9 +65,9 @@ export function Login() {
       <div className="login-card">
         {/* Brand */}
         <div className="login-brand">
-          <div className="sb-mark" style={{ width: 36, height: 36, fontSize: 20 }}>د</div>
+          <div className="sb-mark" style={{ width: 36, height: 36, fontSize: 20 }}>Dg</div>
           <div>
-            <div className="sb-name" style={{ fontSize: 20 }}>DaaraGest</div>
+            <div className="sb-name" style={{ fontSize: 20 }}>Daara<span style={{ color: 'var(--terra)' }}>Gest</span></div>
             <div className="sb-tag">Gestion scolaire franco-arabe</div>
           </div>
         </div>
@@ -130,7 +130,7 @@ export function Login() {
         </form>
 
         <div className="divider" style={{ marginTop: 24 }} />
-        <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-4)' }}>
+        <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--ink-4)' }}>
           École franco-arabe · Sénégal
         </p>
       </div>

@@ -163,8 +163,8 @@ export function Dashboard() {
                           title={fmtNum(m.total) + ' FCFA'}
                         />
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500 }}>{m.label}</div>
-                      <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: isLast ? 'var(--accent-text)' : 'var(--text-2)' }}>
+                      <div style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 500 }}>{m.label}</div>
+                      <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: isLast ? 'var(--terra-ink)' : 'var(--ink-2)' }}>
                         {fmtCompact(m.total)}
                       </div>
                     </div>
@@ -190,7 +190,7 @@ export function Dashboard() {
                   <div className="info-label">Encaissé élèves</div>
                   <div className="font-display" style={{ fontSize: 28, letterSpacing: '-0.02em', lineHeight: 1 }}>
                     {fmtCompact(statsMois.total_encaisse_eleves)}
-                    <span style={{ fontSize: 13, fontFamily: 'var(--font-sans)', color: 'var(--text-3)', marginInlineStart: 4 }}>FCFA</span>
+                    <span style={{ fontSize: 13, fontFamily: 'var(--font-sans)', color: 'var(--ink-3)', marginInlineStart: 4 }}>FCFA</span>
                   </div>
                 </div>
                 <div className="divider" style={{ margin: '0' }} />
@@ -201,7 +201,7 @@ export function Dashboard() {
                   </div>
                   <div>
                     <div className="info-label">Versé profs</div>
-                    <div style={{ fontWeight: 600, fontSize: 14, fontFamily: 'var(--font-mono)', color: 'var(--text-2)' }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, fontFamily: 'var(--font-mono)', color: 'var(--ink-2)' }}>
                       {fmtCompact(statsMois.total_paye_professeurs)}
                     </div>
                   </div>
@@ -240,7 +240,7 @@ export function Dashboard() {
                     <td className="mono">{p.recu}</td>
                     <td>
                       <div className="row gap-2">
-                        <div className="avatar avatar-sm" style={{ background: 'var(--accent-soft)', color: 'var(--accent-text)' }}>
+                        <div className="avatar avatar-sm" style={{ background: 'var(--terra-soft)', color: 'var(--terra-ink)' }}>
                           {(p.eleve_nom || '').split(' ').map(w => w[0]).slice(0, 2).join('')}
                         </div>
                         <div style={{ fontWeight: 500 }}>{p.eleve_nom}</div>

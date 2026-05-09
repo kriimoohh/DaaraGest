@@ -147,7 +147,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div className="filter-row">
         <div className="row">
-          <label style={{ fontSize: 13, color: 'var(--text-3)', flexShrink: 0 }}>Date :</label>
+          <label style={{ fontSize: 13, color: 'var(--ink-3)', flexShrink: 0 }}>Date :</label>
           <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
         </div>
         <Button variant="secondary" onClick={charger} loading={loading}>Actualiser</Button>
@@ -198,8 +198,8 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
                               onClick={() => setStatut(p.professeur_id, s.statut === st.value ? '' : st.value)}
                               style={{
                                 padding: '3px 10px', borderRadius: 99, fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer',
-                                background: s.statut === st.value ? `var(--${st.badge === 'success' ? 'success' : st.badge === 'warning' ? 'warning' : st.badge === 'error' ? 'danger' : 'info'})` : 'var(--bg-3)',
-                                color: s.statut === st.value ? '#fff' : 'var(--text-3)',
+                                background: s.statut === st.value ? `var(--${st.badge === 'success' ? 'success' : st.badge === 'warning' ? 'warning' : st.badge === 'error' ? 'danger' : 'info'})` : 'var(--paper-3)',
+                                color: s.statut === st.value ? '#fff' : 'var(--ink-3)',
                               }}
                             >
                               {st.label}
@@ -281,7 +281,7 @@ function Historique({ api }: { api: ReturnType<typeof useApi> }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div className="filter-row">
-        <span style={{ fontSize: 12, color: 'var(--text-3)', flexShrink: 0 }}>Période :</span>
+        <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>Période :</span>
         <Select value={mois} onChange={e => setMois(e.target.value)}
           options={MOIS_LABELS.map((m, i) => ({ value: String(i + 1), label: m }))} />
         <Input type="number" value={annee} onChange={e => setAnnee(e.target.value)} />
@@ -290,8 +290,8 @@ function Historique({ api }: { api: ReturnType<typeof useApi> }) {
             <button key={s.value} onClick={() => setStatut(s.value)}
               style={{
                 padding: '4px 12px', borderRadius: 99, fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer',
-                background: statut === s.value ? 'var(--text)' : 'var(--bg-3)',
-                color: statut === s.value ? 'var(--bg)' : 'var(--text-3)',
+                background: statut === s.value ? 'var(--ink)' : 'var(--paper-3)',
+                color: statut === s.value ? 'var(--paper)' : 'var(--ink-3)',
               }}>
               {s.label}
             </button>
@@ -365,7 +365,7 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div className="filter-row">
-        <span style={{ fontSize: 12, color: 'var(--text-3)', flexShrink: 0 }}>Période :</span>
+        <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>Période :</span>
         <Select value={mois} onChange={e => setMois(e.target.value)}
           options={MOIS_LABELS.map((m, i) => ({ value: String(i + 1), label: m }))} />
         <Input type="number" value={annee} onChange={e => setAnnee(e.target.value)} />
@@ -382,7 +382,7 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
           ].map(c => (
             <div key={c.label} className="card" style={{ textAlign: 'center', padding: 16 }}>
               <div style={{ fontSize: 24, fontWeight: 700, color: c.color }}>{c.value}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>{c.label}</div>
+              <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>{c.label}</div>
             </div>
           ))}
         </div>
@@ -412,7 +412,7 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
                     <td>
                       {s.taux_presence !== null ? (
                         <div className="row" style={{ gap: 8 }}>
-                          <div style={{ flex: 1, background: 'var(--bg-3)', borderRadius: 99, height: 6, minWidth: 64 }}>
+                          <div style={{ flex: 1, background: 'var(--paper-3)', borderRadius: 99, height: 6, minWidth: 64 }}>
                             <div style={{
                               height: 6, borderRadius: 99, width: `${s.taux_presence}%`,
                               background: s.taux_presence >= 80 ? 'var(--success)' : s.taux_presence >= 60 ? 'var(--warning)' : 'var(--danger)',
@@ -422,7 +422,7 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
                             {s.taux_presence}%
                           </span>
                         </div>
-                      ) : <span style={{ color: 'var(--text-4)', fontSize: 12 }}>—</span>}
+                      ) : <span style={{ color: 'var(--ink-4)', fontSize: 12 }}>—</span>}
                     </td>
                   </tr>
                 ))}

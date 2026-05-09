@@ -103,9 +103,9 @@ export function Sidebar() {
     <aside className="sidebar">
       {/* Brand */}
       <div className="sb-brand">
-        <div className="sb-mark">د</div>
+        <div className="sb-mark">Dg</div>
         <div>
-          <div className="sb-name">DaaraGest</div>
+          <div className="sb-name">Daara<span style={{ color: 'var(--terra)' }}>Gest</span></div>
           <div className="sb-tag">Gestion scolaire</div>
         </div>
       </div>
@@ -147,7 +147,7 @@ export function Sidebar() {
           <div className="sb-user-name">{user?.nom_fr ?? ''}</div>
           <div className="sb-user-role">{role}</div>
         </div>
-        <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--text-4)', flexShrink: 0 }}>
+        <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--ink-4)', flexShrink: 0 }}>
           <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
         </svg>
       </button>
@@ -170,19 +170,19 @@ export function Sidebar() {
 
               {profilTab === 'info' && (
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 16px', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', marginBottom: 16 }}>
-                    <div className="avatar avatar-xl" style={{ background: 'var(--accent-soft)', color: 'var(--accent-text)' }}>{initials || '?'}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 16px', background: 'var(--paper-2)', border: '1px solid var(--rule)', borderRadius: 'var(--r-lg)', marginBottom: 16 }}>
+                    <div className="avatar avatar-xl" style={{ background: 'var(--terra-soft)', color: 'var(--terra-ink)' }}>{initials || '?'}</div>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: 16 }}>{user?.nom_fr}</div>
-                      <div style={{ fontSize: 13, color: 'var(--text-3)', textTransform: 'capitalize', marginTop: 2 }}>{role}</div>
+                      <div style={{ fontSize: 13, color: 'var(--ink-3)', textTransform: 'capitalize', marginTop: 2 }}>{role}</div>
                       {user?.identifiant && (
-                        <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-3)', marginTop: 4 }}>@{user.identifiant}</div>
+                        <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--ink-3)', marginTop: 4 }}>@{user.identifiant}</div>
                       )}
                     </div>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <button
-                      style={{ fontSize: 13, color: 'var(--accent-text)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                      style={{ fontSize: 13, color: 'var(--terra-ink)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                       onClick={() => setProfilTab('password')}
                     >
                       Changer le mot de passe →
