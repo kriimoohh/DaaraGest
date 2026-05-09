@@ -42,6 +42,8 @@ model Utilisateur {
   role_id              String
   nom_fr               String
   nom_ar               String
+  prenom_fr            String?
+  prenom_ar            String?
   identifiant          String    @unique
   email                String?
   mot_de_passe         String
