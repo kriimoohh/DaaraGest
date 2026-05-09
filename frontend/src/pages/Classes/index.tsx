@@ -108,6 +108,8 @@ export function ClassesPage() {
   const [confirmDelete, setConfirmDelete] = useState<Classe | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  const [etablissementNom, setEtablissementNom] = useState('');
+
   // Liste des élèves d'une classe
   const [listeModal, setListeModal] = useState<Classe | null>(null);
   const [listeData, setListeData] = useState<ListeElevesResponse | null>(null);
@@ -117,11 +119,15 @@ export function ClassesPage() {
   const [pdfToutesLoading, setPdfToutesLoading] = useState(false);
   const [imprimerToutesLoading, setImprimerToutesLoading] = useState(false);
 
-  // Fetch annees scolaires once
+  // Fetch annees scolaires + school name once
   useEffect(() => {
     api
       .get<AnneeScolaire[]>('/api/v1/annees-scolaires')
       .then((res) => setAnnees(res))
+      .catch(() => {});
+    api
+      .get<{ nom_fr: string }>('/api/v1/parametres')
+      .then((res) => setEtablissementNom(res.nom_fr ?? ''))
       .catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -286,7 +292,7 @@ export function ClassesPage() {
 </head>
 <body>
   <div class="header">
-    <h1>DaaraGest</h1>
+    <h1>${etablissementNom || 'École'}</h1>
     <h2>Liste des élèves — ${classe.nom_fr}</h2>
     <div class="meta">
       <span>Année scolaire : <strong>${anneeLabel}</strong></span>
@@ -429,7 +435,7 @@ export function ClassesPage() {
           </tr>`).join('');
         return `<div class="page">
           <div class="header">
-            <h1>DaaraGest</h1>
+            <h1>${etablissementNom || 'École'}</h1>
             <h2>Liste des élèves — ${classe.nom_fr}</h2>
             <div class="meta">
               <span>Année scolaire : <strong>${anneeLabel}</strong></span>
