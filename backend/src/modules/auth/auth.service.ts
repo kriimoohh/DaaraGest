@@ -36,7 +36,7 @@ export async function login(identifiant: string, mot_de_passe: string) {
     user: {
       id: utilisateur.id,
       nom_fr: utilisateur.nom_fr,
-      nom_ar: utilisateur.nom_ar,
+      prenom_fr: utilisateur.prenom_fr,
       identifiant: utilisateur.identifiant,
       langue: utilisateur.langue,
       theme: utilisateur.theme,
@@ -91,7 +91,7 @@ export async function getMe(id: string) {
   return {
     id: utilisateur.id,
     nom_fr: utilisateur.nom_fr,
-    nom_ar: utilisateur.nom_ar,
+    prenom_fr: utilisateur.prenom_fr,
     identifiant: utilisateur.identifiant,
     langue: utilisateur.langue,
     theme: utilisateur.theme,
