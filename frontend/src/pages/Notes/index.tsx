@@ -142,7 +142,7 @@ export function NotesPage() {
       {classeId && matiereId && (
         <div className="card">
           <div className="card-hd" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
-            <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
+            <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>
               {eleves.length} élève(s)
             </span>
             <div className="row" style={{ gap: 12 }}>
@@ -204,7 +204,7 @@ export function NotesPage() {
                                 placeholder="—"
                               />
                               {fieldReadOnly && (
-                                <span title="Note déjà saisie — modification non autorisée" style={{ fontSize: 12, color: 'var(--text-4)' }}>🔒</span>
+                                <span title="Note déjà saisie — modification non autorisée" style={{ fontSize: 12, color: 'var(--ink-4)' }}>🔒</span>
                               )}
                             </div>
                           );

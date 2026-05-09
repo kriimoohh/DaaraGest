@@ -24,7 +24,7 @@ function SkeletonRow({ cols }: { cols: number }) {
     <tr>
       {Array.from({ length: cols }).map((_, i) => (
         <td key={i} style={{ padding: '12px 14px' }}>
-          <div style={{ height: 14, background: 'var(--bg-3)', borderRadius: 4, animation: 'pulse 1.5s ease-in-out infinite' }} />
+          <div style={{ height: 14, background: 'var(--paper-3)', borderRadius: 4, animation: 'pulse 1.5s ease-in-out infinite' }} />
         </td>
       ))}
     </tr>
@@ -53,7 +53,7 @@ export function Table<T extends Record<string, unknown>>({
                     {col.headerRender ? col.headerRender() : canSort ? (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                         {col.header}
-                        <span style={{ color: isSorted ? 'var(--accent)' : 'var(--text-4)', fontSize: 10 }}>
+                        <span style={{ color: isSorted ? 'var(--terra)' : 'var(--ink-4)', fontSize: 10 }}>
                           {isSorted ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
                         </span>
                       </span>
