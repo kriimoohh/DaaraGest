@@ -23,14 +23,14 @@ async function main() {
   const etab = await prisma.etablissement.upsert({
     where: { id: 'etablissement-default' },
     update: {
-      nom_fr: 'École Franco Arabe Cheikh Abdoul Ahad Mbacké',
+      nom_fr: 'École Privée Sociale Franco Arabe Cheikh Abdoul Ahad Mbacké',
       adresse: 'Guédiawaye, Dakar, Sénégal',
       telephone: '+221 33 820 12 34',
       devise: 'FCFA',
     },
     create: {
       id: 'etablissement-default',
-      nom_fr: 'École Franco Arabe Cheikh Abdoul Ahad Mbacké',
+      nom_fr: 'École Privée Sociale Franco Arabe Cheikh Abdoul Ahad Mbacké',
       adresse: 'Guédiawaye, Dakar, Sénégal',
       telephone: '+221 33 820 12 34',
       devise: 'FCFA',
