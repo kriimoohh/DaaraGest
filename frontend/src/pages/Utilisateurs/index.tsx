@@ -262,7 +262,7 @@ export function UtilisateursPage() {
       {/* Modal reset password */}
       <Modal isOpen={!!resetModal} onClose={() => setResetModal(null)} title="Réinitialiser le mot de passe" size="sm">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <p style={{ fontSize: 13, color: 'var(--text-3)' }}>
+          <p style={{ fontSize: 13, color: 'var(--ink-3)' }}>
             Nouveau mot de passe pour <strong>{resetModal?.identifiant}</strong>
           </p>
           <Input label={t('utilisateur.nouveau_mdp')} type="password" value={newPwd} onChange={(e) => setNewPwd(e.target.value)} />

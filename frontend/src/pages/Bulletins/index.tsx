@@ -60,7 +60,7 @@ function moyenneVariant(m: number | null): 'success' | 'error' | 'warning' | 'ne
 }
 
 function moyenneColor(m: number | null): string {
-  if (m === null) return 'var(--text-4)';
+  if (m === null) return 'var(--ink-4)';
   if (m >= 14) return 'var(--success)';
   if (m >= 10) return 'var(--warning)';
   return 'var(--danger)';
@@ -68,11 +68,11 @@ function moyenneColor(m: number | null): string {
 
 function filiereChip(f: string) {
   const map: Record<string, { bg: string; color: string; label: string }> = {
-    FR:      { bg: '#dbeafe', color: '#1d4ed8', label: 'FR' },
-    AR:      { bg: '#fef3c7', color: '#b45309', label: 'AR' },
-    COMBINE: { bg: '#d1fae5', color: '#065f46', label: 'FR+AR' },
+    FR:      { bg: 'var(--indigo-soft)', color: 'var(--indigo-ink)', label: 'FR' },
+    AR:      { bg: 'var(--sahel-soft)', color: 'var(--sahel-ink)', label: 'AR' },
+    COMBINE: { bg: 'var(--success-soft)', color: 'var(--success-text)', label: 'FR+AR' },
   };
-  const s = map[f] ?? { bg: 'var(--bg-2)', color: 'var(--text-3)', label: f };
+  const s = map[f] ?? { bg: 'var(--paper-2)', color: 'var(--ink-3)', label: f };
   return (
     <span style={{ display: 'inline-block', padding: '1px 8px', borderRadius: 999, fontSize: 12, fontWeight: 600, background: s.bg, color: s.color }}>
       {s.label}
@@ -81,11 +81,11 @@ function filiereChip(f: string) {
 }
 
 function RangMedal({ rang }: { rang: number | null }) {
-  if (rang === null) return <span style={{ color: 'var(--text-4)' }}>—</span>;
-  if (rang === 1) return <span style={{ color: '#f59e0b', fontWeight: 700, fontSize: 15 }}>🥇 1er</span>;
-  if (rang === 2) return <span style={{ color: 'var(--text-3)', fontWeight: 700 }}>🥈 2ème</span>;
-  if (rang === 3) return <span style={{ color: '#b45309', fontWeight: 700 }}>🥉 3ème</span>;
-  return <span style={{ fontWeight: 600, color: 'var(--text-2)' }}>{rang}ème</span>;
+  if (rang === null) return <span style={{ color: 'var(--ink-4)' }}>—</span>;
+  if (rang === 1) return <span style={{ color: 'var(--sahel)', fontWeight: 700, fontSize: 15 }}>🥇 1er</span>;
+  if (rang === 2) return <span style={{ color: 'var(--ink-3)', fontWeight: 700 }}>🥈 2ème</span>;
+  if (rang === 3) return <span style={{ color: 'var(--sahel-ink)', fontWeight: 700 }}>🥉 3ème</span>;
+  return <span style={{ fontWeight: 600, color: 'var(--ink-2)' }}>{rang}ème</span>;
 }
 
 function ClasseStats({ bulletins }: { bulletins: Bulletin[] }) {
@@ -103,23 +103,23 @@ function ClasseStats({ bulletins }: { bulletins: Bulletin[] }) {
         <div style={{ fontSize: 22, fontWeight: 700, color: moyenneColor(moyClasse) }}>
           {moyClasse.toFixed(2)}
         </div>
-        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>Moyenne classe</div>
+        <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>Moyenne classe</div>
       </div>
       <div className="card" style={{ padding: 16, textAlign: 'center' }}>
-        <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>{bulletins.length}</div>
-        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>Élèves</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)' }}>{bulletins.length}</div>
+        <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>Élèves</div>
       </div>
       <div className="card" style={{ padding: 16, textAlign: 'center' }}>
         <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--success)' }}>
           {avecMoy.length > 0 ? Math.round((reussite / avecMoy.length) * 100) : 0}%
         </div>
-        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>Taux de réussite</div>
+        <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>Taux de réussite</div>
       </div>
       <div className="card" style={{ padding: 16, textAlign: 'center' }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--warning)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {meilleur ? `${meilleur.eleve.prenom_fr} ${meilleur.eleve.nom_fr}` : '—'}
         </div>
-        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>1er de classe</div>
+        <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>1er de classe</div>
       </div>
     </div>
   );
@@ -299,13 +299,13 @@ export function BulletinsPage() {
           )}
 
           {bulletins.length > 0 && (
-            <div style={{ marginInlineStart: 'auto', display: 'flex', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
+            <div style={{ marginInlineStart: 'auto', display: 'flex', border: '1px solid var(--rule)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
               <button
                 onClick={() => setView('cards')}
                 style={{
                   padding: '4px 12px', fontSize: 13,
-                  background: view === 'cards' ? 'var(--text)' : 'transparent',
-                  color: view === 'cards' ? 'var(--bg)' : 'var(--text-3)',
+                  background: view === 'cards' ? 'var(--ink)' : 'transparent',
+                  color: view === 'cards' ? 'var(--paper)' : 'var(--ink-3)',
                   fontWeight: view === 'cards' ? 600 : 400,
                   border: 'none', cursor: 'pointer',
                 }}
@@ -316,8 +316,8 @@ export function BulletinsPage() {
                 onClick={() => setView('table')}
                 style={{
                   padding: '4px 12px', fontSize: 13,
-                  background: view === 'table' ? 'var(--text)' : 'transparent',
-                  color: view === 'table' ? 'var(--bg)' : 'var(--text-3)',
+                  background: view === 'table' ? 'var(--ink)' : 'transparent',
+                  color: view === 'table' ? 'var(--paper)' : 'var(--ink-3)',
                   fontWeight: view === 'table' ? 600 : 400,
                   border: 'none', cursor: 'pointer',
                 }}
@@ -337,7 +337,7 @@ export function BulletinsPage() {
         <div className="grid-4">
           {sortedBulletins.map(b => {
             const moy = b.moyenne !== null ? Number(b.moyenne) : null;
-            const barColor = moy === null ? 'var(--border)' : moy >= 14 ? 'var(--success)' : moy >= 10 ? 'var(--warning)' : 'var(--danger)';
+            const barColor = moy === null ? 'var(--rule)' : moy >= 14 ? 'var(--success)' : moy >= 10 ? 'var(--warning)' : 'var(--danger)';
             return (
               <div key={b.id} className="card" style={{ overflow: 'hidden' }}>
                 {/* Barre de couleur selon la moyenne */}
@@ -347,10 +347,10 @@ export function BulletinsPage() {
                   {/* En-tête élève */}
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                     <div>
-                      <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: 13, lineHeight: 1.3 }}>
+                      <div style={{ fontWeight: 600, color: 'var(--ink)', fontSize: 13, lineHeight: 1.3 }}>
                         {b.eleve.prenom_fr} {b.eleve.nom_fr}
                       </div>
-                      <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-4)', marginTop: 2 }}>{b.eleve.matricule}</div>
+                      <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--ink-4)', marginTop: 2 }}>{b.eleve.matricule}</div>
                     </div>
                     <RangMedal rang={b.rang} />
                   </div>
@@ -358,7 +358,7 @@ export function BulletinsPage() {
                   {/* Badges filière + période */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {filiereChip(b.filiere)}
-                    <span style={{ fontSize: 12, color: 'var(--text-4)' }}>
+                    <span style={{ fontSize: 12, color: 'var(--ink-4)' }}>
                       {b.periode === 0 ? 'Annuel' : `Trimestre ${b.periode}`}
                     </span>
                   </div>
@@ -369,27 +369,27 @@ export function BulletinsPage() {
                       <div style={{ fontSize: 28, fontWeight: 700, color: moyenneColor(moy) }}>
                         {moy !== null ? moy.toFixed(2) : 'N/A'}
                       </div>
-                      <div style={{ fontSize: 12, color: 'var(--text-4)' }}>/20</div>
+                      <div style={{ fontSize: 12, color: 'var(--ink-4)' }}>/20</div>
                     </div>
                     {b.appreciation && (
-                      <div style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'end', maxWidth: 120, lineHeight: 1.4, fontStyle: 'italic' }}>
+                      <div style={{ fontSize: 12, color: 'var(--ink-3)', textAlign: 'end', maxWidth: 120, lineHeight: 1.4, fontStyle: 'italic' }}>
                         {b.appreciation}
                       </div>
                     )}
                   </div>
 
                   {/* Actions */}
-                  <div style={{ display: 'flex', gap: 8, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', gap: 8, paddingTop: 4, borderTop: '1px solid var(--rule)' }}>
                     <button
                       onClick={() => openDetail(b)}
-                      style={{ flex: 1, fontSize: 12, textAlign: 'center', padding: '6px 0', borderRadius: 'var(--r-md)', color: 'var(--text-3)', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                      style={{ flex: 1, fontSize: 12, textAlign: 'center', padding: '6px 0', borderRadius: 'var(--r-md)', color: 'var(--ink-3)', background: 'transparent', border: 'none', cursor: 'pointer' }}
                     >
                       Détail
                     </button>
                     <button
                       onClick={() => downloadPdf(b)}
                       disabled={downloading === b.id}
-                      style={{ flex: 1, fontSize: 12, textAlign: 'center', padding: '6px 0', borderRadius: 'var(--r-md)', background: 'var(--text)', color: 'var(--bg)', border: 'none', cursor: 'pointer', fontWeight: 500, opacity: downloading === b.id ? 0.5 : 1 }}
+                      style={{ flex: 1, fontSize: 12, textAlign: 'center', padding: '6px 0', borderRadius: 'var(--r-md)', background: 'var(--ink)', color: 'var(--paper)', border: 'none', cursor: 'pointer', fontWeight: 500, opacity: downloading === b.id ? 0.5 : 1 }}
                     >
                       {downloading === b.id ? '…' : '⬇ PDF'}
                     </button>
@@ -418,10 +418,10 @@ export function BulletinsPage() {
                 return (
                   <tr key={b.id}>
                     <td><RangMedal rang={b.rang} /></td>
-                    <td style={{ fontWeight: 500, color: 'var(--text)' }}>{b.eleve.prenom_fr} {b.eleve.nom_fr}</td>
-                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-3)' }}>{b.eleve.matricule}</td>
+                    <td style={{ fontWeight: 500, color: 'var(--ink)' }}>{b.eleve.prenom_fr} {b.eleve.nom_fr}</td>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-3)' }}>{b.eleve.matricule}</td>
                     <td>{filiereChip(b.filiere)}</td>
-                    <td style={{ color: 'var(--text-3)', fontSize: 12 }}>
+                    <td style={{ color: 'var(--ink-3)', fontSize: 12 }}>
                       {b.periode === 0 ? 'Annuel' : `T${b.periode}`}
                     </td>
                     <td>
@@ -430,7 +430,7 @@ export function BulletinsPage() {
                         variant={moyenneVariant(moy)}
                       />
                     </td>
-                    <td style={{ fontSize: 12, color: 'var(--text-3)', fontStyle: 'italic', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <td style={{ fontSize: 12, color: 'var(--ink-3)', fontStyle: 'italic', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {b.appreciation ?? '—'}
                     </td>
                     <td>
@@ -451,8 +451,8 @@ export function BulletinsPage() {
       {bulletins.length === 0 && !loading && (
         <div className="card empty" style={{ padding: 64 }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
-          <p style={{ color: 'var(--text-3)' }}>{t('bulletin.aucun')}</p>
-          <p style={{ fontSize: 12, color: 'var(--text-4)', marginTop: 8 }}>
+          <p style={{ color: 'var(--ink-3)' }}>{t('bulletin.aucun')}</p>
+          <p style={{ fontSize: 12, color: 'var(--ink-4)', marginTop: 8 }}>
             Sélectionnez une année scolaire et cliquez sur Charger
           </p>
         </div>
@@ -461,7 +461,7 @@ export function BulletinsPage() {
       {/* Modal détail */}
       <Modal isOpen={!!detail || loadingDetail} onClose={() => setDetail(null)} title={t('bulletin.detail')} size="lg">
         {loadingDetail && (
-          <div style={{ padding: '64px 0', textAlign: 'center', color: 'var(--text-4)', fontSize: 13 }}>Chargement…</div>
+          <div style={{ padding: '64px 0', textAlign: 'center', color: 'var(--ink-4)', fontSize: 13 }}>Chargement…</div>
         )}
         {detail && !loadingDetail && <BulletinDetailContent detail={detail} downloading={downloading} onDownload={downloadPdf} onClose={() => setDetail(null)} api={api} />}
       </Modal>
@@ -472,7 +472,7 @@ export function BulletinsPage() {
 // ─── Contenu modal détail ─────────────────────────────────────────────────────
 
 function noteColor(valeur: number | string | null, noteMax: number | string): string {
-  if (valeur === null) return 'var(--text-4)';
+  if (valeur === null) return 'var(--ink-4)';
   const ratio = Number(valeur) / Number(noteMax);
   if (ratio >= 0.7) return 'var(--success)';
   if (ratio >= 0.5) return 'var(--warning)';
@@ -495,13 +495,13 @@ function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere
         <tbody>
           {notes.map((n, i) => (
             <tr key={i}>
-              <td style={{ color: 'var(--text-2)' }}>{n.matiere.nom_fr}</td>
-              <td style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>{n.matiere.coeff_defaut}</td>
+              <td style={{ color: 'var(--ink-2)' }}>{n.matiere.nom_fr}</td>
+              <td style={{ textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>{n.matiere.coeff_defaut}</td>
               <td style={{ textAlign: 'center' }}>
                 <span style={{ color: noteColor(n.valeur, n.matiere.note_max), fontWeight: n.valeur !== null ? 600 : 400 }}>
                   {n.valeur !== null ? Number(n.valeur).toFixed(1) : '—'}
                 </span>
-                <span style={{ color: 'var(--text-4)', fontSize: 12 }}>/{Number(n.matiere.note_max)}</span>
+                <span style={{ color: 'var(--ink-4)', fontSize: 12 }}>/{Number(n.matiere.note_max)}</span>
               </td>
             </tr>
           ))}
@@ -540,8 +540,8 @@ function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere
       <tbody>
         {rows.map((r, i) => (
           <tr key={i}>
-            <td style={{ color: 'var(--text-2)' }}>{r.nom_fr}</td>
-            <td style={{ textAlign: 'center', color: 'var(--text-4)', fontSize: 12 }}>{r.coeff}</td>
+            <td style={{ color: 'var(--ink-2)' }}>{r.nom_fr}</td>
+            <td style={{ textAlign: 'center', color: 'var(--ink-4)', fontSize: 12 }}>{r.coeff}</td>
             {r.vs.map((v, j) => (
               <td key={j} style={{ textAlign: 'center', fontSize: 12, color: noteColor(v, r.noteMax), fontWeight: v !== null ? 600 : 400 }}>
                 {v !== null ? v.toFixed(1) : '—'}
@@ -594,7 +594,7 @@ function BulletinDetailContent({
   const insc = detail.eleve.inscriptions?.[0];
   const classeNom = insc?.classe_fr?.nom_fr ?? insc?.classe_ar?.nom_fr ?? '—';
 
-  const bandeauBg = moy === null ? 'var(--bg-2)' : moy >= 14 ? '#d1fae5' : moy >= 10 ? '#fef3c7' : '#fee2e2';
+  const bandeauBg = moy === null ? 'var(--paper-2)' : moy >= 14 ? 'var(--success-soft)' : moy >= 10 ? 'var(--warning-soft)' : 'var(--danger-soft)';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -603,15 +603,15 @@ function BulletinDetailContent({
         <div>
           <div style={{ fontSize: 36, fontWeight: 700, color: moyenneColor(moy) }}>
             {moy !== null ? moy.toFixed(2) : 'N/A'}
-            <span style={{ fontSize: 16, fontWeight: 400, color: 'var(--text-4)', marginInlineStart: 4 }}>/20</span>
+            <span style={{ fontSize: 16, fontWeight: 400, color: 'var(--ink-4)', marginInlineStart: 4 }}>/20</span>
           </div>
           {detail.appreciation && (
-            <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--text-2)', marginTop: 4 }}>{detail.appreciation}</div>
+            <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--ink-2)', marginTop: 4 }}>{detail.appreciation}</div>
           )}
         </div>
         <div style={{ textAlign: 'end' }}>
           <RangMedal rang={detail.rang} />
-          <div style={{ fontSize: 12, color: 'var(--text-4)', marginTop: 4 }}>
+          <div style={{ fontSize: 12, color: 'var(--ink-4)', marginTop: 4 }}>
             {isAnnuel ? 'Bulletin Annuel' : `Trimestre ${detail.periode}`}
           </div>
         </div>
@@ -619,21 +619,21 @@ function BulletinDetailContent({
 
       {/* Infos élève */}
       <div className="grid-3" style={{ fontSize: 13 }}>
-        <div style={{ padding: 12, background: 'var(--bg-2)', borderRadius: 'var(--r-md)' }}>
-          <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 2 }}>Élève</div>
-          <div style={{ fontWeight: 600, color: 'var(--text)' }}>{detail.eleve.prenom_fr} {detail.eleve.nom_fr}</div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-4)' }}>{detail.eleve.matricule}</div>
+        <div style={{ padding: 12, background: 'var(--paper-2)', borderRadius: 'var(--r-md)' }}>
+          <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 2 }}>Élève</div>
+          <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{detail.eleve.prenom_fr} {detail.eleve.nom_fr}</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-4)' }}>{detail.eleve.matricule}</div>
         </div>
-        <div style={{ padding: 12, background: 'var(--bg-2)', borderRadius: 'var(--r-md)' }}>
-          <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 2 }}>Classe</div>
-          <div style={{ fontWeight: 600, color: 'var(--text)' }}>{classeNom}</div>
+        <div style={{ padding: 12, background: 'var(--paper-2)', borderRadius: 'var(--r-md)' }}>
+          <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 2 }}>Classe</div>
+          <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{classeNom}</div>
           <div style={{ marginTop: 4 }}>{filiereChip(detail.filiere)}</div>
         </div>
-        <div style={{ padding: 12, background: 'var(--bg-2)', borderRadius: 'var(--r-md)' }}>
-          <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 2 }}>Année scolaire</div>
-          <div style={{ fontWeight: 600, color: 'var(--text)' }}>{detail.annee_scolaire.libelle}</div>
+        <div style={{ padding: 12, background: 'var(--paper-2)', borderRadius: 'var(--r-md)' }}>
+          <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 2 }}>Année scolaire</div>
+          <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{detail.annee_scolaire.libelle}</div>
           {detail.generated_at && (
-            <div style={{ fontSize: 12, color: 'var(--text-4)', marginTop: 4 }}>
+            <div style={{ fontSize: 12, color: 'var(--ink-4)', marginTop: 4 }}>
               Généré le {new Date(detail.generated_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
             </div>
           )}
@@ -644,16 +644,16 @@ function BulletinDetailContent({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {filieres.map(f => {
           const notes = detail.notesByFiliere[f] ?? [];
-          const hdBg = f === 'FR' ? '#eff6ff' : '#fffbeb';
-          const hdColor = f === 'FR' ? '#1d4ed8' : '#b45309';
+          const hdBg = f === 'FR' ? 'var(--indigo-soft)' : 'var(--sahel-soft)';
+          const hdColor = f === 'FR' ? 'var(--indigo-ink)' : 'var(--sahel-ink)';
           return (
             <div key={f} className="card" style={{ overflow: 'hidden' }}>
-              <div style={{ padding: '8px 16px', fontSize: 12, fontWeight: 600, borderBottom: '1px solid var(--border)', background: hdBg, color: hdColor }}>
+              <div style={{ padding: '8px 16px', fontSize: 12, fontWeight: 600, borderBottom: '1px solid var(--rule)', background: hdBg, color: hdColor }}>
                 {f === 'FR' ? t('classe.filiere_fr') : t('classe.filiere_ar')} — {notes.length} {t('matiere.titre').toLowerCase()}
               </div>
               <div style={{ padding: '0 16px 12px' }}>
                 {notes.length === 0
-                  ? <p style={{ padding: '16px 0', fontSize: 12, color: 'var(--text-4)', textAlign: 'center' }}>{t('common.aucune_note')}</p>
+                  ? <p style={{ padding: '16px 0', fontSize: 12, color: 'var(--ink-4)', textAlign: 'center' }}>{t('common.aucune_note')}</p>
                   : <NotesTable notes={notes} filiere={f} isAnnuel={isAnnuel} />
                 }
               </div>
@@ -664,12 +664,12 @@ function BulletinDetailContent({
 
       {/* Observations */}
       <div className="card" style={{ overflow: 'hidden' }}>
-        <div style={{ padding: '8px 16px', fontSize: 12, fontWeight: 600, borderBottom: '1px solid var(--border)', background: 'var(--bg-2)', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <div style={{ padding: '8px 16px', fontSize: 12, fontWeight: 600, borderBottom: '1px solid var(--rule)', background: 'var(--paper-2)', color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           Observations
         </div>
         <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-3)', marginBottom: 4 }}>Observation du directeur (Français)</label>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--ink-3)', marginBottom: 4 }}>Observation du directeur (Français)</label>
             <textarea
               value={obsFr}
               onChange={e => setObsFr(e.target.value)}
@@ -682,7 +682,7 @@ function BulletinDetailContent({
             />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-3)', marginBottom: 4 }}>ملاحظة المدير (العربية)</label>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--ink-3)', marginBottom: 4 }}>ملاحظة المدير (العربية)</label>
             <textarea
               value={obsAr}
               onChange={e => setObsAr(e.target.value)}
@@ -696,7 +696,7 @@ function BulletinDetailContent({
             />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-3)', marginBottom: 4 }}>Observation du professeur</label>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--ink-3)', marginBottom: 4 }}>Observation du professeur</label>
             <textarea
               value={obsProf}
               onChange={e => setObsProf(e.target.value)}
