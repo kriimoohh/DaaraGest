@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
@@ -107,6 +107,114 @@ function SectionIcon({ path }: { path: string }) {
       <svg width={18} height={18} viewBox="0 0 24 24" fill="var(--terra-ink)">
         <path d={path} />
       </svg>
+    </div>
+  );
+}
+
+function LogoUploader({ value, onChange }: { value: string | undefined; onChange: (v: string | undefined) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  const handleFile = (file: File) => {
+    if (!file.type.startsWith('image/')) { toast.error('Format invalide — image uniquement (PNG, JPG, SVG…)'); return; }
+    if (file.size > 512 * 1024) { toast.error('Fichier trop volumineux — maximum 512 Ko'); return; }
+    const reader = new FileReader();
+    reader.onload = e => onChange(e.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  };
+
+  return (
+    <div>
+      <div className="field-label" style={{ marginBottom: 10 }}>Logo de l'établissement</div>
+
+      {value ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{
+            width: '100%', minHeight: 120, borderRadius: 'var(--r-md)',
+            border: '1px solid var(--rule)', background: 'var(--paper-2)',
+            display: 'grid', placeItems: 'center', overflow: 'hidden', padding: 12,
+          }}>
+            <img
+              src={value}
+              alt="Logo"
+              style={{ maxWidth: '100%', maxHeight: 100, objectFit: 'contain' }}
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              className="btn btn-secondary btn-sm"
+              type="button"
+              onClick={() => inputRef.current?.click()}
+            >
+              <svg width={13} height={13} viewBox="0 0 24 24" fill="currentColor">
+                <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+              </svg>
+              Changer
+            </button>
+            <button
+              className="btn btn-ghost btn-sm"
+              type="button"
+              style={{ color: 'var(--danger-text)' }}
+              onClick={() => onChange(undefined)}
+            >
+              Supprimer
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div
+          onClick={() => inputRef.current?.click()}
+          onDragOver={e => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={handleDrop}
+          style={{
+            border: `1.5px dashed ${dragging ? 'var(--terra)' : 'var(--rule-2)'}`,
+            background: dragging ? 'var(--terra-soft)' : 'var(--paper-2)',
+            borderRadius: 'var(--r-md)', padding: '28px 16px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+            cursor: 'pointer', transition: 'background 0.15s, border-color 0.15s',
+            userSelect: 'none',
+          }}
+        >
+          <div style={{
+            width: 48, height: 48, borderRadius: 'var(--r-md)',
+            background: dragging ? 'var(--terra-soft)' : 'var(--paper-3)',
+            display: 'grid', placeItems: 'center',
+          }}>
+            <svg width={24} height={24} viewBox="0 0 24 24" fill={dragging ? 'var(--terra)' : 'var(--ink-4)'}>
+              <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+            </svg>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink-2)' }}>
+              {dragging ? 'Déposez ici' : 'Cliquer ou déposer une image'}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--ink-4)', marginTop: 3 }}>
+              PNG, JPG, SVG, WebP — max 512 Ko
+            </div>
+          </div>
+        </div>
+      )}
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={e => {
+          const file = e.target.files?.[0];
+          if (file) handleFile(file);
+          e.target.value = '';
+        }}
+      />
     </div>
   );
 }
@@ -249,52 +357,37 @@ export function ParametresPage() {
             </div>
             <Button onClick={saveEtab} loading={saving === 'etab'}>{t('actions.enregistrer')}</Button>
           </div>
-          <div className="card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <Input
-              label={t('parametre.nom_etab')}
-              value={etab.nom_fr}
-              onChange={e => setEtab(p => p ? { ...p, nom_fr: e.target.value } : p)}
-            />
-            <div className="grid-2">
-              <Input
-                label={t('common.adresse')}
-                value={etab.adresse ?? ''}
-                onChange={e => setEtab(p => p ? { ...p, adresse: e.target.value } : p)}
+          <div className="card-pad">
+            <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 24, alignItems: 'start' }}>
+              <LogoUploader
+                value={etab.logo_url ?? undefined}
+                onChange={v => setEtab(p => p ? { ...p, logo_url: v ?? '' } : p)}
               />
-              <Input
-                label={t('common.telephone')}
-                value={etab.telephone ?? ''}
-                onChange={e => setEtab(p => p ? { ...p, telephone: e.target.value } : p)}
-              />
-            </div>
-            <div className="grid-2">
-              <Input
-                label={t('common.devise')}
-                value={etab.devise}
-                onChange={e => setEtab(p => p ? { ...p, devise: e.target.value } : p)}
-              />
-              <Input
-                label={t('parametre.logo_url')}
-                value={etab.logo_url ?? ''}
-                placeholder="https://..."
-                onChange={e => setEtab(p => p ? { ...p, logo_url: e.target.value } : p)}
-              />
-            </div>
-            {etab.logo_url && (
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 14,
-                padding: '12px 16px', background: 'var(--paper-2)',
-                border: '1px solid var(--rule)', borderRadius: 'var(--r-md)',
-              }}>
-                <img
-                  src={etab.logo_url}
-                  alt="Logo"
-                  style={{ height: 52, maxWidth: 140, objectFit: 'contain', borderRadius: 'var(--r-sm)' }}
-                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <Input
+                  label={t('parametre.nom_etab')}
+                  value={etab.nom_fr}
+                  onChange={e => setEtab(p => p ? { ...p, nom_fr: e.target.value } : p)}
                 />
-                <span className="sub">{t('parametre.apercu_logo')}</span>
+                <div className="grid-2">
+                  <Input
+                    label={t('common.adresse')}
+                    value={etab.adresse ?? ''}
+                    onChange={e => setEtab(p => p ? { ...p, adresse: e.target.value } : p)}
+                  />
+                  <Input
+                    label={t('common.telephone')}
+                    value={etab.telephone ?? ''}
+                    onChange={e => setEtab(p => p ? { ...p, telephone: e.target.value } : p)}
+                  />
+                </div>
+                <Input
+                  label={t('common.devise')}
+                  value={etab.devise}
+                  onChange={e => setEtab(p => p ? { ...p, devise: e.target.value } : p)}
+                />
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}
