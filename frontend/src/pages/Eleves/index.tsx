@@ -14,6 +14,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Pagination } from '../../components/ui/Pagination';
+import { ActionMenu } from '../../components/ui/ActionMenu';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -183,7 +184,7 @@ export function ElevesPage() {
 
   // Fiche complète modal
   const [ficheModal, setFicheModal] = useState<EleveFiche | null>(null);
-  const [ficheLoading, setFicheLoading] = useState(false);
+  const [ficheLoading, setFicheLoading] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [photoSaving, setPhotoSaving] = useState(false);
 
@@ -359,14 +360,14 @@ export function ElevesPage() {
   // ── Fiche ──────────────────────────────────────────────────────────────────
 
   async function openFiche(eleve: Eleve) {
-    setFicheLoading(true);
+    setFicheLoading(eleve.id);
     try {
       const data = await api.get<EleveFiche>(`/api/v1/eleves/${eleve.id}`);
       setFicheModal(data);
     } catch {
       toast.error('Impossible de charger la fiche');
     } finally {
-      setFicheLoading(false);
+      setFicheLoading(null);
     }
   }
 
@@ -590,27 +591,47 @@ export function ElevesPage() {
     {
       key: 'actions',
       header: 'Actions',
-      width: '280px',
+      width: '80px',
       render: (row) => {
         const e = row as unknown as Eleve;
+        const menuItems = [
+          {
+            label: t('actions.modifier'),
+            icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+            onClick: () => openEdit(e),
+          },
+          ...(canInscrire ? [{
+            label: t('actions.inscrire'),
+            icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx={9} cy={7} r={4}/><line x1={19} y1={8} x2={19} y2={14}/><line x1={22} y1={11} x2={16} y2={11}/></svg>,
+            onClick: () => openInscription(e),
+          }] : []),
+          ...(isGestion ? [{
+            label: e.actif ? 'Désactiver' : 'Réactiver',
+            icon: e.actif
+              ? <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx={12} cy={12} r={10}/><line x1={8} y1={12} x2={16} y2={12}/></svg>
+              : <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx={12} cy={12} r={10}/><line x1={12} y1={8} x2={12} y2={16}/><line x1={8} y1={12} x2={16} y2={12}/></svg>,
+            onClick: () => handleToggleActif(e),
+            variant: e.actif ? 'danger' as const : undefined,
+            disabled: toggleLoading === e.id,
+          }] : []),
+          ...(isAdmin ? [{
+            label: t('actions.supprimer'),
+            icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>,
+            onClick: () => setConfirmDelete(e),
+            variant: 'danger' as const,
+          }] : []),
+        ];
         return (
           <div className="row">
-            <Button size="sm" variant="secondary" onClick={() => openFiche(e)} loading={ficheLoading}>
-              Fiche
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => openEdit(e)}>{t('actions.modifier')}</Button>
-            {canInscrire && <Button size="sm" variant="secondary" onClick={() => openInscription(e)}>{t('actions.inscrire')}</Button>}
-            {isGestion && (
-              <Button
-                size="sm"
-                variant={e.actif ? 'danger' : 'primary'}
-                loading={toggleLoading === e.id}
-                onClick={() => handleToggleActif(e)}
-              >
-                {e.actif ? 'Désactiver' : 'Réactiver'}
-              </Button>
-            )}
-            {isAdmin && <Button size="sm" variant="danger" onClick={() => setConfirmDelete(e)}>{t('actions.supprimer')}</Button>}
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => openFiche(e)}
+              loading={ficheLoading === e.id}
+              icon={ficheLoading !== e.id ? <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx={12} cy={12} r={3}/></svg> : undefined}
+              title="Fiche élève"
+            />
+            <ActionMenu items={menuItems} />
           </div>
         );
       },
