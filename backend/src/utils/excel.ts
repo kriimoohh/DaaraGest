@@ -8,9 +8,9 @@ export async function exportElevesExcel(eleves: Array<{
   date_naissance: Date | string;
   actif: boolean;
   inscriptions?: Array<{ annee_scolaire?: { libelle: string }; classe_fr?: { nom_fr: string } | null; classe_ar?: { nom_fr: string } | null }>;
-}>): Promise<Buffer> {
+}>, etablissementNom = ''): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'DaaraGest';
+  wb.creator = etablissementNom || 'DaaraGest';
   const ws = wb.addWorksheet('Élèves');
 
   ws.columns = [
@@ -53,9 +53,10 @@ export async function exportNotesExcel(data: {
   annee: string;
   periode: number;
   notes: Array<{ matricule: string; nom_fr: string; prenom_fr: string; valeur: number | null }>;
+  etablissementNom?: string;
 }): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'DaaraGest';
+  wb.creator = data.etablissementNom || 'DaaraGest';
   const ws = wb.addWorksheet(`Notes T${data.periode}`);
 
   ws.addRow([`Classe : ${data.classe}`, '', `Matière : ${data.matiere}`, '', `Année : ${data.annee}`, `Période : T${data.periode}`]);
@@ -93,9 +94,9 @@ export async function exportFinancesExcel(paiements: Array<{
   mois: number | null;
   annee: number | null;
   created_at: Date | string;
-}>): Promise<Buffer> {
+}>, etablissementNom = ''): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'DaaraGest';
+  wb.creator = etablissementNom || 'DaaraGest';
   const ws = wb.addWorksheet('Paiements');
 
   ws.columns = [
