@@ -179,7 +179,6 @@ function headerHtml(data: BulletinBaseData): string {
   <div class="header">
     <div class="school-block">
       <div class="school-name">${escapeHtml(data.etablissement_nom_fr)}</div>
-      ${data.etablissement_nom_ar ? `<div class="school-name-ar">${escapeHtml(data.etablissement_nom_ar)}</div>` : ''}
     </div>
     <div class="header-date">le ${today}</div>
   </div>
