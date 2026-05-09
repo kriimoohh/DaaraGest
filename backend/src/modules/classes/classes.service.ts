@@ -124,7 +124,7 @@ export async function listerElevesDeClasse(
 
 // ─── PDF liste élèves ────────────────────────────────────────────────────────
 
-function buildListeBodyContent(data: ListeData): string {
+function buildListeBodyContent(data: ListeData, etablissementNom: string): string {
   const { classe, eleves, total } = data;
   const anneeLabel = (classe.annee_scolaire as { libelle: string })?.libelle ?? '';
   const filiereLabel = classe.filiere === 'FR' ? 'Filière Française' : 'Filière Arabe';
@@ -151,7 +151,7 @@ function buildListeBodyContent(data: ListeData): string {
 
   return `
   <div class="header">
-    <h1>DaaraGest</h1>
+    <h1>${etablissementNom}</h1>
     <h2>Liste des élèves — ${classe.nom_fr}</h2>
     <div class="meta">
       <span>Année scolaire : <strong>${anneeLabel}</strong></span>
@@ -186,7 +186,7 @@ function buildListeBodyContent(data: ListeData): string {
   </div>`;
 }
 
-function buildSingleListeHtml(data: ListeData): string {
+function buildSingleListeHtml(data: ListeData, etablissementNom: string): string {
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -194,13 +194,13 @@ function buildSingleListeHtml(data: ListeData): string {
   <title>Liste ${data.classe.nom_fr}</title>
   <style>${LISTE_CSS} body { padding: 15mm; }</style>
 </head>
-<body>${buildListeBodyContent(data)}</body>
+<body>${buildListeBodyContent(data, etablissementNom)}</body>
 </html>`;
 }
 
-function buildCombinedListeHtml(dataList: ListeData[]): string {
+function buildCombinedListeHtml(dataList: ListeData[], etablissementNom: string): string {
   const pages = dataList.map((data, i) =>
-    `<div class="${i < dataList.length - 1 ? 'page pb' : 'page'}">${buildListeBodyContent(data)}</div>`
+    `<div class="${i < dataList.length - 1 ? 'page pb' : 'page'}">${buildListeBodyContent(data, etablissementNom)}</div>`
   ).join('\n');
 
   return `<!DOCTYPE html>
@@ -237,14 +237,19 @@ export async function genererPdfListeClasse(
   etablissement_id: string,
   annee_scolaire_id?: string
 ): Promise<Buffer> {
+  const etab = await prisma.etablissement.findUnique({ where: { id: etablissement_id }, select: { nom_fr: true } });
+  const etablissementNom = etab?.nom_fr ?? '';
   const data = await listerElevesDeClasse(classe_id, etablissement_id, annee_scolaire_id);
-  return renderPdf(buildSingleListeHtml(data));
+  return renderPdf(buildSingleListeHtml(data, etablissementNom));
 }
 
 export async function genererPdfToutesClasses(
   etablissement_id: string,
   annee_scolaire_id?: string
 ): Promise<Buffer> {
+  const etab = await prisma.etablissement.findUnique({ where: { id: etablissement_id }, select: { nom_fr: true } });
+  const etablissementNom = etab?.nom_fr ?? '';
+
   const classes = await listerClasses(etablissement_id, annee_scolaire_id);
   if (classes.length === 0) throw new Error('Aucune classe trouvée');
 
@@ -257,5 +262,5 @@ export async function genererPdfToutesClasses(
   }
   if (dataList.length === 0) throw new Error('Aucun élève trouvé dans les classes');
 
-  return renderPdf(buildCombinedListeHtml(dataList));
+  return renderPdf(buildCombinedListeHtml(dataList, etablissementNom));
 }
