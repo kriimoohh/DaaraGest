@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const matiereSchema = z.object({
   nom_fr: z.string().min(1),
-  nom_ar: z.string().min(1),
+  nom_ar: z.string().optional(),
   filiere: z.enum(['FR', 'AR']),
   coeff_defaut: z.number().positive().optional(),
   note_max: z.number().positive().max(100).optional(),
