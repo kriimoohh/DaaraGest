@@ -70,8 +70,8 @@ export function MatieresPage() {
   };
 
   const handleSave = async () => {
-    if (!form.nom_fr || !form.nom_ar || !form.filiere) {
-      toast.error('Nom FR, nom AR et filière sont requis');
+    if (!form.nom_fr || !form.filiere) {
+      toast.error('Nom FR et filière sont requis');
       return;
     }
     setSaving(true);
