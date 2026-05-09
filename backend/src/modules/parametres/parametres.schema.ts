@@ -4,7 +4,7 @@ export const etablissementUpdateSchema = z.object({
   nom_fr: z.string().min(1).optional(),
   adresse: z.string().optional(),
   telephone: z.string().optional(),
-  logo_url: z.string().url().optional(),
+  logo_url: z.string().optional().nullable(),
   devise: z.string().optional(),
 });
 
