@@ -21,9 +21,7 @@ export async function listerUtilisateurs(
   if (search) {
     where.OR = [
       { nom_fr: { contains: search, mode: 'insensitive' } },
-      { nom_ar: { contains: search, mode: 'insensitive' } },
       { prenom_fr: { contains: search, mode: 'insensitive' } },
-      { prenom_ar: { contains: search, mode: 'insensitive' } },
       { identifiant: { contains: search, mode: 'insensitive' } },
     ];
   }
@@ -55,9 +53,8 @@ export async function creerUtilisateur(etablissement_id: string, data: Utilisate
       etablissement_id,
       role_id: data.role_id ?? 'role-professeur',
       nom_fr: data.nom_fr,
-      nom_ar: data.nom_ar,
+      nom_ar: '',
       prenom_fr: data.prenom_fr ?? null,
-      prenom_ar: data.prenom_ar ?? null,
       identifiant: data.identifiant,
       email: data.email,
       mot_de_passe: hashedPassword,
@@ -88,9 +85,7 @@ export async function modifierUtilisateur(
   const updateData: Record<string, unknown> = {};
   if (data.identifiant) updateData.identifiant = data.identifiant;
   if (data.nom_fr) updateData.nom_fr = data.nom_fr;
-  if (data.nom_ar !== undefined) updateData.nom_ar = data.nom_ar;
   if (data.prenom_fr !== undefined) updateData.prenom_fr = data.prenom_fr || null;
-  if (data.prenom_ar !== undefined) updateData.prenom_ar = data.prenom_ar || null;
   if (data.email !== undefined) updateData.email = data.email;
   if (data.role_id) updateData.role_id = data.role_id;
   if (data.langue) updateData.langue = data.langue;

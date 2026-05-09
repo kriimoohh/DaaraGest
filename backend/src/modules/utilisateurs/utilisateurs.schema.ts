@@ -2,9 +2,7 @@ import { z } from 'zod';
 
 export const utilisateurSchema = z.object({
   nom_fr: z.string().min(1),
-  nom_ar: z.string().default(''),
   prenom_fr: z.string().optional(),
-  prenom_ar: z.string().optional(),
   identifiant: z.string().min(1),
   mot_de_passe: z.string().min(6),
   email: z.string().email().optional(),
