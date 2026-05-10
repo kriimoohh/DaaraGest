@@ -5,7 +5,7 @@ export const noteItemSchema = z.object({
   matiere_id: z.string().min(1),
   periode: z.number().int().min(1),
   annee_scolaire_id: z.string().min(1),
-  valeur: z.number().min(0).max(200),
+  valeur: z.number().min(0).max(20),
   commentaire: z.string().optional(),
 });
 

@@ -1,7 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { JwtPayload } from '../utils/jwt';
+import { jwtPayloadSchema } from '../utils/jwt';
 
-// Routes autorisées même si le mot de passe doit être changé
 const ROUTES_SANS_RESTRICTION_MDP = [
   '/api/v1/auth/change-password',
   '/api/v1/auth/me',
@@ -11,7 +10,12 @@ const ROUTES_SANS_RESTRICTION_MDP = [
 export async function authMiddleware(request: FastifyRequest, reply: FastifyReply) {
   try {
     await request.jwtVerify();
-    const user = request.user as JwtPayload;
+    const parsed = jwtPayloadSchema.safeParse(request.user);
+    if (!parsed.success) {
+      return reply.status(401).send({ error: 'Token invalide' });
+    }
+    request.user = parsed.data;
+    const user = parsed.data;
     if (
       user.doit_changer_mdp &&
       !ROUTES_SANS_RESTRICTION_MDP.some(r => request.url.startsWith(r))
