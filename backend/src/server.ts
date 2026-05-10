@@ -35,6 +35,7 @@ async function build() {
   await fastify.register(cors, {
     origin: corsOrigins.length === 1 ? corsOrigins[0] : corsOrigins,
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   await fastify.register(cookie);
