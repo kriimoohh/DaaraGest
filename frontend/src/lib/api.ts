@@ -1,7 +1,8 @@
+import { useAuthStore } from '../store/authStore';
+
 export const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const { useAuthStore } = await import('../store/authStore');
   const token = useAuthStore.getState().token;
 
   const headers: Record<string, string> = {
@@ -13,19 +14,16 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers,
-    credentials: 'include', // envoie le cookie httpOnly sur chaque requête
+    credentials: 'include',
   });
 
   if (response.status === 204) {
     return undefined as T;
   }
 
-  // Session expirée : vider le store et rediriger vers /login
   if (response.status === 401) {
-    import('../store/authStore').then(({ useAuthStore }) => {
-      useAuthStore.getState().logout();
-    });
-    window.location.href = '/login';
+    // Vider le store — le Layout redirige vers /login via <Navigate>
+    useAuthStore.getState().logout();
     throw new Error('Session expirée. Veuillez vous reconnecter.');
   }
 
