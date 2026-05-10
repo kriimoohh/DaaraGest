@@ -3,7 +3,11 @@ import { useAuthStore } from '../store/authStore';
 export const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = useAuthStore.getState().token;
+  const state = useAuthStore.getState();
+  const token = state.token;
+
+  // eslint-disable-next-line no-console
+  console.log('[API]', options.method ?? 'GET', path, '| token:', token ? token.substring(0, 20) + '...' : null, '| isAuth:', state.isAuthenticated);
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
