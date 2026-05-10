@@ -98,8 +98,6 @@ export function ClassesPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [annees, setAnnees] = useState<AnneeScolaire[]>([]);
-  const token = useAuthStore((s) => s.token);
-
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Classe | null>(null);
   const [form, setForm] = useState<ClasseFormData>(EMPTY_FORM);
@@ -337,7 +335,7 @@ export function ClassesPage() {
       const params = new URLSearchParams();
       if (anneeFilter) params.set('annee_scolaire_id', anneeFilter);
       const res = await fetch(`${API_BASE}/api/v1/classes/${listeModal.id}/pdf-liste?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Erreur lors de la génération du PDF');
       const blob = await res.blob();
@@ -360,7 +358,7 @@ export function ClassesPage() {
       const params = new URLSearchParams();
       if (anneeFilter) params.set('annee_scolaire_id', anneeFilter);
       const res = await fetch(`${API_BASE}/api/v1/classes/pdf-toutes-classes?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Erreur lors de la génération du PDF');
       const blob = await res.blob();

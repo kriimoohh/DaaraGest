@@ -734,7 +734,7 @@ export function ElevesPage() {
                   if (search) params.set('search', search);
                   const resp = await fetch(
                     `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/api/v1/eleves/export-excel?${params}`,
-                    { headers: { Authorization: `Bearer ${useAuthStore.getState().token}` } }
+                    { credentials: 'include' }
                   );
                   if (!resp.ok) throw new Error('Erreur export');
                   const blob = await resp.blob();

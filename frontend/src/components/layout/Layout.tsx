@@ -1,18 +1,17 @@
-import { useState } from 'react';
-import { Outlet, Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Outlet, Navigate, useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Header';
 import { ToastContainer } from '../ui/Toast';
-import { useAuthStore } from '../../store/authStore';
+import { useAuthStore, AuthUser } from '../../store/authStore';
 import { useTheme } from '../../hooks/useTheme';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import { useApi } from '../../hooks/useApi';
+import { api } from '../../lib/api';
 import { toast } from '../../store/toastStore';
 
 function MustChangePasswordModal() {
-  const { user, login, token } = useAuthStore();
-  const api = useApi();
+  const { user, login } = useAuthStore();
   const [ancien, setAncien] = useState('');
   const [nouveau, setNouveau] = useState('');
   const [confirmer, setConfirmer] = useState('');
@@ -29,8 +28,8 @@ function MustChangePasswordModal() {
         nouveau_mot_de_passe: nouveau,
       });
       toast.success('Mot de passe modifié avec succès');
-      if (user && token) {
-        login(token, { ...user, must_change_password: false });
+      if (user) {
+        login({ ...user, must_change_password: false });
       }
     } catch (err) {
       toast.error((err as Error).message || 'Erreur');
@@ -62,8 +61,18 @@ function MustChangePasswordModal() {
 }
 
 export function Layout() {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, logout } = useAuthStore();
+  const navigate = useNavigate();
   useTheme();
+
+  // Vérification de session au montage : si le cookie est expiré, déconnecter
+  useEffect(() => {
+    api.get<AuthUser>('/api/v1/auth/me').catch(() => {
+      logout();
+      navigate('/login', { replace: true });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
