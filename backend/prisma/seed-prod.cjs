@@ -50,8 +50,8 @@ async function main() {
 
   const hash = await bcrypt.hash('Admin123!', 10);
   await prisma.utilisateur.upsert({
-    where: { identifiant: 'admin' },
-    update: { mot_de_passe: hash, must_change_password: true },
+    where: { id: 'user-admin' },
+    update: {},
     create: {
       id: 'user-admin', identifiant: 'admin', mot_de_passe: hash,
       role_id: 'role-admin', etablissement_id: 'etablissement-default',
