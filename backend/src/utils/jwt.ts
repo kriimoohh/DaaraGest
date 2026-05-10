@@ -1,8 +1,12 @@
-export interface JwtPayload {
-  id: string;
-  role: string;
-  etablissement_id: string;
-  langue: string;
-  theme: string;
-  doit_changer_mdp: boolean;
-}
+import { z } from 'zod';
+
+export const jwtPayloadSchema = z.object({
+  id: z.string().uuid(),
+  role: z.string().min(1),
+  etablissement_id: z.string().uuid(),
+  langue: z.string().min(1),
+  theme: z.string().min(1),
+  doit_changer_mdp: z.boolean(),
+});
+
+export type JwtPayload = z.infer<typeof jwtPayloadSchema>;

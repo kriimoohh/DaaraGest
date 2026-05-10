@@ -33,8 +33,13 @@ export async function bulkUpsertNotes(notes: NoteItem[], insertOnly = false, act
   if (notes.length === 0) return [];
   const results: unknown[] = [];
 
+  // Précharger toutes les matières concernées en une seule requête (élimine le N+1)
+  const matiereIds = [...new Set(notes.map(n => n.matiere_id))];
+  const matieres = await prisma.matiere.findMany({ where: { id: { in: matiereIds } } });
+  const matiereMap = new Map(matieres.map(m => [m.id, m]));
+
   for (const note of notes) {
-    const matiere = await prisma.matiere.findUnique({ where: { id: note.matiere_id } });
+    const matiere = matiereMap.get(note.matiere_id);
     if (matiere) {
       const noteMax = Number(matiere.note_max);
       const noteMin = Number(matiere.note_min);

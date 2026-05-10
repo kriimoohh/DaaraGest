@@ -3,6 +3,21 @@ import { login, getMe, changePassword, updateProfil } from './auth.service';
 import { loginSchema } from './auth.schema';
 import { JwtPayload } from '../../utils/jwt';
 
+const TOKEN_EXPIRY = process.env.JWT_EXPIRES_IN ?? '24h';
+
+function cookieOptions(reply: FastifyReply) {
+  const isProd = process.env.NODE_ENV === 'production';
+  return {
+    httpOnly: true,
+    secure: isProd,
+    // SameSite=none obligatoire pour cross-origin Railway (frontend ≠ backend subdomain)
+    sameSite: isProd ? ('none' as const) : ('lax' as const),
+    path: '/',
+    maxAge: 24 * 60 * 60, // 24 h en secondes
+    signed: false,
+  };
+}
+
 export async function loginHandler(request: FastifyRequest, reply: FastifyReply) {
   const parsed = loginSchema.safeParse(request.body);
   if (!parsed.success) {
@@ -11,14 +26,16 @@ export async function loginHandler(request: FastifyRequest, reply: FastifyReply)
 
   try {
     const { payload, user } = await login(parsed.data.identifiant, parsed.data.mot_de_passe);
-    const token = await reply.jwtSign(payload, { expiresIn: process.env.JWT_EXPIRES_IN ?? '7d' });
-    return reply.send({ token, user });
+    const token = await reply.jwtSign(payload, { expiresIn: TOKEN_EXPIRY });
+    reply.setCookie('daaragest_token', token, cookieOptions(reply));
+    return reply.send({ user });
   } catch (err) {
     return reply.status(401).send({ error: (err as Error).message });
   }
 }
 
 export async function logoutHandler(_request: FastifyRequest, reply: FastifyReply) {
+  reply.clearCookie('daaragest_token', { path: '/' });
   return reply.send({ message: 'Déconnecté avec succès' });
 }
 
@@ -39,9 +56,9 @@ export async function changePasswordHandler(request: FastifyRequest, reply: Fast
   }
   try {
     const { payload } = await changePassword(id, ancien_mot_de_passe, nouveau_mot_de_passe);
-    // Émettre un nouveau token avec doit_changer_mdp: false
-    const token = await reply.jwtSign(payload, { expiresIn: process.env.JWT_EXPIRES_IN ?? '7d' });
-    return reply.send({ message: 'Mot de passe modifié avec succès', token });
+    const token = await reply.jwtSign(payload, { expiresIn: TOKEN_EXPIRY });
+    reply.setCookie('daaragest_token', token, cookieOptions(reply));
+    return reply.send({ message: 'Mot de passe modifié avec succès' });
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
   }

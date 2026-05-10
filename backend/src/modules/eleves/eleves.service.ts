@@ -139,47 +139,39 @@ export async function getProgressionEleve(id: string, etablissement_id: string) 
 
 async function genererMatricule(etablissement_id: string): Promise<string> {
   const annee = new Date().getFullYear();
-  const prefix = `DG-${annee}-`;
-  const result = await prisma.$queryRaw<{ max_num: number | null }[]>`
-    SELECT MAX(CAST(SUBSTRING(matricule FROM ${prefix.length + 1}) AS INTEGER)) AS max_num
-    FROM "Eleve"
-    WHERE etablissement_id = ${etablissement_id}
-    AND matricule ~ ${`^DG-${annee}-[0-9]+$`}
-  `;
-  const lastNum = result[0]?.max_num ?? 0;
-  return `${prefix}${String(lastNum + 1).padStart(3, '0')}`;
+  // La séquence par établissement+année garantit l'unicité sans race condition.
+  // ON CONFLICT ignore la création si elle existe déjà (idempotent).
+  const seqName = `seq_matricule_${etablissement_id.replace(/-/g, '_')}_${annee}`;
+  await prisma.$executeRawUnsafe(
+    `CREATE SEQUENCE IF NOT EXISTS "${seqName}" START 1 INCREMENT 1`
+  );
+  const result = await prisma.$queryRawUnsafe<[{ nextval: bigint }]>(
+    `SELECT nextval('"${seqName}"')`
+  );
+  const num = String(result[0].nextval).padStart(3, '0');
+  return `DG-${annee}-${num}`;
 }
 
 export async function creerEleve(etablissement_id: string, data: EleveInput, acteurId: string) {
   const { parents, ...eleveData } = data;
 
-  // Réessayer jusqu'à 3 fois en cas de collision de matricule (contrainte unique)
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const matricule = data.matricule || await genererMatricule(etablissement_id);
-    try {
-      const eleve = await prisma.eleve.create({
-        data: {
-          etablissement_id,
-          matricule,
-          nom_fr: eleveData.nom_fr,
-          prenom_fr: eleveData.prenom_fr,
-          date_naissance: new Date(eleveData.date_naissance),
-          lieu_naissance: eleveData.lieu_naissance,
-          sexe: eleveData.sexe,
-          photo_url: eleveData.photo_url,
-          parents: parents && parents.length > 0 ? { create: parents } : undefined,
-        },
-        include: { parents: true },
-      });
-      await logAction(etablissement_id, acteurId, 'CREATE', 'Eleve', eleve.id, { matricule: eleve.matricule, nom: `${eleve.nom_fr} ${eleve.prenom_fr}` });
-      return eleve;
-    } catch (err) {
-      // P2002 = violation contrainte unique Prisma → réessayer si matricule auto-généré
-      if (!data.matricule && (err as { code?: string }).code === 'P2002' && attempt < 2) continue;
-      throw err;
-    }
-  }
-  throw new Error('Impossible de générer un matricule unique après 3 tentatives');
+  const matricule = data.matricule || await genererMatricule(etablissement_id);
+  const eleve = await prisma.eleve.create({
+    data: {
+      etablissement_id,
+      matricule,
+      nom_fr: eleveData.nom_fr,
+      prenom_fr: eleveData.prenom_fr,
+      date_naissance: new Date(eleveData.date_naissance),
+      lieu_naissance: eleveData.lieu_naissance,
+      sexe: eleveData.sexe,
+      photo_url: eleveData.photo_url,
+      parents: parents && parents.length > 0 ? { create: parents } : undefined,
+    },
+    include: { parents: true },
+  });
+  await logAction(etablissement_id, acteurId, 'CREATE', 'Eleve', eleve.id, { matricule: eleve.matricule, nom: `${eleve.nom_fr} ${eleve.prenom_fr}` });
+  return eleve;
 }
 
 export async function modifierEleve(id: string, etablissement_id: string, data: Omit<EleveInput, 'parents'>, acteurId: string) {
@@ -240,26 +232,17 @@ export async function importerEleves(etablissement_id: string, rows: ImportRow[]
         ? [{ nom_fr: row.parent_nom_fr, lien: (row.parent_lien || 'pere') as 'pere' | 'mere' | 'tuteur', telephone: row.parent_telephone || '' }]
         : undefined;
 
-      // Retry sur collision matricule
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const matricule = await genererMatricule(etablissement_id);
-        try {
-          await prisma.eleve.create({
-            data: {
-              etablissement_id, matricule,
-              nom_fr: row.nom_fr.trim(), prenom_fr: row.prenom_fr.trim(),
-              date_naissance: row.date_naissance ? new Date(row.date_naissance) : new Date('2010-01-01'),
-              sexe: row.sexe, lieu_naissance: row.lieu_naissance?.trim() || null,
-              parents: parent ? { create: parent } : undefined,
-            },
-          });
-          created.push(matricule);
-          break;
-        } catch (err) {
-          if ((err as { code?: string }).code === 'P2002' && attempt < 2) continue;
-          throw err;
-        }
-      }
+      const matricule = await genererMatricule(etablissement_id);
+      await prisma.eleve.create({
+        data: {
+          etablissement_id, matricule,
+          nom_fr: row.nom_fr.trim(), prenom_fr: row.prenom_fr.trim(),
+          date_naissance: row.date_naissance ? new Date(row.date_naissance) : new Date('2010-01-01'),
+          sexe: row.sexe, lieu_naissance: row.lieu_naissance?.trim() || null,
+          parents: parent ? { create: parent } : undefined,
+        },
+      });
+      created.push(matricule);
     } catch (err) {
       errors.push({ ligne: i + 2, message: (err as Error).message });
     }

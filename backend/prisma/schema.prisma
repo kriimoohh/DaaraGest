@@ -80,6 +80,10 @@ model Professeur {
   matieres_classes ProfMatiereClasse[]
 }
 
+// TODO(NFC): Ces trois modèles sont réservés au futur module de pointage automatique
+// par badge NFC (ProfesseurCarte → lecture → Pointage → calcul HeureTravail).
+// Aucune API ne les expose actuellement. Voir roadmap.
+
 model ProfesseurCarte {
   id            String   @id @default(uuid())
   professeur_id String
@@ -220,7 +224,6 @@ model ProfMatiereClasse {
   classe_id         String
   matiere_id        String
   annee_scolaire_id String
-  coefficient       Decimal @default(1) @db.Decimal(4, 2)
 
   professeur     Professeur    @relation(fields: [professeur_id], references: [id])
   classe         Classe        @relation(fields: [classe_id], references: [id])

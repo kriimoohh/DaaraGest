@@ -115,9 +115,21 @@ Chaque requête authentifiée extrait `etablissement_id` du JWT. Tous les servic
 | Rôle | Pages accessibles |
 |------|------------------|
 | `admin` | Toutes |
-| `directeur` | Toutes sauf Utilisateurs |
-| `caissier` | Dashboard, Élèves, Finances |
-| `professeur` | Dashboard, Classes, Notes, Bulletins |
+| `directeur` | Toutes sauf Utilisateurs et Paramètres |
+| `gestionnaire` | Dashboard, Élèves, Professeurs, Classes, Années, Matières, Notes, Bulletins, Absences, Pointage |
+| `agent de scolarité` | Dashboard, Élèves, Classes, Notes, Bulletins, Absences, Finances |
+| `professeur` | Dashboard, Classes, Notes, Bulletins, Absences |
+| `pointeur` | Dashboard, Professeurs, Absences, Pointage |
+
+### Bulletins — filières et types
+
+| Type | Description |
+|------|-------------|
+| `FR` | Bulletin filière française uniquement |
+| `AR` | Bulletin filière arabe uniquement |
+| `COMBINE` | Bulletins FR et AR fusionnés sur une même fiche — la moyenne couvre les deux filières |
+
+> La filière d'un bulletin (`COMBINE`) ne correspond pas à la filière d'une classe (toujours `FR` ou `AR`). Un élève inscrit dans une classe FR **et** une classe AR peut recevoir un bulletin `COMBINE`.
 
 ---
 
@@ -464,8 +476,7 @@ npm run test:coverage    # rapport HTML dans coverage/
 
 - [ ] **Notifications** — Alertes paiements en retard, bulletins disponibles (email ou in-app)
 - [ ] **Module NFC** — Pointage automatique par badge (modèles `Pointage` · `HeureTravail` · `ProfesseurCarte` déjà en schéma)
-- [ ] **Export Excel** — Listes d'élèves, relevés de notes, états financiers
-- [ ] **Absences élèves** — Suivi de la présence des élèves en classe
+- [ ] **Refresh token** — Renouvellement silencieux du JWT (actuellement expiration 24h)
 
 ### Long terme
 

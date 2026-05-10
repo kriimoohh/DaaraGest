@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import prisma from './config/database';
@@ -36,13 +37,28 @@ async function build() {
     credentials: true,
   });
 
-  await fastify.register(jwt, { secret: JWT_SECRET });
+  await fastify.register(cookie);
+  await fastify.register(jwt, {
+    secret: JWT_SECRET,
+    cookie: { cookieName: 'daaragest_token', signed: false },
+  });
 
   await fastify.register(rateLimit, {
     global: true,
     max: 100,
     timeWindow: '15 minutes',
     errorResponseBuilder: () => ({ error: 'Trop de requêtes. Réessayez dans quelques minutes.' }),
+  });
+
+  // Headers de sécurité HTTP sur toutes les réponses
+  fastify.addHook('onSend', async (_request, reply) => {
+    reply.header('X-Content-Type-Options', 'nosniff');
+    reply.header('X-Frame-Options', 'DENY');
+    reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+    reply.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    if (process.env.NODE_ENV === 'production') {
+      reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
   });
 
   fastify.get('/health', async (_req, reply) => {

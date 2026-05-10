@@ -115,12 +115,19 @@ export async function bulkUpsertAbsences(
   const classe = await prisma.classe.findFirst({ where: { id: data.classe_id, etablissement_id } });
   if (!classe) throw new Error('Classe introuvable');
 
+  // Charger tous les élèves valides en une seule requête (élimine le N+1)
+  const eleveIds = data.absences.map(a => a.eleve_id);
+  const elevesValides = await prisma.eleve.findMany({
+    where: { id: { in: eleveIds }, etablissement_id },
+    select: { id: true },
+  });
+  const eleveIdSet = new Set(elevesValides.map(e => e.id));
+
   const date = new Date(data.date);
   const results = [];
 
   for (const a of data.absences) {
-    const eleve = await prisma.eleve.findFirst({ where: { id: a.eleve_id, etablissement_id } });
-    if (!eleve) continue;
+    if (!eleveIdSet.has(a.eleve_id)) continue;
 
     const payload = {
       statut: a.statut,
