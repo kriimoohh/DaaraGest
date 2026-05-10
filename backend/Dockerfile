@@ -37,8 +37,9 @@ COPY --from=builder /app/dist            ./dist
 COPY --from=builder /app/node_modules    ./node_modules
 COPY --from=builder /app/prisma          ./prisma
 COPY package*.json ./
+COPY entrypoint.sh ./
 
 EXPOSE 3000
 
-# Applique le schéma → seed essentiels → démarre le serveur
-CMD ["sh", "-c", "npx prisma migrate deploy && node prisma/seed-prod.cjs && node dist/server.js"]
+# Baseline migrations if needed → apply new ones → seed → start
+CMD ["sh", "entrypoint.sh"]

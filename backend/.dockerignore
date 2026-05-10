@@ -4,4 +4,3 @@ dist
 .env.local
 *.log
 prisma/*.db
-prisma/migrations
