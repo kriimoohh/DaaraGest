@@ -58,6 +58,8 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'daaragest-auth',
+      version: 2,
+      migrate: () => ({ user: null, token: null, isAuthenticated: false, globalTheme: 'light' as const }),
       partialize: (state) => ({
         user: state.user,
         token: state.token,
