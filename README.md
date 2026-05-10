@@ -49,7 +49,7 @@ Application web de gestion d'école franco-arabe, conçue pour les établissemen
 | Backend | Node.js + Fastify | 4.x |
 | ORM | Prisma | 5.x |
 | Base de données | PostgreSQL | 15+ |
-| Authentification | @fastify/jwt + bcryptjs | cost 10 |
+| Authentification | @fastify/jwt v7 + @fastify/cookie v7 + bcryptjs | cost 10 |
 | Rate limiting | @fastify/rate-limit | 9.x |
 | Validation | Zod (avec coerce pour les Decimal Prisma) | 3.x |
 | PDF | Puppeteer | 24.x |
@@ -61,6 +61,8 @@ Application web de gestion d'école franco-arabe, conçue pour les établissemen
 | Graphiques | Recharts | — |
 | Import CSV | PapaParse | — |
 | Routing | react-router-dom v6 (flags v7 activés) | — |
+
+> **Note versions** : `@fastify/jwt` et `@fastify/cookie` sont maintenus en v7.x (compatibles Fastify 4). Les versions v8+/v11+ requièrent Fastify 5 — voir section [Dette technique](#dette-technique).
 
 ---
 
@@ -430,13 +432,26 @@ DIALLO,Fatou,ديالو,فاتو,2011-09-20,F,DIALLO Ibrahima,père,775678901
 | Mesure | Détail |
 |--------|--------|
 | JWT | HMAC-SHA256, expiration 7j, **fail-fast si `JWT_SECRET` absent** |
+| Transport du token | `Authorization: Bearer <token>` sur chaque requête · cookie httpOnly posé en parallèle comme mécanisme secondaire |
+| Stockage token (frontend) | Zustand + `localStorage` (compromis UX/sécurité — acceptable pour outil interne) |
 | Mots de passe | bcrypt cost 10 |
 | Auth middleware | `return reply.status(401)` — arrêt immédiat sur token invalide |
-| Rate limiting | Login : 5 tentatives/minute par IP (`@fastify/rate-limit` v9) |
-| CORS | Configurable via `CORS_ORIGIN` (pas d'URL hardcodée) |
+| Rate limiting | Global : 100 req/15 min par IP (`@fastify/rate-limit` v9) |
+| CORS | Origine configurable via `CORS_ORIGIN` · `Authorization` explicitement autorisé dans `allowedHeaders` |
 | Multi-tenant | Chaque requête filtre par `etablissement_id` extrait du JWT |
 | Validation | Zod sur tous les body POST/PUT · `z.coerce.number()` pour les Decimal Prisma |
 | PDF | `escapeHtml()` sur toutes les données utilisateur avant insertion dans les templates |
+| Headers HTTP | `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `HSTS` (prod) |
+
+### Flux d'authentification
+
+```
+1. POST /auth/login → { user, token }
+2. Frontend stocke token dans Zustand (localStorage)
+3. Chaque requête : Authorization: Bearer <token>
+4. Backend : jwtVerify() → vérifie header puis cookie en fallback
+5. Zod valide le payload JWT (id, role, etablissement_id, langue, theme, doit_changer_mdp)
+```
 
 ### Configuration production
 
@@ -470,13 +485,37 @@ npm run test:coverage    # rapport HTML dans coverage/
 
 ---
 
+## Dette technique
+
+Points connus à traiter lors d'une prochaine session de dev planifiée. L'application est **pleinement fonctionnelle** en l'état.
+
+### 1. Migration Fastify 4 → 5 *(priorité moyenne)*
+
+`@fastify/jwt` et `@fastify/cookie` sont bloqués en v7.x car les v8+/v11+ requièrent Fastify 5. La migration permettrait de revenir aux dernières versions des plugins.
+
+```bash
+# Étapes approximatives
+npm install fastify@^5 @fastify/jwt@^8 @fastify/cookie@^11 @fastify/cors@^10 @fastify/rate-limit@^10
+# Tester toutes les routes, vérifier les breaking changes Fastify 5
+```
+
+### 2. Migration des IDs non-UUID *(priorité basse)*
+
+Le seed utilise des IDs en clair (`'user-admin'`, `'etablissement-default'`) incompatibles avec `z.string().uuid()`. La validation Zod est actuellement assouplie à `z.string().min(1)` pour compenser. Une migration Prisma remplacerait ces IDs par de vrais UUIDs et permettrait de restaurer la validation stricte.
+
+### 3. Token JWT en localStorage *(priorité basse)*
+
+L'audit de sécurité visait un stockage exclusif en cookie httpOnly. Le transport cross-subdomain Railway (`dg.sakai.sn` → `api.dg.sakai.sn`) bloque les cookies cross-origin, ce qui a nécessité le passage au Bearer token stocké en localStorage. Alternative propre : mettre frontend et API sur le même domaine (ex: `ecole.sn` + `ecole.sn/api`), ou utiliser un proxy nginx.
+
+---
+
 ## Roadmap
 
 ### À venir (moyen terme)
 
 - [ ] **Notifications** — Alertes paiements en retard, bulletins disponibles (email ou in-app)
 - [ ] **Module NFC** — Pointage automatique par badge (modèles `Pointage` · `HeureTravail` · `ProfesseurCarte` déjà en schéma)
-- [ ] **Refresh token** — Renouvellement silencieux du JWT (actuellement expiration 24h)
+- [ ] **Refresh token** — Renouvellement silencieux du JWT (actuellement expiration 7j)
 
 ### Long terme
 
