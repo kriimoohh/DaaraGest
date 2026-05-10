@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
+import { useAuth } from '../../hooks/useAuth';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import { useApi } from '../../hooks/useApi';
+import { api } from '../../lib/api';
 import { toast } from '../../store/toastStore';
 
 const NAV_SECTIONS = [
@@ -67,8 +68,8 @@ function NavIcon({ path, size = 16 }: { path: string; size?: number }) {
 
 export function Sidebar() {
   const { t, i18n } = useTranslation();
-  const { user, logout } = useAuthStore();
-  const api = useApi();
+  const { user } = useAuthStore();
+  const { signOut } = useAuth();
   const location = useLocation();
   const role = user?.role ?? '';
   const isAr = i18n.language === 'ar';
@@ -187,7 +188,7 @@ export function Sidebar() {
                     >
                       Changer le mot de passe →
                     </button>
-                    <button className="btn btn-danger btn-sm" onClick={() => { logout(); setProfilOpen(false); }}>
+                    <button className="btn btn-danger btn-sm" onClick={() => { setProfilOpen(false); signOut(); }}>
                       Déconnexion
                     </button>
                   </div>
