@@ -2,11 +2,12 @@ import prisma from '../../config/database';
 import { logAction } from '../../utils/audit';
 import { PaiementEleveInput, BulkPaiementEleveInput, UpdatePaiementEleveInput, PaiementProfesseurInput } from './finances.schema';
 
-function genererRecu(): string {
+async function genererRecu(): Promise<string> {
   const now = new Date();
   const ymd = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
-  const rand = String(Math.floor(Math.random() * 90000) + 10000);
-  return `REC-${ymd}-${rand}`;
+  const result = await prisma.$queryRaw<[{ nextval: bigint }]>`SELECT nextval('seq_recu_numero')`;
+  const seq = String(result[0].nextval).padStart(6, '0');
+  return `REC-${ymd}-${seq}`;
 }
 
 export async function listerPaiementsEleves(
@@ -64,7 +65,7 @@ export async function creerPaiementEleve(etablissement_id: string, data: Paiemen
       montant: data.montant,
       mois: data.mois,
       annee: data.annee,
-      recu_numero: data.recu_numero || genererRecu(),
+      recu_numero: data.recu_numero || await genererRecu(),
     },
     include: { eleve: true },
   });
@@ -81,8 +82,10 @@ export async function bulkCreerPaiementEleve(etablissement_id: string, data: Bul
   });
   if (eleves.length === 0) throw new Error('Aucun élève valide trouvé');
 
+  // Générer les numéros séquentiellement avant le Promise.all
+  const recuNumeros = await Promise.all(eleves.map(() => genererRecu()));
   const created = await Promise.all(
-    eleves.map(e =>
+    eleves.map((e, i) =>
       prisma.paiementEleve.create({
         data: {
           eleve_id: e.id,
@@ -91,7 +94,7 @@ export async function bulkCreerPaiementEleve(etablissement_id: string, data: Bul
           montant: data.montant,
           mois: data.mois,
           annee: data.annee,
-          recu_numero: genererRecu(),
+          recu_numero: recuNumeros[i],
         },
         include: { eleve: { select: { id: true, nom_fr: true, matricule: true } } },
       })
@@ -197,20 +200,34 @@ export async function creerPaiementProfesseur(etablissement_id: string, data: Pa
 
 export async function getStatsMensuels(etablissement_id: string, nbMois = 6) {
   const now = new Date();
-  const mois: { label: string; mois: number; annee: number; total: number }[] = [];
+  const MOIS_LABELS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 
+  // Construire la liste des (mois, annee) couverts
+  const periodes: { mois: number; annee: number }[] = [];
   for (let i = nbMois - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const m = d.getMonth() + 1;
-    const a = d.getFullYear();
-    const agg = await prisma.paiementEleve.aggregate({
-      where: { eleve: { etablissement_id }, mois: m, annee: a },
-      _sum: { montant: true },
-    });
-    const MOIS_LABELS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-    mois.push({ label: `${MOIS_LABELS[m-1]} ${a}`, mois: m, annee: a, total: Number(agg._sum.montant ?? 0) });
+    periodes.push({ mois: d.getMonth() + 1, annee: d.getFullYear() });
   }
-  return mois;
+
+  // Une seule requête groupée au lieu de N requêtes séquentielles
+  const annees = [...new Set(periodes.map(p => p.annee))];
+  const rows = await prisma.paiementEleve.groupBy({
+    by: ['mois', 'annee'],
+    where: {
+      eleve: { etablissement_id },
+      annee: { in: annees },
+    },
+    _sum: { montant: true },
+  });
+
+  const totauxMap = new Map(rows.map(r => [`${r.mois}-${r.annee}`, Number(r._sum.montant ?? 0)]));
+
+  return periodes.map(({ mois, annee }) => ({
+    label: `${MOIS_LABELS[mois - 1]} ${annee}`,
+    mois,
+    annee,
+    total: totauxMap.get(`${mois}-${annee}`) ?? 0,
+  }));
 }
 
 export async function getStatsFinances(etablissement_id: string) {
