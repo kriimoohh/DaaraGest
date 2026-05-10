@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const jwtPayloadSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
   role: z.string().min(1),
   etablissement_id: z.string().uuid(),
   langue: z.string().min(1),
