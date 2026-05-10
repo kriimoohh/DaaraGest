@@ -163,6 +163,7 @@ model AnneeScolaire {
   classes         Classe[]
   inscriptions    Inscription[]
   prof_matieres   ProfMatiereClasse[]
+  matiere_classes MatiereClasse[]
   bulletins       Bulletin[]
   notes           Note[]
   absences_eleves AbsenceEleve[]
@@ -195,9 +196,10 @@ model Matiere {
   ordre_bulletin   Int     @default(0)
   active           Boolean @default(true)
 
-  etablissement Etablissement       @relation(fields: [etablissement_id], references: [id])
-  prof_matieres ProfMatiereClasse[]
-  notes         Note[]
+  etablissement   Etablissement       @relation(fields: [etablissement_id], references: [id])
+  prof_matieres   ProfMatiereClasse[]
+  matiere_classes MatiereClasse[]
+  notes           Note[]
 }
 
 model Classe {
@@ -210,12 +212,26 @@ model Classe {
   capacite         Int     @default(30)
   active           Boolean @default(true)
 
-  etablissement  Etablissement       @relation(fields: [etablissement_id], references: [id])
-  annee_scolaire AnneeScolaire       @relation(fields: [annee_scolaire_id], references: [id])
-  inscriptions_fr Inscription[]      @relation("ClasseFR")
-  inscriptions_ar Inscription[]      @relation("ClasseAR")
+  etablissement   Etablissement       @relation(fields: [etablissement_id], references: [id])
+  annee_scolaire  AnneeScolaire       @relation(fields: [annee_scolaire_id], references: [id])
+  inscriptions_fr Inscription[]       @relation("ClasseFR")
+  inscriptions_ar Inscription[]       @relation("ClasseAR")
   prof_matieres   ProfMatiereClasse[]
+  matiere_classes MatiereClasse[]
   absences        AbsenceEleve[]
+}
+
+model MatiereClasse {
+  id                String @id @default(uuid())
+  matiere_id        String
+  classe_id         String
+  annee_scolaire_id String
+
+  matiere        Matiere       @relation(fields: [matiere_id], references: [id])
+  classe         Classe        @relation(fields: [classe_id], references: [id])
+  annee_scolaire AnneeScolaire @relation(fields: [annee_scolaire_id], references: [id])
+
+  @@unique([matiere_id, classe_id, annee_scolaire_id])
 }
 
 model ProfMatiereClasse {

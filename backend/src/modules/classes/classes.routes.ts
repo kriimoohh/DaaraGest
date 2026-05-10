@@ -3,6 +3,7 @@ import { authMiddleware } from '../../middlewares/auth.middleware';
 import { requireRole } from '../../middlewares/role.middleware';
 import { ROLE_GROUPS } from '../../config/roles';
 import { listerHandler, getHandler, creerHandler, modifierHandler, supprimerHandler, listerElevesHandler, pdfListeClasseHandler, pdfToutesClassesHandler } from './classes.controller';
+import { listerHandler as listerMatieresHandler, assignerHandler as assignerMatieresHandler } from './matiere-classe.controller';
 
 const lecture        = requireRole(...ROLE_GROUPS.ACADEMIQUE);
 const gestion        = requireRole(...ROLE_GROUPS.GESTION);
@@ -17,4 +18,6 @@ export async function classeRoutes(fastify: FastifyInstance) {
   fastify.delete('/:id',             { preHandler: [authMiddleware, adminSeulement] }, supprimerHandler);
   fastify.get('/:id/eleves',         { preHandler: [authMiddleware, lecture] }, listerElevesHandler);
   fastify.get('/:id/pdf-liste',      { preHandler: [authMiddleware, lecture] }, pdfListeClasseHandler);
+  fastify.get('/:id/matieres',       { preHandler: [authMiddleware, lecture] }, listerMatieresHandler);
+  fastify.put('/:id/matieres',       { preHandler: [authMiddleware, gestion] }, assignerMatieresHandler);
 }

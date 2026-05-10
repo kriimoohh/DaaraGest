@@ -9,7 +9,20 @@ function appreciation(m: number): string {
   return 'Insuffisant — Doit faire des efforts';
 }
 
-async function getMatieres(etablissement_id: string, filiere: 'FR' | 'AR') {
+async function getMatieres(
+  etablissement_id: string,
+  filiere: 'FR' | 'AR',
+  classe_id?: string,
+  annee_scolaire_id?: string,
+) {
+  if (classe_id && annee_scolaire_id) {
+    const rows = await prisma.matiereClasse.findMany({
+      where: { classe_id, annee_scolaire_id, matiere: { filiere, active: true } },
+      include: { matiere: true },
+      orderBy: { matiere: { ordre_bulletin: 'asc' } },
+    });
+    return rows.map(r => r.matiere);
+  }
   return prisma.matiere.findMany({
     where: { etablissement_id, filiere, active: true },
     orderBy: { ordre_bulletin: 'asc' },
@@ -55,7 +68,7 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
 
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
   const matMap: Record<string, Awaited<ReturnType<typeof getMatieres>>> = {};
-  for (const f of filieres) matMap[f] = await getMatieres(etablissement_id, f);
+  for (const f of filieres) matMap[f] = await getMatieres(etablissement_id, f, classe_id, annee_scolaire_id);
 
   // Fetch toutes les notes d'un coup (évite N+1)
   const tousMatIds = filieres.flatMap(f => matMap[f].map(m => m.id));
@@ -107,7 +120,7 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
 
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
   const matMap: Record<string, Awaited<ReturnType<typeof getMatieres>>> = {};
-  for (const f of filieres) matMap[f] = await getMatieres(etablissement_id, f);
+  for (const f of filieres) matMap[f] = await getMatieres(etablissement_id, f, classe_id, annee_scolaire_id);
 
   // Fetch toutes les notes annuelles d'un coup (évite N+1)
   const tousMatIdsAnnuel = filieres.flatMap(f => matMap[f].map(m => m.id));
@@ -161,17 +174,29 @@ export async function getBulletin(id: string, etablissement_id: string) {
   if (!bulletin) throw new Error('Bulletin introuvable');
 
   const filieres: ('FR' | 'AR')[] = bulletin.filiere === 'COMBINE' ? ['FR', 'AR'] : [bulletin.filiere as 'FR' | 'AR'];
+
+  // Récupérer la classe de l'élève pour cette année scolaire (pour filtrer par MatiereClasse)
+  const inscription = bulletin.eleve.inscriptions.find(
+    i => i.annee_scolaire_id === bulletin.annee_scolaire_id
+  );
+  const classeIdByFiliere: Record<string, string | null> = {
+    FR: inscription?.classe_fr_id ?? null,
+    AR: inscription?.classe_ar_id ?? null,
+  };
+
   const notesByFiliere: Record<string, unknown[]> = {};
+  const matieresByFiliere: Record<string, Awaited<ReturnType<typeof getMatieres>>> = {};
   for (const f of filieres) {
-    const matieres = await getMatieres(etablissement_id, f);
+    const classeId = classeIdByFiliere[f] ?? undefined;
+    matieresByFiliere[f] = await getMatieres(etablissement_id, f, classeId, bulletin.annee_scolaire_id);
     const periodes = bulletin.periode === 0 ? [1, 2, 3] : [bulletin.periode];
     notesByFiliere[f] = await prisma.note.findMany({
-      where: { eleve_id: bulletin.eleve_id, annee_scolaire_id: bulletin.annee_scolaire_id, periode: { in: periodes }, matiere_id: { in: matieres.map(m => m.id) } },
+      where: { eleve_id: bulletin.eleve_id, annee_scolaire_id: bulletin.annee_scolaire_id, periode: { in: periodes }, matiere_id: { in: matieresByFiliere[f].map(m => m.id) } },
       include: { matiere: true },
       orderBy: { matiere: { ordre_bulletin: 'asc' } },
     });
   }
-  return { ...bulletin, notesByFiliere };
+  return { ...bulletin, notesByFiliere, matieresByFiliere };
 }
 
 // ─── Mettre à jour les observations ─────────────────────────────────────────
@@ -215,24 +240,38 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
     appreciation: data.appreciation, devise: etab.devise,
   };
 
-  type NoteRaw = { valeur: unknown; periode: number; matiere: { nom_fr: string; nom_ar: string; coeff_defaut: unknown } };
+  type NoteRaw = { matiere_id: string; valeur: unknown; periode: number; matiere: { nom_fr: string; nom_ar: string; coeff_defaut: unknown; note_max: unknown } };
+  type MatiereRaw = { id: string; nom_fr: string; nom_ar: string; coeff_defaut: unknown; note_max: unknown };
 
-  const toRows = (f: 'FR' | 'AR') =>
-    ((data.notesByFiliere[f] ?? []) as NoteRaw[]).map(n => ({
-      nom_fr: n.matiere.nom_fr, nom_ar: n.matiere.nom_ar,
-      coeff: Number(n.matiere.coeff_defaut), valeur: n.valeur !== null ? Number(n.valeur) : null,
+  // Construit les lignes à partir du programme de la classe (toutes les matières),
+  // les notes existantes sont fusionnées — les matières sans note affichent null (→ "—")
+  const toRows = (f: 'FR' | 'AR') => {
+    const matieres = (data.matieresByFiliere[f] ?? []) as MatiereRaw[];
+    const notesMap = new Map(((data.notesByFiliere[f] ?? []) as NoteRaw[]).map(n => [n.matiere_id, n]));
+    return matieres.map(m => ({
+      nom_fr: m.nom_fr, nom_ar: m.nom_ar,
+      coeff: Number(m.coeff_defaut),
+      valeur: notesMap.has(m.id) ? (notesMap.get(m.id)!.valeur !== null ? Number(notesMap.get(m.id)!.valeur) : null) : null,
+      note_max: Number(m.note_max ?? 20),
     }));
+  };
 
   const toAnnuelRows = (f: 'FR' | 'AR') => {
-    const map = new Map<string, { nom_fr: string; nom_ar: string; coeff: number; vals: Record<number, number | null> }>();
+    const matieres = (data.matieresByFiliere[f] ?? []) as MatiereRaw[];
+    const noteMap = new Map<string, Record<number, number | null>>();
     for (const n of (data.notesByFiliere[f] ?? []) as NoteRaw[]) {
-      if (!map.has(n.matiere.nom_fr)) map.set(n.matiere.nom_fr, { nom_fr: n.matiere.nom_fr, nom_ar: n.matiere.nom_ar, coeff: Number(n.matiere.coeff_defaut), vals: {} });
-      map.get(n.matiere.nom_fr)!.vals[n.periode] = n.valeur !== null ? Number(n.valeur) : null;
+      if (!noteMap.has(n.matiere_id)) noteMap.set(n.matiere_id, {});
+      noteMap.get(n.matiere_id)![n.periode] = n.valeur !== null ? Number(n.valeur) : null;
     }
-    return Array.from(map.values()).map(m => {
-      const vals = [1, 2, 3].map(p => m.vals[p] ?? null);
+    return matieres.map(m => {
+      const vals = [1, 2, 3].map(p => noteMap.get(m.id)?.[p] ?? null);
       const nums = vals.filter(v => v !== null) as number[];
-      return { ...m, valeurs: vals, moyenne_annuelle: nums.length > 0 ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length * 100) / 100 : null };
+      return {
+        nom_fr: m.nom_fr, nom_ar: m.nom_ar, coeff: Number(m.coeff_defaut),
+        note_max: Number(m.note_max ?? 20),
+        valeurs: vals,
+        moyenne_annuelle: nums.length > 0 ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length * 100) / 100 : null,
+      };
     });
   };
 
@@ -286,10 +325,13 @@ export async function genererPdfClasse(
 
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
   const matMap: Record<string, Awaited<ReturnType<typeof getMatieres>>> = {};
-  for (const f of filieres) matMap[f] = await getMatieres(etablissement_id, f);
+  for (const f of filieres) matMap[f] = await getMatieres(etablissement_id, f, classe_id, annee_scolaire_id);
 
   const { generateBulletinHtml } = await import('./bulletin.template');
   const pages: string[] = [];
+
+  type NoteRawClasse = { matiere_id: string; valeur: unknown; matiere: { nom_fr: string; nom_ar: string; coeff_defaut: unknown; note_max: unknown } };
+  type MatiereRawClasse = { id: string; nom_fr: string; nom_ar: string; coeff_defaut: unknown; note_max: unknown };
 
   for (const bulletin of bulletins) {
     const notesByFiliere: Record<string, unknown[]> = {};
@@ -299,13 +341,16 @@ export async function genererPdfClasse(
         include: { matiere: true }, orderBy: { matiere: { ordre_bulletin: 'asc' } },
       });
     }
-    type NoteRaw = { valeur: unknown; matiere: { nom_fr: string; nom_ar: string; coeff_defaut: unknown } };
-    const toRows = (f: 'FR' | 'AR') =>
-      ((notesByFiliere[f] ?? []) as NoteRaw[]).map(n => ({
-        nom_fr: n.matiere.nom_fr, nom_ar: n.matiere.nom_ar,
-        coeff: Number(n.matiere.coeff_defaut), valeur: n.valeur !== null ? Number(n.valeur) : null,
-        note_max: Number((n.matiere as {note_max?: unknown}).note_max ?? 20),
+    const toRows = (f: 'FR' | 'AR') => {
+      const matieres = matMap[f] as MatiereRawClasse[];
+      const notesMap = new Map(((notesByFiliere[f] ?? []) as NoteRawClasse[]).map(n => [n.matiere_id, n]));
+      return matieres.map(m => ({
+        nom_fr: m.nom_fr, nom_ar: m.nom_ar,
+        coeff: Number(m.coeff_defaut),
+        valeur: notesMap.has(m.id) ? (notesMap.get(m.id)!.valeur !== null ? Number(notesMap.get(m.id)!.valeur) : null) : null,
+        note_max: Number(m.note_max ?? 20),
       }));
+    };
 
     pages.push(generateBulletinHtml({
       type: filiere as 'FR' | 'AR' | 'COMBINE', periode: bulletin.periode,

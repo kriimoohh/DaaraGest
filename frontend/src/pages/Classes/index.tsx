@@ -48,6 +48,21 @@ interface Classe {
   annee_scolaire?: { id: string; libelle: string } | string;
 }
 
+interface Matiere {
+  id: string;
+  nom_fr: string;
+  nom_ar: string;
+  filiere: 'FR' | 'AR';
+  coeff_defaut: number;
+  ordre_bulletin: number;
+}
+
+interface MatiereClasseRow {
+  id: string;
+  matiere_id: string;
+  matiere: Matiere;
+}
+
 interface ClasseFormData {
   nom_fr: string;
   filiere: string;
@@ -107,6 +122,13 @@ export function ClassesPage() {
   const [deleting, setDeleting] = useState(false);
 
   const [etablissementNom, setEtablissementNom] = useState('');
+
+  // Gestion des matières d'une classe
+  const [matiereModal, setMatiereModal] = useState<Classe | null>(null);
+  const [allMatieres, setAllMatieres] = useState<Matiere[]>([]);
+  const [selectedMatiereIds, setSelectedMatiereIds] = useState<Set<string>>(new Set());
+  const [matiereLoading, setMatiereLoading] = useState(false);
+  const [matiereSaving, setMatiereSaving] = useState(false);
 
   // Liste des élèves d'une classe
   const [listeModal, setListeModal] = useState<Classe | null>(null);
@@ -219,6 +241,50 @@ export function ClassesPage() {
       setDeleting(false);
     }
   };
+
+  async function openMatiereModal(classe: Classe) {
+    setMatiereModal(classe);
+    setMatiereLoading(true);
+    try {
+      const [toutes, assignees] = await Promise.all([
+        api.get<Matiere[]>(`/api/v1/matieres?filiere=${classe.filiere}`),
+        api.get<MatiereClasseRow[]>(`/api/v1/classes/${classe.id}/matieres?annee_scolaire_id=${classe.annee_scolaire_id}`),
+      ]);
+      setAllMatieres(toutes);
+      setSelectedMatiereIds(new Set(assignees.map(r => r.matiere_id)));
+    } catch (err) {
+      toast.error((err as Error).message || 'Impossible de charger les matières');
+      setMatiereModal(null);
+    } finally {
+      setMatiereLoading(false);
+    }
+  }
+
+  function toggleMatiere(id: string) {
+    setSelectedMatiereIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function saveMatieres() {
+    if (!matiereModal) return;
+    setMatiereSaving(true);
+    try {
+      await api.put(`/api/v1/classes/${matiereModal.id}/matieres`, {
+        annee_scolaire_id: matiereModal.annee_scolaire_id,
+        matiere_ids: Array.from(selectedMatiereIds),
+      });
+      toast.success('Programme mis à jour');
+      setMatiereModal(null);
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur lors de la sauvegarde');
+    } finally {
+      setMatiereSaving(false);
+    }
+  }
 
   async function openListeEleves(classe: Classe) {
     setListeModal(classe);
@@ -540,6 +606,7 @@ export function ClassesPage() {
         return (
           <div className="row" style={{ gap: 6 }}>
             <Button size="sm" variant="secondary" onClick={() => openListeEleves(c)}>Liste élèves</Button>
+            <Button size="sm" variant="secondary" onClick={() => openMatiereModal(c)}>Matières</Button>
             <Button size="sm" variant="ghost" onClick={() => openEdit(c)}>{t('actions.modifier')}</Button>
             {isAdmin && <Button size="sm" variant="danger" onClick={() => setConfirmDelete(c)}>{t('actions.supprimer')}</Button>}
           </div>
@@ -689,6 +756,70 @@ export function ClassesPage() {
       loading={deleting}
       message={`Supprimer la classe "${confirmDelete?.nom_fr}" ?`}
     />
+
+    {/* ── Modale programme des matières ───────────────────────────────────── */}
+    {matiereModal && (
+      <Modal
+        isOpen={!!matiereModal}
+        onClose={() => setMatiereModal(null)}
+        title={`Programme des matières — ${matiereModal.nom_fr}`}
+        size="md"
+      >
+        {matiereLoading ? (
+          <div className="empty">Chargement...</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <p style={{ fontSize: 13, color: 'var(--ink-3)' }}>
+              Sélectionnez les matières enseignées dans cette classe pour l'année scolaire en cours.
+              Ces matières apparaîtront dans les bulletins, même sans note (affichées <strong>—</strong>).
+            </p>
+
+            {allMatieres.length === 0 ? (
+              <div className="empty">Aucune matière disponible pour cette filière</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: '50vh', overflowY: 'auto', padding: '4px 0' }}>
+                {allMatieres.map(m => (
+                  <label
+                    key={m.id}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '10px 14px', borderRadius: 'var(--r-md)',
+                      border: `1px solid ${selectedMatiereIds.has(m.id) ? 'var(--primary)' : 'var(--rule)'}`,
+                      background: selectedMatiereIds.has(m.id) ? 'var(--primary-soft)' : 'var(--surface)',
+                      cursor: 'pointer', transition: 'all 0.15s',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedMatiereIds.has(m.id)}
+                      onChange={() => toggleMatiere(m.id)}
+                      style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--primary)' }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>{m.nom_fr}</div>
+                      {m.nom_ar && <div style={{ fontSize: 12, color: 'var(--ink-3)', direction: 'rtl' }}>{m.nom_ar}</div>}
+                    </div>
+                    <span style={{ fontSize: 12, color: 'var(--ink-4)', whiteSpace: 'nowrap' }}>
+                      Coeff. {Number(m.coeff_defaut).toFixed(1)}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 12, color: 'var(--ink-4)' }}>
+                {selectedMatiereIds.size} matière{selectedMatiereIds.size !== 1 ? 's' : ''} sélectionnée{selectedMatiereIds.size !== 1 ? 's' : ''}
+              </span>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <Button variant="secondary" onClick={() => setMatiereModal(null)}>Annuler</Button>
+                <Button onClick={saveMatieres} loading={matiereSaving}>Enregistrer</Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+    )}
 
     {/* ── Modale liste des élèves ──────────────────────────────────────────── */}
     {listeModal && (

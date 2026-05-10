@@ -20,9 +20,18 @@ interface Bulletin {
 }
 
 interface NoteDetail {
+  matiere_id: string;
   valeur: number | null;
   periode: number;
   matiere: { nom_fr: string; nom_ar: string; coeff_defaut: number; note_max: number; };
+}
+
+interface MatiereDetail {
+  id: string;
+  nom_fr: string;
+  nom_ar: string;
+  coeff_defaut: number;
+  note_max: number;
 }
 
 interface DetailBulletin extends Bulletin {
@@ -33,6 +42,7 @@ interface DetailBulletin extends Bulletin {
     inscriptions: { classe_fr: { nom_fr: string } | null; classe_ar: { nom_fr: string } | null; }[];
   };
   notesByFiliere: { FR?: NoteDetail[]; AR?: NoteDetail[]; };
+  matieresByFiliere: { FR?: MatiereDetail[]; AR?: MatiereDetail[]; };
 }
 
 type BulletinType = 'FR' | 'AR' | 'COMBINE' | 'ANNUEL_FR' | 'ANNUEL_AR' | 'ANNUEL_COMBINE';
@@ -477,10 +487,17 @@ function noteColor(valeur: number | string | null, noteMax: number | string): st
   return 'var(--danger)';
 }
 
-function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere: string; isAnnuel: boolean }) {
-  if (notes.length === 0) return null;
+function NotesTable({ matieres, notes, filiere, isAnnuel }: {
+  matieres: MatiereDetail[];
+  notes: NoteDetail[];
+  filiere: string;
+  isAnnuel: boolean;
+}) {
+  if (matieres.length === 0) return null;
 
   if (!isAnnuel) {
+    // Index des notes par matiere_id pour lookup O(1)
+    const notesMap = new Map(notes.map(n => [n.matiere_id, n]));
     return (
       <table className="tbl">
         <thead>
@@ -491,36 +508,40 @@ function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere
           </tr>
         </thead>
         <tbody>
-          {notes.map((n, i) => (
-            <tr key={i}>
-              <td style={{ color: 'var(--ink-2)' }}>{n.matiere.nom_fr}</td>
-              <td style={{ textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>{n.matiere.coeff_defaut}</td>
-              <td style={{ textAlign: 'center' }}>
-                <span style={{ color: noteColor(n.valeur, n.matiere.note_max), fontWeight: n.valeur !== null ? 600 : 400 }}>
-                  {n.valeur !== null ? Number(n.valeur).toFixed(1) : '—'}
-                </span>
-                <span style={{ color: 'var(--ink-4)', fontSize: 12 }}>/{Number(n.matiere.note_max)}</span>
-              </td>
-            </tr>
-          ))}
+          {matieres.map(m => {
+            const note = notesMap.get(m.id);
+            const valeur = note?.valeur ?? null;
+            return (
+              <tr key={m.id}>
+                <td style={{ color: 'var(--ink-2)' }}>{m.nom_fr}</td>
+                <td style={{ textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>{m.coeff_defaut}</td>
+                <td style={{ textAlign: 'center' }}>
+                  <span style={{ color: noteColor(valeur, m.note_max), fontWeight: valeur !== null ? 600 : 400 }}>
+                    {valeur !== null ? Number(valeur).toFixed(1) : '—'}
+                  </span>
+                  <span style={{ color: 'var(--ink-4)', fontSize: 12 }}>/{Number(m.note_max)}</span>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     );
   }
 
-  // Annuel: group by matiere, columns T1 | T2 | T3 | Moy.
-  const matMap = new Map<string, { nom_fr: string; coeff: number; noteMax: number; vals: Record<number, number | null> }>();
+  // Annuel : colonnes T1 | T2 | T3 | Moy. — une ligne par matière du programme
+  const notesByMatiereAndPeriode = new Map<string, Record<number, number | null>>();
   for (const n of notes) {
-    if (!matMap.has(n.matiere.nom_fr)) {
-      matMap.set(n.matiere.nom_fr, { nom_fr: n.matiere.nom_fr, coeff: Number(n.matiere.coeff_defaut), noteMax: Number(n.matiere.note_max), vals: {} });
-    }
-    matMap.get(n.matiere.nom_fr)!.vals[n.periode] = n.valeur !== null ? Number(n.valeur) : null;
+    if (!notesByMatiereAndPeriode.has(n.matiere_id)) notesByMatiereAndPeriode.set(n.matiere_id, {});
+    notesByMatiereAndPeriode.get(n.matiere_id)![n.periode] = n.valeur !== null ? Number(n.valeur) : null;
   }
-  const rows = Array.from(matMap.values()).map(m => {
-    const vs = [1, 2, 3].map(p => m.vals[p] ?? null);
+
+  const rows = matieres.map(m => {
+    const periodeVals = notesByMatiereAndPeriode.get(m.id) ?? {};
+    const vs = [1, 2, 3].map(p => periodeVals[p] ?? null);
     const nums = vs.filter((v): v is number => v !== null);
     const moy = nums.length > 0 ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length * 100) / 100 : null;
-    return { ...m, vs, moy };
+    return { m, vs, moy };
   });
 
   return (
@@ -536,17 +557,17 @@ function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere
         </tr>
       </thead>
       <tbody>
-        {rows.map((r, i) => (
-          <tr key={i}>
-            <td style={{ color: 'var(--ink-2)' }}>{r.nom_fr}</td>
-            <td style={{ textAlign: 'center', color: 'var(--ink-4)', fontSize: 12 }}>{r.coeff}</td>
-            {r.vs.map((v, j) => (
-              <td key={j} style={{ textAlign: 'center', fontSize: 12, color: noteColor(v, r.noteMax), fontWeight: v !== null ? 600 : 400 }}>
+        {rows.map(({ m, vs, moy }) => (
+          <tr key={m.id}>
+            <td style={{ color: 'var(--ink-2)' }}>{m.nom_fr}</td>
+            <td style={{ textAlign: 'center', color: 'var(--ink-4)', fontSize: 12 }}>{m.coeff_defaut}</td>
+            {vs.map((v, j) => (
+              <td key={j} style={{ textAlign: 'center', fontSize: 12, color: noteColor(v, m.note_max), fontWeight: v !== null ? 600 : 400 }}>
                 {v !== null ? v.toFixed(1) : '—'}
               </td>
             ))}
-            <td style={{ textAlign: 'center', fontSize: 12, color: noteColor(r.moy, r.noteMax), fontWeight: r.moy !== null ? 600 : 400 }}>
-              {r.moy !== null ? r.moy.toFixed(2) : '—'}
+            <td style={{ textAlign: 'center', fontSize: 12, color: noteColor(moy, m.note_max), fontWeight: moy !== null ? 600 : 400 }}>
+              {moy !== null ? moy.toFixed(2) : '—'}
             </td>
           </tr>
         ))}
@@ -642,17 +663,24 @@ function BulletinDetailContent({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {filieres.map(f => {
           const notes = detail.notesByFiliere[f] ?? [];
+          const matieres = detail.matieresByFiliere?.[f] ?? [];
           const hdBg = f === 'FR' ? 'var(--indigo-soft)' : 'var(--sahel-soft)';
           const hdColor = f === 'FR' ? 'var(--indigo-ink)' : 'var(--sahel-ink)';
+          const notesCount = notes.filter(n => n.valeur !== null).length;
           return (
             <div key={f} className="card" style={{ overflow: 'hidden' }}>
               <div style={{ padding: '8px 16px', fontSize: 12, fontWeight: 600, borderBottom: '1px solid var(--rule)', background: hdBg, color: hdColor }}>
-                {f === 'FR' ? t('classe.filiere_fr') : t('classe.filiere_ar')} — {notes.length} {t('matiere.titre').toLowerCase()}
+                {f === 'FR' ? t('classe.filiere_fr') : t('classe.filiere_ar')} — {matieres.length > 0 ? `${matieres.length} matière${matieres.length > 1 ? 's' : ''} au programme` : `${notes.length} ${t('matiere.titre').toLowerCase()}`}
+                {matieres.length > 0 && notesCount < matieres.length && (
+                  <span style={{ marginInlineStart: 8, fontWeight: 400, opacity: 0.75 }}>
+                    ({notesCount} notée{notesCount > 1 ? 's' : ''})
+                  </span>
+                )}
               </div>
               <div style={{ padding: '0 16px 12px' }}>
-                {notes.length === 0
+                {matieres.length === 0 && notes.length === 0
                   ? <p style={{ padding: '16px 0', fontSize: 12, color: 'var(--ink-4)', textAlign: 'center' }}>{t('common.aucune_note')}</p>
-                  : <NotesTable notes={notes} filiere={f} isAnnuel={isAnnuel} />
+                  : <NotesTable matieres={matieres} notes={notes} filiere={f} isAnnuel={isAnnuel} />
                 }
               </div>
             </div>
