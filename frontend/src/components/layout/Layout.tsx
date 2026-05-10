@@ -23,13 +23,13 @@ function MustChangePasswordModal() {
     if (nouveau.length < 8) { toast.error('Minimum 8 caractères'); return; }
     setSaving(true);
     try {
-      await api.put('/api/v1/auth/change-password', {
+      const res = await api.put<{ message: string; token: string }>('/api/v1/auth/change-password', {
         ancien_mot_de_passe: ancien,
         nouveau_mot_de_passe: nouveau,
       });
       toast.success('Mot de passe modifié avec succès');
       if (user) {
-        login({ ...user, must_change_password: false });
+        login({ ...user, must_change_password: false }, res.token);
       }
     } catch (err) {
       toast.error((err as Error).message || 'Erreur');
@@ -65,8 +65,10 @@ export function Layout() {
   const navigate = useNavigate();
   useTheme();
 
-  // Vérification de session au montage : si le cookie est expiré, déconnecter
+  // Vérification de session au montage : uniquement si pas de token en mémoire (ex: après refresh)
+  const { token } = useAuthStore();
   useEffect(() => {
+    if (token) return; // token présent → session valide, pas besoin de vérifier
     api.get<AuthUser>('/api/v1/auth/me').catch(() => {
       logout();
       navigate('/login', { replace: true });

@@ -15,27 +15,30 @@ export interface AuthUser {
 
 interface AuthState {
   user: AuthUser | null;
+  token: string | null;
   isAuthenticated: boolean;
   globalTheme: 'light' | 'dark';
-  login: (user: AuthUser) => void;
+  login: (user: AuthUser, token: string) => void;
   logout: () => void;
   updatePreferences: (langue: string, theme: string) => void;
   setGlobalTheme: (theme: 'light' | 'dark') => void;
+  setToken: (token: string) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
+      token: null,
       isAuthenticated: false,
       globalTheme: 'light',
 
-      login: (user) => {
-        set({ user, isAuthenticated: true, globalTheme: (user.theme as 'light' | 'dark') ?? 'light' });
+      login: (user, token) => {
+        set({ user, token, isAuthenticated: true, globalTheme: (user.theme as 'light' | 'dark') ?? 'light' });
       },
 
       logout: () => {
-        set({ user: null, isAuthenticated: false });
+        set({ user: null, token: null, isAuthenticated: false });
       },
 
       updatePreferences: (langue, theme) => {
@@ -48,12 +51,16 @@ export const useAuthStore = create<AuthState>()(
       setGlobalTheme: (theme) => {
         set({ globalTheme: theme });
       },
+
+      setToken: (token) => {
+        set({ token });
+      },
     }),
     {
       name: 'daaragest-auth',
-      // On ne persiste que les infos non-sensibles — le token voyage en cookie httpOnly
       partialize: (state) => ({
         user: state.user,
+        token: state.token,
         isAuthenticated: state.isAuthenticated,
         globalTheme: state.globalTheme,
       }),

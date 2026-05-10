@@ -28,7 +28,7 @@ export async function loginHandler(request: FastifyRequest, reply: FastifyReply)
     const { payload, user } = await login(parsed.data.identifiant, parsed.data.mot_de_passe);
     const token = await reply.jwtSign(payload, { expiresIn: TOKEN_EXPIRY });
     reply.setCookie('daaragest_token', token, cookieOptions(reply));
-    return reply.send({ user });
+    return reply.send({ user, token });
   } catch (err) {
     return reply.status(401).send({ error: (err as Error).message });
   }
@@ -58,7 +58,7 @@ export async function changePasswordHandler(request: FastifyRequest, reply: Fast
     const { payload } = await changePassword(id, ancien_mot_de_passe, nouveau_mot_de_passe);
     const token = await reply.jwtSign(payload, { expiresIn: TOKEN_EXPIRY });
     reply.setCookie('daaragest_token', token, cookieOptions(reply));
-    return reply.send({ message: 'Mot de passe modifié avec succès' });
+    return reply.send({ message: 'Mot de passe modifié avec succès', token });
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
   }
