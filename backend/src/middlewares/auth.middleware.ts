@@ -25,8 +25,7 @@ export async function authMiddleware(request: FastifyRequest, reply: FastifyRepl
         doit_changer_mdp: true,
       });
     }
-  } catch (err) {
-    request.log.warn({ msg: (err as Error).message }, 'jwtVerify failed');
+  } catch {
     return reply.status(401).send({ error: 'Non authentifié' });
   }
 }
