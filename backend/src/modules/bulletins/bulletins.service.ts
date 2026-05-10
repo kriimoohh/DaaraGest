@@ -255,11 +255,14 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
 
   const puppeteer = await import('puppeteer');
   const browser = await puppeteer.default.launch({ headless: true, executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'] });
-  const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: 'networkidle0' });
-  const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '10mm', bottom: '10mm', left: '8mm', right: '8mm' } });
-  await browser.close();
-  return Buffer.from(pdf);
+  try {
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '10mm', bottom: '10mm', left: '8mm', right: '8mm' } });
+    return Buffer.from(pdf);
+  } finally {
+    await browser.close();
+  }
 }
 
 // ─── PDF toute la classe ─────────────────────────────────────────────────────
@@ -323,9 +326,12 @@ export async function genererPdfClasse(
 
   const puppeteer = await import('puppeteer');
   const browser = await puppeteer.default.launch({ headless: true, executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'] });
-  const page = await browser.newPage();
-  await page.setContent(combined, { waitUntil: 'networkidle0' });
-  const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '0', bottom: '0', left: '0', right: '0' } });
-  await browser.close();
-  return Buffer.from(pdf);
+  try {
+    const page = await browser.newPage();
+    await page.setContent(combined, { waitUntil: 'networkidle0' });
+    const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '0', bottom: '0', left: '0', right: '0' } });
+    return Buffer.from(pdf);
+  } finally {
+    await browser.close();
+  }
 }

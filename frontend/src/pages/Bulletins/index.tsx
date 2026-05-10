@@ -128,8 +128,6 @@ function ClasseStats({ bulletins }: { bulletins: Bulletin[] }) {
 export function BulletinsPage() {
   const { t } = useTranslation();
   const api = useApi();
-  const { token } = useAuthStore();
-
   const [annees, setAnnees] = useState<AnneeScolaire[]>([]);
   const [classes, setClasses] = useState<Classe[]>([]);
   const [bulletins, setBulletins] = useState<Bulletin[]>([]);
@@ -197,7 +195,7 @@ export function BulletinsPage() {
     try {
       const resp = await fetch(
         `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/api/v1/bulletins/${b.id}/pdf`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { credentials: 'include' }
       );
       if (!resp.ok) throw new Error('Erreur génération PDF');
       const blob = await resp.blob();
@@ -225,7 +223,7 @@ export function BulletinsPage() {
       const params = new URLSearchParams({ classe_id: classeId, annee_scolaire_id: anneeId, periode: String(periodeFetch), filiere: filiereFetch });
       const resp = await fetch(
         `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/api/v1/bulletins/pdf-classe?${params}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { credentials: 'include' }
       );
       if (!resp.ok) { const e = await resp.json().catch(() => ({})); throw new Error(e.error || 'Erreur'); }
       const blob = await resp.blob();

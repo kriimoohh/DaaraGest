@@ -41,4 +41,4 @@ COPY package*.json ./
 EXPOSE 3000
 
 # Applique le schéma → seed essentiels → démarre le serveur
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node prisma/seed-prod.cjs && node dist/server.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node prisma/seed-prod.cjs && node dist/server.js"]

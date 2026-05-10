@@ -95,12 +95,18 @@ export async function upsertPresence(etablissement_id: string, data: PresenceInp
 
 export async function bulkUpsertPresences(etablissement_id: string, data: BulkPresenceInput) {
   const date = new Date(data.date);
+
+  // Charger tous les professeurs valides en une seule requête (élimine le N+1)
+  const profIds = data.presences.map(p => p.professeur_id);
+  const profsValides = await prisma.professeur.findMany({
+    where: { id: { in: profIds }, utilisateur: { etablissement_id } },
+    select: { id: true },
+  });
+  const profIdSet = new Set(profsValides.map(p => p.id));
+
   const results = [];
   for (const p of data.presences) {
-    const prof = await prisma.professeur.findFirst({
-      where: { id: p.professeur_id, utilisateur: { etablissement_id } },
-    });
-    if (!prof) continue;
+    if (!profIdSet.has(p.professeur_id)) continue;
     const heuresAuto = calcHeures(p.heure_arrivee, p.heure_depart);
     const bulk_payload = {
       statut: p.statut,
