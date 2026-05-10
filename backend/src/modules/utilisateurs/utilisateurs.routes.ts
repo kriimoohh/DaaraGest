@@ -1,17 +1,16 @@
 import { FastifyInstance } from 'fastify';
 import { authMiddleware } from '../../middlewares/auth.middleware';
 import { requireRole } from '../../middlewares/role.middleware';
+import { ROLE_GROUPS } from '../../config/roles';
 import { rolesHandler, listerHandler, creerHandler, modifierHandler, supprimerHandler, resetPasswordHandler } from './utilisateurs.controller';
 
-const adminSeulement = requireRole('admin');
+const adminOnly = requireRole(...ROLE_GROUPS.ADMIN_ONLY);
 
 export async function utilisateurRoutes(fastify: FastifyInstance) {
-  // GET /roles accessible à tous les authentifiés (sélecteur de rôle)
-  fastify.get('/roles', { preHandler: [authMiddleware] }, rolesHandler);
-  // Gestion utilisateurs : admin uniquement
-  fastify.get('/',                    { preHandler: [authMiddleware, adminSeulement] }, listerHandler);
-  fastify.post('/',                   { preHandler: [authMiddleware, adminSeulement] }, creerHandler);
-  fastify.put('/:id',                 { preHandler: [authMiddleware, adminSeulement] }, modifierHandler);
-  fastify.delete('/:id',              { preHandler: [authMiddleware, adminSeulement] }, supprimerHandler);
-  fastify.put('/:id/reset-password',  { preHandler: [authMiddleware, adminSeulement] }, resetPasswordHandler);
+  fastify.get('/roles',              { preHandler: [authMiddleware] }, rolesHandler);
+  fastify.get('/',                   { preHandler: [authMiddleware, adminOnly] }, listerHandler);
+  fastify.post('/',                  { preHandler: [authMiddleware, adminOnly] }, creerHandler);
+  fastify.put('/:id',                { preHandler: [authMiddleware, adminOnly] }, modifierHandler);
+  fastify.delete('/:id',             { preHandler: [authMiddleware, adminOnly] }, supprimerHandler);
+  fastify.put('/:id/reset-password', { preHandler: [authMiddleware, adminOnly] }, resetPasswordHandler);
 }
