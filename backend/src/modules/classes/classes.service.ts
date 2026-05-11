@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { ClasseInput } from './classes.schema';
+import { renderPdfHtml } from '../../utils/browserPool';
 
 type ListeData = Awaited<ReturnType<typeof listerElevesDeClasse>>;
 
@@ -218,18 +219,8 @@ function buildCombinedListeHtml(dataList: ListeData[], etablissementNom: string)
 </html>`;
 }
 
-async function renderPdf(html: string): Promise<Buffer> {
-  const puppeteer = await import('puppeteer');
-  const browser = await puppeteer.default.launch({
-    headless: true,
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-  });
-  const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: 'networkidle0' });
-  const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '0', bottom: '0', left: '0', right: '0' } });
-  await browser.close();
-  return Buffer.from(pdf);
+function renderPdf(html: string): Promise<Buffer> {
+  return renderPdfHtml(html, { format: 'A4', printBackground: true, margin: { top: '0', bottom: '0', left: '0', right: '0' } });
 }
 
 export async function genererPdfListeClasse(

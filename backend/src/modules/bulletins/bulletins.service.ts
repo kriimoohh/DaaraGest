@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { GenererBulletinInput, GenererBulletinAnnuelInput, ObservationInput } from './bulletins.schema';
+import { renderPdfHtml } from '../../utils/browserPool';
 
 function appreciation(m: number): string {
   if (m >= 16) return 'Très bien — Félicitations du conseil';
@@ -253,16 +254,7 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
     });
   }
 
-  const puppeteer = await import('puppeteer');
-  const browser = await puppeteer.default.launch({ headless: true, executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'] });
-  try {
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '10mm', bottom: '10mm', left: '8mm', right: '8mm' } });
-    return Buffer.from(pdf);
-  } finally {
-    await browser.close();
-  }
+  return renderPdfHtml(html, { format: 'A4', printBackground: true, margin: { top: '10mm', bottom: '10mm', left: '8mm', right: '8mm' } });
 }
 
 // ─── PDF toute la classe ─────────────────────────────────────────────────────
@@ -324,14 +316,5 @@ export async function genererPdfClasse(
     ${pages.map((p, i) => { const m = p.match(/<body>([\s\S]*)<\/body>/); const c = m ? m[1] : p; return i < pages.length - 1 ? `<div class="pb" style="padding:28px 36px">${c}</div>` : `<div style="padding:28px 36px">${c}</div>`; }).join('\n')}
   </body></html>`;
 
-  const puppeteer = await import('puppeteer');
-  const browser = await puppeteer.default.launch({ headless: true, executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'] });
-  try {
-    const page = await browser.newPage();
-    await page.setContent(combined, { waitUntil: 'networkidle0' });
-    const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '0', bottom: '0', left: '0', right: '0' } });
-    return Buffer.from(pdf);
-  } finally {
-    await browser.close();
-  }
+  return renderPdfHtml(combined, { format: 'A4', printBackground: true, margin: { top: '0', bottom: '0', left: '0', right: '0' } });
 }
