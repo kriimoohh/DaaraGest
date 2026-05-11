@@ -38,11 +38,18 @@ interface ListeElevesResponse {
   eleves: EleveInClasse[];
 }
 
+interface Niveau {
+  id: string;
+  libelle: string;
+  ordre: number;
+}
+
 interface Classe {
   id: string;
   nom_fr: string;
   filiere: 'FR' | 'AR';
-  niveau: string;
+  niveau_id: string | null;
+  niveau?: Niveau | null;
   capacite: number;
   annee_scolaire_id: string;
   annee_scolaire?: { id: string; libelle: string } | string;
@@ -51,7 +58,7 @@ interface Classe {
 interface ClasseFormData {
   nom_fr: string;
   filiere: string;
-  niveau: string;
+  niveau_id: string;
   capacite: string;
   annee_scolaire_id: string;
 }
@@ -63,7 +70,7 @@ type FormErrors = Partial<Record<keyof ClasseFormData, string>>;
 const EMPTY_FORM: ClasseFormData = {
   nom_fr: '',
   filiere: '',
-  niveau: '',
+  niveau_id: '',
   capacite: '',
   annee_scolaire_id: '',
 };
@@ -98,6 +105,7 @@ export function ClassesPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [annees, setAnnees] = useState<AnneeScolaire[]>([]);
+  const [niveaux, setNiveaux] = useState<Niveau[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Classe | null>(null);
   const [form, setForm] = useState<ClasseFormData>(EMPTY_FORM);
@@ -126,6 +134,10 @@ export function ClassesPage() {
     api
       .get<{ nom_fr: string }>('/api/v1/parametres')
       .then((res) => setEtablissementNom(res.nom_fr ?? ''))
+      .catch(() => {});
+    api
+      .get<Niveau[]>('/api/v1/niveaux')
+      .then(setNiveaux)
       .catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -161,7 +173,7 @@ export function ClassesPage() {
     setForm({
       nom_fr: classe.nom_fr,
       filiere: classe.filiere,
-      niveau: classe.niveau,
+      niveau_id: classe.niveau_id ?? '',
       capacite: String(classe.capacite ?? ''),
       annee_scolaire_id: classe.annee_scolaire_id,
     });
@@ -185,7 +197,7 @@ export function ClassesPage() {
       const payload = {
         nom_fr: form.nom_fr,
         filiere: form.filiere,
-        niveau: form.niveau,
+        niveau_id: form.niveau_id || null,
         capacite: form.capacite ? Number(form.capacite) : undefined,
         annee_scolaire_id: form.annee_scolaire_id,
       };
@@ -295,7 +307,7 @@ export function ClassesPage() {
     <div class="meta">
       <span>Année scolaire : <strong>${anneeLabel}</strong></span>
       <span class="badge">${filiereLabel}</span>
-      <span>Niveau : <strong>${classe.niveau || '—'}</strong></span>
+      <span>Niveau : <strong>${(classe.niveau as Niveau | null)?.libelle || '—'}</strong></span>
     </div>
   </div>
   <table>
@@ -438,7 +450,7 @@ export function ClassesPage() {
             <div class="meta">
               <span>Année scolaire : <strong>${anneeLabel}</strong></span>
               <span class="badge" style="background:${badgeBg};color:${badgeColor}">${filiereLabel}</span>
-              <span>Niveau : <strong>${classe.niveau || '—'}</strong></span>
+              <span>Niveau : <strong>${(classe.niveau as Niveau | null)?.libelle || '—'}</strong></span>
             </div>
           </div>
           <table>
@@ -518,7 +530,7 @@ export function ClassesPage() {
         );
       },
     },
-    { key: 'niveau', header: 'Niveau' },
+    { key: 'niveau', header: 'Niveau', render: (c: Classe) => c.niveau?.libelle ?? '—' },
     { key: 'capacite', header: 'Capacité', width: '100px' },
     {
       key: 'annee_scolaire',
@@ -644,11 +656,12 @@ export function ClassesPage() {
               ]}
               placeholder={t('common.selectionner')}
             />
-            <Input
+            <Select
               label={t('classe.niveau')}
-              value={form.niveau}
-              onChange={(e) => setField('niveau', e.target.value)}
-              placeholder="Ex: CM1"
+              value={form.niveau_id}
+              onChange={(e) => setField('niveau_id', e.target.value)}
+              options={niveaux.map(n => ({ value: n.id, label: n.libelle }))}
+              placeholder="Choisir un niveau..."
             />
           </div>
 

@@ -7,7 +7,13 @@ import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 
-type Tab = 'etablissement' | 'pedagogie' | 'compte';
+type Tab = 'etablissement' | 'pedagogie' | 'niveaux' | 'compte';
+
+interface Niveau {
+  id: string;
+  libelle: string;
+  ordre: number;
+}
 
 interface Etablissement {
   id: string;
@@ -227,6 +233,11 @@ export function ParametresPage() {
   const [tab, setTab] = useState<Tab>('etablissement');
   const [etab, setEtab] = useState<Etablissement | null>(null);
   const [config, setConfig] = useState<ConfigNotes | null>(null);
+  const [niveaux, setNiveaux] = useState<Niveau[]>([]);
+  const [niveauLibelle, setNiveauLibelle] = useState('');
+  const [niveauOrdre, setNiveauOrdre] = useState('');
+  const [editNiveau, setEditNiveau] = useState<Niveau | null>(null);
+  const [savingNiveau, setSavingNiveau] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
 
@@ -236,7 +247,11 @@ export function ParametresPage() {
   const [nouveauMdp, setNouveauMdp] = useState('');
   const [confirmMdp, setConfirmMdp] = useState('');
 
+  const fetchNiveaux = () =>
+    api.get<Niveau[]>('/api/v1/niveaux').then(setNiveaux).catch(() => {});
+
   useEffect(() => {
+    fetchNiveaux();
     Promise.all([
       api.get<Etablissement>('/api/v1/parametres'),
       api.get<Record<string, unknown>>('/api/v1/parametres/notes'),
@@ -260,6 +275,35 @@ export function ParametresPage() {
       .catch(err => toast.error((err as Error).message || 'Erreur de chargement'))
       .finally(() => setLoading(false));
   }, []);
+
+  const handleSaveNiveau = async () => {
+    if (!niveauLibelle.trim()) return;
+    setSavingNiveau(true);
+    try {
+      const body = { libelle: niveauLibelle.trim(), ordre: Number(niveauOrdre) || 0 };
+      if (editNiveau) {
+        await api.put(`/api/v1/niveaux/${editNiveau.id}`, body);
+        toast.success('Niveau modifié');
+      } else {
+        await api.post('/api/v1/niveaux', body);
+        toast.success('Niveau ajouté');
+      }
+      setNiveauLibelle(''); setNiveauOrdre(''); setEditNiveau(null);
+      fetchNiveaux();
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    } finally { setSavingNiveau(false); }
+  };
+
+  const handleDeleteNiveau = async (n: Niveau) => {
+    try {
+      await api.delete(`/api/v1/niveaux/${n.id}`);
+      toast.success('Niveau supprimé');
+      fetchNiveaux();
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    }
+  };
 
   const handleNbPeriodes = (n: number) => {
     if (!config) return;
@@ -333,6 +377,9 @@ export function ParametresPage() {
         </button>
         <button className={`tab${tab === 'pedagogie' ? ' active' : ''}`} onClick={() => setTab('pedagogie')}>
           {t('parametre.pedagogie')}
+        </button>
+        <button className={`tab${tab === 'niveaux' ? ' active' : ''}`} onClick={() => setTab('niveaux')}>
+          Niveaux
         </button>
         <button className={`tab${tab === 'compte' ? ' active' : ''}`} onClick={() => setTab('compte')}>
           {t('parametre.mon_compte')}
@@ -514,6 +561,68 @@ export function ParametresPage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* ── Onglet Niveaux ── */}
+      {tab === 'niveaux' && (
+        <div className="card card-pad">
+          <h3 style={{ marginBottom: 16 }}>Gestion des niveaux</h3>
+
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 20, flexWrap: 'wrap' }}>
+            <Input
+              label="Libellé"
+              value={niveauLibelle}
+              onChange={e => setNiveauLibelle(e.target.value)}
+              placeholder="Ex: CM1"
+            />
+            <Input
+              label="Ordre d'affichage"
+              type="number"
+              value={niveauOrdre}
+              onChange={e => setNiveauOrdre(e.target.value)}
+              placeholder="1"
+            />
+            <div style={{ paddingTop: 22 }}>
+              <Button onClick={handleSaveNiveau} loading={savingNiveau} disabled={!niveauLibelle.trim()}>
+                {editNiveau ? 'Modifier' : 'Ajouter'}
+              </Button>
+            </div>
+            {editNiveau && (
+              <div style={{ paddingTop: 22 }}>
+                <Button variant="ghost" onClick={() => { setEditNiveau(null); setNiveauLibelle(''); setNiveauOrdre(''); }}>
+                  Annuler
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <table className="table">
+            <thead>
+              <tr><th>Libellé</th><th>Ordre</th><th></th></tr>
+            </thead>
+            <tbody>
+              {niveaux.map(n => (
+                <tr key={n.id}>
+                  <td>{n.libelle}</td>
+                  <td>{n.ordre}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    <span style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <Button size="sm" variant="ghost" onClick={() => { setEditNiveau(n); setNiveauLibelle(n.libelle); setNiveauOrdre(String(n.ordre)); }}>
+                        Modifier
+                      </Button>
+                      <Button size="sm" variant="danger" onClick={() => handleDeleteNiveau(n)}>
+                        Supprimer
+                      </Button>
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {niveaux.length === 0 && (
+                <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Aucun niveau défini</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {/* ── Onglet Mon compte ── */}
