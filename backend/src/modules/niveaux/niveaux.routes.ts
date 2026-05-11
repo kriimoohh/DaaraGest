@@ -4,7 +4,7 @@ import { requireRole } from '../../middlewares/role.middleware';
 import { ROLE_GROUPS } from '../../config/roles';
 import { listerHandler, creerHandler, modifierHandler, supprimerHandler } from './niveaux.controller';
 
-const lecture = requireRole(...ROLE_GROUPS.LECTURE);
+const lecture = requireRole(...ROLE_GROUPS.PRESENCE);
 const admin   = requireRole(...ROLE_GROUPS.ADMIN_ONLY);
 
 export async function niveauxRoutes(fastify: FastifyInstance) {
