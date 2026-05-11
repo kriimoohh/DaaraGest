@@ -23,6 +23,7 @@ model Etablissement {
   classes          Classe[]
   eleves           Eleve[]
   matieres         Matiere[]
+  niveaux          Niveau[]
   config_notes     ConfigNotes?
   absences_eleves  AbsenceEleve[]
 }
@@ -200,18 +201,31 @@ model Matiere {
   notes         Note[]
 }
 
+model Niveau {
+  id               String  @id @default(uuid())
+  etablissement_id String
+  libelle          String
+  ordre            Int     @default(0)
+
+  etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
+  classes       Classe[]
+
+  @@unique([etablissement_id, libelle])
+}
+
 model Classe {
   id               String  @id @default(uuid())
   etablissement_id String
   annee_scolaire_id String
   nom_fr           String
   filiere          String
-  niveau           String
+  niveau_id        String?
   capacite         Int     @default(30)
   active           Boolean @default(true)
 
   etablissement  Etablissement       @relation(fields: [etablissement_id], references: [id])
   annee_scolaire AnneeScolaire       @relation(fields: [annee_scolaire_id], references: [id])
+  niveau         Niveau?             @relation(fields: [niveau_id], references: [id])
   inscriptions_fr Inscription[]      @relation("ClasseFR")
   inscriptions_ar Inscription[]      @relation("ClasseAR")
   prof_matieres   ProfMatiereClasse[]

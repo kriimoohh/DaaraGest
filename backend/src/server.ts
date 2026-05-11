@@ -17,6 +17,7 @@ import { parametresRoutes } from './modules/parametres/parametres.routes';
 import { utilisateurRoutes } from './modules/utilisateurs/utilisateurs.routes';
 import { pointageRoutes } from './modules/pointage/pointage.routes';
 import { absencesRoutes } from './modules/absences/absences.routes';
+import { niveauxRoutes } from './modules/niveaux/niveaux.routes';
 
 const jwtSecret = process.env.JWT_SECRET;
 if (!jwtSecret) {
@@ -86,6 +87,7 @@ async function build() {
       await api.register(utilisateurRoutes, { prefix: '/utilisateurs' });
       await api.register(pointageRoutes, { prefix: '/pointage' });
       await api.register(absencesRoutes, { prefix: '/absences' });
+      await api.register(niveauxRoutes,  { prefix: '/niveaux' });
     },
     { prefix: '/api/v1' }
   );
