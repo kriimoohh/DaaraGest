@@ -7,8 +7,8 @@ export function useAuth() {
   const navigate = useNavigate();
 
   const signIn = async (identifiant: string, mot_de_passe: string) => {
-    const data = await api.post<{ user: AuthUser; token: string }>('/api/v1/auth/login', { identifiant, mot_de_passe });
-    login(data.user, data.token);
+    const data = await api.post<{ user: AuthUser }>('/api/v1/auth/login', { identifiant, mot_de_passe });
+    login(data.user);
     navigate('/dashboard');
   };
 

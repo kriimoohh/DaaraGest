@@ -33,10 +33,17 @@ async function build() {
   // Support plusieurs origines séparées par des virgules
   const corsRaw = process.env.CORS_ORIGIN ?? 'http://localhost:5173';
   const corsOrigins = corsRaw.split(',').map(s => s.trim()).filter(Boolean);
+  if (!process.env.CORS_ORIGIN) {
+    fastify.log.warn('[CORS] CORS_ORIGIN non défini — utilisation du défaut localhost:5173');
+  }
   await fastify.register(cors, {
     origin: corsOrigins.length === 1 ? corsOrigins[0] : corsOrigins,
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'Accept'],
+    exposedHeaders: ['Set-Cookie'],
+    preflight: true,
+    strictPreflight: false,
   });
 
   await fastify.register(cookie);
