@@ -81,21 +81,22 @@ async function main() {
   console.log('✅ Matières (5 FR + 5 AR)');
 
   const niveaux = [
-    { id: 'niv-cp',       libelle: 'CP',         ordre: 1 },
-    { id: 'niv-ce1',      libelle: 'CE1',        ordre: 2 },
-    { id: 'niv-ce2',      libelle: 'CE2',        ordre: 3 },
-    { id: 'niv-cm1',      libelle: 'CM1',        ordre: 4 },
-    { id: 'niv-cm2',      libelle: 'CM2',        ordre: 5 },
-    { id: 'niv-6e',       libelle: '6ème',       ordre: 6 },
-    { id: 'niv-5e',       libelle: '5ème',       ordre: 7 },
-    { id: 'niv-4e',       libelle: '4ème',       ordre: 8 },
-    { id: 'niv-3e',       libelle: '3ème',       ordre: 9 },
-    { id: 'niv-ar1',      libelle: 'السنة الأولى',  ordre: 11 },
-    { id: 'niv-ar2',      libelle: 'السنة الثانية', ordre: 12 },
-    { id: 'niv-ar3',      libelle: 'السنة الثالثة', ordre: 13 },
-    { id: 'niv-ar4',      libelle: 'السنة الرابعة', ordre: 14 },
-    { id: 'niv-ar5',      libelle: 'السنة الخامسة', ordre: 15 },
-    { id: 'niv-ar6',      libelle: 'السنة السادسة', ordre: 16 },
+    { id: 'niv-ps',       libelle: 'Petite Section', ordre: 1  },
+    { id: 'niv-ms',       libelle: 'Moyenne Section', ordre: 2 },
+    { id: 'niv-gs',       libelle: 'Grande Section',  ordre: 3 },
+    { id: 'niv-ci',       libelle: 'CI',              ordre: 4 },
+    { id: 'niv-cp',       libelle: 'CP',              ordre: 5 },
+    { id: 'niv-ce1',      libelle: 'CE1',             ordre: 6 },
+    { id: 'niv-ce2',      libelle: 'CE2',             ordre: 7 },
+    { id: 'niv-cm1',      libelle: 'CM1',             ordre: 8 },
+    { id: 'niv-cm2',      libelle: 'CM2',             ordre: 9 },
+    { id: 'niv-6e',       libelle: '6e',              ordre: 10 },
+    { id: 'niv-5e',       libelle: '5e',              ordre: 11 },
+    { id: 'niv-4e',       libelle: '4e',              ordre: 12 },
+    { id: 'niv-3e',       libelle: '3e',              ordre: 13 },
+    { id: 'niv-seconde',  libelle: 'Seconde',         ordre: 14 },
+    { id: 'niv-premiere', libelle: 'Première',        ordre: 15 },
+    { id: 'niv-terminale',libelle: 'Terminale',       ordre: 16 },
   ];
   for (const n of niveaux) {
     await prisma.niveau.upsert({
@@ -104,7 +105,7 @@ async function main() {
       create: { ...n, etablissement_id: 'etablissement-default' },
     });
   }
-  console.log('✅ Niveaux (9 FR + 6 AR)');
+  console.log('✅ Niveaux (16 — communs FR et AR)');
 
   console.log('\n✅  Seed production terminé.\n');
 }
