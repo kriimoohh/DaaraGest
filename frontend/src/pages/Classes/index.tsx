@@ -530,7 +530,7 @@ export function ClassesPage() {
         );
       },
     },
-    { key: 'niveau', header: 'Niveau', render: (c: Classe) => c.niveau?.libelle ?? '—' },
+    { key: 'niveau', header: 'Niveau', render: (row) => (row as unknown as Classe).niveau?.libelle ?? '—' },
     { key: 'capacite', header: 'Capacité', width: '100px' },
     {
       key: 'annee_scolaire',
