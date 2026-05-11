@@ -82,9 +82,11 @@ export async function bulkCreerPaiementEleve(etablissement_id: string, data: Bul
   });
   if (eleves.length === 0) throw new Error('Aucun élève valide trouvé');
 
-  // Générer les numéros séquentiellement avant le Promise.all
+  // Les numéros de reçu sont générés via une séquence PostgreSQL non transactionnelle
+  // (les séquences ne rollback pas), donc on les génère avant la transaction.
   const recuNumeros = await Promise.all(eleves.map(() => genererRecu()));
-  const created = await Promise.all(
+
+  const created = await prisma.$transaction(
     eleves.map((e, i) =>
       prisma.paiementEleve.create({
         data: {
@@ -100,6 +102,7 @@ export async function bulkCreerPaiementEleve(etablissement_id: string, data: Bul
       })
     )
   );
+
   await logAction(etablissement_id, acteurId, 'CREATE', 'PaiementEleve', 'bulk', {
     count: created.length, type: data.type, montant: String(data.montant),
   });

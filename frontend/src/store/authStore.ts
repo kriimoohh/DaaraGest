@@ -58,11 +58,13 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'daaragest-auth',
-      version: 2,
+      version: 3,
       migrate: () => ({ user: null, token: null, isAuthenticated: false, globalTheme: 'light' as const }),
+      // Le token JWT est volontairement exclu du localStorage : il est conservé uniquement
+      // en mémoire. La session est persistée via le cookie httpOnly (SameSite=None; Secure)
+      // qui est renvoyé automatiquement par le navigateur sur chaque requête.
       partialize: (state) => ({
         user: state.user,
-        token: state.token,
         isAuthenticated: state.isAuthenticated,
         globalTheme: state.globalTheme,
       }),
