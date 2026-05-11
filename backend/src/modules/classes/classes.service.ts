@@ -156,7 +156,7 @@ function buildListeBodyContent(data: ListeData, etablissementNom: string): strin
     <div class="meta">
       <span>Année scolaire : <strong>${anneeLabel}</strong></span>
       <span class="badge" style="background:${badgeBg};color:${badgeColor}">${filiereLabel}</span>
-      <span>Niveau : <strong>${classe.niveau || '—'}</strong></span>
+      <span>Niveau : <strong>${(classe as { niveau?: { libelle: string } | null }).niveau?.libelle || '—'}</strong></span>
     </div>
   </div>
   <table>
