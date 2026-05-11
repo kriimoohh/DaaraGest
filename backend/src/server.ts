@@ -1,4 +1,4 @@
-import Fastify from 'fastify';
+import Fastify, { FastifyError } from 'fastify';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
@@ -53,7 +53,7 @@ async function build() {
   });
 
   // Headers de sécurité HTTP sur toutes les réponses
-  fastify.addHook('onSend', async (_request, reply) => {
+  fastify.addHook('onSend', async (_request, reply, payload) => {
     reply.header('X-Content-Type-Options', 'nosniff');
     reply.header('X-Frame-Options', 'DENY');
     reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -61,6 +61,7 @@ async function build() {
     if (process.env.NODE_ENV === 'production') {
       reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }
+    return payload;
   });
 
   fastify.get('/health', async (_req, reply) => {
@@ -92,7 +93,7 @@ async function build() {
     { prefix: '/api/v1' }
   );
 
-  fastify.setErrorHandler((error, _request, reply) => {
+  fastify.setErrorHandler((error: FastifyError, _request, reply) => {
     fastify.log.error(error);
     reply.status(error.statusCode ?? 500).send({
       error: error.message ?? 'Erreur interne du serveur',
