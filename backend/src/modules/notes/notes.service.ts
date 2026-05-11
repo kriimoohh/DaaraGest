@@ -31,13 +31,13 @@ export async function listerNotes(
 
 export async function bulkUpsertNotes(notes: NoteItem[], insertOnly = false, acteurId?: string, etablissement_id?: string) {
   if (notes.length === 0) return [];
-  const results: unknown[] = [];
 
   // Précharger toutes les matières concernées en une seule requête (élimine le N+1)
   const matiereIds = [...new Set(notes.map(n => n.matiere_id))];
   const matieres = await prisma.matiere.findMany({ where: { id: { in: matiereIds } } });
   const matiereMap = new Map(matieres.map(m => [m.id, m]));
 
+  // Valider toutes les notes avant d'ouvrir la transaction
   for (const note of notes) {
     const matiere = matiereMap.get(note.matiere_id);
     if (matiere) {
@@ -50,33 +50,39 @@ export async function bulkUpsertNotes(notes: NoteItem[], insertOnly = false, act
         throw new Error(`La note ${note.valeur} est inférieure au minimum (${noteMin}) pour "${matiere.nom_fr}"`);
       }
     }
-
-    const uniqueKey = {
-      eleve_id_matiere_id_periode_annee_scolaire_id: {
-        eleve_id: note.eleve_id,
-        matiere_id: note.matiere_id,
-        periode: note.periode,
-        annee_scolaire_id: note.annee_scolaire_id,
-      },
-    };
-
-    // En mode insertOnly (professeur), ignorer les notes qui existent déjà
-    if (insertOnly) {
-      const existing = await prisma.note.findUnique({ where: uniqueKey });
-      if (existing) continue;
-    }
-
-    const result = await prisma.note.upsert({
-      where: uniqueKey,
-      create: {
-        eleve_id: note.eleve_id, matiere_id: note.matiere_id,
-        periode: note.periode, annee_scolaire_id: note.annee_scolaire_id,
-        valeur: note.valeur, commentaire: note.commentaire,
-      },
-      update: { valeur: note.valeur, commentaire: note.commentaire },
-    });
-    results.push(result);
   }
+
+  const results = await prisma.$transaction(async (tx) => {
+    const saved: unknown[] = [];
+    for (const note of notes) {
+      const uniqueKey = {
+        eleve_id_matiere_id_periode_annee_scolaire_id: {
+          eleve_id: note.eleve_id,
+          matiere_id: note.matiere_id,
+          periode: note.periode,
+          annee_scolaire_id: note.annee_scolaire_id,
+        },
+      };
+
+      // En mode insertOnly (professeur), ignorer les notes qui existent déjà
+      if (insertOnly) {
+        const existing = await tx.note.findUnique({ where: uniqueKey });
+        if (existing) continue;
+      }
+
+      const result = await tx.note.upsert({
+        where: uniqueKey,
+        create: {
+          eleve_id: note.eleve_id, matiere_id: note.matiere_id,
+          periode: note.periode, annee_scolaire_id: note.annee_scolaire_id,
+          valeur: note.valeur, commentaire: note.commentaire,
+        },
+        update: { valeur: note.valeur, commentaire: note.commentaire },
+      });
+      saved.push(result);
+    }
+    return saved;
+  });
 
   if (results.length > 0 && acteurId && etablissement_id) {
     await logAction(etablissement_id, acteurId, insertOnly ? 'CREATE' : 'UPDATE', 'Note', 'bulk', {

@@ -65,14 +65,20 @@ export function Layout() {
   const navigate = useNavigate();
   useTheme();
 
-  // Vérification de session au montage : uniquement si pas de token en mémoire (ex: après refresh)
-  const { token } = useAuthStore();
+  // Vérification de session au montage : le token n'est plus persisted, on valide
+  // via le cookie httpOnly à chaque rechargement de page.
+  const { token, login } = useAuthStore();
   useEffect(() => {
-    if (token) return; // token présent → session valide, pas besoin de vérifier
-    api.get<AuthUser>('/api/v1/auth/me').catch(() => {
-      logout();
-      navigate('/login', { replace: true });
-    });
+    if (token) return; // token présent en mémoire → session fraîche, pas besoin de vérifier
+    api.get<AuthUser>('/api/v1/auth/me')
+      .then((freshUser) => {
+        // Synchronise les données utilisateur depuis le serveur après rechargement
+        if (freshUser && user) login({ ...user, ...freshUser }, '');
+      })
+      .catch(() => {
+        logout();
+        navigate('/login', { replace: true });
+      });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
