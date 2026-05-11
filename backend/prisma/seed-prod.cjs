@@ -83,7 +83,7 @@ async function main() {
     { id: ID.roles.pointeur,     libelle_fr: 'pointeur' },
   ];
   for (const r of roles) {
-    await prisma.role.upsert({ where: { id: r.id }, update: { libelle_fr: r.libelle_fr }, create: r });
+    await prisma.role.upsert({ where: { libelle_fr: r.libelle_fr }, update: {}, create: r });
   }
   console.log('✅ Rôles');
 
