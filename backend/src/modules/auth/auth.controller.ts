@@ -10,10 +10,11 @@ function cookieOptions(reply: FastifyReply) {
   return {
     httpOnly: true,
     secure: isProd,
-    // SameSite=none obligatoire pour cross-origin Railway (frontend ≠ backend subdomain)
     sameSite: isProd ? ('none' as const) : ('lax' as const),
+    // Partage le cookie entre dg.sakai.sn et api.dg.sakai.sn
+    domain: isProd ? '.dg.sakai.sn' : undefined,
     path: '/',
-    maxAge: 24 * 60 * 60, // 24 h en secondes
+    maxAge: 24 * 60 * 60,
     signed: false,
   };
 }

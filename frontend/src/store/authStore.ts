@@ -15,30 +15,27 @@ export interface AuthUser {
 
 interface AuthState {
   user: AuthUser | null;
-  token: string | null;
   isAuthenticated: boolean;
   globalTheme: 'light' | 'dark';
-  login: (user: AuthUser, token: string) => void;
+  login: (user: AuthUser) => void;
   logout: () => void;
   updatePreferences: (langue: string, theme: string) => void;
   setGlobalTheme: (theme: 'light' | 'dark') => void;
-  setToken: (token: string) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
-      token: null,
       isAuthenticated: false,
       globalTheme: 'light',
 
-      login: (user, token) => {
-        set({ user, token, isAuthenticated: true, globalTheme: (user.theme as 'light' | 'dark') ?? 'light' });
+      login: (user) => {
+        set({ user, isAuthenticated: true, globalTheme: (user.theme as 'light' | 'dark') ?? 'light' });
       },
 
       logout: () => {
-        set({ user: null, token: null, isAuthenticated: false });
+        set({ user: null, isAuthenticated: false });
       },
 
       updatePreferences: (langue, theme) => {
@@ -51,18 +48,11 @@ export const useAuthStore = create<AuthState>()(
       setGlobalTheme: (theme) => {
         set({ globalTheme: theme });
       },
-
-      setToken: (token) => {
-        set({ token });
-      },
     }),
     {
       name: 'daaragest-auth',
-      version: 3,
-      migrate: () => ({ user: null, token: null, isAuthenticated: false, globalTheme: 'light' as const }),
-      // Le token JWT est volontairement exclu du localStorage : il est conservé uniquement
-      // en mémoire. La session est persistée via le cookie httpOnly (SameSite=None; Secure)
-      // qui est renvoyé automatiquement par le navigateur sur chaque requête.
+      version: 4,
+      migrate: () => ({ user: null, isAuthenticated: false, globalTheme: 'light' as const }),
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
