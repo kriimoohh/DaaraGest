@@ -1,5 +1,5 @@
 import prisma from '../../config/database';
-import { ClasseInput } from './classes.schema';
+import { ClasseInput, ClasseMatiereInput, ClasseMatiereUpdateInput } from './classes.schema';
 import { renderPdfHtml } from '../../utils/browserPool';
 
 type ListeData = Awaited<ReturnType<typeof listerElevesDeClasse>>;
@@ -82,6 +82,81 @@ export async function supprimerClasse(id: string, etablissement_id: string) {
   if (!existing) throw new Error('Classe introuvable');
 
   return prisma.classe.update({ where: { id }, data: { active: false } });
+}
+
+// ─── Programme de matières par classe ───────────────────────────────────────
+
+export async function listerMatieresDeclasse(classe_id: string, etablissement_id: string) {
+  const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
+  if (!classe) throw new Error('Classe introuvable');
+
+  return prisma.classeMatiere.findMany({
+    where: { classe_id },
+    include: { matiere: true },
+    orderBy: [{ ordre_override: 'asc' }, { matiere: { ordre_bulletin: 'asc' } }],
+  });
+}
+
+export async function ajouterMatiereClasse(
+  classe_id: string, etablissement_id: string, data: ClasseMatiereInput
+) {
+  const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
+  if (!classe) throw new Error('Classe introuvable');
+
+  const matiere = await prisma.matiere.findFirst({
+    where: { id: data.matiere_id, etablissement_id, active: true },
+  });
+  if (!matiere) throw new Error('Matière introuvable');
+  if (matiere.filiere !== classe.filiere) {
+    throw new Error(`Impossible d'ajouter une matière ${matiere.filiere} à une classe ${classe.filiere}`);
+  }
+
+  return prisma.classeMatiere.create({
+    data: {
+      classe_id,
+      matiere_id: data.matiere_id,
+      coeff_override: data.coeff_override ?? null,
+      ordre_override: data.ordre_override ?? null,
+    },
+    include: { matiere: true },
+  });
+}
+
+export async function modifierMatiereClasse(
+  classe_id: string, etablissement_id: string, matiere_id: string, data: ClasseMatiereUpdateInput
+) {
+  const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
+  if (!classe) throw new Error('Classe introuvable');
+
+  const existing = await prisma.classeMatiere.findUnique({
+    where: { classe_id_matiere_id: { classe_id, matiere_id } },
+  });
+  if (!existing) throw new Error('Matière non assignée à cette classe');
+
+  return prisma.classeMatiere.update({
+    where: { classe_id_matiere_id: { classe_id, matiere_id } },
+    data: {
+      coeff_override: data.coeff_override ?? null,
+      ordre_override: data.ordre_override ?? null,
+    },
+    include: { matiere: true },
+  });
+}
+
+export async function supprimerMatiereClasse(
+  classe_id: string, etablissement_id: string, matiere_id: string
+) {
+  const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
+  if (!classe) throw new Error('Classe introuvable');
+
+  const existing = await prisma.classeMatiere.findUnique({
+    where: { classe_id_matiere_id: { classe_id, matiere_id } },
+  });
+  if (!existing) throw new Error('Matière non assignée à cette classe');
+
+  return prisma.classeMatiere.delete({
+    where: { classe_id_matiere_id: { classe_id, matiere_id } },
+  });
 }
 
 export async function listerElevesDeClasse(

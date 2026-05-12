@@ -196,9 +196,10 @@ model Matiere {
   ordre_bulletin   Int     @default(0)
   active           Boolean @default(true)
 
-  etablissement Etablissement       @relation(fields: [etablissement_id], references: [id])
-  prof_matieres ProfMatiereClasse[]
-  notes         Note[]
+  etablissement   Etablissement       @relation(fields: [etablissement_id], references: [id])
+  prof_matieres   ProfMatiereClasse[]
+  notes           Note[]
+  classe_matieres ClasseMatiere[]
 }
 
 model Niveau {
@@ -230,6 +231,20 @@ model Classe {
   inscriptions_ar Inscription[]      @relation("ClasseAR")
   prof_matieres   ProfMatiereClasse[]
   absences        AbsenceEleve[]
+  classe_matieres ClasseMatiere[]
+}
+
+model ClasseMatiere {
+  id             String   @id @default(uuid())
+  classe_id      String
+  matiere_id     String
+  coeff_override Decimal? @db.Decimal(4, 2)
+  ordre_override Int?
+
+  classe  Classe  @relation(fields: [classe_id], references: [id])
+  matiere Matiere @relation(fields: [matiere_id], references: [id])
+
+  @@unique([classe_id, matiere_id])
 }
 
 model ProfMatiereClasse {
