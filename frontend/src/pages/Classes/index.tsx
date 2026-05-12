@@ -16,6 +16,26 @@ import { Pagination } from '../../components/ui/Pagination';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
+interface Matiere {
+  id: string;
+  nom_fr: string;
+  nom_ar: string;
+  filiere: 'FR' | 'AR';
+  coeff_defaut: number;
+  note_max: number;
+  note_min: number;
+  ordre_bulletin: number;
+}
+
+interface ClasseMatiere {
+  id: string;
+  classe_id: string;
+  matiere_id: string;
+  coeff_override: number | null;
+  ordre_override: number | null;
+  matiere: Matiere;
+}
+
 interface AnneeScolaire {
   id: string;
   libelle: string;
@@ -115,6 +135,22 @@ export function ClassesPage() {
   const [deleting, setDeleting] = useState(false);
 
   const [etablissementNom, setEtablissementNom] = useState('');
+
+  // Programme de matières par classe
+  const [programmeModal, setProgrammeModal] = useState<Classe | null>(null);
+  const [programme, setProgramme] = useState<ClasseMatiere[]>([]);
+  const [programmeLoading, setProgrammeLoading] = useState(false);
+  const [toutesMatieresFiliere, setToutesMatieresFiliere] = useState<Matiere[]>([]);
+  const [ajoutMatiereId, setAjoutMatiereId] = useState('');
+  const [ajoutCoeff, setAjoutCoeff] = useState('');
+  const [ajoutOrdre, setAjoutOrdre] = useState('');
+  const [ajoutLoading, setAjoutLoading] = useState(false);
+  const [editProgramme, setEditProgramme] = useState<ClasseMatiere | null>(null);
+  const [editCoeff, setEditCoeff] = useState('');
+  const [editOrdre, setEditOrdre] = useState('');
+  const [editProgrammeSaving, setEditProgrammeSaving] = useState(false);
+  const [supprimerProgramme, setSupprimerProgramme] = useState<ClasseMatiere | null>(null);
+  const [supprimerProgrammeLoading, setSupprimerProgrammeLoading] = useState(false);
 
   // Liste des élèves d'une classe
   const [listeModal, setListeModal] = useState<Classe | null>(null);
@@ -231,6 +267,92 @@ export function ClassesPage() {
       setDeleting(false);
     }
   };
+
+  async function openProgramme(classe: Classe) {
+    setProgrammeModal(classe);
+    setProgramme([]);
+    setAjoutMatiereId('');
+    setAjoutCoeff('');
+    setAjoutOrdre('');
+    setEditProgramme(null);
+    setProgrammeLoading(true);
+    try {
+      const [prog, matieres] = await Promise.all([
+        api.get<ClasseMatiere[]>(`/api/v1/classes/${classe.id}/matieres`),
+        api.get<Matiere[]>(`/api/v1/matieres?filiere=${classe.filiere}`),
+      ]);
+      setProgramme(prog);
+      setToutesMatieresFiliere(matieres);
+    } catch (err) {
+      toast.error((err as Error).message || 'Impossible de charger le programme');
+      setProgrammeModal(null);
+    } finally {
+      setProgrammeLoading(false);
+    }
+  }
+
+  async function handleAjouterMatiere() {
+    if (!programmeModal || !ajoutMatiereId) return;
+    setAjoutLoading(true);
+    try {
+      const payload: Record<string, unknown> = { matiere_id: ajoutMatiereId };
+      if (ajoutCoeff) payload.coeff_override = parseFloat(ajoutCoeff);
+      if (ajoutOrdre) payload.ordre_override = parseInt(ajoutOrdre);
+      await api.post(`/api/v1/classes/${programmeModal.id}/matieres`, payload);
+      toast.success('Matière ajoutée au programme');
+      setAjoutMatiereId('');
+      setAjoutCoeff('');
+      setAjoutOrdre('');
+      const prog = await api.get<ClasseMatiere[]>(`/api/v1/classes/${programmeModal.id}/matieres`);
+      setProgramme(prog);
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    } finally {
+      setAjoutLoading(false);
+    }
+  }
+
+  function openEditProgramme(cm: ClasseMatiere) {
+    setEditProgramme(cm);
+    setEditCoeff(cm.coeff_override != null ? String(cm.coeff_override) : '');
+    setEditOrdre(cm.ordre_override != null ? String(cm.ordre_override) : '');
+  }
+
+  async function handleEditProgramme() {
+    if (!programmeModal || !editProgramme) return;
+    setEditProgrammeSaving(true);
+    try {
+      const payload: Record<string, unknown> = {
+        coeff_override: editCoeff ? parseFloat(editCoeff) : null,
+        ordre_override: editOrdre ? parseInt(editOrdre) : null,
+      };
+      await api.put(`/api/v1/classes/${programmeModal.id}/matieres/${editProgramme.matiere_id}`, payload);
+      toast.success('Coefficient modifié');
+      setEditProgramme(null);
+      const prog = await api.get<ClasseMatiere[]>(`/api/v1/classes/${programmeModal.id}/matieres`);
+      setProgramme(prog);
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    } finally {
+      setEditProgrammeSaving(false);
+    }
+  }
+
+  async function handleSupprimerMatiereProgramme() {
+    if (!programmeModal || !supprimerProgramme) return;
+    setSupprimerProgrammeLoading(true);
+    try {
+      await api.delete(`/api/v1/classes/${programmeModal.id}/matieres/${supprimerProgramme.matiere_id}`);
+      toast.success('Matière retirée du programme');
+      setSupprimerProgramme(null);
+      const prog = await api.get<ClasseMatiere[]>(`/api/v1/classes/${programmeModal.id}/matieres`);
+      setProgramme(prog);
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    } finally {
+      setSupprimerProgrammeLoading(false);
+    }
+  }
 
   async function openListeEleves(classe: Classe) {
     setListeModal(classe);
@@ -552,6 +674,7 @@ export function ClassesPage() {
         return (
           <div className="row" style={{ gap: 6 }}>
             <Button size="sm" variant="secondary" onClick={() => openListeEleves(c)}>Liste élèves</Button>
+            <Button size="sm" variant="secondary" onClick={() => openProgramme(c)}>Programme</Button>
             <Button size="sm" variant="ghost" onClick={() => openEdit(c)}>{t('actions.modifier')}</Button>
             {isAdmin && <Button size="sm" variant="danger" onClick={() => setConfirmDelete(c)}>{t('actions.supprimer')}</Button>}
           </div>
@@ -701,6 +824,157 @@ export function ClassesPage() {
       onConfirm={handleDelete}
       loading={deleting}
       message={`Supprimer la classe "${confirmDelete?.nom_fr}" ?`}
+    />
+
+    {/* ── Modale programme de matières ────────────────────────────────────── */}
+    {programmeModal && (
+      <Modal
+        isOpen={!!programmeModal}
+        onClose={() => { setProgrammeModal(null); setEditProgramme(null); setSupprimerProgramme(null); }}
+        title={`Programme — ${programmeModal.nom_fr}`}
+        size="xl"
+      >
+        {programmeLoading ? (
+          <div className="empty">Chargement...</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+            {/* Liste des matières assignées */}
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--ink-2)' }}>
+                Matières du programme ({programme.length})
+              </p>
+              {programme.length === 0 ? (
+                <div className="empty" style={{ flexDirection: 'column', gap: 6, padding: '24px 0' }}>
+                  <span style={{ fontSize: 32 }}>📚</span>
+                  <p style={{ fontSize: 13, color: 'var(--ink-4)' }}>Aucune matière assignée à cette classe.</p>
+                </div>
+              ) : (
+                <div style={{ overflow: 'auto', maxHeight: '40vh', borderRadius: 'var(--r-lg)', border: '1px solid var(--rule)' }}>
+                  <table className="tbl">
+                    <thead>
+                      <tr>
+                        {['Matière FR', 'Matière AR', 'Coeff effectif', 'Ordre', 'Actions'].map(h => <th key={h}>{h}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {programme.map(cm => (
+                        <tr key={cm.id}>
+                          <td>{cm.matiere.nom_fr}</td>
+                          <td dir="rtl">{cm.matiere.nom_ar}</td>
+                          <td>
+                            {editProgramme?.id === cm.id ? (
+                              <input
+                                type="number"
+                                step="0.25"
+                                min="0.25"
+                                className="input"
+                                style={{ width: 80, padding: '4px 8px' }}
+                                value={editCoeff}
+                                onChange={e => setEditCoeff(e.target.value)}
+                                placeholder={String(cm.matiere.coeff_defaut)}
+                              />
+                            ) : (
+                              <span style={{ fontWeight: cm.coeff_override != null ? 600 : 400 }}>
+                                {cm.coeff_override != null ? cm.coeff_override : cm.matiere.coeff_defaut}
+                                {cm.coeff_override != null && <span style={{ fontSize: 10, color: 'var(--primary)', marginInlineStart: 4 }}>✎</span>}
+                              </span>
+                            )}
+                          </td>
+                          <td>
+                            {editProgramme?.id === cm.id ? (
+                              <input
+                                type="number"
+                                min="0"
+                                className="input"
+                                style={{ width: 64, padding: '4px 8px' }}
+                                value={editOrdre}
+                                onChange={e => setEditOrdre(e.target.value)}
+                                placeholder={String(cm.matiere.ordre_bulletin)}
+                              />
+                            ) : (
+                              cm.ordre_override != null ? cm.ordre_override : cm.matiere.ordre_bulletin
+                            )}
+                          </td>
+                          <td>
+                            <div className="row" style={{ gap: 6 }}>
+                              {editProgramme?.id === cm.id ? (
+                                <>
+                                  <Button size="sm" onClick={handleEditProgramme} loading={editProgrammeSaving}>Enregistrer</Button>
+                                  <Button size="sm" variant="secondary" onClick={() => setEditProgramme(null)}>Annuler</Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button size="sm" variant="ghost" onClick={() => openEditProgramme(cm)}>Modifier</Button>
+                                  <Button size="sm" variant="danger" onClick={() => setSupprimerProgramme(cm)}>Retirer</Button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Ajout d'une matière */}
+            <div style={{ padding: '14px 16px', background: 'var(--surface-2)', borderRadius: 'var(--r-lg)', border: '1px solid var(--rule)' }}>
+              <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--ink-2)' }}>Ajouter une matière</p>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                <div style={{ flex: '1 1 180px' }}>
+                  <Select
+                    label="Matière"
+                    value={ajoutMatiereId}
+                    onChange={e => setAjoutMatiereId(e.target.value)}
+                    options={toutesMatieresFiliere
+                      .filter(m => !programme.some(p => p.matiere_id === m.id))
+                      .map(m => ({ value: m.id, label: m.nom_fr }))}
+                    placeholder="Choisir une matière..."
+                  />
+                </div>
+                <div style={{ width: 100 }}>
+                  <Input
+                    label="Coeff (optionnel)"
+                    type="number"
+                    step="0.25"
+                    min="0.25"
+                    value={ajoutCoeff}
+                    onChange={e => setAjoutCoeff(e.target.value)}
+                    placeholder="ex: 2"
+                  />
+                </div>
+                <div style={{ width: 80 }}>
+                  <Input
+                    label="Ordre (opt.)"
+                    type="number"
+                    min="0"
+                    value={ajoutOrdre}
+                    onChange={e => setAjoutOrdre(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+                <Button onClick={handleAjouterMatiere} loading={ajoutLoading} disabled={!ajoutMatiereId}>
+                  + Ajouter
+                </Button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Button variant="secondary" onClick={() => { setProgrammeModal(null); setEditProgramme(null); }}>Fermer</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    )}
+
+    <ConfirmModal
+      isOpen={!!supprimerProgramme}
+      onClose={() => setSupprimerProgramme(null)}
+      onConfirm={handleSupprimerMatiereProgramme}
+      loading={supprimerProgrammeLoading}
+      message={`Retirer "${supprimerProgramme?.matiere.nom_fr}" du programme de cette classe ?`}
     />
 
     {/* ── Modale liste des élèves ──────────────────────────────────────────── */}

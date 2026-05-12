@@ -10,6 +10,7 @@ import { useAuthStore } from '../../store/authStore';
 interface AnneeScolaire { id: string; libelle: string; active: boolean; }
 interface Classe { id: string; nom_fr: string; filiere: string; }
 interface Matiere { id: string; nom_fr: string; nom_ar: string; filiere: string; note_max: number; note_min: number; }
+interface ClasseMatiere { matiere_id: string; coeff_override: number | null; matiere: Matiere; }
 interface Eleve { id: string; nom_fr: string; prenom_fr: string; matricule: string; }
 interface Note { id: string; eleve_id: string; valeur: number; commentaire?: string; }
 
@@ -32,6 +33,7 @@ export function NotesPage() {
   const [classeId, setClasseId] = useState('');
   const [matiereId, setMatiereId] = useState('');
   const [periode, setPeriode] = useState('1');
+  const [programmeSansMatiere, setProgrammeSansMatiere] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -47,8 +49,17 @@ export function NotesPage() {
 
   useEffect(() => {
     if (!classeId) return;
-    const filiere = classes.find((c) => c.id === classeId)?.filiere ?? '';
-    api.get<Matiere[]>(`/api/v1/matieres?filiere=${filiere}`).then(setMatieres).catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
+    setProgrammeSansMatiere(false);
+    setMatieres([]);
+    setMatiereId('');
+    // Charge les matières depuis le programme de la classe (pas depuis la filière globale)
+    api.get<ClasseMatiere[]>(`/api/v1/classes/${classeId}/matieres`)
+      .then(rows => {
+        const mats = rows.map(r => r.matiere);
+        setMatieres(mats);
+        if (mats.length === 0) setProgrammeSansMatiere(true);
+      })
+      .catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
     api.get<{ data: Eleve[] }>(`/api/v1/eleves?classe_id=${classeId}&limit=100`)
       .then((r) => setEleves([...(r.data ?? [])].sort((a, b) => `${a.nom_fr} ${a.prenom_fr}`.localeCompare(`${b.nom_fr} ${b.prenom_fr}`, 'fr'))))
       .catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
@@ -88,7 +99,7 @@ export function NotesPage() {
           annee_scolaire_id: anneeId,
           valeur: parseFloat(notes[e.id]),
         }));
-      await api.post('/api/v1/notes/bulk', { notes: notesList });
+      await api.post('/api/v1/notes/bulk', { notes: notesList, classe_id: classeId });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
@@ -138,6 +149,12 @@ export function NotesPage() {
           />
         </div>
       </div>
+
+      {classeId && programmeSansMatiere && (
+        <div style={{ padding: '12px 16px', background: 'var(--warning-soft)', border: '1px solid var(--warning-border)', borderRadius: 'var(--r-lg)', fontSize: 13, color: 'var(--warning)', marginBottom: 16 }}>
+          ⚠️ Cette classe n'a pas encore de programme de matières. Rendez-vous dans <strong>Classes → Programme</strong> pour assigner les matières.
+        </div>
+      )}
 
       {classeId && matiereId && (
         <div className="card">

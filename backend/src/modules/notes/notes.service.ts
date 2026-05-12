@@ -29,8 +29,22 @@ export async function listerNotes(
   });
 }
 
-export async function bulkUpsertNotes(notes: NoteItem[], insertOnly = false, acteurId?: string, etablissement_id?: string) {
+export async function bulkUpsertNotes(notes: NoteItem[], insertOnly = false, acteurId?: string, etablissement_id?: string, classe_id?: string) {
   if (notes.length === 0) return [];
+
+  // Si classe_id fourni, vérifier que toutes les matières sont dans le programme de la classe
+  if (classe_id) {
+    const programmeMatieres = await prisma.classeMatiere.findMany({
+      where: { classe_id },
+      select: { matiere_id: true },
+    });
+    const matieresAutorisees = new Set(programmeMatieres.map(pm => pm.matiere_id));
+    for (const note of notes) {
+      if (!matieresAutorisees.has(note.matiere_id)) {
+        throw new Error(`La matière ${note.matiere_id} ne fait pas partie du programme de cette classe`);
+      }
+    }
+  }
 
   // Précharger toutes les matières concernées en une seule requête (élimine le N+1)
   const matiereIds = [...new Set(notes.map(n => n.matiere_id))];
