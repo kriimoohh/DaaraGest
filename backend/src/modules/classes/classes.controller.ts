@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
-import { classeSchema } from './classes.schema';
-import { listerClasses, getClasse, creerClasse, modifierClasse, supprimerClasse, listerElevesDeClasse, genererPdfListeClasse, genererPdfToutesClasses } from './classes.service';
+import { classeSchema, classeMatiereSchema, classeMatiereUpdateSchema } from './classes.schema';
+import { listerClasses, getClasse, creerClasse, modifierClasse, supprimerClasse, listerElevesDeClasse, genererPdfListeClasse, genererPdfToutesClasses, listerMatieresDeclasse, ajouterMatiereClasse, modifierMatiereClasse, supprimerMatiereClasse } from './classes.service';
 
 export async function listerHandler(
   request: FastifyRequest, reply: FastifyReply
@@ -111,5 +111,69 @@ export async function pdfToutesClassesHandler(
     return reply.send(pdf);
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
+  }
+}
+
+// ─── Programme de matières par classe ───────────────────────────────────────
+
+export async function listerMatieresClasseHandler(
+  request: FastifyRequest, reply: FastifyReply
+) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { id } = request.params as { id: string };
+  try {
+    const data = await listerMatieresDeclasse(id, etablissement_id);
+    return reply.send(data);
+  } catch (err) {
+    return reply.status(404).send({ error: (err as Error).message });
+  }
+}
+
+export async function ajouterMatiereClasseHandler(
+  request: FastifyRequest, reply: FastifyReply
+) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { id } = request.params as { id: string };
+  const parsed = classeMatiereSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: parsed.error.errors[0].message });
+  }
+  try {
+    const data = await ajouterMatiereClasse(id, etablissement_id, parsed.data);
+    return reply.status(201).send(data);
+  } catch (err) {
+    const msg = (err as Error).message;
+    const status = msg.includes('introuvable') ? 404 : 400;
+    return reply.status(status).send({ error: msg });
+  }
+}
+
+export async function modifierMatiereClasseHandler(
+  request: FastifyRequest, reply: FastifyReply
+) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { id, matiere_id } = request.params as { id: string; matiere_id: string };
+  const parsed = classeMatiereUpdateSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: parsed.error.errors[0].message });
+  }
+  try {
+    const data = await modifierMatiereClasse(id, etablissement_id, matiere_id, parsed.data);
+    return reply.send(data);
+  } catch (err) {
+    return reply.status(404).send({ error: (err as Error).message });
+  }
+}
+
+export async function supprimerMatiereClasseHandler(
+  request: FastifyRequest, reply: FastifyReply
+) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { id, matiere_id } = request.params as { id: string; matiere_id: string };
+  try {
+    await supprimerMatiereClasse(id, etablissement_id, matiere_id);
+    return reply.status(204).send();
+  } catch (err) {
+    return reply.status(404).send({ error: (err as Error).message });
   }
 }

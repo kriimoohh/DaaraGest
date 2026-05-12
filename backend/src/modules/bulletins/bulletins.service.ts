@@ -10,6 +10,25 @@ function appreciation(m: number): string {
   return 'Insuffisant — Doit faire des efforts';
 }
 
+type MatiereAvecCoeff = {
+  id: string; nom_fr: string; nom_ar: string; filiere: string;
+  coeff_defaut: unknown; coeff_effectif: unknown;
+  note_max: unknown; note_min: unknown; ordre_bulletin: number;
+};
+
+async function getMatieresDeclasse(classe_id: string, filiere: 'FR' | 'AR'): Promise<MatiereAvecCoeff[]> {
+  const rows = await prisma.classeMatiere.findMany({
+    where: { classe_id, matiere: { filiere, active: true } },
+    include: { matiere: true },
+    orderBy: [{ ordre_override: 'asc' }, { matiere: { ordre_bulletin: 'asc' } }],
+  });
+  return rows.map(r => ({
+    ...r.matiere,
+    coeff_effectif: r.coeff_override ?? r.matiere.coeff_defaut,
+    ordre_bulletin: r.ordre_override ?? r.matiere.ordre_bulletin,
+  }));
+}
+
 async function getMatieres(etablissement_id: string, filiere: 'FR' | 'AR') {
   return prisma.matiere.findMany({
     where: { etablissement_id, filiere, active: true },
@@ -55,8 +74,8 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
   if (inscriptions.length === 0) return { message: 'Aucun élève inscrit', bulletins: [] };
 
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
-  const matMap: Record<string, Awaited<ReturnType<typeof getMatieres>>> = {};
-  for (const f of filieres) matMap[f] = await getMatieres(etablissement_id, f);
+  const matMap: Record<string, MatiereAvecCoeff[]> = {};
+  for (const f of filieres) matMap[f] = await getMatieresDeclasse(classe_id, f);
 
   // Fetch toutes les notes d'un coup (évite N+1)
   const tousMatIds = filieres.flatMap(f => matMap[f].map(m => m.id));
@@ -71,11 +90,16 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
     notesByEleve.get(n.eleve_id)!.push(n);
   }
 
+  // Map matiere_id → coeff_effectif (override prioritaire)
+  const coeffMap = new Map<string, number>(
+    filieres.flatMap(f => matMap[f].map(m => [m.id, Number(m.coeff_effectif)]))
+  );
+
   const moyennes: { eleve_id: string; moyenne: number }[] = [];
   for (const { eleve_id } of inscriptions) {
     let totalP = 0, totalC = 0;
     for (const n of notesByEleve.get(eleve_id) ?? []) {
-      const c = Number(n.matiere.coeff_defaut);
+      const c = coeffMap.get(n.matiere_id) ?? Number(n.matiere.coeff_defaut);
       totalP += Number(n.valeur) * c;
       totalC += c;
     }
@@ -107,11 +131,11 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
   if (inscriptions.length === 0) return { message: 'Aucun élève inscrit', bulletins: [] };
 
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
-  const matMap: Record<string, Awaited<ReturnType<typeof getMatieres>>> = {};
-  for (const f of filieres) matMap[f] = await getMatieres(etablissement_id, f);
+  const matMapAnnuel: Record<string, MatiereAvecCoeff[]> = {};
+  for (const f of filieres) matMapAnnuel[f] = await getMatieresDeclasse(classe_id, f);
 
   // Fetch toutes les notes annuelles d'un coup (évite N+1)
-  const tousMatIdsAnnuel = filieres.flatMap(f => matMap[f].map(m => m.id));
+  const tousMatIdsAnnuel = filieres.flatMap(f => matMapAnnuel[f].map(m => m.id));
   const elevesIdsAnnuel = inscriptions.map(i => i.eleve_id);
   const toutesLesNotesAnnuel = await prisma.note.findMany({
     where: { eleve_id: { in: elevesIdsAnnuel }, annee_scolaire_id, periode: { in: [1, 2, 3] }, matiere_id: { in: tousMatIdsAnnuel } },
@@ -123,11 +147,15 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
     notesByEleveAnnuel.get(n.eleve_id)!.push(n);
   }
 
+  const coeffMapAnnuel = new Map<string, number>(
+    filieres.flatMap(f => matMapAnnuel[f].map(m => [m.id, Number(m.coeff_effectif)]))
+  );
+
   const moyennes: { eleve_id: string; moyenne: number }[] = [];
   for (const { eleve_id } of inscriptions) {
     let totalP = 0, totalC = 0;
     for (const n of notesByEleveAnnuel.get(eleve_id) ?? []) {
-      const c = Number(n.matiere.coeff_defaut);
+      const c = coeffMapAnnuel.get(n.matiere_id) ?? Number(n.matiere.coeff_defaut);
       totalP += Number(n.valeur) * c;
       totalC += c;
     }
@@ -162,9 +190,20 @@ export async function getBulletin(id: string, etablissement_id: string) {
   if (!bulletin) throw new Error('Bulletin introuvable');
 
   const filieres: ('FR' | 'AR')[] = bulletin.filiere === 'COMBINE' ? ['FR', 'AR'] : [bulletin.filiere as 'FR' | 'AR'];
+
+  // Chercher la classe de l'élève pour l'année scolaire du bulletin
+  const inscription = bulletin.eleve.inscriptions.find(
+    i => i.annee_scolaire_id === bulletin.annee_scolaire_id
+  ) as { classe_fr_id?: string | null; classe_ar_id?: string | null } | undefined;
+  const classeIdFR = inscription?.classe_fr_id ?? null;
+  const classeIdAR = inscription?.classe_ar_id ?? null;
+
   const notesByFiliere: Record<string, unknown[]> = {};
   for (const f of filieres) {
-    const matieres = await getMatieres(etablissement_id, f);
+    const classeId = f === 'FR' ? classeIdFR : classeIdAR;
+    const matieres = classeId
+      ? await getMatieresDeclasse(classeId, f)
+      : await getMatieres(etablissement_id, f);
     const periodes = bulletin.periode === 0 ? [1, 2, 3] : [bulletin.periode];
     notesByFiliere[f] = await prisma.note.findMany({
       where: { eleve_id: bulletin.eleve_id, annee_scolaire_id: bulletin.annee_scolaire_id, periode: { in: periodes }, matiere_id: { in: matieres.map(m => m.id) } },
@@ -277,8 +316,8 @@ export async function genererPdfClasse(
   if (bulletins.length === 0) throw new Error('Aucun bulletin trouvé');
 
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
-  const matMap: Record<string, Awaited<ReturnType<typeof getMatieres>>> = {};
-  for (const f of filieres) matMap[f] = await getMatieres(etablissement_id, f);
+  const matMap: Record<string, MatiereAvecCoeff[]> = {};
+  for (const f of filieres) matMap[f] = await getMatieresDeclasse(classe_id, f);
 
   const { generateBulletinHtml } = await import('./bulletin.template');
   const pages: string[] = [];
