@@ -75,6 +75,7 @@ export async function creerProfesseur(etablissement_id: string, data: Professeur
       date_embauche: data.date_embauche ? new Date(data.date_embauche) : undefined,
       type_contrat: data.type_contrat ?? 'permanent',
       salaire_base: data.salaire_base,
+      photo_url: data.photo_url,
     },
     include: { utilisateur: true },
   });
@@ -113,6 +114,7 @@ export async function modifierProfesseur(id: string, etablissement_id: string, d
         date_embauche: data.date_embauche ? new Date(data.date_embauche) : undefined,
         type_contrat: data.type_contrat,
         salaire_base: data.salaire_base,
+        photo_url: data.photo_url,
       },
       include: { utilisateur: true },
     })
