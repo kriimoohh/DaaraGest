@@ -11,7 +11,9 @@ export const noteItemSchema = z.object({
 
 export const bulkNotesSchema = z.object({
   notes: z.array(noteItemSchema).min(1),
+  classe_id: z.string().min(1).optional(),
 });
 
 export type NoteItem = z.infer<typeof noteItemSchema>;
 export type BulkNotesInput = z.infer<typeof bulkNotesSchema>;
+export type BulkNotesPayload = BulkNotesInput;
