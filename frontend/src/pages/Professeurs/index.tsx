@@ -27,6 +27,12 @@ interface Professeur {
   professeur?: { photo_url?: string };
 }
 
+interface AnneeScolaire {
+  id: string;
+  libelle: string;
+  active: boolean;
+}
+
 interface ProfesseursResponse {
   data: Professeur[];
   total: number;
@@ -86,6 +92,11 @@ export function ProfesseursPage() {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [photoLoading, setPhotoLoading] = useState(false);
 
+  const [ficheTarget, setFicheTarget] = useState<Professeur | null>(null);
+  const [ficheAnneeId, setFicheAnneeId] = useState('');
+  const [anneesScolaires, setAnneesScolaires] = useState<AnneeScolaire[]>([]);
+  const [ficheLoading, setFicheLoading] = useState(false);
+
   const fetchProfs = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -104,6 +115,44 @@ export function ProfesseursPage() {
 
   useEffect(() => { fetchProfs(); }, [fetchProfs]);
   useEffect(() => { setPage(1); }, [search]);
+
+  useEffect(() => {
+    api.get<{ data: AnneeScolaire[] }>('/api/v1/annees-scolaires')
+      .then(res => setAnneesScolaires(res.data ?? []))
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function openFiche(prof: Professeur) {
+    setFicheTarget(prof);
+    const active = anneesScolaires.find(a => a.active);
+    setFicheAnneeId(active?.id ?? anneesScolaires[0]?.id ?? '');
+  }
+
+  async function downloadFiche() {
+    if (!ficheTarget) return;
+    setFicheLoading(true);
+    try {
+      const base = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+      const params = ficheAnneeId ? `?annee_scolaire_id=${ficheAnneeId}` : '';
+      const resp = await fetch(`${base}/api/v1/professeurs/${ficheTarget.id}/fiche-cours${params}`, {
+        credentials: 'include',
+      });
+      if (!resp.ok) throw new Error('Erreur génération PDF');
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `fiche-cours-${ficheTarget.nom_fr.replace(/\s+/g, '-')}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Fiche de cours téléchargée');
+      setFicheTarget(null);
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur PDF');
+    } finally {
+      setFicheLoading(false);
+    }
+  }
 
   function openAdd() {
     setEditTarget(null);
@@ -231,6 +280,7 @@ export function ProfesseursPage() {
         return (
           <>
             <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>{t('actions.modifier')}</Button>
+            <Button size="sm" variant="secondary" onClick={() => openFiche(p)}>Fiche de cours</Button>
             {isAdmin && <Button size="sm" variant="danger" onClick={() => setConfirmDelete(p)}>{t('actions.supprimer')}</Button>}
           </>
         );
@@ -341,6 +391,34 @@ export function ProfesseursPage() {
             </div>
           </div>
         </Modal>
+
+      <Modal
+        isOpen={!!ficheTarget}
+        onClose={() => setFicheTarget(null)}
+        title={`Fiche de cours — ${ficheTarget?.nom_fr ?? ''}`}
+        size="sm"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
+            Sélectionnez l'année scolaire pour générer la fiche de cours en PDF.
+          </p>
+          <Select
+            label="Année scolaire"
+            value={ficheAnneeId}
+            onChange={(e) => setFicheAnneeId(e.target.value)}
+            options={[
+              { value: '', label: 'Toutes les années' },
+              ...anneesScolaires.map(a => ({ value: a.id, label: a.libelle + (a.active ? ' (active)' : '') })),
+            ]}
+          />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+            <Button variant="secondary" onClick={() => setFicheTarget(null)}>Annuler</Button>
+            <Button onClick={downloadFiche} loading={ficheLoading}>
+              ⬇ Télécharger PDF
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <ConfirmModal
         isOpen={!!confirmDelete}

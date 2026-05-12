@@ -7,6 +7,7 @@ import {
   creerProfesseur,
   modifierProfesseur,
   supprimerProfesseur,
+  genererFicheCoursPdf,
 } from './professeurs.service';
 
 export async function listerHandler(
@@ -72,5 +73,19 @@ export async function supprimerHandler(
     return reply.status(204).send();
   } catch (err) {
     return reply.status(404).send({ error: (err as Error).message });
+  }
+}
+
+export async function ficheCoursHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { id } = request.params as { id: string };
+  const { annee_scolaire_id } = request.query as { annee_scolaire_id?: string };
+  try {
+    const pdf = await genererFicheCoursPdf(id, etablissement_id, annee_scolaire_id);
+    reply.header('Content-Type', 'application/pdf')
+         .header('Content-Disposition', `attachment; filename="fiche-cours-${id}.pdf"`)
+         .send(pdf);
+  } catch (err) {
+    return reply.status(500).send({ error: (err as Error).message });
   }
 }
