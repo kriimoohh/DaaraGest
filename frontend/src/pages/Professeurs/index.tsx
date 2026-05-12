@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
@@ -23,6 +23,8 @@ interface Professeur {
   telephone: string;
   type_contrat: 'permanent' | 'vacataire';
   statut: 'actif' | 'inactif';
+  photo_url?: string;
+  professeur?: { photo_url?: string };
 }
 
 interface ProfesseursResponse {
@@ -39,6 +41,7 @@ interface ProfesseurFormData {
   specialite_fr: string;
   telephone: string;
   type_contrat: string;
+  photo_url?: string;
 }
 
 type FormErrors = Partial<Record<keyof ProfesseurFormData, string>>;
@@ -80,6 +83,8 @@ export function ProfesseursPage() {
   const [submitting, setSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Professeur | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoLoading, setPhotoLoading] = useState(false);
 
   const fetchProfs = useCallback(async () => {
     setLoading(true);
@@ -115,9 +120,22 @@ export function ProfesseursPage() {
       identifiant: prof.identifiant, mot_de_passe: '',
       specialite_fr: prof.specialite_fr, telephone: prof.telephone,
       type_contrat: prof.type_contrat,
+      photo_url: prof.professeur?.photo_url ?? prof.photo_url,
     });
     setFormErrors({});
     setModalOpen(true);
+  }
+
+  function handlePhotoSelect(file: File) {
+    const reader = new FileReader();
+    setPhotoLoading(true);
+    reader.onload = (ev) => {
+      const base64 = ev.target?.result as string;
+      setForm((f) => ({ ...f, photo_url: base64 }));
+      setPhotoLoading(false);
+    };
+    reader.onerror = () => setPhotoLoading(false);
+    reader.readAsDataURL(file);
   }
 
   function setField<K extends keyof ProfesseurFormData>(key: K, value: ProfesseurFormData[K]) {
@@ -135,6 +153,7 @@ export function ProfesseursPage() {
         nom_ar: form.nom_ar,
         identifiant: form.identifiant, specialite_fr: form.specialite_fr,
         telephone: form.telephone, type_contrat: form.type_contrat,
+        photo_url: form.photo_url,
       };
       if (!editTarget && form.mot_de_passe) payload.mot_de_passe = form.mot_de_passe;
       if (editTarget) {
@@ -175,7 +194,22 @@ export function ProfesseursPage() {
       header: 'Nom',
       render: (row) => {
         const p = row as unknown as Professeur;
-        return p.nom_fr;
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%', overflow: 'hidden',
+              background: 'var(--primary-soft)', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 14, fontWeight: 600, color: 'var(--primary)',
+            }}>
+              {(p.professeur?.photo_url ?? p.photo_url)
+                ? <img src={p.professeur?.photo_url ?? p.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : (p.nom_fr?.[0] ?? '?').toUpperCase()
+              }
+            </div>
+            <span>{p.nom_fr}</span>
+          </div>
+        );
       },
     },
     { key: 'identifiant', header: 'Identifiant' },
@@ -242,6 +276,39 @@ export function ProfesseursPage() {
           size="lg"
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={(e) => { if (e.target.files?.[0]) handlePhotoSelect(e.target.files[0]); e.target.value = ''; }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                disabled={photoLoading}
+                style={{
+                  position: 'relative', width: 88, height: 88, borderRadius: '50%',
+                  border: '2px dashed var(--border)', background: 'var(--surface-2)',
+                  cursor: 'pointer', overflow: 'hidden', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 4,
+                }}
+              >
+                {form.photo_url
+                  ? <img src={form.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <span style={{ fontSize: 28 }}>👤</span>
+                }
+                <div style={{
+                  position: 'absolute', bottom: 0, left: 0, right: 0,
+                  background: 'rgba(0,0,0,0.5)', padding: '4px 0',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <span style={{ color: '#fff', fontSize: 11 }}>{photoLoading ? '…' : '📷'}</span>
+                </div>
+              </button>
+            </div>
+
             <Input label={t('common.nom_fr')} value={form.nom_fr} onChange={(e) => setField('nom_fr', e.target.value)} error={formErrors.nom_fr} />
 
             <div className="grid-2">
