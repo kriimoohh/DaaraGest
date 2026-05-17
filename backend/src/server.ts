@@ -18,6 +18,9 @@ import { utilisateurRoutes } from './modules/utilisateurs/utilisateurs.routes';
 import { pointageRoutes } from './modules/pointage/pointage.routes';
 import { absencesRoutes } from './modules/absences/absences.routes';
 import { niveauxRoutes } from './modules/niveaux/niveaux.routes';
+import { emploiDuTempsRoutes } from './modules/emploi-du-temps/emploi-du-temps.routes';
+import { calendrierRoutes } from './modules/calendrier/calendrier.routes';
+import { notificationsRoutes } from './modules/notifications/notifications.routes';
 
 const jwtSecret = process.env.JWT_SECRET;
 if (!jwtSecret) {
@@ -96,6 +99,9 @@ async function build() {
       await api.register(pointageRoutes, { prefix: '/pointage' });
       await api.register(absencesRoutes, { prefix: '/absences' });
       await api.register(niveauxRoutes,  { prefix: '/niveaux' });
+      await api.register(emploiDuTempsRoutes, { prefix: '/emploi-du-temps' });
+      await api.register(calendrierRoutes, { prefix: '/calendrier' });
+      await api.register(notificationsRoutes, { prefix: '/notifications' });
     },
     { prefix: '/api/v1' }
   );

@@ -24,7 +24,9 @@
     "utilisateurs": "المستخدمون",
     "parametres": "الإعدادات",
     "pointage": "الحضور",
-    "absences": "غيابات التلاميذ"
+    "absences": "غيابات التلاميذ",
+    "emploi_du_temps": "جدول الحصص",
+    "calendrier": "التقويم"
   },
   "theme": {
     "light": "الوضع الفاتح",
@@ -227,6 +229,41 @@
     "motif": "السبب",
     "progression": "التطور",
     "taux_presence": "نسبة الحضور"
+  },
+  "emploi_du_temps": {
+    "titre": "جدول الحصص",
+    "ajouter_creneau": "إضافة حصة",
+    "selectionner_classe": "اختر فصلاً لعرض الجدول",
+    "salle": "القاعة (اختياري)",
+    "heure_debut": "وقت البداية",
+    "heure_fin": "وقت النهاية",
+    "lundi": "الاثنين",
+    "mardi": "الثلاثاء",
+    "mercredi": "الأربعاء",
+    "jeudi": "الخميس",
+    "vendredi": "الجمعة",
+    "conflit": "تعارض في الجدول"
+  },
+  "calendrier": {
+    "titre": "التقويم الدراسي",
+    "ajouter": "إضافة حدث",
+    "vacances": "عطلة",
+    "examen": "امتحان",
+    "evenement": "حدث",
+    "fermeture": "إغلاق",
+    "reunion": "اجتماع",
+    "titre_fr": "العنوان (بالفرنسية)",
+    "titre_ar": "العنوان (بالعربية، اختياري)",
+    "description": "الوصف (اختياري)"
+  },
+  "notifications": {
+    "titre": "الإشعارات",
+    "aucune": "لا توجد إشعارات",
+    "tout_lire": "تحديد الكل كمقروء",
+    "absence_eleve": "غياب تلميذ",
+    "paiement_retard": "تأخر في الدفع",
+    "note_insuffisante": "نقطة غير كافية",
+    "absence_professeur": "غياب أستاذ"
   },
   "pointage": {
     "titre": "حضور الأساتذة",
