@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { AbsenceInput, BulkAbsenceInput } from './absences.schema';
+import { notifierRoles } from '../notifications/notifications.service';
 
 export async function getElevesJour(
   etablissement_id: string,
@@ -150,6 +151,29 @@ export async function bulkUpsertAbsences(
     });
     results.push(r);
   }
+  // Check absences threshold and notify
+  const SEUIL = 3;
+  const eleveIdsAbsents = data.absences.filter(a => a.statut === 'absent' && !a.justifiee).map(a => a.eleve_id);
+  for (const eleve_id of eleveIdsAbsents) {
+    const count = await prisma.absenceEleve.count({
+      where: { eleve_id, annee_scolaire_id: data.annee_scolaire_id, statut: 'absent', justifiee: false },
+    });
+    if (count >= SEUIL && count % SEUIL === 0) {
+      const eleve = await prisma.eleve.findFirst({ where: { id: eleve_id }, select: { nom_fr: true, prenom_fr: true, matricule: true } });
+      if (eleve) {
+        await notifierRoles(
+          etablissement_id,
+          ['admin', 'directeur', 'gestionnaire'],
+          'absence_eleve',
+          `Absences répétées — ${eleve.prenom_fr} ${eleve.nom_fr}`,
+          `L'élève ${eleve.prenom_fr} ${eleve.nom_fr} (${eleve.matricule}) a cumulé ${count} absences non justifiées.`,
+          'eleve',
+          eleve_id,
+        );
+      }
+    }
+  }
+
   return { saved: results.length };
 }
 

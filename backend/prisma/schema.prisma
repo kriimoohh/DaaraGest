@@ -18,14 +18,17 @@ model Etablissement {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
-  utilisateurs     Utilisateur[]
-  annees_scolaires AnneeScolaire[]
-  classes          Classe[]
-  eleves           Eleve[]
-  matieres         Matiere[]
-  niveaux          Niveau[]
-  config_notes     ConfigNotes?
-  absences_eleves  AbsenceEleve[]
+  utilisateurs            Utilisateur[]
+  annees_scolaires        AnneeScolaire[]
+  classes                 Classe[]
+  eleves                  Eleve[]
+  matieres                Matiere[]
+  niveaux                 Niveau[]
+  config_notes            ConfigNotes?
+  absences_eleves         AbsenceEleve[]
+  creneaux                Creneau[]
+  evenements_calendrier   EvenementCalendrier[]
+  notifications           Notification[]
 }
 
 model Role {
@@ -55,9 +58,11 @@ model Utilisateur {
   created_at           DateTime  @default(now())
   updated_at           DateTime  @updatedAt
 
-  etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
-  role          Role          @relation(fields: [role_id], references: [id])
-  professeur    Professeur?
+  etablissement       Etablissement         @relation(fields: [etablissement_id], references: [id])
+  role                Role                  @relation(fields: [role_id], references: [id])
+  professeur          Professeur?
+  evenements_crees    EvenementCalendrier[]
+  notifications_recues Notification[]
 }
 
 model Professeur {
@@ -79,6 +84,7 @@ model Professeur {
   presences        PresenceProfesseur[]
   paiements        PaiementProfesseur[]
   matieres_classes ProfMatiereClasse[]
+  creneaux         Creneau[]
 }
 
 // TODO(NFC): Ces trois modèles sont réservés au futur module de pointage automatique
@@ -167,6 +173,7 @@ model AnneeScolaire {
   bulletins       Bulletin[]
   notes           Note[]
   absences_eleves AbsenceEleve[]
+  creneaux        Creneau[]
 }
 
 model ConfigNotes {
@@ -176,10 +183,13 @@ model ConfigNotes {
   note_min         Decimal  @default(0) @db.Decimal(5, 2)
   nb_periodes      Int      @default(3)
   noms_periodes    Json     @default("{\"fr\":[\"1er Trimestre\",\"2ème Trimestre\",\"3ème Trimestre\"],\"ar\":[\"الفصل الأول\",\"الفصل الثاني\",\"الفصل الثالث\"]}")
-  arrondi              Int      @default(2)
-  chiffres_arabes      Boolean  @default(false)
-  montant_mensualite   Decimal  @default(7500) @db.Decimal(10, 2)
-  updated_at           DateTime @updatedAt
+  arrondi                 Int      @default(2)
+  chiffres_arabes         Boolean  @default(false)
+  montant_mensualite      Decimal  @default(7500) @db.Decimal(10, 2)
+  seuil_absences_alerte   Int      @default(3)
+  seuil_note_insuffisante Decimal  @default(10) @db.Decimal(5, 2)
+  jours_cours             Json     @default("[\"lundi\",\"mardi\",\"mercredi\",\"jeudi\",\"vendredi\"]")
+  updated_at              DateTime @updatedAt
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
 }
@@ -200,6 +210,7 @@ model Matiere {
   prof_matieres   ProfMatiereClasse[]
   notes           Note[]
   classe_matieres ClasseMatiere[]
+  creneaux        Creneau[]
 }
 
 model Niveau {
@@ -232,6 +243,7 @@ model Classe {
   prof_matieres   ProfMatiereClasse[]
   absences        AbsenceEleve[]
   classe_matieres ClasseMatiere[]
+  creneaux        Creneau[]
 }
 
 model ClasseMatiere {
@@ -405,4 +417,59 @@ model AbsenceEleve {
   etablissement  Etablissement @relation(fields: [etablissement_id], references: [id])
 
   @@unique([eleve_id, classe_id, date])
+}
+
+model Creneau {
+  id                String   @id @default(uuid())
+  etablissement_id  String
+  annee_scolaire_id String
+  classe_id         String
+  matiere_id        String
+  professeur_id     String
+  jour              String   // 'lundi' | 'mardi' | 'mercredi' | 'jeudi' | 'vendredi'
+  heure_debut       String   // "08:00"
+  heure_fin         String   // "10:00"
+  salle             String?
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  etablissement  Etablissement @relation(fields: [etablissement_id], references: [id])
+  annee_scolaire AnneeScolaire @relation(fields: [annee_scolaire_id], references: [id])
+  classe         Classe        @relation(fields: [classe_id], references: [id])
+  matiere        Matiere       @relation(fields: [matiere_id], references: [id])
+  professeur     Professeur    @relation(fields: [professeur_id], references: [id])
+}
+
+model EvenementCalendrier {
+  id               String   @id @default(uuid())
+  etablissement_id String
+  titre_fr         String
+  titre_ar         String?
+  description      String?
+  date_debut       DateTime @db.Date
+  date_fin         DateTime @db.Date
+  type             String   // 'vacances' | 'examen' | 'evenement' | 'fermeture' | 'reunion'
+  couleur          String   @default("#3B82F6")
+  createur_id      String
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
+  createur      Utilisateur   @relation(fields: [createur_id], references: [id])
+}
+
+model Notification {
+  id               String   @id @default(uuid())
+  etablissement_id String
+  destinataire_id  String
+  type             String   // 'absence_eleve' | 'paiement_retard' | 'note_insuffisante' | 'absence_professeur'
+  titre            String
+  message          String
+  lu               Boolean  @default(false)
+  entite_type      String?
+  entite_id        String?
+  created_at       DateTime @default(now())
+
+  etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
+  destinataire  Utilisateur   @relation(fields: [destinataire_id], references: [id])
 }

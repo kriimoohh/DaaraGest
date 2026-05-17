@@ -24,7 +24,9 @@
     "utilisateurs": "Utilisateurs",
     "parametres": "Paramètres",
     "pointage": "Pointage",
-    "absences": "Absences élèves"
+    "absences": "Absences élèves",
+    "emploi_du_temps": "Emploi du temps",
+    "calendrier": "Calendrier"
   },
   "theme": {
     "light": "Mode clair",
@@ -227,6 +229,41 @@
     "motif": "Motif",
     "progression": "Progression",
     "taux_presence": "Taux de présence"
+  },
+  "emploi_du_temps": {
+    "titre": "Emploi du temps",
+    "ajouter_creneau": "Ajouter un créneau",
+    "selectionner_classe": "Sélectionnez une classe pour afficher l'emploi du temps",
+    "salle": "Salle (optionnel)",
+    "heure_debut": "Heure de début",
+    "heure_fin": "Heure de fin",
+    "lundi": "Lundi",
+    "mardi": "Mardi",
+    "mercredi": "Mercredi",
+    "jeudi": "Jeudi",
+    "vendredi": "Vendredi",
+    "conflit": "Conflit horaire détecté"
+  },
+  "calendrier": {
+    "titre": "Calendrier scolaire",
+    "ajouter": "Ajouter un événement",
+    "vacances": "Vacances",
+    "examen": "Examen",
+    "evenement": "Événement",
+    "fermeture": "Fermeture",
+    "reunion": "Réunion",
+    "titre_fr": "Titre (Français)",
+    "titre_ar": "Titre (Arabe, optionnel)",
+    "description": "Description (optionnel)"
+  },
+  "notifications": {
+    "titre": "Notifications",
+    "aucune": "Aucune notification",
+    "tout_lire": "Tout marquer comme lu",
+    "absence_eleve": "Absences élève",
+    "paiement_retard": "Paiement en retard",
+    "note_insuffisante": "Note insuffisante",
+    "absence_professeur": "Absence professeur"
   },
   "pointage": {
     "titre": "Pointage des professeurs",
