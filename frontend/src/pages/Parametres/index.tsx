@@ -37,7 +37,17 @@ interface ConfigNotes {
   arrondi: number;
   chiffres_arabes: boolean;
   montant_mensualite: number;
+  jours_cours: string[];
 }
+
+const TOUS_JOURS = [
+  { value: 'lundi',    label: 'Lundi' },
+  { value: 'mardi',    label: 'Mardi' },
+  { value: 'mercredi', label: 'Mercredi' },
+  { value: 'jeudi',    label: 'Jeudi' },
+  { value: 'vendredi', label: 'Vendredi' },
+  { value: 'samedi',   label: 'Samedi' },
+];
 
 const DEFAULT_FR = ['1er Trimestre', '2ème Trimestre', '3ème Trimestre', '4ème Trimestre'];
 const DEFAULT_AR = ['الفصل الأول', 'الفصل الثاني', 'الفصل الثالث', 'الفصل الرابع'];
@@ -269,6 +279,7 @@ export function ParametresPage() {
             chiffres_arabes: Boolean(rawNotes.chiffres_arabes),
             montant_mensualite: Number(rawNotes.montant_mensualite),
             noms_periodes: buildPeriodes(nb, rawPeriodes),
+            jours_cours: (rawNotes.jours_cours as string[]) ?? ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'],
           });
         }
       })
@@ -516,6 +527,54 @@ export function ParametresPage() {
                 checked={config.chiffres_arabes}
                 onChange={v => setConfig(p => p ? { ...p, chiffres_arabes: v } : p)}
               />
+
+              {/* Jours de cours */}
+              <div style={{ padding: '12px 16px', background: 'var(--paper-2)', border: '1px solid var(--rule)', borderRadius: 'var(--r-md)' }}>
+                <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--ink)', marginBottom: 10 }}>
+                  Jours de cours
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 12 }}>
+                  Sélectionnez les jours où l'établissement est ouvert
+                </div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {TOUS_JOURS.map(jour => {
+                    const actif = config.jours_cours?.includes(jour.value) ?? false;
+                    return (
+                      <label
+                        key={jour.value}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 6,
+                          padding: '6px 14px', borderRadius: 99,
+                          border: `1px solid ${actif ? 'var(--terra)' : 'var(--rule)'}`,
+                          background: actif ? 'var(--terra-soft)' : 'var(--paper)',
+                          color: actif ? 'var(--terra-ink)' : 'var(--ink-3)',
+                          cursor: 'pointer', fontSize: 13, fontWeight: actif ? 600 : 400,
+                          transition: 'all 0.15s', userSelect: 'none',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={actif}
+                          style={{ display: 'none' }}
+                          onChange={() => {
+                            setConfig(p => {
+                              if (!p) return p;
+                              const jours = p.jours_cours ?? [];
+                              const updated = actif
+                                ? jours.filter(j => j !== jour.value)
+                                : [...jours, jour.value];
+                              // Garder l'ordre canonique
+                              const ordre = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+                              return { ...p, jours_cours: ordre.filter(j => updated.includes(j)) };
+                            });
+                          }}
+                        />
+                        {jour.label}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
 

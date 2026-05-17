@@ -25,6 +25,7 @@ export const configNotesSchema = z.object({
   arrondi: z.number().int().min(0).optional(),
   chiffres_arabes: z.boolean().optional(),
   montant_mensualite: zodDecimalString.pipe(z.string().refine(s => parseFloat(s) > 0, 'Doit être positif')).optional(),
+  jours_cours: z.array(z.enum(['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'])).min(1, 'Au moins un jour de cours requis').optional(),
 });
 
 export type EtablissementUpdateInput = z.infer<typeof etablissementUpdateSchema>;
