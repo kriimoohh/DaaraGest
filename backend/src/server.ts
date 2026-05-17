@@ -21,6 +21,8 @@ import { niveauxRoutes } from './modules/niveaux/niveaux.routes';
 import { emploiDuTempsRoutes } from './modules/emploi-du-temps/emploi-du-temps.routes';
 import { calendrierRoutes } from './modules/calendrier/calendrier.routes';
 import { notificationsRoutes } from './modules/notifications/notifications.routes';
+import { messagerieRoutes } from './modules/messagerie/messagerie.routes';
+import { portailParentRoutes } from './modules/portail-parent/portail-parent.routes';
 
 const jwtSecret = process.env.JWT_SECRET;
 if (!jwtSecret) {
@@ -102,6 +104,8 @@ async function build() {
       await api.register(emploiDuTempsRoutes, { prefix: '/emploi-du-temps' });
       await api.register(calendrierRoutes, { prefix: '/calendrier' });
       await api.register(notificationsRoutes, { prefix: '/notifications' });
+      await api.register(messagerieRoutes, { prefix: '/messagerie' });
+      await api.register(portailParentRoutes, { prefix: '/portail-parent' });
     },
     { prefix: '/api/v1' }
   );

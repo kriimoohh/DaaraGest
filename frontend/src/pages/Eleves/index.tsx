@@ -147,6 +147,7 @@ export function ElevesPage() {
   const isAdmin = useAuthStore(s => s.user?.role === 'admin');
   const isGestion = useAuthStore(s => ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'].includes(s.user?.role ?? ''));
   const canInscrire = useAuthStore(s => ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'].includes(s.user?.role ?? ''));
+  const canPortail = useAuthStore(s => ['admin', 'directeur', 'gestionnaire'].includes(s.user?.role ?? ''));
   const SEXE_OPTIONS = [
     { value: 'M', label: t('eleve.masculin') },
     { value: 'F', label: t('eleve.feminin') },
@@ -208,6 +209,12 @@ export function ElevesPage() {
   const [bulkInscSaving, setBulkInscSaving] = useState(false);
   const [bulkAnnees, setBulkAnnees] = useState<{ id: string; libelle: string }[]>([]);
   const [bulkClasses, setBulkClasses] = useState<{ id: string; nom_fr: string; filiere: string }[]>([]);
+
+  // Portail parent
+  const [portailModal, setPortailModal] = useState<Eleve | null>(null);
+  const [portailUrl, setPortailUrl] = useState<string | null>(null);
+  const [portailLoading, setPortailLoading] = useState(false);
+  const [portailCopied, setPortailCopied] = useState(false);
 
   // Import CSV
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -453,6 +460,22 @@ export function ElevesPage() {
     }
   };
 
+  const openPortail = async (eleve: Eleve) => {
+    setPortailModal(eleve);
+    setPortailUrl(null);
+    setPortailCopied(false);
+    setPortailLoading(true);
+    try {
+      const res = await api.post<{ token: string }>('/api/v1/portail-parent/generer', { eleve_id: eleve.id });
+      setPortailUrl(`${window.location.origin}/portail/${res.token}`);
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur lors de la génération du lien');
+      setPortailModal(null);
+    } finally {
+      setPortailLoading(false);
+    }
+  };
+
   function openAdd() {
     setEditTarget(null);
     setForm(EMPTY_FORM);
@@ -604,6 +627,11 @@ export function ElevesPage() {
             label: t('actions.inscrire'),
             icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx={9} cy={7} r={4}/><line x1={19} y1={8} x2={19} y2={14}/><line x1={22} y1={11} x2={16} y2={11}/></svg>,
             onClick: () => openInscription(e),
+          }] : []),
+          ...(canPortail ? [{
+            label: 'Portail parent',
+            icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>,
+            onClick: () => openPortail(e),
           }] : []),
           ...(isGestion ? [{
             label: e.actif ? 'Désactiver' : 'Réactiver',
@@ -1233,6 +1261,51 @@ export function ElevesPage() {
             Annuler
           </Button>
         </div>
+      )}
+
+      {/* ── Modal Portail parent ─────────────────────────────────────────────── */}
+      {portailModal && (
+        <Modal
+          isOpen={!!portailModal}
+          onClose={() => { setPortailModal(null); setPortailUrl(null); setPortailCopied(false); }}
+          title={`Portail parent — ${portailModal.prenom_fr} ${portailModal.nom_fr}`}
+          size="md"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {portailLoading ? (
+              <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--ink-4)' }}>Génération du lien…</div>
+            ) : portailUrl ? (
+              <>
+                <div style={{ padding: '12px 14px', background: 'var(--indigo-soft)', border: '1px solid var(--indigo)', borderRadius: 'var(--r-md)', fontSize: 12, color: 'var(--indigo-ink)' }}>
+                  Partagez ce lien avec le parent ou tuteur de l'élève. Le lien donne accès aux notes, paiements et absences sans connexion requise.
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    readOnly
+                    value={portailUrl}
+                    className="input"
+                    style={{ flex: 1, fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--ink-3)' }}
+                    onClick={e => (e.target as HTMLInputElement).select()}
+                  />
+                  <Button
+                    variant="secondary"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(portailUrl);
+                      setPortailCopied(true);
+                      setTimeout(() => setPortailCopied(false), 2000);
+                    }}
+                  >
+                    {portailCopied ? 'Copié !' : 'Copier'}
+                  </Button>
+                </div>
+              </>
+            ) : null}
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Button variant="secondary" onClick={() => { setPortailModal(null); setPortailUrl(null); setPortailCopied(false); }}>Fermer</Button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* ── Modal Import CSV ─────────────────────────────────────────────────── */}
