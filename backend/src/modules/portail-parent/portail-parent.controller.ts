@@ -1,0 +1,40 @@
+import { FastifyRequest, FastifyReply } from 'fastify';
+import { JwtPayload } from '../../utils/jwt';
+import { genererTokenSchema } from './portail-parent.schema';
+import { genererToken, revoquerToken, getPortailData, listerTokensEtablissement } from './portail-parent.service';
+
+export async function genererHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const parsed = genererTokenSchema.safeParse(request.body);
+  if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  try {
+    return reply.status(201).send(await genererToken(etablissement_id, parsed.data.eleve_id));
+  } catch (err) {
+    return reply.status(400).send({ error: (err as Error).message });
+  }
+}
+
+export async function revoquerHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { token } = request.params as { token: string };
+  try {
+    await revoquerToken(token, etablissement_id);
+    return reply.send({ success: true });
+  } catch (err) {
+    return reply.status(400).send({ error: (err as Error).message });
+  }
+}
+
+export async function portailHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { token } = request.params as { token: string };
+  try {
+    return reply.send(await getPortailData(token));
+  } catch (err) {
+    return reply.status(404).send({ error: (err as Error).message });
+  }
+}
+
+export async function listerTokensHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  return reply.send(await listerTokensEtablissement(etablissement_id));
+}

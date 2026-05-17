@@ -29,6 +29,8 @@ model Etablissement {
   creneaux                Creneau[]
   evenements_calendrier   EvenementCalendrier[]
   notifications           Notification[]
+  conversations           Conversation[]
+  portail_tokens          PortailParentToken[]
 }
 
 model Role {
@@ -63,6 +65,8 @@ model Utilisateur {
   professeur          Professeur?
   evenements_crees    EvenementCalendrier[]
   notifications_recues Notification[]
+  conversations_participees ConversationParticipant[]
+  messages_envoyes    MessageConversation[]
 }
 
 model Professeur {
@@ -292,6 +296,7 @@ model Eleve {
   bulletins     Bulletin[]
   notes         Note[]
   absences      AbsenceEleve[]
+  portail_tokens PortailParentToken[]
 }
 
 model Parent {
@@ -472,4 +477,56 @@ model Notification {
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
   destinataire  Utilisateur   @relation(fields: [destinataire_id], references: [id])
+}
+
+model Conversation {
+  id               String   @id @default(uuid())
+  etablissement_id String
+  sujet            String
+  type             String   @default("individuel") // 'individuel' | 'broadcast'
+  cibles_roles     Json?    // e.g. ["professeur"] for broadcast
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  etablissement Etablissement            @relation(fields: [etablissement_id], references: [id])
+  participants  ConversationParticipant[]
+  messages      MessageConversation[]
+}
+
+model ConversationParticipant {
+  id               String    @id @default(uuid())
+  conversation_id  String
+  utilisateur_id   String
+  derniere_lecture DateTime?
+  created_at       DateTime  @default(now())
+
+  conversation Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  utilisateur  Utilisateur  @relation(fields: [utilisateur_id], references: [id])
+
+  @@unique([conversation_id, utilisateur_id])
+}
+
+model MessageConversation {
+  id              String   @id @default(uuid())
+  conversation_id String
+  expediteur_id   String
+  corps           String
+  created_at      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  expediteur   Utilisateur  @relation(fields: [expediteur_id], references: [id])
+}
+
+model PortailParentToken {
+  id               String    @id @default(uuid())
+  etablissement_id String
+  eleve_id         String
+  token            String    @unique @default(uuid())
+  actif            Boolean   @default(true)
+  created_at       DateTime  @default(now())
+
+  etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
+  eleve         Eleve         @relation(fields: [eleve_id], references: [id])
+
+  @@unique([etablissement_id, eleve_id])
 }

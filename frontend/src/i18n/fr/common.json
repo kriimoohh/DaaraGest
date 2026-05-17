@@ -26,7 +26,8 @@
     "pointage": "Pointage",
     "absences": "Absences élèves",
     "emploi_du_temps": "Emploi du temps",
-    "calendrier": "Calendrier"
+    "calendrier": "Calendrier",
+    "messagerie": "Messagerie"
   },
   "theme": {
     "light": "Mode clair",
@@ -271,6 +272,38 @@
     "absent": "Absent",
     "retard": "Retard",
     "conge": "Congé"
+  },
+  "messagerie": {
+    "titre": "Messagerie",
+    "nouveau": "Nouveau message",
+    "sujet": "Sujet",
+    "corps": "Message",
+    "repondre": "Répondre",
+    "envoyer": "Envoyer",
+    "individuel": "Individuel",
+    "broadcast": "Diffusion (par rôle)",
+    "destinataires": "Destinataires",
+    "roles_cibles": "Rôles destinataires",
+    "aucune_conversation": "Aucune conversation",
+    "aucun_message": "Aucun message",
+    "ecrire": "Écrire un message...",
+    "non_lu": "Non lu",
+    "participants": "Participants"
+  },
+  "portail_parent": {
+    "titre": "Portail parent",
+    "lien_acces": "Lien d'accès parent",
+    "generer": "Générer le lien",
+    "copier": "Copier le lien",
+    "copie": "Lien copié !",
+    "invalide": "Lien invalide ou expiré",
+    "notes": "Notes",
+    "paiements": "Paiements",
+    "absences": "Absences",
+    "infos": "Informations",
+    "moyenne": "Moyenne",
+    "rang": "Rang",
+    "telecharger_bulletin": "Télécharger le bulletin"
   },
   "common": {
     "actif": "Actif",
