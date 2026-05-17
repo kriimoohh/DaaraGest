@@ -27,12 +27,13 @@ interface Creneau {
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
-const JOURS = [
+const TOUS_LES_JOURS = [
   { value: 'lundi',    label: 'Lundi' },
   { value: 'mardi',    label: 'Mardi' },
   { value: 'mercredi', label: 'Mercredi' },
   { value: 'jeudi',    label: 'Jeudi' },
   { value: 'vendredi', label: 'Vendredi' },
+  { value: 'samedi',   label: 'Samedi' },
 ];
 
 const ROLES_EDIT = ['admin', 'directeur', 'gestionnaire'];
@@ -118,6 +119,7 @@ export function EmploiDuTempsPage() {
   const [matieres, setMatieres] = useState<Matiere[]>([]);
   const [professeurs, setProfesseurs] = useState<Professeur[]>([]);
   const [creneaux, setCreneaux] = useState<Creneau[]>([]);
+  const [joursActifs, setJoursActifs] = useState<string[]>(['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi']);
   const [anneeId, setAnneeId] = useState('');
   const [classeId, setClasseId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -135,13 +137,18 @@ export function EmploiDuTempsPage() {
     salle: '',
   });
 
-  // Load années scolaires
+  // Load années scolaires + jours actifs depuis les paramètres
   useEffect(() => {
     api.get<AnneeScolaire[]>('/api/v1/annees-scolaires').then(r => {
       const list = r ?? [];
       setAnnees(list);
       const active = list.find(a => a.active);
       if (active) setAnneeId(active.id);
+    }).catch(() => {});
+
+    api.get<{ config_notes?: { jours_cours?: string[] } }>('/api/v1/parametres').then(r => {
+      const jours = r?.config_notes?.jours_cours;
+      if (Array.isArray(jours) && jours.length > 0) setJoursActifs(jours);
     }).catch(() => {});
   }, []);
 
@@ -232,9 +239,12 @@ export function EmploiDuTempsPage() {
     ? matieres.filter(m => m.filiere === selectedClasse.filiere)
     : matieres;
 
+  // Jours visibles (filtrés selon la config établissement)
+  const JOURS = TOUS_LES_JOURS.filter(j => joursActifs.includes(j.value));
+
   // Group creneaux by jour
   const byJour: Record<string, Creneau[]> = {};
-  for (const jour of JOURS.map(j => j.value)) byJour[jour] = [];
+  for (const jour of joursActifs) byJour[jour] = [];
   for (const c of creneaux) {
     if (byJour[c.jour]) {
       byJour[c.jour].push(c);
@@ -299,7 +309,7 @@ export function EmploiDuTempsPage() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(5, 1fr)',
+            gridTemplateColumns: `repeat(${JOURS.length}, 1fr)`,
             gap: 12,
           }}
         >
