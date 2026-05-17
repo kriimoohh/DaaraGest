@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { PresenceInput, BulkPresenceInput } from './pointage.schema';
+import { notifierRoles } from '../notifications/notifications.service';
 
 function calcHeures(arrivee?: string, depart?: string): number | undefined {
   if (!arrivee || !depart) return undefined;
@@ -85,12 +86,32 @@ export async function upsertPresence(etablissement_id: string, data: PresenceInp
     heures_reelles: heures_reelles ?? null,
     motif: data.motif ?? null,
   };
-  return prisma.presenceProfesseur.upsert({
+  const result = await prisma.presenceProfesseur.upsert({
     where: { professeur_id_date: { professeur_id: data.professeur_id, date } },
     create: { professeur_id: data.professeur_id, date, ...payload },
     update: payload,
-    include: { professeur: { include: { utilisateur: { select: { nom_fr: true } } } } },
+    include: { professeur: { include: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } } } },
   });
+
+  if (data.statut === 'absent') {
+    const prof = await prisma.professeur.findFirst({
+      where: { id: data.professeur_id },
+      include: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } },
+    });
+    if (prof) {
+      await notifierRoles(
+        etablissement_id,
+        ['admin', 'directeur'],
+        'absence_professeur',
+        `Absence professeur — ${prof.utilisateur.prenom_fr} ${prof.utilisateur.nom_fr}`,
+        `Le professeur ${prof.utilisateur.prenom_fr} ${prof.utilisateur.nom_fr} est absent le ${data.date}.`,
+        'professeur',
+        data.professeur_id,
+      );
+    }
+  }
+
+  return result;
 }
 
 export async function bulkUpsertPresences(etablissement_id: string, data: BulkPresenceInput) {

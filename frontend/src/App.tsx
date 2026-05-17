@@ -15,6 +15,8 @@ import { MatieresPage } from './pages/Matieres';
 import { UtilisateursPage } from './pages/Utilisateurs';
 import { PointagePage } from './pages/Pointage';
 import { AbsencesPage } from './pages/Absences';
+import { EmploiDuTempsPage } from './pages/EmploiDuTemps';
+import { CalendrierPage } from './pages/Calendrier';
 import './i18n';
 
 // Mêmes listes que la Sidebar — source de vérité unique côté frontend
@@ -59,6 +61,12 @@ export default function App() {
           } />
           <Route path="/absences" element={
             <ProtectedRoute roles={ROLES.lecture}><AbsencesPage /></ProtectedRoute>
+          } />
+          <Route path="/emploi-du-temps" element={
+            <ProtectedRoute roles={ROLES.lecture}><EmploiDuTempsPage /></ProtectedRoute>
+          } />
+          <Route path="/calendrier" element={
+            <ProtectedRoute roles={ROLES.lecture}><CalendrierPage /></ProtectedRoute>
           } />
           <Route path="/pointage" element={
             <ProtectedRoute roles={ROLES.pointage}><PointagePage /></ProtectedRoute>
