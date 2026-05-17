@@ -34,17 +34,22 @@ export async function listerCreneaux(
 }
 
 export async function creerCreneau(etablissement_id: string, data: CreneauInput) {
-  // Validate that classe and matiere belong to the etablissement
-  const [classe, matiere, professeur, annee] = await Promise.all([
+  const [classe, matiere, professeur, annee, config] = await Promise.all([
     prisma.classe.findFirst({ where: { id: data.classe_id, etablissement_id } }),
     prisma.matiere.findFirst({ where: { id: data.matiere_id, etablissement_id } }),
     prisma.professeur.findFirst({ where: { id: data.professeur_id, utilisateur: { etablissement_id } } }),
     prisma.anneeScolaire.findFirst({ where: { id: data.annee_scolaire_id, etablissement_id } }),
+    prisma.configNotes.findUnique({ where: { etablissement_id } }),
   ]);
   if (!classe) throw new Error('Classe introuvable');
   if (!matiere) throw new Error('Matière introuvable');
   if (!professeur) throw new Error('Professeur introuvable');
   if (!annee) throw new Error('Année scolaire introuvable');
+
+  const joursActifs = (config?.jours_cours as string[]) ?? ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
+  if (!joursActifs.includes(data.jour)) {
+    throw new Error(`"${data.jour}" n'est pas un jour de cours actif pour cet établissement`);
+  }
 
   if (heureToMinutes(data.heure_debut) >= heureToMinutes(data.heure_fin)) {
     throw new Error('L\'heure de début doit être avant l\'heure de fin');
