@@ -1,7 +1,8 @@
 -- Ajout des colonnes manquantes dans ConfigNotes
 ALTER TABLE "ConfigNotes"
-  ADD COLUMN IF NOT EXISTS "seuil_absences_alerte" INTEGER NOT NULL DEFAULT 3,
-  ADD COLUMN IF NOT EXISTS "jours_cours" JSONB NOT NULL DEFAULT '["lundi","mardi","mercredi","jeudi","vendredi"]';
+  ADD COLUMN IF NOT EXISTS "seuil_absences_alerte"   INTEGER        NOT NULL DEFAULT 3,
+  ADD COLUMN IF NOT EXISTS "seuil_note_insuffisante" NUMERIC(5,2)   NOT NULL DEFAULT 10,
+  ADD COLUMN IF NOT EXISTS "jours_cours"             JSONB          NOT NULL DEFAULT '["lundi","mardi","mercredi","jeudi","vendredi"]';
 
 -- Table Creneau (emploi du temps)
 CREATE TABLE IF NOT EXISTS "Creneau" (
