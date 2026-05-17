@@ -26,7 +26,8 @@
     "pointage": "الحضور",
     "absences": "غيابات التلاميذ",
     "emploi_du_temps": "جدول الحصص",
-    "calendrier": "التقويم"
+    "calendrier": "التقويم",
+    "messagerie": "الرسائل"
   },
   "theme": {
     "light": "الوضع الفاتح",
@@ -271,6 +272,38 @@
     "absent": "غائب",
     "retard": "متأخر",
     "conge": "إجازة"
+  },
+  "messagerie": {
+    "titre": "الرسائل",
+    "nouveau": "رسالة جديدة",
+    "sujet": "الموضوع",
+    "corps": "الرسالة",
+    "repondre": "رد",
+    "envoyer": "إرسال",
+    "individuel": "فردي",
+    "broadcast": "إذاعة (حسب الدور)",
+    "destinataires": "المستلمون",
+    "roles_cibles": "أدوار المستلمين",
+    "aucune_conversation": "لا توجد محادثات",
+    "aucun_message": "لا توجد رسائل",
+    "ecrire": "اكتب رسالة...",
+    "non_lu": "غير مقروء",
+    "participants": "المشاركون"
+  },
+  "portail_parent": {
+    "titre": "بوابة الأولياء",
+    "lien_acces": "رابط الوصول للوالدين",
+    "generer": "إنشاء الرابط",
+    "copier": "نسخ الرابط",
+    "copie": "تم نسخ الرابط!",
+    "invalide": "الرابط غير صالح أو منتهي الصلاحية",
+    "notes": "النقاط",
+    "paiements": "المدفوعات",
+    "absences": "الغيابات",
+    "infos": "المعلومات",
+    "moyenne": "المعدل",
+    "rang": "الترتيب",
+    "telecharger_bulletin": "تحميل التقرير"
   },
   "common": {
     "actif": "نشط",

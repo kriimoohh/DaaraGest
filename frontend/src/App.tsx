@@ -17,6 +17,8 @@ import { PointagePage } from './pages/Pointage';
 import { AbsencesPage } from './pages/Absences';
 import { EmploiDuTempsPage } from './pages/EmploiDuTemps';
 import { CalendrierPage } from './pages/Calendrier';
+import { MessageriePage } from './pages/Messagerie';
+import { PortailParentPage } from './pages/PortailParent';
 import './i18n';
 
 // Mêmes listes que la Sidebar — source de vérité unique côté frontend
@@ -34,6 +36,7 @@ export default function App() {
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/portail/:token" element={<PortailParentPage />} />
         <Route element={<Layout />}>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
@@ -67,6 +70,9 @@ export default function App() {
           } />
           <Route path="/calendrier" element={
             <ProtectedRoute roles={ROLES.lecture}><CalendrierPage /></ProtectedRoute>
+          } />
+          <Route path="/messagerie" element={
+            <ProtectedRoute roles={ROLES.lecture}><MessageriePage /></ProtectedRoute>
           } />
           <Route path="/pointage" element={
             <ProtectedRoute roles={ROLES.pointage}><PointagePage /></ProtectedRoute>
