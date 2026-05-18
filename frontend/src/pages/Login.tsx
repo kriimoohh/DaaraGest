@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { useAuthStore } from '../store/authStore';
+import { LogoMark } from '../components/ui/LogoMark';
 
 export function Login() {
   const { t, i18n } = useTranslation();
@@ -64,10 +65,10 @@ export function Login() {
 
       <div className="login-card">
         {/* Brand */}
-        <div className="login-brand">
-          <div className="sb-mark" style={{ width: 36, height: 36, fontSize: 20 }}>Dg</div>
-          <div>
-            <div className="sb-name" style={{ fontSize: 20 }}>Daara<span style={{ color: 'var(--terra)' }}>Gest</span></div>
+        <div className="login-brand" style={{ flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          <LogoMark size={64} />
+          <div style={{ textAlign: 'center' }}>
+            <div className="sb-name" style={{ fontSize: 22 }}>Daara<span style={{ color: 'var(--terra)' }}>Gest</span></div>
             <div className="sb-tag">Gestion scolaire franco-arabe</div>
           </div>
         </div>
