@@ -27,6 +27,18 @@ interface PortailData {
     id: string; date: string; statut: string; justifiee: boolean; motif: string | null;
     classe: { nom_fr: string }
   }>
+  evaluations_formatives: Array<{
+    id: string; note: string | null; absent: boolean;
+    evaluation: {
+      titre: string; type: string; date: string; coefficient: string; note_max: string; periode: number;
+      matiere: { nom_fr: string; nom_ar: string; filiere: string }
+    }
+  }>
+  activites: Array<{
+    id: string;
+    activite: { nom_fr: string; nom_ar: string; description: string | null }
+    evaluations: Array<{ id: string; periode: number; note: string | null; appreciation: string | null }>
+  }>
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -319,6 +331,110 @@ function InfosTab({ data }: { data: PortailData }) {
   );
 }
 
+const TYPE_EVAL_COLOR: Record<string, { bg: string; text: string }> = {
+  DS:      { bg: '#dbeafe', text: '#1d4ed8' },
+  INTERRO: { bg: '#fef3c7', text: '#b45309' },
+  DM:      { bg: '#f3f4f6', text: '#374151' },
+  EXAMEN:  { bg: '#fce7f3', text: '#9d174d' },
+};
+
+function EvaluationsFormativesTab({ evaluations }: { evaluations: PortailData['evaluations_formatives'] }) {
+  if (evaluations.length === 0) {
+    return <div style={{ padding: 24, textAlign: 'center', color: '#6b7280', fontSize: 14 }}>Aucune évaluation formative disponible</div>;
+  }
+
+  const periodes = [...new Set(evaluations.map(e => e.evaluation.periode))].sort();
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {periodes.map(periode => {
+        const evalsP = evaluations.filter(e => e.evaluation.periode === periode);
+        return (
+          <div key={periode} style={{ border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
+            <div style={{ background: '#f9fafb', padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+              <h3 style={{ fontSize: 14, fontWeight: 700, color: '#111827', margin: 0 }}>
+                {PERIODE_LABEL[periode] ?? `Période ${periode}`}
+              </h3>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: '#f3f4f6' }}>
+                    {['Matière', 'Titre', 'Type', 'Date', 'Note', 'Coeff.'].map(h => (
+                      <th key={h} style={{ padding: '8px 12px', textAlign: 'start', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {evalsP.map(ev => {
+                    const colors = TYPE_EVAL_COLOR[ev.evaluation.type] ?? { bg: '#f3f4f6', text: '#374151' };
+                    const note = ev.note ? parseFloat(ev.note) : null;
+                    const noteMax = parseFloat(ev.evaluation.note_max);
+                    return (
+                      <tr key={ev.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                        <td style={{ padding: '10px 12px', color: '#111827', fontWeight: 500 }}>{ev.evaluation.matiere.nom_fr}</td>
+                        <td style={{ padding: '10px 12px', color: '#374151' }}>{ev.evaluation.titre}</td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: colors.bg, color: colors.text }}>
+                            {ev.evaluation.type}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px 12px', color: '#6b7280', fontSize: 12, whiteSpace: 'nowrap' }}>{formatDate(ev.evaluation.date)}</td>
+                        <td style={{ padding: '10px 12px', fontWeight: 700, textAlign: 'center', color: ev.absent ? '#9ca3af' : note !== null ? (note >= noteMax / 2 ? '#16a34a' : '#dc2626') : '#6b7280' }}>
+                          {ev.absent ? <span style={{ fontSize: 11, color: '#9ca3af' }}>Absent</span> : note !== null ? `${note}/${noteMax}` : '—'}
+                        </td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center', color: '#6b7280', fontSize: 12 }}>×{ev.evaluation.coefficient}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ActivitesTab({ activites }: { activites: PortailData['activites'] }) {
+  if (activites.length === 0) {
+    return <div style={{ padding: 24, textAlign: 'center', color: '#6b7280', fontSize: 14 }}>Aucune activité parascolaire enregistrée</div>;
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {activites.map(insc => (
+        <div key={insc.id} style={{ border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ background: '#f9fafb', padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: '#111827', margin: 0 }}>{insc.activite.nom_fr}</h3>
+            {insc.activite.description && (
+              <p style={{ fontSize: 12, color: '#6b7280', margin: '4px 0 0' }}>{insc.activite.description}</p>
+            )}
+          </div>
+          {insc.evaluations.length === 0 ? (
+            <div style={{ padding: '12px 16px', fontSize: 13, color: '#9ca3af' }}>Aucune évaluation</div>
+          ) : (
+            <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {insc.evaluations.map(ev => (
+                <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 12, color: '#6b7280', minWidth: 100 }}>{PERIODE_LABEL[ev.periode] ?? `Période ${ev.periode}`}</span>
+                  {ev.note !== null && (
+                    <span style={{ fontSize: 14, fontWeight: 700, color: '#2563eb' }}>{parseFloat(ev.note).toFixed(1)}/20</span>
+                  )}
+                  {ev.appreciation && (
+                    <span style={{ fontSize: 13, color: '#374151', fontStyle: 'italic' }}>{ev.appreciation}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export function PortailParentPage() {
@@ -326,7 +442,7 @@ export function PortailParentPage() {
   const [data, setData] = useState<PortailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<'notes' | 'paiements' | 'absences' | 'infos'>('notes');
+  const [tab, setTab] = useState<'notes' | 'evaluations' | 'paiements' | 'absences' | 'activites' | 'infos'>('notes');
 
   useEffect(() => {
     if (!token) { setError('Token manquant'); setLoading(false); return; }
@@ -374,8 +490,10 @@ export function PortailParentPage() {
 
   const TABS: { key: typeof tab; label: string }[] = [
     { key: 'notes', label: 'Notes' },
+    { key: 'evaluations', label: 'Évaluations' },
     { key: 'paiements', label: 'Paiements' },
     { key: 'absences', label: 'Absences' },
+    { key: 'activites', label: 'Activités' },
     { key: 'infos', label: 'Informations' },
   ];
 
@@ -452,8 +570,10 @@ export function PortailParentPage() {
           {/* Tab content */}
           <div style={{ padding: 20 }}>
             {tab === 'notes' && <NotesTab notes={data.notes} bulletins={data.bulletins} />}
+            {tab === 'evaluations' && <EvaluationsFormativesTab evaluations={data.evaluations_formatives} />}
             {tab === 'paiements' && <PaiementsTab paiements={data.paiements} />}
             {tab === 'absences' && <AbsencesTab absences={data.absences} />}
+            {tab === 'activites' && <ActivitesTab activites={data.activites} />}
             {tab === 'infos' && <InfosTab data={data} />}
           </div>
         </div>
