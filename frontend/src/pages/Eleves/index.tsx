@@ -60,12 +60,18 @@ interface EleveFiche extends Eleve {
   inscriptions: Inscription[];
 }
 
+interface ProgressionDecision {
+  decision: string; decision_auto: string | null;
+  note_directeur: string | null; validee: boolean; validee_le: string | null;
+}
 interface ProgressionAnnee {
   annee_scolaire: { id: string; libelle: string };
   classe_fr: { nom_fr: string } | null;
   classe_ar: { nom_fr: string } | null;
   bulletins: Array<{ filiere: string; moyenne: number | null; rang: number | null; appreciation: string | null }>;
   absences: { absents: number; presents: number };
+  progression_decision: ProgressionDecision | null;
+  total_paiements: number;
 }
 
 interface ProgressionData {
@@ -1115,9 +1121,23 @@ export function ElevesPage() {
                           </div>
                         ))}
                         {p.bulletins.length === 0 && <span style={{ fontStyle: 'italic', color: 'var(--ink-4)' }}>Aucun bulletin annuel</span>}
-                        <span style={{ marginInlineStart: 'auto', color: 'var(--ink-4)' }}>
-                          {p.absences.absents > 0 ? `⚠ ${p.absences.absents} abs.` : ''}
-                        </span>
+                        {p.absences.absents > 0 && (
+                          <span style={{ color: 'var(--warning)', marginInlineStart: 'auto' }}>⚠ {p.absences.absents} abs.</span>
+                        )}
+                        {p.total_paiements > 0 && (
+                          <span style={{ color: 'var(--success-text)' }}>{p.total_paiements.toLocaleString('fr-FR')} FCFA</span>
+                        )}
+                        {p.progression_decision && (
+                          <span style={{
+                            padding: '1px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600,
+                            background: p.progression_decision.decision === 'admis' ? 'var(--success-soft)' : p.progression_decision.decision === 'redoublant' ? 'var(--danger-soft)' : 'var(--warning-soft)',
+                            color: p.progression_decision.decision === 'admis' ? 'var(--success-text)' : p.progression_decision.decision === 'redoublant' ? 'var(--danger-text)' : 'var(--warning)',
+                            border: `1px solid ${p.progression_decision.decision === 'admis' ? 'var(--success-border)' : p.progression_decision.decision === 'redoublant' ? 'var(--danger-border, var(--danger))' : 'var(--warning-border)'}`,
+                          }}>
+                            {{ admis: 'Admis', redoublant: 'Redoublant', transfere: 'Transféré', exclu: 'Exclu' }[p.progression_decision.decision] ?? p.progression_decision.decision}
+                            {!p.progression_decision.validee && ' ·'}
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}

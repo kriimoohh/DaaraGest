@@ -7,6 +7,8 @@ import { ElevesPage } from './pages/Eleves';
 import { ProfesseursPage } from './pages/Professeurs';
 import { ClassesPage } from './pages/Classes';
 import { NotesPage } from './pages/Notes';
+import { EvaluationsPage } from './pages/Evaluations';
+import { ProgressionPage } from './pages/Progression';
 import { BulletinsPage } from './pages/Bulletins';
 import { FinancesPage } from './pages/Finances';
 import { ParametresPage } from './pages/Parametres';
@@ -18,6 +20,8 @@ import { AbsencesPage } from './pages/Absences';
 import { EmploiDuTempsPage } from './pages/EmploiDuTemps';
 import { CalendrierPage } from './pages/Calendrier';
 import { MessageriePage } from './pages/Messagerie';
+import { ActivitesPage } from './pages/Activites';
+import { DocumentsPage } from './pages/Documents';
 import { PortailParentPage } from './pages/PortailParent';
 import './i18n';
 
@@ -58,6 +62,18 @@ export default function App() {
           } />
           <Route path="/notes" element={
             <ProtectedRoute roles={ROLES.academique}><NotesPage /></ProtectedRoute>
+          } />
+          <Route path="/evaluations" element={
+            <ProtectedRoute roles={ROLES.academique}><EvaluationsPage /></ProtectedRoute>
+          } />
+          <Route path="/progression" element={
+            <ProtectedRoute roles={ROLES.gestion}><ProgressionPage /></ProtectedRoute>
+          } />
+          <Route path="/activites" element={
+            <ProtectedRoute roles={ROLES.academique}><ActivitesPage /></ProtectedRoute>
+          } />
+          <Route path="/documents" element={
+            <ProtectedRoute roles={['admin', 'directeur', 'gestionnaire']}><DocumentsPage /></ProtectedRoute>
           } />
           <Route path="/bulletins" element={
             <ProtectedRoute roles={ROLES.academique}><BulletinsPage /></ProtectedRoute>

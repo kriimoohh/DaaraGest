@@ -12,8 +12,10 @@ model Etablissement {
   nom_fr      String
   adresse     String?
   telephone   String?
-  logo_url    String?
-  devise      String   @default("FCFA")
+  logo_url      String?
+  signature_url String?
+  cachet_url    String?
+  devise        String   @default("FCFA")
   actif       Boolean  @default(true)
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
@@ -31,6 +33,11 @@ model Etablissement {
   notifications           Notification[]
   conversations           Conversation[]
   portail_tokens          PortailParentToken[]
+  evaluations             Evaluation[]
+  progressions_eleves     ProgressionEleve[]
+  activites               Activite[]
+  document_templates      DocumentTemplate[]
+  documents_generes       DocumentGenere[]
 }
 
 model Role {
@@ -67,6 +74,8 @@ model Utilisateur {
   notifications_recues Notification[]
   conversations_participees ConversationParticipant[]
   messages_envoyes    MessageConversation[]
+  activites_responsable Activite[]          @relation("ActiviteResponsable")
+  documents_generes     DocumentGenere[]    @relation("DocumentsGeneres")
 }
 
 model Professeur {
@@ -178,6 +187,9 @@ model AnneeScolaire {
   notes           Note[]
   absences_eleves AbsenceEleve[]
   creneaux        Creneau[]
+  evaluations             Evaluation[]
+  progressions_eleves     ProgressionEleve[]
+  inscriptions_activites  InscriptionActivite[]
 }
 
 model ConfigNotes {
@@ -215,6 +227,7 @@ model Matiere {
   notes           Note[]
   classe_matieres ClasseMatiere[]
   creneaux        Creneau[]
+  evaluations     Evaluation[]
 }
 
 model Niveau {
@@ -248,6 +261,7 @@ model Classe {
   absences        AbsenceEleve[]
   classe_matieres ClasseMatiere[]
   creneaux        Creneau[]
+  evaluations     Evaluation[]
 }
 
 model ClasseMatiere {
@@ -297,6 +311,10 @@ model Eleve {
   notes         Note[]
   absences      AbsenceEleve[]
   portail_tokens PortailParentToken[]
+  notes_evaluations      NoteEvaluation[]
+  progressions           ProgressionEleve[]
+  inscriptions_activites InscriptionActivite[]
+  presences_activites    PresenceActivite[]
 }
 
 model Parent {
@@ -530,3 +548,191 @@ model PortailParentToken {
 
   @@unique([etablissement_id, eleve_id])
 }
+
+// ─── Phase 3.1 — Évaluations formatives ─────────────────────────────────────
+
+model Evaluation {
+  id                String   @id @default(uuid())
+  etablissement_id  String
+  classe_id         String
+  matiere_id        String
+  annee_scolaire_id String
+  periode           Int
+  titre             String
+  type              String   // 'DS' | 'INTERRO' | 'DM' | 'EXAMEN'
+  date              DateTime @db.Date
+  coefficient       Decimal  @default(1)  @db.Decimal(4, 2)
+  note_max          Decimal  @default(20) @db.Decimal(5, 2)
+  created_by        String
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  etablissement  Etablissement    @relation(fields: [etablissement_id], references: [id])
+  classe         Classe           @relation(fields: [classe_id], references: [id])
+  matiere        Matiere          @relation(fields: [matiere_id], references: [id])
+  annee_scolaire AnneeScolaire    @relation(fields: [annee_scolaire_id], references: [id])
+  notes_eleves   NoteEvaluation[]
+}
+
+model NoteEvaluation {
+  id            String   @id @default(uuid())
+  evaluation_id String
+  eleve_id      String
+  valeur        Decimal? @db.Decimal(5, 2)
+  absent        Boolean  @default(false)
+  commentaire   String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  evaluation Evaluation @relation(fields: [evaluation_id], references: [id], onDelete: Cascade)
+  eleve      Eleve      @relation(fields: [eleve_id], references: [id])
+
+  @@unique([evaluation_id, eleve_id])
+}
+
+// ─── Phase 3.2 — Progression élève ──────────────────────────────────────────
+
+model ProgressionEleve {
+  id                String    @id @default(uuid())
+  etablissement_id  String
+  eleve_id          String
+  annee_scolaire_id String
+  decision          String    // 'admis' | 'redoublant' | 'transfere' | 'exclu'
+  decision_auto     String?
+  note_directeur    String?
+  validee           Boolean   @default(false)
+  validee_par       String?
+  validee_le        DateTime?
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+
+  etablissement  Etablissement @relation(fields: [etablissement_id], references: [id])
+  eleve          Eleve         @relation(fields: [eleve_id], references: [id])
+  annee_scolaire AnneeScolaire @relation(fields: [annee_scolaire_id], references: [id])
+
+  @@unique([eleve_id, annee_scolaire_id])
+}
+
+// ─── Phase 3.3 — Activités parascolaires ────────────────────────────────────
+
+model Activite {
+  id               String   @id @default(uuid())
+  etablissement_id String
+  nom_fr           String
+  nom_ar           String?
+  description      String?
+  responsable_id   String?
+  capacite_max     Int?
+  actif            Boolean  @default(true)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  etablissement Etablissement         @relation(fields: [etablissement_id], references: [id])
+  responsable   Utilisateur?          @relation("ActiviteResponsable", fields: [responsable_id], references: [id])
+  inscriptions  InscriptionActivite[]
+  seances       SeanceActivite[]
+}
+
+model InscriptionActivite {
+  id                String   @id @default(uuid())
+  activite_id       String
+  eleve_id          String
+  annee_scolaire_id String
+  date_inscription  DateTime @default(now())
+
+  activite       Activite            @relation(fields: [activite_id], references: [id], onDelete: Cascade)
+  eleve          Eleve               @relation(fields: [eleve_id], references: [id])
+  annee_scolaire AnneeScolaire       @relation(fields: [annee_scolaire_id], references: [id])
+  evaluations    EvaluationActivite[]
+
+  @@unique([activite_id, eleve_id, annee_scolaire_id])
+}
+
+model SeanceActivite {
+  id          String   @id @default(uuid())
+  activite_id String
+  date        DateTime @db.Date
+  duree_min   Int?
+  notes       String?
+  created_at  DateTime @default(now())
+
+  activite  Activite          @relation(fields: [activite_id], references: [id], onDelete: Cascade)
+  presences PresenceActivite[]
+}
+
+model PresenceActivite {
+  id         String   @id @default(uuid())
+  seance_id  String
+  eleve_id   String
+  statut     String   // 'present' | 'absent' | 'retard'
+  created_at DateTime @default(now())
+
+  seance SeanceActivite @relation(fields: [seance_id], references: [id], onDelete: Cascade)
+  eleve  Eleve          @relation(fields: [eleve_id], references: [id])
+
+  @@unique([seance_id, eleve_id])
+}
+
+model EvaluationActivite {
+  id                      String   @id @default(uuid())
+  inscription_activite_id String
+  periode                 Int?
+  appreciation            String?
+  note                    Decimal? @db.Decimal(5, 2)
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  inscription_activite InscriptionActivite @relation(fields: [inscription_activite_id], references: [id], onDelete: Cascade)
+}
+
+// ─── Documents administratifs ────────────────────────────────────────────────
+
+enum TypeDocument {
+  CERTIFICAT_SCOLARITE
+  ATTESTATION_INSCRIPTION
+  CONVOCATION_EXAMEN
+  FICHE_TRANSFERT
+  EMPLOI_DU_TEMPS_ELEVE
+  RELEVE_NOTES
+  CERTIFICAT_BONNE_CONDUITE
+  FICHE_RENSEIGNEMENTS
+  ATTESTATION_RESULTATS
+  LISTE_CLASSE
+  ATTESTATION_TRAVAIL
+  ORDRE_MISSION
+  FICHE_PAIE
+  PLANNING_COURS
+}
+
+model DocumentTemplate {
+  id               String       @id @default(uuid())
+  etablissement_id String
+  type             TypeDocument
+  nom              String
+  contenu_html     String
+  actif            Boolean      @default(true)
+  created_at       DateTime     @default(now())
+  updated_at       DateTime     @updatedAt
+
+  etablissement     Etablissement    @relation(fields: [etablissement_id], references: [id])
+  documents_generes DocumentGenere[]
+
+  @@unique([etablissement_id, type])
+}
+
+model DocumentGenere {
+  id                String       @id @default(uuid())
+  etablissement_id  String
+  template_id       String?
+  type              TypeDocument
+  destinataire_type String
+  destinataire_id   String
+  genere_par        String
+  genere_le         DateTime     @default(now())
+  parametres        Json?
+
+  etablissement Etablissement     @relation(fields: [etablissement_id], references: [id])
+  template      DocumentTemplate? @relation(fields: [template_id], references: [id])
+  utilisateur   Utilisateur       @relation("DocumentsGeneres", fields: [genere_par], references: [id])
+}
+

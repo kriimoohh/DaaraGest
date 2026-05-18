@@ -17,7 +17,10 @@
     "professeurs": "الأساتذة",
     "classes": "الأقسام",
     "notes": "الدرجات",
+    "evaluations": "التقييمات",
     "bulletins": "شهادات النتائج",
+    "progression": "التقدم الدراسي",
+    "activites": "الأنشطة",
     "finances": "المالية",
     "annees_scolaires": "السنوات الدراسية",
     "matieres": "المواد",
@@ -27,7 +30,8 @@
     "absences": "غيابات التلاميذ",
     "emploi_du_temps": "جدول الحصص",
     "calendrier": "التقويم",
-    "messagerie": "الرسائل"
+    "messagerie": "الرسائل",
+    "documents": "الوثائق"
   },
   "theme": {
     "light": "الوضع الفاتح",

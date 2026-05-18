@@ -14,6 +14,8 @@ export const etablissementUpdateSchema = z.object({
   adresse: z.string().optional(),
   telephone: z.string().optional(),
   logo_url: z.string().optional().nullable(),
+  signature_url: z.string().url().optional().nullable(),
+  cachet_url: z.string().url().optional().nullable(),
   devise: z.string().optional(),
 });
 
