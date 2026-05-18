@@ -6,7 +6,6 @@ import { API_BASE } from '../../lib/api';
 import { toast } from '../../store/toastStore';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { PageHeader } from '../../components/ui/PageHeader';
-import { Table, Column } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
@@ -636,53 +635,6 @@ export function ClassesPage() {
     { value: '', label: t('classe.toutes_annees') },
     ...anneeOptions,
   ];
-
-  const columns: Column<Record<string, unknown>>[] = [
-    { key: 'nom_fr', header: 'Nom FR' },
-    {
-      key: 'filiere',
-      header: 'Filière',
-      render: (row) => {
-        const c = row as unknown as Classe;
-        return (
-          <Badge
-            label={c.filiere}
-            variant={c.filiere === 'FR' ? 'info' : 'success'}
-          />
-        );
-      },
-    },
-    { key: 'niveau', header: 'Niveau', render: (row) => (row as unknown as Classe).niveau?.libelle ?? '—' },
-    { key: 'capacite', header: 'Capacité', width: '100px' },
-    {
-      key: 'annee_scolaire',
-      header: t('classe.annee_scolaire'),
-      render: (row) => {
-        const c = row as unknown as Classe;
-        const obj = c.annee_scolaire;
-        if (obj && typeof obj === 'object') return obj.libelle;
-        const found = annees.find(a => a.id === c.annee_scolaire_id);
-        return found?.libelle ?? (typeof obj === 'string' ? obj : '—');
-      },
-    },
-    {
-      key: 'actions',
-      header: 'Actions',
-      width: '120px',
-      render: (row) => {
-        const c = row as unknown as Classe;
-        return (
-          <div className="row" style={{ gap: 6 }}>
-            <Button size="sm" variant="secondary" onClick={() => openListeEleves(c)}>Liste élèves</Button>
-            <Button size="sm" variant="secondary" onClick={() => openProgramme(c)}>Programme</Button>
-            <Button size="sm" variant="ghost" onClick={() => openEdit(c)}>{t('actions.modifier')}</Button>
-            {isAdmin && <Button size="sm" variant="danger" onClick={() => setConfirmDelete(c)}>{t('actions.supprimer')}</Button>}
-          </div>
-        );
-      },
-    },
-  ];
-
 
   return (
     <>

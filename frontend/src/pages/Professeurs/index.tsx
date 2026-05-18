@@ -17,6 +17,7 @@ import { Pagination } from '../../components/ui/Pagination';
 interface Professeur {
   id: string;
   nom_fr: string;
+  prenom_fr?: string;
   nom_ar: string;
   identifiant: string;
   specialite_fr: string;
