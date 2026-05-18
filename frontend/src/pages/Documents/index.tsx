@@ -396,7 +396,8 @@ export function DocumentsPage() {
   const [annees, setAnnees]               = useState<AnneeScolaire[]>([]);
   const [selectedClasseId, setSelectedClasseId] = useState('');
   const [extraParams, setExtraParams]     = useState<Record<string, string>>({});
-  const [generating, setGenerating]       = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [printing,    setPrinting]    = useState(false);
 
   // ── Historique tab state ───────────────────────────────────────────────────
   const [historique, setHistorique]   = useState<HistoriqueItem[]>([]);
@@ -461,23 +462,48 @@ export function DocumentsPage() {
   const destinataireId = destType === 'eleve' ? selectedEleve?.id : destType === 'professeur' ? selectedProfId : selectedClasseId;
   const canGenerate = !!selectedType && !!destinataireId;
 
-  const handleGenerer = async () => {
-    if (!selectedType || !destinataireId) return;
-    setGenerating(true);
+  const fetchPdfBlob = async (): Promise<{ blob: Blob; filename: string } | null> => {
+    if (!selectedType || !destinataireId) return null;
+    const res = await fetch(`${API_BASE}/api/v1/documents/generer`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      body: JSON.stringify({ type: selectedType, destinataire_type: DEST_TYPE[selectedType], destinataire_id: destinataireId, parametres: Object.keys(extraParams).length ? extraParams : undefined }),
+    });
+    if (!res.ok) { const e = await res.json().catch(() => ({ error: 'Erreur' })); throw new Error(e.error); }
+    return { blob: await res.blob(), filename: `${LABELS[selectedType].toLowerCase().replace(/\s+/g, '_')}.pdf` };
+  };
+
+  const handleTelecharger = async () => {
+    if (!canGenerate) return;
+    setDownloading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/v1/documents/generer`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-        body: JSON.stringify({ type: selectedType, destinataire_type: DEST_TYPE[selectedType], destinataire_id: destinataireId, parametres: Object.keys(extraParams).length ? extraParams : undefined }),
-      });
-      if (!res.ok) { const e = await res.json().catch(() => ({ error: 'Erreur' })); throw new Error(e.error); }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
+      const result = await fetchPdfBlob();
+      if (!result) return;
+      const url = URL.createObjectURL(result.blob);
       const a = document.createElement('a');
-      a.href = url; a.download = `${LABELS[selectedType].toLowerCase().replace(/\s+/g, '_')}.pdf`; a.click();
+      a.href = url; a.download = result.filename; a.click();
       URL.revokeObjectURL(url);
-      toast.success('Document généré et téléchargé');
+      toast.success('Document téléchargé');
     } catch (err) { toast.error((err as Error).message); }
-    finally { setGenerating(false); }
+    finally { setDownloading(false); }
+  };
+
+  const handleImprimer = async () => {
+    if (!canGenerate) return;
+    setPrinting(true);
+    try {
+      const result = await fetchPdfBlob();
+      if (!result) return;
+      const url = URL.createObjectURL(result.blob);
+      const win = window.open(url, '_blank');
+      if (!win) { toast.error('Autorisez les popups pour imprimer'); URL.revokeObjectURL(url); return; }
+      win.addEventListener('load', () => {
+        win.focus();
+        win.print();
+      });
+      setTimeout(() => URL.revokeObjectURL(url), 120000);
+      toast.success('Document ouvert — utilisez Ctrl+P pour imprimer');
+    } catch (err) { toast.error((err as Error).message); }
+    finally { setPrinting(false); }
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -592,13 +618,28 @@ export function DocumentsPage() {
                   </div>
                 )}
 
-                <div style={{ paddingTop: 4 }}>
-                  <Button onClick={handleGenerer} loading={generating} disabled={!canGenerate}>
-                    <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: 6 }}>
-                      <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zm-2 9v-2H7v-2h3v-2l4 3-4 3z" />
+                <div style={{ paddingTop: 4, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <Button onClick={handleTelecharger} loading={downloading} disabled={!canGenerate || printing}>
+                    <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: 6 }}>
+                      <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
                     </svg>
-                    Générer le PDF
+                    Télécharger
                   </Button>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={handleImprimer}
+                    disabled={!canGenerate || downloading || printing}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, opacity: (!canGenerate || downloading || printing) ? 0.5 : 1 }}
+                  >
+                    {printing ? (
+                      <span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                    ) : (
+                      <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z" />
+                      </svg>
+                    )}
+                    Imprimer
+                  </button>
                 </div>
               </div>
             )}
