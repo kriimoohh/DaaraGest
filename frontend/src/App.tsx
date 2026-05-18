@@ -8,6 +8,7 @@ import { ProfesseursPage } from './pages/Professeurs';
 import { ClassesPage } from './pages/Classes';
 import { NotesPage } from './pages/Notes';
 import { EvaluationsPage } from './pages/Evaluations';
+import { ProgressionPage } from './pages/Progression';
 import { BulletinsPage } from './pages/Bulletins';
 import { FinancesPage } from './pages/Finances';
 import { ParametresPage } from './pages/Parametres';
@@ -62,6 +63,9 @@ export default function App() {
           } />
           <Route path="/evaluations" element={
             <ProtectedRoute roles={ROLES.academique}><EvaluationsPage /></ProtectedRoute>
+          } />
+          <Route path="/progression" element={
+            <ProtectedRoute roles={ROLES.gestion}><ProgressionPage /></ProtectedRoute>
           } />
           <Route path="/bulletins" element={
             <ProtectedRoute roles={ROLES.academique}><BulletinsPage /></ProtectedRoute>

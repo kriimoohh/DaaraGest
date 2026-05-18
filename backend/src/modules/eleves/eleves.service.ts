@@ -126,12 +126,33 @@ export async function getProgressionEleve(id: string, etablissement_id: string) 
     if (a.statut === 'present') s.presents += a._count.statut;
   }
 
+  // Décisions de fin d'année (Phase 3.2)
+  const decisionsProgression = await prisma.progressionEleve.findMany({
+    where: { eleve_id: id, annee_scolaire_id: { in: anneeIds } },
+    select: {
+      annee_scolaire_id: true,
+      decision: true, decision_auto: true,
+      note_directeur: true, validee: true, validee_le: true,
+    },
+  });
+  const decisionByAnnee = new Map(decisionsProgression.map(d => [d.annee_scolaire_id, d]));
+
+  // Paiements par année
+  const paiements = await prisma.paiementEleve.groupBy({
+    by: ['annee'],
+    where: { eleve_id: id, annee: { not: null } },
+    _sum: { montant: true },
+  });
+  const paiementByAnnee = new Map(paiements.map(p => [p.annee, Number(p._sum.montant ?? 0)]));
+
   const progression = inscriptions.map(insc => ({
     annee_scolaire: insc.annee_scolaire,
     classe_fr: insc.classe_fr,
     classe_ar: insc.classe_ar,
     bulletins: bulletinByAnnee.get(insc.annee_scolaire_id) ?? [],
     absences: absencesByAnnee.get(insc.annee_scolaire_id) ?? { absents: 0, presents: 0 },
+    progression_decision: decisionByAnnee.get(insc.annee_scolaire_id) ?? null,
+    total_paiements: paiementByAnnee.get(new Date(insc.annee_scolaire.date_debut).getFullYear()) ?? 0,
   }));
 
   return { eleve, progression };
