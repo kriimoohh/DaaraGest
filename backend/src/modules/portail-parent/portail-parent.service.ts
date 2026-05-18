@@ -66,6 +66,30 @@ export async function getPortailData(token: string) {
     orderBy: { date: 'desc' },
   }) : [];
 
+  // Get évaluations formatives (Phase 3.1)
+  const evaluationsFormatives = inscription ? await prisma.noteEvaluation.findMany({
+    where: { eleve_id: eleve.id },
+    include: {
+      evaluation: {
+        select: {
+          titre: true, type: true, date: true,
+          coefficient: true, note_max: true, periode: true,
+          matiere: { select: { nom_fr: true, nom_ar: true, filiere: true } },
+        },
+      },
+    },
+    orderBy: { evaluation: { date: 'desc' } },
+  }) : [];
+
+  // Get activités parascolaires (Phase 3.3)
+  const activitesInscriptions = inscription ? await prisma.inscriptionActivite.findMany({
+    where: { eleve_id: eleve.id, annee_scolaire_id: inscription.annee_scolaire_id },
+    include: {
+      activite: { select: { nom_fr: true, nom_ar: true, description: true } },
+      evaluations: { orderBy: { periode: 'asc' } },
+    },
+  }) : [];
+
   return {
     etablissement: record.etablissement,
     eleve: {
@@ -80,6 +104,8 @@ export async function getPortailData(token: string) {
     bulletins,
     paiements,
     absences,
+    evaluations_formatives: evaluationsFormatives,
+    activites: activitesInscriptions,
   };
 }
 
