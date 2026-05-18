@@ -76,7 +76,15 @@ export async function getConversation(id: string, etablissement_id: string, util
     data: { derniere_lecture: new Date() },
   });
 
-  return conversation;
+  if (!conversation) return null;
+
+  return {
+    ...conversation,
+    participants: conversation.participants.map(p => ({
+      ...p,
+      utilisateur: { ...p.utilisateur, role: p.utilisateur.role.libelle_fr },
+    })),
+  };
 }
 
 export async function creerConversation(
@@ -168,9 +176,10 @@ export async function ajouterMessage(
 }
 
 export async function listerUtilisateurs(etablissement_id: string) {
-  return prisma.utilisateur.findMany({
+  const users = await prisma.utilisateur.findMany({
     where: { etablissement_id, actif: true },
     select: { id: true, nom_fr: true, prenom_fr: true, role: { select: { libelle_fr: true } } },
     orderBy: [{ role: { libelle_fr: 'asc' } }, { nom_fr: 'asc' }],
   });
+  return users.map(u => ({ ...u, role: u.role.libelle_fr }));
 }
