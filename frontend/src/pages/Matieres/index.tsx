@@ -119,31 +119,32 @@ export function MatieresPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Pédagogie"
         title="Matières"
         subtitle="Gérer les matières FR et AR"
         action={<Button onClick={openAdd}>+ Ajouter une matière</Button>}
       />
 
-      {/* Bandeau guide filière */}
-      <div style={{ padding: 16, background: 'var(--info-soft)', border: '1px solid var(--info-border)', borderRadius: 'var(--r-lg)', fontSize: 13, color: 'var(--info)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-        <span style={{ fontSize: 16, flexShrink: 0 }}>ℹ️</span>
+      {/* Bandeau guide filière — couleurs lisibles dark mode */}
+      <div style={{ padding: 16, background: 'var(--info-soft)', border: '1px solid var(--info-border)', borderRadius: 'var(--r-lg)', fontSize: 13, color: 'var(--info-text)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <span style={{ fontSize: 16, flexShrink: 0, color: 'var(--info-text)' }}>ℹ️</span>
         <div>
-          <strong>Configuration des notes par filière :</strong> chaque matière possède sa propre plage de notation (Note Max / Note Min).
+          <strong style={{ color: 'var(--info-text)' }}>Configuration des notes par filière :</strong> chaque matière possède sa propre plage de notation (Note Max / Note Min).
           Les matières arabes peuvent avoir une notation différente des matières françaises (ex. sur 10 au lieu de 20).
           Pour modifier la plage d'une matière, cliquez sur <em>Modifier</em>.
         </div>
       </div>
 
-      <div className="filter-row">
-        <Select
-          value={filiere}
-          onChange={(e) => setFiliere(e.target.value)}
-          options={[
-            { value: '', label: t('classe.toutes_filieres') },
-            { value: 'FR', label: t('classe.filiere_fr') },
-            { value: 'AR', label: t('classe.filiere_ar') },
-          ]}
-        />
+      <div className="tabs">
+        <button className={`tab${filiere === '' ? ' active' : ''}`} onClick={() => setFiliere('')}>
+          Toutes <span className="count">{matieres.length}</span>
+        </button>
+        <button className={`tab${filiere === 'FR' ? ' active' : ''}`} onClick={() => setFiliere('FR')}>
+          Française <span className="count">{matieres.filter(m => m.filiere === 'FR').length}</span>
+        </button>
+        <button className={`tab${filiere === 'AR' ? ' active' : ''}`} onClick={() => setFiliere('AR')}>
+          Arabe <span className="count">{matieres.filter(m => m.filiere === 'AR').length}</span>
+        </button>
       </div>
 
       <div className="card">
