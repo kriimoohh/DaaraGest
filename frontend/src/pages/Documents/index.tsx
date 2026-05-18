@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -92,47 +92,327 @@ const EXTRA_PARAMS: Record<TypeDocument, { key: string; label: string; type: 'te
   LISTE_CLASSE: [], ATTESTATION_TRAVAIL: [], PLANNING_COURS: [],
 };
 
+// ── Variables disponibles pour l'éditeur ──────────────────────────────────────
+
+const VAR_GROUPS: { label: string; vars: { key: string; desc: string }[] }[] = [
+  {
+    label: 'Établissement',
+    vars: [
+      { key: 'NOM_ETABLISSEMENT',   desc: "Nom de l'établissement" },
+      { key: 'ADRESSE_ETABLISSEMENT', desc: 'Adresse' },
+      { key: 'TEL_ETABLISSEMENT',   desc: 'Téléphone' },
+      { key: 'ANNEE_SCOLAIRE',      desc: 'Année scolaire active' },
+      { key: 'DATE_AUJOURD_HUI',    desc: "Date du jour" },
+      { key: 'REF_DOCUMENT',        desc: 'Référence auto-générée' },
+      { key: 'LOGO',                desc: 'Logo (balise img)' },
+      { key: 'SIGNATURE',           desc: 'Signature directeur (img)' },
+      { key: 'CACHET',              desc: 'Cachet établissement (img)' },
+    ],
+  },
+  {
+    label: 'Élève',
+    vars: [
+      { key: 'NOM_PRENOM_ELEVE',  desc: 'Prénom + Nom' },
+      { key: 'NOM_ELEVE',         desc: 'Nom' },
+      { key: 'PRENOM_ELEVE',      desc: 'Prénom' },
+      { key: 'MATRICULE',         desc: 'Matricule' },
+      { key: 'DATE_NAISSANCE',    desc: 'Date de naissance' },
+      { key: 'SEXE',              desc: 'Masculin / Féminin' },
+      { key: 'CLASSE_FR',         desc: 'Classe filière française' },
+      { key: 'CLASSE_AR',         desc: 'Classe filière arabe' },
+      { key: 'FILIERE',           desc: 'Filière' },
+    ],
+  },
+  {
+    label: 'Professeur',
+    vars: [
+      { key: 'NOM_PRENOM_PROF',  desc: 'Prénom + Nom' },
+      { key: 'NOM_PROF',         desc: 'Nom' },
+      { key: 'PRENOM_PROF',      desc: 'Prénom' },
+      { key: 'SPECIALITE',       desc: 'Spécialité' },
+      { key: 'TYPE_CONTRAT',     desc: 'Type de contrat' },
+      { key: 'DATE_EMBAUCHE',    desc: "Date d'embauche" },
+    ],
+  },
+  {
+    label: 'Paramètres additionnels',
+    vars: [
+      { key: 'DATE_EXAMEN',               desc: "Date de l'examen" },
+      { key: 'HEURE_CONVOCATION',         desc: 'Heure de convocation' },
+      { key: 'SALLE',                     desc: 'Salle' },
+      { key: 'ETABLISSEMENT_DESTINATION', desc: 'Établissement de destination' },
+      { key: 'MOTIF',                     desc: 'Motif' },
+      { key: 'DESTINATION',               desc: 'Destination mission' },
+      { key: 'DATE_DEBUT_MISSION',        desc: 'Début de mission' },
+      { key: 'DATE_FIN_MISSION',          desc: 'Fin de mission' },
+      { key: 'OBJET_MISSION',             desc: 'Objet de la mission' },
+      { key: 'MOIS_ANNEE',                desc: 'Mois et année (paie)' },
+      { key: 'SALAIRE_BRUT',              desc: 'Salaire brut' },
+      { key: 'RETENUES',                  desc: 'Retenues' },
+      { key: 'NET_A_PAYER',               desc: 'Net à payer' },
+      { key: 'MOYENNE_ANNUELLE',          desc: 'Moyenne annuelle' },
+    ],
+  },
+  {
+    label: 'Tableaux (auto-générés)',
+    vars: [
+      { key: 'TABLEAU_NOTES',            desc: 'Relevé de notes par période' },
+      { key: 'TABLEAU_ELEVES',           desc: 'Liste numérotée des élèves' },
+      { key: 'TABLEAU_EMPLOI_DU_TEMPS',  desc: "Grille horaire de l'élève" },
+      { key: 'TABLEAU_PLANNING',         desc: 'Planning hebdo du professeur' },
+    ],
+  },
+];
+
 function fmtDate(s: string) {
   return new Date(s).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+// ── TypeList sidebar (shared between tabs) ────────────────────────────────────
+
+function TypeList({ selected, onSelect, templates, activeColor = false }: {
+  selected: TypeDocument | null;
+  onSelect: (t: TypeDocument) => void;
+  templates: TemplateInfo[];
+  activeColor?: boolean;
+}) {
+  return (
+    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      {GROUPS.map(group => (
+        <div key={group.label}>
+          <div style={{ padding: '10px 14px', background: 'var(--paper-2)', borderBottom: '1px solid var(--rule)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="var(--ink-3)"><path d={group.icon} /></svg>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{group.label}</span>
+          </div>
+          {group.types.map(type => {
+            const tpl = templates.find(t => t.type === type);
+            const active = selected === type;
+            return (
+              <button
+                key={type}
+                onClick={() => onSelect(type)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  width: '100%', padding: '10px 14px', border: 'none', borderBottom: '1px solid var(--rule)',
+                  background: active ? (activeColor ? '#eff6ff' : 'var(--terra-soft)') : 'transparent',
+                  cursor: 'pointer', textAlign: 'start',
+                }}
+              >
+                <span style={{ fontSize: 13, color: active ? (activeColor ? '#1d4ed8' : 'var(--terra-ink)') : 'var(--ink)', fontWeight: active ? 600 : 400 }}>
+                  {LABELS[type]}
+                </span>
+                {tpl?.has_custom && (
+                  <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: '#d1fae5', color: '#065f46', flexShrink: 0 }}>✓ perso</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Template editor ───────────────────────────────────────────────────────────
+
+function TemplateEditor({ type, templates, onSaved }: {
+  type: TypeDocument;
+  templates: TemplateInfo[];
+  onSaved: () => void;
+}) {
+  const api = useApi();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [html, setHtml]         = useState('');
+  const [dirty, setDirty]       = useState(false);
+  const [loading, setLoading]   = useState(false);
+  const [saving, setSaving]     = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const hasCustom = templates.find(t => t.type === type)?.has_custom ?? false;
+
+  useEffect(() => {
+    setLoading(true);
+    setDirty(false);
+    api.get<{ contenu_html: string }>(`/api/v1/documents/${type}`)
+      .then(d => setHtml(d.contenu_html))
+      .catch(() => toast.error('Impossible de charger le template'))
+      .finally(() => setLoading(false));
+  }, [type]);
+
+  const insertVar = (varKey: string) => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end   = ta.selectionEnd;
+    const inserted = `{{${varKey}}}`;
+    const newVal = html.substring(0, start) + inserted + html.substring(end);
+    setHtml(newVal);
+    setDirty(true);
+    setTimeout(() => {
+      ta.focus();
+      const pos = start + inserted.length;
+      ta.selectionStart = pos;
+      ta.selectionEnd   = pos;
+    }, 0);
+  };
+
+  const handlePreview = () => {
+    const blob = new Blob([html], { type: 'text/html' });
+    const url  = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.put(`/api/v1/documents/${type}`, { nom: LABELS[type], contenu_html: html });
+      toast.success('Template sauvegardé');
+      setDirty(false);
+      onSaved();
+    } catch (err) { toast.error((err as Error).message); }
+    finally { setSaving(false); }
+  };
+
+  const handleReset = async () => {
+    if (!confirm('Supprimer le template personnalisé et revenir au modèle par défaut ?')) return;
+    setResetting(true);
+    try {
+      await api.delete(`/api/v1/documents/${type}/reset`);
+      toast.success('Template réinitialisé');
+      setDirty(false);
+      onSaved();
+      // Reload default
+      const d = await api.get<{ contenu_html: string }>(`/api/v1/documents/${type}`);
+      setHtml(d.contenu_html);
+    } catch (err) { toast.error((err as Error).message); }
+    finally { setResetting(false); }
+  };
+
+  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--ink-3)', fontSize: 14 }}>Chargement du template…</div>;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, height: '100%' }}>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: '1px solid var(--rule)', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1 }}>
+          <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>{LABELS[type]}</span>
+          {dirty && <span style={{ fontSize: 11, marginLeft: 8, color: '#d97706' }}>● Non sauvegardé</span>}
+          {hasCustom && !dirty && <span style={{ fontSize: 11, marginLeft: 8, padding: '1px 7px', borderRadius: 4, background: '#d1fae5', color: '#065f46' }}>✓ Template personnalisé</span>}
+        </div>
+        <button className="btn btn-ghost btn-sm" onClick={handlePreview} title="Aperçu dans un nouvel onglet">
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: 5 }}>
+            <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+          </svg>
+          Aperçu
+        </button>
+        {hasCustom && (
+          <button className="btn btn-ghost btn-sm" onClick={handleReset} disabled={resetting} style={{ color: '#dc2626' }}>
+            Réinitialiser
+          </button>
+        )}
+        <Button onClick={handleSave} loading={saving} disabled={!dirty}>
+          Sauvegarder
+        </Button>
+      </div>
+
+      {/* Editor body */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', flex: 1, minHeight: 0 }}>
+        {/* HTML textarea */}
+        <div style={{ borderRight: '1px solid var(--rule)', position: 'relative' }}>
+          <textarea
+            ref={textareaRef}
+            value={html}
+            onChange={e => { setHtml(e.target.value); setDirty(true); }}
+            spellCheck={false}
+            style={{
+              width: '100%', height: '100%', minHeight: 500,
+              padding: '14px 16px', border: 'none', outline: 'none', resize: 'none',
+              fontFamily: '"JetBrains Mono", "Fira Code", "Courier New", monospace',
+              fontSize: 12, lineHeight: 1.6,
+              background: 'var(--paper)', color: 'var(--ink)',
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
+
+        {/* Variables panel */}
+        <div style={{ overflowY: 'auto', maxHeight: 560 }}>
+          <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--rule)', fontSize: 11, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Variables disponibles
+          </div>
+          {VAR_GROUPS.map(group => (
+            <div key={group.label}>
+              <div style={{ padding: '8px 12px 4px', fontSize: 11, fontWeight: 600, color: 'var(--ink-3)', borderBottom: '1px solid var(--rule)', background: 'var(--paper-2)' }}>
+                {group.label}
+              </div>
+              <div style={{ padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {group.vars.map(v => (
+                  <button
+                    key={v.key}
+                    onClick={() => insertVar(v.key)}
+                    title={v.desc}
+                    style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 6,
+                      padding: '5px 8px', border: '1px solid var(--rule)',
+                      borderRadius: 6, background: 'var(--paper-2)', cursor: 'pointer',
+                      textAlign: 'start', transition: 'background 0.1s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--paper-3)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'var(--paper-2)')}
+                  >
+                    <code style={{ fontSize: 10, color: '#2563eb', fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0, marginTop: 1 }}>
+                      {`{{${v.key}}}`}
+                    </code>
+                    <span style={{ fontSize: 10, color: 'var(--ink-3)', lineHeight: 1.4 }}>{v.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export function DocumentsPage() {
   const api = useApi();
-  const [tab, setTab] = useState<'generer' | 'historique'>('generer');
+  const [tab, setTab] = useState<'generer' | 'historique' | 'modeles'>('generer');
 
-  // Template list
+  // Template list (shared across tabs)
   const [templates, setTemplates] = useState<TemplateInfo[]>([]);
-  const [selectedType, setSelectedType] = useState<TypeDocument | null>(null);
 
-  // Destinataire
-  const [eleveSearch, setEleveSearch]   = useState('');
-  const [elevesFound, setElevesFound]   = useState<Eleve[]>([]);
+  // ── Générer tab state ──────────────────────────────────────────────────────
+  const [selectedType, setSelectedType]   = useState<TypeDocument | null>(null);
+  const [eleveSearch, setEleveSearch]     = useState('');
+  const [elevesFound, setElevesFound]     = useState<Eleve[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [selectedEleve, setSelectedEleve]     = useState<Eleve | null>(null);
-  const [professeurs, setProfesseurs]   = useState<Professeur[]>([]);
-  const [selectedProfId, setSelectedProfId]   = useState('');
-  const [classes, setClasses]           = useState<Classe[]>([]);
-  const [annees, setAnnees]             = useState<AnneeScolaire[]>([]);
+  const [selectedEleve, setSelectedEleve] = useState<Eleve | null>(null);
+  const [professeurs, setProfesseurs]     = useState<Professeur[]>([]);
+  const [selectedProfId, setSelectedProfId] = useState('');
+  const [classes, setClasses]             = useState<Classe[]>([]);
+  const [annees, setAnnees]               = useState<AnneeScolaire[]>([]);
   const [selectedClasseId, setSelectedClasseId] = useState('');
+  const [extraParams, setExtraParams]     = useState<Record<string, string>>({});
+  const [generating, setGenerating]       = useState(false);
 
-  // Extra params
-  const [extraParams, setExtraParams] = useState<Record<string, string>>({});
-
-  // Generation
-  const [generating, setGenerating] = useState(false);
-
-  // Historique
+  // ── Historique tab state ───────────────────────────────────────────────────
   const [historique, setHistorique]   = useState<HistoriqueItem[]>([]);
   const [histLoading, setHistLoading] = useState(false);
 
-  // ── Load ───────────────────────────────────────────────────────────────────
+  // ── Modèles tab state ──────────────────────────────────────────────────────
+  const [editType, setEditType] = useState<TypeDocument | null>(null);
+
+  // ── Load shared data ───────────────────────────────────────────────────────
+
+  const loadTemplates = useCallback(() => {
+    api.get<TemplateInfo[]>('/api/v1/documents').then(setTemplates).catch(() => {});
+  }, []);
 
   useEffect(() => {
-    api.get<TemplateInfo[]>('/api/v1/documents')
-      .then(setTemplates)
-      .catch(() => {});
+    loadTemplates();
     api.get<Classe[]>('/api/v1/classes?limit=200')
       .then(d => setClasses(Array.isArray(d) ? d : (d as { data: Classe[] }).data ?? []))
       .catch(() => {});
@@ -171,11 +451,8 @@ export function DocumentsPage() {
 
   const selectType = (type: TypeDocument) => {
     setSelectedType(type);
-    setSelectedEleve(null);
-    setSelectedProfId('');
-    setSelectedClasseId('');
-    setEleveSearch('');
-    setElevesFound([]);
+    setSelectedEleve(null); setSelectedProfId(''); setSelectedClasseId('');
+    setEleveSearch(''); setElevesFound([]);
     const a = annees.find(x => x.active);
     setExtraParams(a ? { annee_scolaire_id: a.id } : {});
   };
@@ -189,34 +466,18 @@ export function DocumentsPage() {
     setGenerating(true);
     try {
       const res = await fetch(`${API_BASE}/api/v1/documents/generer`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          type: selectedType,
-          destinataire_type: DEST_TYPE[selectedType],
-          destinataire_id: destinataireId,
-          parametres: Object.keys(extraParams).length ? extraParams : undefined,
-        }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ type: selectedType, destinataire_type: DEST_TYPE[selectedType], destinataire_id: destinataireId, parametres: Object.keys(extraParams).length ? extraParams : undefined }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Erreur de génération' }));
-        throw new Error(err.error ?? 'Erreur de génération');
-      }
+      if (!res.ok) { const e = await res.json().catch(() => ({ error: 'Erreur' })); throw new Error(e.error); }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `${LABELS[selectedType].toLowerCase().replace(/\s+/g, '_')}.pdf`;
-      a.click();
+      a.href = url; a.download = `${LABELS[selectedType].toLowerCase().replace(/\s+/g, '_')}.pdf`; a.click();
       URL.revokeObjectURL(url);
       toast.success('Document généré et téléchargé');
-      if (tab === 'historique') loadHistorique();
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setGenerating(false);
-    }
+    } catch (err) { toast.error((err as Error).message); }
+    finally { setGenerating(false); }
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -225,62 +486,16 @@ export function DocumentsPage() {
     <>
       <PageHeader title="Documents administratifs" />
 
-      {/* Tabs */}
       <div className="tabs" style={{ marginBottom: 20 }}>
-        <button className={`tab${tab === 'generer' ? ' active' : ''}`} onClick={() => setTab('generer')}>
-          Générer un document
-        </button>
-        <button className={`tab${tab === 'historique' ? ' active' : ''}`} onClick={() => setTab('historique')}>
-          Historique
-        </button>
+        <button className={`tab${tab === 'generer' ? ' active' : ''}`} onClick={() => setTab('generer')}>Générer</button>
+        <button className={`tab${tab === 'historique' ? ' active' : ''}`} onClick={() => setTab('historique')}>Historique</button>
+        <button className={`tab${tab === 'modeles' ? ' active' : ''}`} onClick={() => setTab('modeles')}>Modèles</button>
       </div>
 
       {/* ── Onglet Générer ── */}
       {tab === 'generer' && (
         <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 20, alignItems: 'start' }}>
-
-          {/* Type selector */}
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            {GROUPS.map(group => (
-              <div key={group.label}>
-                <div style={{ padding: '10px 14px', background: 'var(--paper-2)', borderBottom: '1px solid var(--rule)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <svg width={14} height={14} viewBox="0 0 24 24" fill="var(--ink-3)">
-                    <path d={group.icon} />
-                  </svg>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                    {group.label}
-                  </span>
-                </div>
-                {group.types.map(type => {
-                  const tpl = templates.find(t => t.type === type);
-                  const active = selectedType === type;
-                  return (
-                    <button
-                      key={type}
-                      onClick={() => selectType(type)}
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        width: '100%', padding: '10px 14px', border: 'none', borderBottom: '1px solid var(--rule)',
-                        background: active ? 'var(--terra-soft)' : 'transparent',
-                        cursor: 'pointer', textAlign: 'start',
-                      }}
-                    >
-                      <span style={{ fontSize: 13, color: active ? 'var(--terra-ink)' : 'var(--ink)', fontWeight: active ? 600 : 400 }}>
-                        {LABELS[type]}
-                      </span>
-                      {tpl?.has_custom && (
-                        <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: '#d1fae5', color: '#065f46', flexShrink: 0 }}>
-                          ✓ perso
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-
-          {/* Generation form */}
+          <TypeList selected={selectedType} onSelect={selectType} templates={templates} />
           <div className="card card-pad">
             {!selectedType ? (
               <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--ink-3)' }}>
@@ -298,7 +513,6 @@ export function DocumentsPage() {
                   </p>
                 </div>
 
-                {/* Destinataire selector */}
                 {destType === 'eleve' && (
                   <div>
                     <div className="field-label" style={{ marginBottom: 6 }}>Élève</div>
@@ -308,26 +522,16 @@ export function DocumentsPage() {
                           <div style={{ fontSize: 14, fontWeight: 600 }}>{selectedEleve.prenom_fr} {selectedEleve.nom_fr}</div>
                           <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{selectedEleve.matricule}</div>
                         </div>
-                        <button className="btn btn-ghost btn-sm" onClick={() => { setSelectedEleve(null); setEleveSearch(''); }}>
-                          Changer
-                        </button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => { setSelectedEleve(null); setEleveSearch(''); }}>Changer</button>
                       </div>
                     ) : (
                       <div style={{ position: 'relative' }}>
-                        <Input
-                          placeholder="Rechercher par nom ou matricule..."
-                          value={eleveSearch}
-                          onChange={e => setEleveSearch(e.target.value)}
-                        />
+                        <Input placeholder="Rechercher par nom ou matricule..." value={eleveSearch} onChange={e => setEleveSearch(e.target.value)} />
                         {(elevesFound.length > 0 || searchLoading) && (
                           <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--paper)', border: '1px solid var(--rule)', borderRadius: 'var(--r-md)', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', marginTop: 4 }}>
                             {searchLoading && <div style={{ padding: 10, fontSize: 13, color: 'var(--ink-3)', textAlign: 'center' }}>Recherche…</div>}
                             {elevesFound.map(e => (
-                              <button
-                                key={e.id}
-                                onClick={() => { setSelectedEleve(e); setEleveSearch(''); setElevesFound([]); }}
-                                style={{ display: 'flex', flexDirection: 'column', width: '100%', padding: '10px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'start', borderBottom: '1px solid var(--rule)' }}
-                              >
+                              <button key={e.id} onClick={() => { setSelectedEleve(e); setEleveSearch(''); setElevesFound([]); }} style={{ display: 'flex', flexDirection: 'column', width: '100%', padding: '10px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'start', borderBottom: '1px solid var(--rule)' }}>
                                 <span style={{ fontSize: 13, fontWeight: 600 }}>{e.prenom_fr} {e.nom_fr}</span>
                                 <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>{e.matricule}</span>
                               </button>
@@ -344,9 +548,7 @@ export function DocumentsPage() {
                     <label className="field-label">Professeur</label>
                     <select className="input" value={selectedProfId} onChange={e => setSelectedProfId(e.target.value)}>
                       <option value="">Sélectionner un professeur…</option>
-                      {professeurs.map(p => (
-                        <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>
-                      ))}
+                      {professeurs.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}
                     </select>
                   </div>
                 )}
@@ -357,50 +559,32 @@ export function DocumentsPage() {
                       <label className="field-label">Classe</label>
                       <select className="input" value={selectedClasseId} onChange={e => setSelectedClasseId(e.target.value)}>
                         <option value="">Sélectionner une classe…</option>
-                        {classes.map(c => (
-                          <option key={c.id} value={c.id}>{c.nom_fr} ({c.filiere})</option>
-                        ))}
+                        {classes.map(c => <option key={c.id} value={c.id}>{c.nom_fr} ({c.filiere})</option>)}
                       </select>
                     </div>
                     <div className="field">
                       <label className="field-label">Année scolaire</label>
                       <select className="input" value={extraParams.annee_scolaire_id ?? ''} onChange={e => setExtraParams(p => ({ ...p, annee_scolaire_id: e.target.value }))}>
                         <option value="">Sélectionner…</option>
-                        {annees.map(a => (
-                          <option key={a.id} value={a.id}>{a.libelle}{a.active ? ' (active)' : ''}</option>
-                        ))}
+                        {annees.map(a => <option key={a.id} value={a.id}>{a.libelle}{a.active ? ' (active)' : ''}</option>)}
                       </select>
                     </div>
                   </div>
                 )}
 
-                {/* Extra params */}
                 {EXTRA_PARAMS[selectedType]?.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Paramètres du document
-                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Paramètres du document</div>
                     <div className="grid-2" style={{ gap: 10 }}>
                       {EXTRA_PARAMS[selectedType].map(p => (
                         <div key={p.key} className={p.type === 'textarea' ? 'grid-span-2' : ''}>
                           {p.type === 'textarea' ? (
                             <div className="field">
                               <label className="field-label">{p.label}</label>
-                              <textarea
-                                className="input"
-                                rows={2}
-                                style={{ resize: 'vertical' }}
-                                value={extraParams[p.key] ?? ''}
-                                onChange={e => setExtraParams(prev => ({ ...prev, [p.key]: e.target.value }))}
-                              />
+                              <textarea className="input" rows={2} style={{ resize: 'vertical' }} value={extraParams[p.key] ?? ''} onChange={e => setExtraParams(prev => ({ ...prev, [p.key]: e.target.value }))} />
                             </div>
                           ) : (
-                            <Input
-                              label={p.label}
-                              type={p.type}
-                              value={extraParams[p.key] ?? ''}
-                              onChange={e => setExtraParams(prev => ({ ...prev, [p.key]: e.target.value }))}
-                            />
+                            <Input label={p.label} type={p.type} value={extraParams[p.key] ?? ''} onChange={e => setExtraParams(prev => ({ ...prev, [p.key]: e.target.value }))} />
                           )}
                         </div>
                       ))}
@@ -408,7 +592,6 @@ export function DocumentsPage() {
                   </div>
                 )}
 
-                {/* Generate button */}
                 <div style={{ paddingTop: 4 }}>
                   <Button onClick={handleGenerer} loading={generating} disabled={!canGenerate}>
                     <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: 6 }}>
@@ -442,25 +625,39 @@ export function DocumentsPage() {
               <tbody>
                 {historique.map(item => (
                   <tr key={item.id} style={{ borderBottom: '1px solid var(--rule)' }}>
-                    <td style={{ padding: '10px 14px', fontWeight: 500, color: 'var(--ink)' }}>
-                      {LABELS[item.type] ?? item.type}
+                    <td style={{ padding: '10px 14px', fontWeight: 500, color: 'var(--ink)' }}>{LABELS[item.type] ?? item.type}</td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: 'var(--paper-2)', border: '1px solid var(--rule)' }}>{item.destinataire_type}</span>
                     </td>
-                    <td style={{ padding: '10px 14px', color: 'var(--ink-2)' }}>
-                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: 'var(--paper-2)', border: '1px solid var(--rule)' }}>
-                        {item.destinataire_type}
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px 14px', color: 'var(--ink-3)' }}>
-                      {item.utilisateur ? `${item.utilisateur.prenom} ${item.utilisateur.nom}` : '—'}
-                    </td>
-                    <td style={{ padding: '10px 14px', color: 'var(--ink-3)', fontSize: 12, whiteSpace: 'nowrap' }}>
-                      {fmtDate(item.genere_le)}
-                    </td>
+                    <td style={{ padding: '10px 14px', color: 'var(--ink-3)' }}>{item.utilisateur ? `${item.utilisateur.prenom} ${item.utilisateur.nom}` : '—'}</td>
+                    <td style={{ padding: '10px 14px', color: 'var(--ink-3)', fontSize: 12, whiteSpace: 'nowrap' }}>{fmtDate(item.genere_le)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
+        </div>
+      )}
+
+      {/* ── Onglet Modèles ── */}
+      {tab === 'modeles' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 20, alignItems: 'start' }}>
+          <TypeList selected={editType} onSelect={setEditType} templates={templates} activeColor />
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            {!editType ? (
+              <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--ink-3)' }}>
+                <svg width={48} height={48} viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.3, display: 'block', margin: '0 auto 12px' }}>
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                </svg>
+                <p style={{ fontSize: 14 }}>Sélectionnez un type pour éditer son modèle</p>
+                <p style={{ fontSize: 12, color: 'var(--ink-4)', maxWidth: 300, margin: '4px auto 0' }}>
+                  Les modèles utilisent des variables <code style={{ fontSize: 11 }}>{'{{VARIABLE}}'}</code> remplacées automatiquement à la génération.
+                </p>
+              </div>
+            ) : (
+              <TemplateEditor key={editType} type={editType} templates={templates} onSaved={loadTemplates} />
+            )}
+          </div>
         </div>
       )}
     </>
