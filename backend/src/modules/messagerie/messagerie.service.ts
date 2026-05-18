@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import prisma from '../../config/database';
 import { CreerConversationInput, AjouterMessageInput } from './messagerie.schema';
+import { creerNotification } from '../notifications/notifications.service';
 
 export async function listerConversations(etablissement_id: string, utilisateur_id: string) {
   const participations = await prisma.conversationParticipant.findMany({
@@ -171,6 +172,29 @@ export async function ajouterMessage(
       data: { derniere_lecture: new Date() },
     }),
   ]);
+
+  // Notifier tous les participants sauf l'expéditeur
+  const autresParticipants = await prisma.conversationParticipant.findMany({
+    where: { conversation_id, utilisateur_id: { not: expediteur_id } },
+    include: { conversation: { select: { sujet: true, etablissement_id: true } } },
+  });
+
+  const expediteur = message.expediteur;
+  const nomExpediteur = `${expediteur.prenom_fr ?? ''} ${expediteur.nom_fr}`.trim();
+
+  await Promise.all(
+    autresParticipants.map(p =>
+      creerNotification({
+        etablissement_id: p.conversation.etablissement_id,
+        destinataire_id: p.utilisateur_id,
+        type: 'nouveau_message',
+        titre: `Nouveau message de ${nomExpediteur}`,
+        message: data.corps.length > 80 ? data.corps.substring(0, 80) + '…' : data.corps,
+        entite_type: 'conversation',
+        entite_id: conversation_id,
+      })
+    )
+  );
 
   return message;
 }
