@@ -1,6 +1,8 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
+import { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
 
 const NAV_SECTIONS = [
   {
@@ -87,6 +89,22 @@ export function Sidebar() {
   const role = user?.role ?? '';
   const isAr = i18n.language === 'ar';
 
+  const [counts, setCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    Promise.allSettled([
+      api.get<{ total: number }>('/api/v1/eleves?limit=1'),
+      api.get<{ total: number }>('/api/v1/professeurs?limit=1'),
+      api.get<unknown[]>('/api/v1/classes'),
+    ]).then(([eleves, profs, classes]) => {
+      setCounts({
+        eleves: eleves.status === 'fulfilled' ? (eleves.value as { total: number }).total : 0,
+        professeurs: profs.status === 'fulfilled' ? (profs.value as { total: number }).total : 0,
+        classes: classes.status === 'fulfilled' ? (classes.value as unknown[]).length : 0,
+      });
+    });
+  }, []);
+
   return (
     <aside className="sidebar">
       {/* Brand */}
@@ -94,7 +112,7 @@ export function Sidebar() {
         <div className="sb-mark">Dg</div>
         <div>
           <div className="sb-name">Daara<span style={{ color: 'var(--terra)' }}>Gest</span></div>
-          <div className="sb-tag">Gestion scolaire</div>
+          <div className="sb-tag">{t('app.tagline')}</div>
         </div>
       </NavLink>
 
@@ -119,6 +137,9 @@ export function Sidebar() {
                         <NavIcon path={NAV_ICONS[item.key]} size={16} />
                       )}
                       <span className="sb-item-label">{t(`nav.${item.key}`)}</span>
+                      {counts[item.key] !== undefined && (
+                        <span className="badge-num">{counts[item.key]}</span>
+                      )}
                     </NavLink>
                   );
                 })}

@@ -94,7 +94,11 @@
     "salaire": "الراتب الأساسي",
     "date_embauche": "تاريخ التوظيف",
     "ajouter": "إضافة أستاذ",
-    "rechercher": "البحث بالاسم أو المعرّف..."
+    "rechercher": "البحث بالاسم أو المعرّف...",
+    "vue_cartes": "بطاقات",
+    "vue_liste": "قائمة",
+    "heures_semaine": "ساعات/أسبوع",
+    "classes_assignees": "الأقسام"
   },
   "classe": {
     "titre": "الأقسام",
@@ -150,6 +154,7 @@
   "finance": {
     "titre": "المالية",
     "paiements_eleves": "مدفوعات التلاميذ",
+    "reliquats": "المتأخرات",
     "paiements_profs": "مدفوعات الأساتذة",
     "montant": "المبلغ",
     "montant_brut": "المبلغ الإجمالي",
@@ -171,13 +176,38 @@
     "aucun_paiement": "لا توجد مدفوعات",
     "aucun_paiement_periode": "لا توجد مدفوعات لهذه الفترة",
     "recu_auto": "سيتم توليد رقم الوصل تلقائياً.",
-    "selectionner_eleve": "اختر تلميذاً..."
+    "selectionner_eleve": "اختر تلميذاً...",
+    "motif_retenue": "سبب الاستقطاع",
+    "totaux": "المجاميع",
+    "total_reliquats": "إجمالي المتأخرات",
+    "relancer": "مراسلة",
+    "encaisser": "تحصيل",
+    "methode": "طريقة الدفع",
+    "especes": "نقداً",
+    "wave": "Wave",
+    "orange_money": "Orange Money",
+    "virement": "تحويل بنكي",
+    "cheque": "شيك",
+    "notes_paiement": "ملاحظات (اختياري)"
   },
   "parametre": {
     "titre": "الإعدادات",
     "etablissement": "المؤسسة",
     "pedagogie": "التعليم",
     "mon_compte": "حسابي",
+    "bareme_mentions": "سلم التقديرات",
+    "tarifs": "التعريفات والأقساط",
+    "notifications_section": "الإشعارات",
+    "securite": "الأمان",
+    "frais_inscription": "رسوم التسجيل (FCFA)",
+    "frais_blouse": "رسوم البلوزة (FCFA)",
+    "frais_examen": "رسوم الامتحان (FCFA)",
+    "section_construction": "القسم قيد الإنشاء",
+    "tres_bien": "ممتاز",
+    "bien": "جيد جداً",
+    "assez_bien": "جيد",
+    "passable": "مقبول",
+    "insuffisant": "ضعيف",
     "etab_titre": "معلومات المؤسسة",
     "etab_desc": "تظهر هذه المعلومات على شهادات النتائج والوثائق الرسمية",
     "nom_etab": "اسم المؤسسة",
@@ -223,6 +253,18 @@
     "ajouter": "إضافة مستخدم",
     "desactiver": "تعطيل المستخدم"
   },
+  "tb": {
+    "search": "البحث عن تلاميذ، أقسام، مدفوعات…"
+  },
+  "cmd": {
+    "eleves_section": "التلاميذ",
+    "pages_section": "الصفحات والإجراءات",
+    "no_results": "لا توجد نتائج",
+    "action_label": "إجراء",
+    "new_eleve": "+ تلميذ جديد",
+    "new_paiement": "+ دفعة جديدة",
+    "generer_bulletins": "⚡ توليد الشهادات"
+  },
   "absences": {
     "titre": "غيابات التلاميذ",
     "present": "حاضر",
@@ -233,7 +275,10 @@
     "non_justifiee": "غير مبررة",
     "motif": "السبب",
     "progression": "التطور",
-    "taux_presence": "نسبة الحضور"
+    "taux_presence": "نسبة الحضور",
+    "tout_present": "تحديد الكل حاضر",
+    "stats_jour": "إحصائيات اليوم",
+    "eleves_en_alerte": "{{count}} تلميذ(ة) في حالة تنبيه"
   },
   "emploi_du_temps": {
     "titre": "جدول الحصص",
