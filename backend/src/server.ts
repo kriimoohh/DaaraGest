@@ -23,6 +23,9 @@ import { calendrierRoutes } from './modules/calendrier/calendrier.routes';
 import { notificationsRoutes } from './modules/notifications/notifications.routes';
 import { messagerieRoutes } from './modules/messagerie/messagerie.routes';
 import { portailParentRoutes } from './modules/portail-parent/portail-parent.routes';
+import { evaluationsRoutes } from './modules/evaluations/evaluations.routes';
+import { activitesRoutes } from './modules/activites/activites.routes';
+import { progressionRoutes } from './modules/progression/progression.routes';
 
 const jwtSecret = process.env.JWT_SECRET;
 if (!jwtSecret) {
@@ -106,6 +109,9 @@ async function build() {
       await api.register(notificationsRoutes, { prefix: '/notifications' });
       await api.register(messagerieRoutes, { prefix: '/messagerie' });
       await api.register(portailParentRoutes, { prefix: '/portail-parent' });
+      await api.register(evaluationsRoutes, { prefix: '/evaluations' });
+      await api.register(activitesRoutes,   { prefix: '/activites' });
+      await api.register(progressionRoutes, { prefix: '/progression' });
     },
     { prefix: '/api/v1' }
   );
