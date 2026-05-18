@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -50,6 +51,7 @@ function dateAujourdHui() { return new Date().toISOString().split('T')[0]; }
 // ── Saisie journalière ────────────────────────────────────────────────────────
 
 function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
+  const { t } = useTranslation();
   const [annees, setAnnees] = useState<AnneeScolaire[]>([]);
   const [classes, setClasses] = useState<Classe[]>([]);
   const [anneeId, setAnneeId] = useState('');
@@ -134,6 +136,16 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
   const nbSaisis = eleves.filter(e => saisie[e.eleve_id]?.statut).length;
   const nbAbsents = eleves.filter(e => saisie[e.eleve_id]?.statut === 'absent').length;
   const nbPresents = eleves.filter(e => saisie[e.eleve_id]?.statut === 'present').length;
+  const nbRetards = eleves.filter(e => saisie[e.eleve_id]?.statut === 'retard').length;
+  const nbDispenses = eleves.filter(e => saisie[e.eleve_id]?.statut === 'dispense').length;
+
+  const markAllPresent = () => {
+    const updated: typeof saisie = {};
+    for (const e of eleves) {
+      updated[e.eleve_id] = { ...saisie[e.eleve_id], statut: 'present', motif: '', justifiee: false, heure_arrivee: '' };
+    }
+    setSaisie(prev => ({ ...prev, ...updated }));
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -152,13 +164,30 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
         <Button onClick={handleSave} loading={saving} disabled={nbSaisis === 0}>
           Enregistrer ({nbSaisis})
         </Button>
-        {nbSaisis > 0 && (
-          <div className="row" style={{ marginInlineStart: 'auto', gap: 12 }}>
-            <span style={{ fontSize: 13, color: 'var(--success)', fontWeight: 500 }}>✓ {nbPresents} présents</span>
-            <span style={{ fontSize: 13, color: 'var(--danger)', fontWeight: 500 }}>✗ {nbAbsents} absents</span>
-          </div>
+        {eleves.length > 0 && (
+          <Button variant="secondary" onClick={markAllPresent}>{t('absences.tout_present')}</Button>
         )}
       </div>
+
+      {eleves.length > 0 && (
+        <div className="grid-4">
+          {([
+            ['Présents', nbPresents, 'success'],
+            ['Absents', nbAbsents, 'danger'],
+            ['Retards', nbRetards, 'warning'],
+            ['Dispensés', nbDispenses, 'info'],
+          ] as [string, number, string][]).map(([label, val, kind]) => (
+            <div key={label} className="card stat">
+              <div className="stat-label">
+                <span className="badge-dot" style={{ background: `var(--${kind})` }} /> {label}
+              </div>
+              <div className="stat-value font-display">
+                {val}<span className="unit">/ {eleves.length}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {eleves.length === 0 ? (
         <div className="card empty" style={{ flexDirection: 'column', gap: 8, padding: 48 }}>
@@ -207,8 +236,11 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
                       </td>
                       <td>
                         {needMotif && (
-                          <input type="checkbox" checked={s.justifiee}
-                            onChange={ev => setSaisie(prev => ({ ...prev, [e.eleve_id]: { ...prev[e.eleve_id], justifiee: ev.target.checked } }))} />
+                          <Badge
+                            label={s.justifiee ? t('absences.justifiee') : t('absences.non_justifiee')}
+                            variant={s.justifiee ? 'success' : 'error'}
+                            onClick={() => setSaisie(prev => ({ ...prev, [e.eleve_id]: { ...prev[e.eleve_id], justifiee: !prev[e.eleve_id]?.justifiee } }))}
+                          />
                         )}
                       </td>
                       <td style={{ width: 112 }}>
@@ -466,7 +498,7 @@ export function AbsencesPage() {
 
   return (
     <>
-      <PageHeader title="Absences des élèves" />
+      <PageHeader eyebrow="Suivi pédagogique" title="Absences des élèves" />
 
       <div className="tabs" style={{ marginBottom: 16 }}>
         {TABS.map(tb => (
