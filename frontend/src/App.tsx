@@ -21,6 +21,7 @@ import { EmploiDuTempsPage } from './pages/EmploiDuTemps';
 import { CalendrierPage } from './pages/Calendrier';
 import { MessageriePage } from './pages/Messagerie';
 import { ActivitesPage } from './pages/Activites';
+import { DocumentsPage } from './pages/Documents';
 import { PortailParentPage } from './pages/PortailParent';
 import './i18n';
 
@@ -70,6 +71,9 @@ export default function App() {
           } />
           <Route path="/activites" element={
             <ProtectedRoute roles={ROLES.academique}><ActivitesPage /></ProtectedRoute>
+          } />
+          <Route path="/documents" element={
+            <ProtectedRoute roles={['admin', 'directeur', 'gestionnaire']}><DocumentsPage /></ProtectedRoute>
           } />
           <Route path="/bulletins" element={
             <ProtectedRoute roles={ROLES.academique}><BulletinsPage /></ProtectedRoute>

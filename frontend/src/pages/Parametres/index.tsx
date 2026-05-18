@@ -21,6 +21,8 @@ interface Etablissement {
   adresse?: string;
   telephone?: string;
   logo_url?: string;
+  signature_url?: string;
+  cachet_url?: string;
   devise: string;
 }
 
@@ -235,6 +237,38 @@ function LogoUploader({ value, onChange }: { value: string | undefined; onChange
   );
 }
 
+function ImageFieldUploader({ label, value, onChange }: { label: string; value: string | undefined; onChange: (v: string | undefined) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const handleFile = (file: File) => {
+    if (!file.type.startsWith('image/')) { toast.error('Format invalide — image uniquement'); return; }
+    if (file.size > 512 * 1024) { toast.error('Fichier trop volumineux — maximum 512 Ko'); return; }
+    const reader = new FileReader();
+    reader.onload = e => onChange(e.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+  return (
+    <div>
+      <div className="field-label" style={{ marginBottom: 6 }}>{label}</div>
+      {value ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ width: '100%', minHeight: 64, borderRadius: 'var(--r-md)', border: '1px solid var(--rule)', background: 'var(--paper-2)', display: 'grid', placeItems: 'center', padding: 8 }}>
+            <img src={value} alt={label} style={{ maxWidth: '100%', maxHeight: 56, objectFit: 'contain' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button className="btn btn-secondary btn-sm" type="button" onClick={() => inputRef.current?.click()}>Changer</button>
+            <button className="btn btn-ghost btn-sm" type="button" onClick={() => onChange(undefined)}>Supprimer</button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" className="btn btn-secondary btn-sm" onClick={() => inputRef.current?.click()}>
+          Charger une image
+        </button>
+      )}
+      <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
+    </div>
+  );
+}
+
 export function ParametresPage() {
   const { t, i18n } = useTranslation();
   const api = useApi();
@@ -330,6 +364,8 @@ export function ParametresPage() {
         nom_fr: etab.nom_fr, adresse: etab.adresse,
         telephone: etab.telephone, devise: etab.devise,
         logo_url: etab.logo_url || undefined,
+        signature_url: etab.signature_url || undefined,
+        cachet_url: etab.cachet_url || undefined,
       });
       toast.success(t('parametre.sauvegarde_ok'));
     } catch (err) {
@@ -417,10 +453,22 @@ export function ParametresPage() {
           </div>
           <div className="card-pad">
             <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 24, alignItems: 'start' }}>
-              <LogoUploader
-                value={etab.logo_url ?? undefined}
-                onChange={v => setEtab(p => p ? { ...p, logo_url: v ?? '' } : p)}
-              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <LogoUploader
+                  value={etab.logo_url ?? undefined}
+                  onChange={v => setEtab(p => p ? { ...p, logo_url: v ?? '' } : p)}
+                />
+                <ImageFieldUploader
+                  label="Signature (directeur)"
+                  value={etab.signature_url ?? undefined}
+                  onChange={v => setEtab(p => p ? { ...p, signature_url: v ?? '' } : p)}
+                />
+                <ImageFieldUploader
+                  label="Cachet de l'établissement"
+                  value={etab.cachet_url ?? undefined}
+                  onChange={v => setEtab(p => p ? { ...p, cachet_url: v ?? '' } : p)}
+                />
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <Input
                   label={t('parametre.nom_etab')}
