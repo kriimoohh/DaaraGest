@@ -257,7 +257,7 @@ export function BulletinsPage() {
 
   return (
     <>
-      <PageHeader title={t('bulletin.titre')} />
+      <PageHeader eyebrow="Édition" title={t('bulletin.titre')} />
 
       {/* Filtres */}
       <div className="card-pad" style={{ marginBottom: 16 }}>
