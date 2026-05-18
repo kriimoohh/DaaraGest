@@ -1,13 +1,6 @@
-import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
-import { useAuth } from '../../hooks/useAuth';
-import { Input } from '../ui/Input';
-import { Button } from '../ui/Button';
-import { NotificationBell } from '../ui/NotificationBell';
-import { api } from '../../lib/api';
-import { toast } from '../../store/toastStore';
 
 const NAV_SECTIONS = [
   {
@@ -82,36 +75,9 @@ function NavIcon({ path, size = 16 }: { path: string; size?: number }) {
 export function Sidebar() {
   const { t, i18n } = useTranslation();
   const { user } = useAuthStore();
-  const { signOut } = useAuth();
   const location = useLocation();
   const role = user?.role ?? '';
   const isAr = i18n.language === 'ar';
-  const initials = (user?.nom_fr ?? '').slice(0, 2).toUpperCase();
-
-  const [profilOpen, setProfilOpen] = useState(false);
-  const [profilTab, setProfilTab] = useState<'info' | 'password'>('info');
-  const [ancienMdp, setAncienMdp] = useState('');
-  const [nouveauMdp, setNouveauMdp] = useState('');
-  const [confirmMdp, setConfirmMdp] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const handleChangePassword = async () => {
-    if (!ancienMdp || !nouveauMdp) { toast.error('Tous les champs sont requis'); return; }
-    if (nouveauMdp !== confirmMdp) { toast.error('Les mots de passe ne correspondent pas'); return; }
-    if (nouveauMdp.length < 8) { toast.error('Minimum 8 caractères'); return; }
-    setSaving(true);
-    try {
-      await api.put('/api/v1/auth/change-password', {
-        ancien_mot_de_passe: ancienMdp,
-        nouveau_mot_de_passe: nouveauMdp,
-      });
-      toast.success('Mot de passe modifié');
-      setAncienMdp(''); setNouveauMdp(''); setConfirmMdp('');
-      setProfilOpen(false);
-    } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
-    } finally { setSaving(false); }
-  };
 
   return (
     <aside className="sidebar">
@@ -154,82 +120,6 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Notifications */}
-      <div style={{ padding: '8px 12px', borderTop: '1px solid var(--rule)' }}>
-        <NotificationBell />
-      </div>
-
-      {/* User */}
-      <button className="sb-user" onClick={() => { setProfilOpen(true); setProfilTab('info'); }}>
-        <div className="sb-avatar">{initials || '?'}</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="sb-user-name">{user?.nom_fr ?? ''}</div>
-          <div className="sb-user-role">{role}</div>
-        </div>
-        <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--ink-4)', flexShrink: 0 }}>
-          <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
-        </svg>
-      </button>
-
-      {/* Profil modal */}
-      {profilOpen && (
-        <div className="modal-backdrop" onClick={() => setProfilOpen(false)}>
-          <div className="modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-hd">
-              <h2>Mon profil</h2>
-              <button className="tb-btn" onClick={() => setProfilOpen(false)}>
-                <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" /></svg>
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="tabs" style={{ marginBottom: 16 }}>
-                <button className={`tab${profilTab === 'info' ? ' active' : ''}`} onClick={() => setProfilTab('info')}>Informations</button>
-                <button className={`tab${profilTab === 'password' ? ' active' : ''}`} onClick={() => setProfilTab('password')}>Mot de passe</button>
-              </div>
-
-              {profilTab === 'info' && (
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 16px', background: 'var(--paper-2)', border: '1px solid var(--rule)', borderRadius: 'var(--r-lg)', marginBottom: 16 }}>
-                    <div className="avatar avatar-xl" style={{ background: 'var(--terra-soft)', color: 'var(--terra-ink)' }}>{initials || '?'}</div>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 16 }}>{user?.nom_fr}</div>
-                      <div style={{ fontSize: 13, color: 'var(--ink-3)', textTransform: 'capitalize', marginTop: 2 }}>{role}</div>
-                      {user?.identifiant && (
-                        <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--ink-3)', marginTop: 4 }}>@{user.identifiant}</div>
-                      )}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <button
-                      style={{ fontSize: 13, color: 'var(--terra-ink)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                      onClick={() => setProfilTab('password')}
-                    >
-                      Changer le mot de passe →
-                    </button>
-                    <button className="btn btn-danger btn-sm" onClick={() => { setProfilOpen(false); signOut(); }}>
-                      Déconnexion
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {profilTab === 'password' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <Input label="Mot de passe actuel" type="password" value={ancienMdp} onChange={e => setAncienMdp(e.target.value)} />
-                  <Input label="Nouveau mot de passe" type="password" value={nouveauMdp} onChange={e => setNouveauMdp(e.target.value)} placeholder="Minimum 8 caractères" />
-                  <Input label="Confirmer le nouveau mot de passe" type="password" value={confirmMdp} onChange={e => setConfirmMdp(e.target.value)} />
-                </div>
-              )}
-            </div>
-            {profilTab === 'password' && (
-              <div className="modal-foot">
-                <button className="btn btn-secondary" onClick={() => setProfilOpen(false)}>Annuler</button>
-                <Button onClick={handleChangePassword} loading={saving}>Modifier le mot de passe</Button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </aside>
   );
 }
