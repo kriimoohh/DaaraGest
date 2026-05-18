@@ -75,6 +75,7 @@ export function ProfesseursPage() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<'grid' | 'table'>('grid');
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Professeur | null>(null);
@@ -241,6 +242,7 @@ export function ProfesseursPage() {
   return (
     <>
       <PageHeader
+          eyebrow="Personnel enseignant"
           title="Professeurs"
           subtitle="Gestion du corps enseignant"
           action={
@@ -256,16 +258,57 @@ export function ProfesseursPage() {
           </div>
         )}
 
-        <div className="mb-4 max-w-sm">
+        <div className="filter-row">
           <SearchInput value={search} onChange={setSearch} placeholder="Rechercher par nom ou identifiant..." />
+          <div className="row" style={{ marginInlineStart: 'auto', background: 'var(--paper-2)', border: '1px solid var(--rule)', borderRadius: 6, padding: 2 }}>
+            <button className={`btn btn-sm ${view === 'grid' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => setView('grid')}>{t('professeur.vue_cartes')}</button>
+            <button className={`btn btn-sm ${view === 'table' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => setView('table')}>{t('professeur.vue_liste')}</button>
+          </div>
         </div>
 
-        <Table
-          columns={columns}
-          data={profs as unknown as Record<string, unknown>[]}
-          loading={loading}
-          emptyMessage="Aucun professeur trouvé"
-        />
+        {loading && <div className="empty">{t('common.chargement')}</div>}
+
+        {!loading && view === 'grid' && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
+            {profs.map(p => (
+              <div key={p.id} className="card card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div className="row gap-3">
+                  <div className="avatar avatar-lg" style={{ background: 'var(--indigo-soft)', color: 'var(--indigo-ink)', overflow: 'hidden' }}>
+                    {(p.professeur?.photo_url ?? p.photo_url)
+                      ? <img src={p.professeur?.photo_url ?? p.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                      : `${p.prenom_fr?.[0] ?? ''}${p.nom_fr?.[0] ?? ''}`}
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{p.prenom_fr} {p.nom_fr}</div>
+                    <div className="muted" style={{ fontSize: 12 }}>{p.specialite_fr}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => openEdit(p)}>{t('actions.modifier')}</button>
+                    {isAdmin && <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} onClick={() => setConfirmDelete(p)}>✕</button>}
+                  </div>
+                </div>
+                <div className="divider" style={{ margin: '4px 0' }} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12 }}>
+                  <div><div className="muted">Contrat</div><div style={{ fontWeight: 500 }}>{p.type_contrat}</div></div>
+                  <div>
+                    <div className="muted">Statut</div>
+                    <Badge label={p.statut === 'actif' ? t('common.actif') : t('common.inactif')} variant={p.statut === 'actif' ? 'success' : 'neutral'} />
+                  </div>
+                </div>
+              </div>
+            ))}
+            {profs.length === 0 && <div className="empty" style={{ gridColumn: '1/-1' }}>Aucun professeur trouvé</div>}
+          </div>
+        )}
+
+        {!loading && view === 'table' && (
+          <Table
+            columns={columns}
+            data={profs as unknown as Record<string, unknown>[]}
+            loading={false}
+            emptyMessage="Aucun professeur trouvé"
+          />
+        )}
 
         <Pagination page={page} total={total} limit={LIMIT} onChange={setPage} />
 
