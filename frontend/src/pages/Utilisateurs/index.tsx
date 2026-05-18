@@ -159,6 +159,7 @@ export function UtilisateursPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Administration"
         title="Utilisateurs"
         subtitle="Gérer les comptes utilisateurs"
         action={<Button onClick={openAdd}>+ Ajouter un utilisateur</Button>}

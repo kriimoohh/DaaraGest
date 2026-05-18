@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../../hooks/useTheme';
@@ -7,6 +7,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { NotificationBell } from '../ui/NotificationBell';
+import { CommandPalette } from '../CommandPalette';
 import { api } from '../../lib/api';
 import { toast } from '../../store/toastStore';
 
@@ -41,8 +42,20 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const initials = (user?.nom_fr ?? '').slice(0, 2).toUpperCase();
   const currentTitle = PAGE_TITLES[location.pathname] ?? 'DaaraGest';
 
+  const [cmdOpen, setCmdOpen] = useState(false);
   const [profilOpen, setProfilOpen] = useState(false);
   const [profilTab, setProfilTab] = useState<'info' | 'password'>('info');
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCmdOpen(true);
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
   const [ancienMdp, setAncienMdp] = useState('');
   const [nouveauMdp, setNouveauMdp] = useState('');
   const [confirmMdp, setConfirmMdp] = useState('');
@@ -90,6 +103,16 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           <span className="here">{currentTitle}</span>
         </div>
 
+        <button className="tb-search" onClick={() => setCmdOpen(true)}>
+          <svg width={13} height={13} viewBox="0 0 24 24" fill="currentColor">
+            <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+          </svg>
+          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {t('tb.search', 'Rechercher…')}
+          </span>
+          <kbd>⌘K</kbd>
+        </button>
+
         <div className="tb-spacer" />
 
         <button className="tb-pill" onClick={toggleLang} title="Langue">
@@ -126,6 +149,8 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           </span>
         </button>
       </header>
+
+      <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
 
       {/* Profil modal */}
       {profilOpen && (

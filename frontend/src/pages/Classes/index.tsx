@@ -687,6 +687,7 @@ export function ClassesPage() {
   return (
     <>
     <PageHeader
+        eyebrow="Pédagogie"
         title="Classes"
         subtitle="Gestion des classes et sections"
         action={
@@ -744,12 +745,63 @@ export function ClassesPage() {
         </div>
       </div>
 
-      <Table
-        columns={columns}
-        data={classes as unknown as Record<string, unknown>[]}
-        loading={loading}
-        emptyMessage="Aucune classe trouvée"
-      />
+      {loading ? (
+        <div className="empty">{t('common.chargement')}</div>
+      ) : classes.length === 0 ? (
+        <div className="empty">Aucune classe trouvée</div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
+          {classes.map(c => {
+            const effectif = (c as Classe & { effectif?: number }).effectif ?? 0;
+            const capacite = c.capacite ?? 1;
+            const ratio = capacite > 0 ? effectif / capacite : 0;
+            const ratioColor = ratio > 0.95 ? 'var(--danger)' : ratio > 0.85 ? 'var(--warning)' : 'var(--success)';
+            return (
+              <div key={c.id} className="card card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div className="row" style={{ justifyContent: 'space-between' }}>
+                  <Badge
+                    label={c.filiere === 'AR' ? t('classe.filiere_ar') : t('classe.filiere_fr')}
+                    variant={c.filiere === 'AR' ? 'warning' : 'info'}
+                    dot
+                  />
+                  <div className="row gap-2">
+                    <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)}>{t('actions.modifier')}</button>
+                    {isAdmin && <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger-text)' }} onClick={() => setConfirmDelete(c)}>✕</button>}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="font-display" style={{ fontSize: 28, letterSpacing: '-0.02em', lineHeight: 1 }}>{c.nom_fr}</div>
+                  <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                    Niveau {c.niveau?.libelle ?? '—'}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="row" style={{ justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
+                    <span className="muted">Effectif</span>
+                    <span className="font-mono">
+                      <strong>{effectif}</strong>
+                      <span className="muted"> / {capacite}</span>
+                    </span>
+                  </div>
+                  <div className="progress">
+                    <div
+                      className="progress-bar"
+                      style={{ width: `${Math.min(ratio * 100, 100)}%`, background: ratioColor }}
+                    />
+                  </div>
+                </div>
+
+                <div className="row gap-2">
+                  <button className="btn btn-secondary btn-sm grow" onClick={() => openListeEleves(c)}>Élèves</button>
+                  <button className="btn btn-secondary btn-sm grow" onClick={() => openProgramme(c)}>Programme</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <Pagination page={page} total={total} limit={LIMIT} onChange={setPage} />
 

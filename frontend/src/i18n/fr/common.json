@@ -94,7 +94,11 @@
     "salaire": "Salaire de base",
     "date_embauche": "Date d'embauche",
     "ajouter": "Ajouter un professeur",
-    "rechercher": "Rechercher par nom ou identifiant..."
+    "rechercher": "Rechercher par nom ou identifiant...",
+    "vue_cartes": "Cartes",
+    "vue_liste": "Liste",
+    "heures_semaine": "Heures/sem.",
+    "classes_assignees": "Classes"
   },
   "classe": {
     "titre": "Classes",
@@ -150,6 +154,7 @@
   "finance": {
     "titre": "Finances",
     "paiements_eleves": "Paiements élèves",
+    "reliquats": "Reliquats",
     "paiements_profs": "Paiements professeurs",
     "montant": "Montant",
     "montant_brut": "Montant brut (FCFA)",
@@ -171,13 +176,38 @@
     "aucun_paiement": "Aucun paiement trouvé",
     "aucun_paiement_periode": "Aucun paiement pour cette période",
     "recu_auto": "Le numéro de reçu sera généré automatiquement.",
-    "selectionner_eleve": "Sélectionner un élève..."
+    "selectionner_eleve": "Sélectionner un élève...",
+    "motif_retenue": "Motif de la retenue",
+    "totaux": "Totaux",
+    "total_reliquats": "Total reliquats",
+    "relancer": "Relancer",
+    "encaisser": "Encaisser",
+    "methode": "Méthode",
+    "especes": "Espèces",
+    "wave": "Wave",
+    "orange_money": "Orange Money",
+    "virement": "Virement",
+    "cheque": "Chèque",
+    "notes_paiement": "Notes (optionnel)"
   },
   "parametre": {
     "titre": "Paramètres",
     "etablissement": "Établissement",
     "pedagogie": "Pédagogie",
     "mon_compte": "Mon compte",
+    "bareme_mentions": "Barème des mentions",
+    "tarifs": "Tarifs & mensualités",
+    "notifications_section": "Notifications",
+    "securite": "Sécurité",
+    "frais_inscription": "Frais d'inscription (FCFA)",
+    "frais_blouse": "Frais blouse (FCFA)",
+    "frais_examen": "Frais examen (FCFA)",
+    "section_construction": "Section en cours de construction",
+    "tres_bien": "Très bien",
+    "bien": "Bien",
+    "assez_bien": "Assez bien",
+    "passable": "Passable",
+    "insuffisant": "Insuffisant",
     "etab_titre": "Informations de l'établissement",
     "etab_desc": "Ces informations apparaissent sur les bulletins et documents officiels",
     "nom_etab": "Nom de l'établissement",
@@ -223,6 +253,18 @@
     "ajouter": "Ajouter un utilisateur",
     "desactiver": "Désactiver l'utilisateur"
   },
+  "tb": {
+    "search": "Rechercher élèves, classes, paiements…"
+  },
+  "cmd": {
+    "eleves_section": "Élèves",
+    "pages_section": "Pages & actions",
+    "no_results": "Aucun résultat",
+    "action_label": "action",
+    "new_eleve": "+ Nouvel élève",
+    "new_paiement": "+ Nouveau paiement",
+    "generer_bulletins": "⚡ Générer les bulletins"
+  },
   "absences": {
     "titre": "Absences des élèves",
     "present": "Présent",
@@ -233,7 +275,10 @@
     "non_justifiee": "Non justifiée",
     "motif": "Motif",
     "progression": "Progression",
-    "taux_presence": "Taux de présence"
+    "taux_presence": "Taux de présence",
+    "tout_present": "Tout marquer présent",
+    "stats_jour": "Statistiques du jour",
+    "eleves_en_alerte": "{{count}} élève(s) en alerte"
   },
   "emploi_du_temps": {
     "titre": "Emploi du temps",
