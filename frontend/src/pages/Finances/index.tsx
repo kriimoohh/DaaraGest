@@ -30,6 +30,7 @@ interface Reliquat {
   nb_mois_dus: number;
   mois_manquants: { mois: number; annee: number }[];
   montant_du: number;
+  parent_telephone?: string;
 }
 
 interface ProfesseurSimple {
@@ -40,6 +41,7 @@ interface ProfesseurSimple {
 interface PaiementProf {
   id: string; mois: number; annee: number; montant_brut: number;
   retenues: number; net_a_payer: number; statut: string; created_at: string;
+  motif_retenue?: string | null;
   professeur: { utilisateur: { nom_fr: string; }; };
 }
 
@@ -54,9 +56,8 @@ const FILTER_TYPES = [
 ];
 const FILTER_STATUTS = [
   { value: '', label: 'Tous statuts' },
-  { value: 'paye', label: 'Payés', activeClass: 'bg-emerald-500 text-white' },
-  { value: 'impaye', label: 'Non payés', activeClass: 'bg-amber-500 text-white' },
-  { value: 'reliquat', label: 'Manquants', activeClass: 'bg-red-500 text-white', icon: '🔴' },
+  { value: 'paye', label: 'Payés' },
+  { value: 'impaye', label: 'Non payés' },
 ];
 
 // ─── EleveSearchPicker ────────────────────────────────────────────────────────
@@ -176,7 +177,7 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     professeur_id: '', mois: String(now.getMonth() + 1), annee: String(now.getFullYear()),
-    montant_brut: '', retenues: '0', net_a_payer: '',
+    montant_brut: '', retenues: '0', net_a_payer: '', motif_retenue: '',
   });
 
   useEffect(() => {
@@ -245,7 +246,10 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
                   <td style={{ fontWeight: 500, color: 'var(--ink)' }}>{p.professeur.utilisateur.nom_fr}</td>
                   <td style={{ color: 'var(--ink-3)' }}>{MOIS[p.mois-1]} {p.annee}</td>
                   <td style={{ color: 'var(--ink-2)' }}>{formatMontant(Number(p.montant_brut))}</td>
-                  <td style={{ color: 'var(--danger)', fontSize: 12 }}>-{formatMontant(Number(p.retenues))}</td>
+                  <td>
+                    <div style={{ color: 'var(--danger-text)', fontSize: 12 }}>-{formatMontant(Number(p.retenues))}</div>
+                    {p.motif_retenue && <div style={{ fontSize: 10.5, color: 'var(--ink-3)', marginTop: 2 }}>{p.motif_retenue}</div>}
+                  </td>
                   <td style={{ fontWeight: 600, color: 'var(--ink)' }}>{formatMontant(Number(p.net_a_payer))}</td>
                   <td>
                     <Badge label={p.statut === 'paye' ? t('finance.paye') : t('finance.impaye')} variant={p.statut === 'paye' ? 'success' : 'warning'} />
@@ -253,6 +257,15 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr style={{ background: 'var(--paper-2)' }}>
+                <td colSpan={2} style={{ padding: '10px 14px', fontWeight: 600, fontSize: 12, color: 'var(--ink-2)' }}>{t('finance.totaux')}</td>
+                <td style={{ padding: '10px 14px', fontWeight: 700 }}>{formatMontant(paiements.reduce((s, p) => s + Number(p.montant_brut), 0))}</td>
+                <td style={{ padding: '10px 14px', fontWeight: 700, color: 'var(--danger-text)' }}>-{formatMontant(paiements.reduce((s, p) => s + Number(p.retenues), 0))}</td>
+                <td style={{ padding: '10px 14px', fontWeight: 700, color: 'var(--success-text)' }}>{formatMontant(paiements.reduce((s, p) => s + Number(p.net_a_payer), 0))}</td>
+                <td />
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
@@ -284,6 +297,11 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
             <Input label={t('finance.net_a_payer')} type="number" value={form.net_a_payer}
               onChange={(e) => setForm(f => ({ ...f, net_a_payer: e.target.value }))} />
           </div>
+          {parseFloat(form.retenues) > 0 && (
+            <Input label={t('finance.motif_retenue')} value={form.motif_retenue}
+              onChange={(e) => setForm(f => ({ ...f, motif_retenue: e.target.value }))}
+              placeholder="Ex: Absence non justifiée, avance récupérée…" />
+          )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
             <Button variant="secondary" onClick={() => setModal(false)}>{t('actions.annuler')}</Button>
             <Button onClick={handleSave} loading={saving}>{t('actions.enregistrer')}</Button>
@@ -302,7 +320,7 @@ export function FinancesPage() {
   const isAdmin = useAuthStore(s => s.user?.role === 'admin');
   const now = new Date();
 
-  const [tab, setTab] = useState<'eleves' | 'profs'>('eleves');
+  const [tab, setTab] = useState<'eleves' | 'reliquats' | 'profs'>('eleves');
   const [stats, setStats] = useState<Stats | null>(null);
   const [paiements, setPaiements] = useState<PaiementEleve[]>([]);
   const [reliquats, setReliquats] = useState<Reliquat[]>([]);
@@ -323,6 +341,7 @@ export function FinancesPage() {
   const [form, setForm] = useState({
     type: 'mensualite', montant: '',
     mois: String(now.getMonth() + 1), annee: String(now.getFullYear()),
+    methode: 'especes', notes: '',
   });
 
   // Modal édition (admin)
@@ -335,7 +354,6 @@ export function FinancesPage() {
   const [deleting, setDeleting] = useState(false);
 
   const formatMontant = (v: number) => new Intl.NumberFormat('fr-FR').format(v) + ' FCFA';
-  const isReliquat = filterStatut === 'reliquat';
 
   const TYPE_LABELS: Record<string, string> = {
     mensualite: t('finance.mensualite'),
@@ -357,12 +375,12 @@ export function FinancesPage() {
   const charger = async () => {
     setLoading(true);
     try {
-      if (isReliquat) {
+      if (tab === 'reliquats') {
         const params = new URLSearchParams();
         if (mois) params.set('mois', mois);
         if (annee) params.set('annee', annee);
         const data = await api.get<Reliquat[]>(`/api/v1/finances/reliquats?${params}`);
-        setReliquats(data);
+        setReliquats(data ?? []);
       } else {
         const params = new URLSearchParams({ page: String(page), limit: '20' });
         if (search) params.set('search', search);
@@ -379,12 +397,12 @@ export function FinancesPage() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { if (tab === 'eleves') charger(); }, [page, search, filterType, filterStatut, mois, annee, tab]);
+  useEffect(() => { if (tab === 'eleves' || tab === 'reliquats') charger(); }, [page, search, filterType, filterStatut, mois, annee, tab]);
   useEffect(() => { setPage(1); }, [search, filterType, filterStatut, mois, annee]);
 
   function openModal() {
     setSelectedEleves([]);
-    setForm({ type: 'mensualite', montant: '', mois: String(now.getMonth() + 1), annee: String(now.getFullYear()) });
+    setForm({ type: 'mensualite', montant: '', mois: String(now.getMonth() + 1), annee: String(now.getFullYear()), methode: 'especes', notes: '' });
     setModal(true);
   }
 
@@ -401,6 +419,8 @@ export function FinancesPage() {
         montant: parseFloat(form.montant),
         mois: parseInt(form.mois),
         annee: parseInt(form.annee),
+        methode: form.methode || undefined,
+        notes: form.notes || undefined,
       };
       const res = await api.post<{ count: number }>('/api/v1/finances/paiements-eleves/bulk', payload);
       toast.success(`${res.count} paiement(s) enregistré(s)`);
@@ -459,7 +479,7 @@ export function FinancesPage() {
 
   return (
     <>
-      <PageHeader title={t('finance.titre')} />
+      <PageHeader eyebrow="Comptabilité" title={t('finance.titre')} />
 
       {/* Stats */}
       {stats && (
@@ -482,12 +502,107 @@ export function FinancesPage() {
 
       {/* Tabs */}
       <div className="tabs">
-        {(['eleves', 'profs'] as const).map(t2 => (
-          <button key={t2} onClick={() => setTab(t2)} className={`tab${tab === t2 ? ' active' : ''}`}>
-            {t2 === 'eleves' ? t('finance.paiements_eleves') : t('finance.paiements_profs')}
-          </button>
-        ))}
+        <button onClick={() => setTab('eleves')} className={`tab${tab === 'eleves' ? ' active' : ''}`}>
+          {t('finance.paiements_eleves')}
+        </button>
+        <button onClick={() => setTab('reliquats')} className={`tab${tab === 'reliquats' ? ' active' : ''}`}>
+          {t('finance.reliquats')} {reliquats.length > 0 && <span className="count">{reliquats.length}</span>}
+        </button>
+        <button onClick={() => setTab('profs')} className={`tab${tab === 'profs' ? ' active' : ''}`}>
+          {t('finance.paiements_profs')}
+        </button>
       </div>
+
+      {tab === 'reliquats' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="filter-row">
+            <Select value={mois} onChange={e => setMois(e.target.value)}
+              options={[{ value: '', label: 'Toute l\'année' }, ...MOIS.map((m, i) => ({ value: String(i+1), label: m }))]} />
+            <Input label="" type="number" value={annee} onChange={e => setAnnee(e.target.value)} />
+            <Button variant="secondary" onClick={charger} loading={loading}>Actualiser</Button>
+          </div>
+          {loading ? <div className="empty">Chargement...</div> :
+          reliquats.length === 0 ? (
+            <div className="card empty" style={{ flexDirection: 'column', gap: 8, padding: 32 }}>
+              <span style={{ fontSize: 28 }}>✅</span>
+              <p>Aucun reliquat — tous les élèves sont à jour</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ background: 'var(--danger-soft)', border: '1px solid var(--danger-border)', borderRadius: 'var(--r-lg)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: 24 }}>🔴</span>
+                <div>
+                  <p style={{ fontWeight: 600, color: 'var(--danger-text)' }}>
+                    {reliquats.length} élève(s) en retard de paiement
+                  </p>
+                  <p style={{ fontSize: 13, color: 'var(--danger-text)' }}>
+                    Montant total dû : {formatMontant(reliquats.reduce((s, r) => s + r.montant_du, 0))}
+                  </p>
+                </div>
+              </div>
+              <div className="card tbl-wrap">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      {['Élève', 'Matricule', 'Mois dus', 'Mois manquants', 'Montant dû', 'Actions'].map(h => (
+                        <th key={h}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reliquats.map(r => (
+                      <tr key={r.eleve.id}>
+                        <td>{r.eleve.prenom_fr} {r.eleve.nom_fr}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{r.eleve.matricule}</td>
+                        <td><Badge label={String(r.nb_mois_dus)} variant="error" /></td>
+                        <td style={{ fontSize: 12 }}>
+                          {r.mois_manquants.map(m => `${MOIS[m.mois-1]} ${m.annee}`).join(', ')}
+                        </td>
+                        <td style={{ fontWeight: 600, color: 'var(--danger-text)' }}>{formatMontant(r.montant_du)}</td>
+                        <td>
+                          <div className="row gap-2">
+                            <Button size="sm" variant="secondary" onClick={() => {
+                              const tel = (r as Reliquat & { parent_telephone?: string }).parent_telephone;
+                              if (tel) { window.open('tel:' + tel); }
+                              else { toast.info('Aucun téléphone parent enregistré'); }
+                            }}>
+                              {t('finance.relancer')}
+                            </Button>
+                            <Button size="sm" onClick={() => {
+                              setSelectedEleves([r.eleve]);
+                              const premierMois = r.mois_manquants[0];
+                              setForm(f => ({
+                                ...f,
+                                mois: premierMois ? String(premierMois.mois) : f.mois,
+                                annee: premierMois ? String(premierMois.annee) : f.annee,
+                                type: 'mensualite',
+                              }));
+                              setModal(true);
+                            }}>
+                              {t('finance.encaisser')}
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ background: 'var(--paper-2)' }}>
+                      <td colSpan={4} style={{ textAlign: 'end', fontWeight: 600, fontSize: 13, color: 'var(--ink-2)', padding: '10px 14px' }}>
+                        {t('finance.total_reliquats')}
+                      </td>
+                      <td style={{ fontWeight: 700, color: 'var(--danger-text)', fontSize: 14, padding: '10px 14px' }}>
+                        {formatMontant(reliquats.reduce((s, r) => s + r.montant_du, 0))}
+                      </td>
+                      <td />
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {tab === 'eleves' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -498,21 +613,19 @@ export function FinancesPage() {
             <Button onClick={openModal}>+ Paiement</Button>
           </div>
 
-          {!isReliquat && (
-            <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
-              <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>Type :</span>
-              {FILTER_TYPES.map(f => (
-                <button key={f.value} onClick={() => setFilterType(f.value)}
-                  style={{
-                    padding: '4px 12px', borderRadius: 99, fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer',
-                    background: filterType === f.value ? 'var(--ink)' : 'var(--paper-3)',
-                    color: filterType === f.value ? 'var(--paper)' : 'var(--ink-3)',
-                  }}>
-                  {f.label}
-                </button>
-              ))}
-            </div>
-          )}
+          <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
+            <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>Type :</span>
+            {FILTER_TYPES.map(f => (
+              <button key={f.value} onClick={() => setFilterType(f.value)}
+                style={{
+                  padding: '4px 12px', borderRadius: 99, fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer',
+                  background: filterType === f.value ? 'var(--ink)' : 'var(--paper-3)',
+                  color: filterType === f.value ? 'var(--paper)' : 'var(--ink-3)',
+                }}>
+                {f.label}
+              </button>
+            ))}
+          </div>
 
           <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
             <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>Statut :</span>
@@ -523,7 +636,7 @@ export function FinancesPage() {
                   background: filterStatut === f.value ? 'var(--ink)' : 'var(--paper-3)',
                   color: filterStatut === f.value ? 'var(--paper)' : 'var(--ink-3)',
                 }}>
-                {f.icon && `${f.icon} `}{f.label}
+                {f.label}
               </button>
             ))}
           </div>
@@ -531,101 +644,48 @@ export function FinancesPage() {
           <div className="row" style={{ gap: 12 }}>
             <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>Période :</span>
             <Select value={mois} onChange={e => setMois(e.target.value)}
-              options={[{ value: '', label: isReliquat ? 'Toute l\'année' : 'Tous les mois' }, ...MOIS.map((m, i) => ({ value: String(i+1), label: m }))]} />
+              options={[{ value: '', label: 'Tous les mois' }, ...MOIS.map((m, i) => ({ value: String(i+1), label: m }))]} />
             <Input label="" type="number" value={annee} onChange={e => setAnnee(e.target.value)} />
           </div>
 
-          {isReliquat ? (
-            loading ? <div className="empty">Chargement...</div> :
-            reliquats.length === 0 ? (
-              <div className="card empty" style={{ flexDirection: 'column', gap: 8, padding: 32 }}>
-                <span style={{ fontSize: 28 }}>✅</span>
-                <p>Aucun reliquat — tous les élèves sont à jour</p>
+          <div className="card">
+            {loading ? <div className="empty">Chargement...</div> :
+            paiements.length === 0 ? <div className="empty">Aucun paiement trouvé</div> : (
+              <div className="tbl-wrap">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      {['Élève', 'Matricule', 'Type', 'Montant', 'Période', 'N° Reçu', 'Statut', ...(isAdmin ? ['Actions'] : [])].map(h => (
+                        <th key={h}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paiements.map(p => (
+                      <tr key={p.id}>
+                        <td>{p.eleve.prenom_fr} {p.eleve.nom_fr}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{p.eleve.matricule}</td>
+                        <td><Badge label={TYPE_LABELS[p.type] ?? p.type} variant="info" /></td>
+                        <td style={{ fontWeight: 600 }}>{formatMontant(p.montant)}</td>
+                        <td>{p.mois ? `${MOIS[p.mois-1]} ${p.annee}` : '—'}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{p.recu_numero ?? '—'}</td>
+                        <td><Badge label={STATUT_LABELS[p.statut] ?? p.statut} variant={p.statut === 'paye' ? 'success' : 'warning'} /></td>
+                        {isAdmin && (
+                          <td>
+                            <div className="row" style={{ gap: 4 }}>
+                              <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>Modifier</Button>
+                              <Button size="sm" variant="danger" onClick={() => setDeleteTarget(p)}>Supprimer</Button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ background: 'var(--danger-soft)', border: '1px solid var(--danger-border)', borderRadius: 'var(--r-lg)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ fontSize: 24 }}>🔴</span>
-                  <div>
-                    <p style={{ fontWeight: 600, color: 'var(--danger)' }}>
-                      {reliquats.length} élève(s) sans paiement
-                      {mois ? ` pour ${MOIS[parseInt(mois)-1]} ${annee}` : ' (toute l\'année scolaire)'}
-                    </p>
-                    <p style={{ fontSize: 13, color: 'var(--danger)' }}>
-                      Montant total dû : {formatMontant(reliquats.reduce((s, r) => s + r.montant_du, 0))}
-                    </p>
-                  </div>
-                </div>
-                <div className="card">
-                  <div className="tbl-wrap">
-                    <table className="tbl">
-                      <thead>
-                        <tr>
-                          {['Élève', 'Matricule', 'Mois dus', 'Mois manquants', 'Montant dû'].map(h => (
-                            <th key={h}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reliquats.map(r => (
-                          <tr key={r.eleve.id}>
-                            <td>{r.eleve.prenom_fr} {r.eleve.nom_fr}</td>
-                            <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{r.eleve.matricule}</td>
-                            <td><Badge label={String(r.nb_mois_dus)} variant="error" /></td>
-                            <td style={{ fontSize: 12 }}>
-                              {r.mois_manquants.map(m => `${MOIS[m.mois-1]} ${m.annee}`).join(', ')}
-                            </td>
-                            <td style={{ fontWeight: 600, color: 'var(--danger)' }}>{formatMontant(r.montant_du)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )
-          ) : (
-            <>
-              <div className="card">
-                {loading ? <div className="empty">Chargement...</div> :
-                paiements.length === 0 ? <div className="empty">Aucun paiement trouvé</div> : (
-                  <div className="tbl-wrap">
-                    <table className="tbl">
-                      <thead>
-                        <tr>
-                          {['Élève', 'Matricule', 'Type', 'Montant', 'Période', 'N° Reçu', 'Statut', ...(isAdmin ? ['Actions'] : [])].map(h => (
-                            <th key={h}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {paiements.map(p => (
-                          <tr key={p.id}>
-                            <td>{p.eleve.prenom_fr} {p.eleve.nom_fr}</td>
-                            <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{p.eleve.matricule}</td>
-                            <td><Badge label={TYPE_LABELS[p.type] ?? p.type} variant="info" /></td>
-                            <td style={{ fontWeight: 600 }}>{formatMontant(p.montant)}</td>
-                            <td>{p.mois ? `${MOIS[p.mois-1]} ${p.annee}` : '—'}</td>
-                            <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{p.recu_numero ?? '—'}</td>
-                            <td><Badge label={STATUT_LABELS[p.statut] ?? p.statut} variant={p.statut === 'paye' ? 'success' : 'warning'} /></td>
-                            {isAdmin && (
-                              <td>
-                                <div className="row" style={{ gap: 4 }}>
-                                  <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>Modifier</Button>
-                                  <Button size="sm" variant="danger" onClick={() => setDeleteTarget(p)}>Supprimer</Button>
-                                </div>
-                              </td>
-                            )}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-              <Pagination page={page} total={total} limit={20} onChange={setPage} />
-            </>
-          )}
+            )}
+          </div>
+          <Pagination page={page} total={total} limit={20} onChange={setPage} />
         </div>
       )}
 
@@ -650,6 +710,25 @@ export function FinancesPage() {
               options={MOIS.map((m, i) => ({ value: String(i+1), label: m }))} />
             <Input label={t('common.annee')} type="number" value={form.annee}
               onChange={e => setForm(f => ({ ...f, annee: e.target.value }))} />
+          </div>
+          <Select label={t('finance.methode')} value={form.methode} onChange={e => setForm(f => ({ ...f, methode: e.target.value }))}
+            options={[
+              { value: 'especes', label: t('finance.especes') },
+              { value: 'wave', label: t('finance.wave') },
+              { value: 'orange_money', label: t('finance.orange_money') },
+              { value: 'virement', label: t('finance.virement') },
+              { value: 'cheque', label: t('finance.cheque') },
+            ]} />
+          <div>
+            <label style={{ fontSize: 12, color: 'var(--ink-3)', display: 'block', marginBottom: 4 }}>{t('finance.notes_paiement')}</label>
+            <textarea
+              value={form.notes}
+              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+              placeholder="Remarques, référence chèque…"
+              rows={2}
+              className="input"
+              style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit' }}
+            />
           </div>
           <p className="muted" style={{ fontSize: 12, fontStyle: 'italic' }}>{t('finance.recu_auto')}</p>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
