@@ -179,15 +179,41 @@ Les jours actifs de la semaine sont configurables par établissement dans **Para
 
 ## Identité graphique
 
-| Rôle | Couleur | Hex |
-|------|---------|-----|
-| Primaire | Émeraude | `#10B981` |
-| Secondaire | Teal | `#14B8A6` |
-| Accent | Or Sénégal | `#F59E0B` |
-| Fond dark | Nuit | `#0F172A` |
-| Surface dark | Ardoise | `#1E293B` |
+Identité enracinée dans la culture du daara sénégalais : papier chaud,
+encre brune profonde, accent latérite (terracotta).
 
-Polices : **Big Shoulders Display** (titres, 800–900) · **Instrument Sans** (corps, 400–700) · **Noto Naskh Arabic** (arabe)
+### Palette
+
+| Rôle             | Token CSS        | Hex       |
+|------------------|------------------|-----------|
+| Fond papier      | `--paper`        | `#FAF6EE` |
+| Surface élevée   | `--card`         | `#FFFFFF` |
+| Encre principale | `--ink`          | `#1B1812` |
+| Encre secondaire | `--ink-2`        | `#4A4337` |
+| Accent primaire  | `--terra`        | `#B85433` |
+| Accent hover     | `--terra-deep`   | `#8C3E25` |
+| Mention/honneur  | `--sahel`        | `#C8932B` |
+| Cachet officiel  | `--indigo`       | `#2D3A6E` |
+
+Dark mode : fond `#1B1812`, surface `#231F18`, encre `#F1ECE0`, accent
+`#E8825F`.
+
+### Typographie
+
+| Famille                | Usage                                   |
+|------------------------|-----------------------------------------|
+| **Fraunces** 500–700   | Titres, chiffres clés (KPI), display    |
+| **Instrument Sans** 400–700 | Interface, paragraphes, formulaires |
+| **JetBrains Mono** 400–500  | Matricules, n° reçus, dates ISO     |
+| **Noto Naskh Arabic** 400–700 | Contenus arabe (RTL)              |
+
+### Logo
+
+- **Monogramme** : disque terracotta `#B85433` + lettres « Dg » en
+  Fraunces 700 blanc (`<LogoIcon />`) — usages : favicon, sidebar, avatars.
+- **Mark complet** : planchette `lawh` (forme arquée + trois lignes
+  d'écriture + monogramme « Dg ») (`<LogoMark />`) — usages : page de
+  connexion, en-tête bulletin PDF, page 404, splash mobile.
 
 ---
 
