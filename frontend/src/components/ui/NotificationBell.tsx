@@ -198,15 +198,15 @@ export function NotificationBell() {
           ref={dropdownRef}
           style={{
             position: 'absolute',
-            bottom: '100%',
-            left: 0,
+            top: '100%',
+            right: 0,
             width: 320,
             background: 'var(--paper)',
             border: '1px solid var(--rule)',
             borderRadius: 10,
             boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
             zIndex: 100,
-            marginBottom: 8,
+            marginTop: 8,
             overflow: 'hidden',
           }}
         >
