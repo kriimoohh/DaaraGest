@@ -103,7 +103,7 @@ body { font-family:Arial,sans-serif;font-size:11.5px;color:#111;padding:18px 28p
 .school-name { font-size:15px;font-weight:bold;color:#0F172A;text-transform:uppercase;letter-spacing:.3px }
 .school-name-ar { font-size:13px;color:#374151;direction:rtl;margin-top:2px }
 .header-date { font-size:11px;color:#374151;white-space:nowrap;padding-top:2px }
-.divider { border:none;border-top:2.5px solid #10B981;margin:8px 0 12px }
+.divider { border:none;border-top:2.5px solid #B85433;margin:8px 0 12px }
 
 /* ── Titre principal ── */
 .doc-title-wrap { border:2px solid #0F172A;border-radius:4px;margin-bottom:12px;overflow:hidden }
@@ -173,12 +173,29 @@ tr:nth-child(even) { background:#f9fafb }
 
 // ─── Header commun ─────────────────────────────────────────────────────────
 
+const LOGO_MARK_SVG = `<svg width="56" height="64" viewBox="0 0 56 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
+  <rect x="20" y="0" width="16" height="8" rx="4" fill="#B85433"/>
+  <rect x="4" y="6" width="48" height="52" rx="6" fill="#B85433"/>
+  <rect x="18" y="6" width="20" height="6" rx="2" fill="#FAF6EE" opacity="0.25"/>
+  <g stroke="#FAF6EE" stroke-width="2.5" stroke-linecap="round" opacity="0.6">
+    <line x1="14" y1="28" x2="42" y2="28"/>
+    <line x1="14" y1="36" x2="42" y2="36"/>
+    <line x1="14" y1="44" x2="34" y2="44"/>
+  </g>
+  <text x="28" y="22" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="13" fill="#FAF6EE">Dg</text>
+</svg>`;
+
 function headerHtml(data: BulletinBaseData): string {
   const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
   return `
   <div class="header">
     <div class="school-block">
-      <div class="school-name">${escapeHtml(data.etablissement_nom_fr)}</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        ${LOGO_MARK_SVG}
+        <div>
+          <div class="school-name">${escapeHtml(data.etablissement_nom_fr)}</div>
+        </div>
+      </div>
     </div>
     <div class="header-date">le ${today}</div>
   </div>
