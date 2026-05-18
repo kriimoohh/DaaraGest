@@ -85,12 +85,6 @@ export function Dashboard() {
             {new Date().toLocaleDateString(isAr ? 'ar-SN' : 'fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
-        <div className="page-actions">
-          <button className="btn btn-secondary">
-            <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" /></svg>
-            {t('common.export', 'Exporter')}
-          </button>
-        </div>
       </div>
 
       {/* Stat cards */}
