@@ -7,6 +7,16 @@ import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
 import { useAuthStore } from '../../store/authStore';
 
+function appreciation(valeur: number, max: number): { label: string; color: string } {
+  const pct = valeur / max;
+  if (pct >= 0.9) return { label: 'Excellent', color: 'var(--success-text)' };
+  if (pct >= 0.8) return { label: 'Très bien', color: 'var(--success-text)' };
+  if (pct >= 0.7) return { label: 'Bien', color: 'var(--success-text)' };
+  if (pct >= 0.6) return { label: 'Assez bien', color: 'var(--ink-2)' };
+  if (pct >= 0.5) return { label: 'Passable', color: 'var(--warning-text)' };
+  return { label: 'Insuffisant', color: 'var(--danger-text)' };
+}
+
 interface AnneeScolaire { id: string; libelle: string; active: boolean; }
 interface Classe { id: string; nom_fr: string; filiere: string; }
 interface Matiere { id: string; nom_fr: string; nom_ar: string; filiere: string; note_max: number; note_min: number; }
@@ -117,10 +127,10 @@ export function NotesPage() {
 
   return (
     <>
-      <PageHeader title={t('note.saisie')} />
+      <PageHeader eyebrow="Saisie en masse" title={t('note.saisie')} />
 
       <div className="card-pad" style={{ marginBottom: 16 }}>
-        <div className="grid-4">
+        <div className="grid-3" style={{ marginBottom: 12 }}>
           <Select
             label={t('classe.annee_scolaire')}
             value={anneeId}
@@ -141,17 +151,30 @@ export function NotesPage() {
             options={[{ value: '', label: t('common.selectionner') }, ...matieres.map((m) => ({ value: m.id, label: m.nom_fr }))]}
             disabled={!classeId}
           />
-          <Select
-            label={t('note.periode')}
-            value={periode}
-            onChange={(e) => setPeriode(e.target.value)}
-            options={periodeOptions}
-          />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>{t('note.periode')} :</span>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {periodeOptions.map(p => (
+              <button
+                key={p.value}
+                onClick={() => setPeriode(p.value)}
+                style={{
+                  padding: '4px 16px', borderRadius: 99, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer',
+                  background: periode === p.value ? 'var(--terra)' : 'var(--paper-3)',
+                  color: periode === p.value ? '#fff' : 'var(--ink-3)',
+                  transition: 'background 0.15s',
+                }}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {classeId && programmeSansMatiere && (
-        <div style={{ padding: '12px 16px', background: 'var(--warning-soft)', border: '1px solid var(--warning-border)', borderRadius: 'var(--r-lg)', fontSize: 13, color: 'var(--warning)', marginBottom: 16 }}>
+        <div style={{ padding: '12px 16px', background: 'var(--warning-soft)', border: '1px solid var(--warning-border)', borderRadius: 'var(--r-lg)', fontSize: 13, color: 'var(--warning-text)', marginBottom: 16 }}>
           ⚠️ Cette classe n'a pas encore de programme de matières. Rendez-vous dans <strong>Classes → Programme</strong> pour assigner les matières.
         </div>
       )}
@@ -164,7 +187,7 @@ export function NotesPage() {
             </span>
             <div className="row" style={{ gap: 12 }}>
               {isProfesseur && (
-                <span style={{ fontSize: 12, color: 'var(--info)', background: 'var(--info-soft)', border: '1px solid var(--info-border)', padding: '4px 10px', borderRadius: 'var(--r-md)' }}>
+                <span style={{ fontSize: 12, color: 'var(--info-text)', background: 'var(--info-soft)', border: '1px solid var(--info-border)', padding: '4px 10px', borderRadius: 'var(--r-md)' }}>
                   Ajout uniquement — les notes déjà saisies ne peuvent pas être modifiées
                 </span>
               )}
@@ -193,6 +216,7 @@ export function NotesPage() {
                     <th>Matricule</th>
                     <th>Élève</th>
                     <th style={{ width: 128 }}>Note /{matMax}</th>
+                    <th style={{ width: 120 }}>Appréciation</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -225,6 +249,14 @@ export function NotesPage() {
                               )}
                             </div>
                           );
+                        })()}
+                      </td>
+                      <td style={{ fontSize: 12 }}>
+                        {notes[eleve.id] !== undefined && notes[eleve.id] !== '' && (() => {
+                          const v = parseFloat(notes[eleve.id]);
+                          if (isNaN(v)) return null;
+                          const app = appreciation(v, matMax);
+                          return <span style={{ color: app.color, fontWeight: 500 }}>{app.label}</span>;
                         })()}
                       </td>
                     </tr>

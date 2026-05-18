@@ -142,6 +142,8 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
   const nbSaisis = profs.filter(p => saisie[p.professeur_id]?.statut).length;
   const nbPresents = profs.filter(p => saisie[p.professeur_id]?.statut === 'present').length;
   const nbAbsents = profs.filter(p => saisie[p.professeur_id]?.statut === 'absent').length;
+  const nbRetards = profs.filter(p => saisie[p.professeur_id]?.statut === 'retard').length;
+  const nbConges = profs.filter(p => saisie[p.professeur_id]?.statut === 'conge').length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -154,13 +156,27 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
         <Button onClick={handleSave} loading={saving} disabled={nbSaisis === 0}>
           Enregistrer ({nbSaisis})
         </Button>
-        {nbSaisis > 0 && (
-          <div className="row" style={{ marginInlineStart: 'auto', gap: 12 }}>
-            <span style={{ fontSize: 13, color: 'var(--success)', fontWeight: 500 }}>✓ {nbPresents} présents</span>
-            <span style={{ fontSize: 13, color: 'var(--danger)', fontWeight: 500 }}>✗ {nbAbsents} absents</span>
-          </div>
-        )}
       </div>
+
+      {profs.length > 0 && (
+        <div className="grid-4">
+          {([
+            ['Présents', nbPresents, 'success'],
+            ['Absents', nbAbsents, 'danger'],
+            ['Retards', nbRetards, 'warning'],
+            ['Congés', nbConges, 'info'],
+          ] as [string, number, string][]).map(([label, val, kind]) => (
+            <div key={label} className="card stat">
+              <div className="stat-label">
+                <span className="badge-dot" style={{ background: `var(--${kind})` }} /> {label}
+              </div>
+              <div className="stat-value font-display">
+                {val}<span className="unit">/ {profs.length}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div className="empty">Chargement…</div>
@@ -378,7 +394,7 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
             { label: 'Présences', value: total.presents, color: 'var(--success)' },
             { label: 'Absences', value: total.absents, color: 'var(--danger)' },
             { label: 'Retards', value: total.retards, color: 'var(--warning)' },
-            { label: 'Congés', value: total.conges, color: 'var(--info)' },
+            { label: 'Congés', value: total.conges, color: 'var(--info-text)' },
           ].map(c => (
             <div key={c.label} className="card" style={{ textAlign: 'center', padding: 16 }}>
               <div style={{ fontSize: 24, fontWeight: 700, color: c.color }}>{c.value}</div>
@@ -408,7 +424,7 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
                     <td style={{ color: 'var(--success)', fontWeight: 600 }}>{s.presents}</td>
                     <td style={{ color: 'var(--danger)', fontWeight: 600 }}>{s.absents}</td>
                     <td style={{ color: 'var(--warning)' }}>{s.retards}</td>
-                    <td style={{ color: 'var(--info)' }}>{s.conges}</td>
+                    <td style={{ color: 'var(--info-text)' }}>{s.conges}</td>
                     <td>
                       {s.taux_presence !== null ? (
                         <div className="row" style={{ gap: 8 }}>
@@ -450,7 +466,7 @@ export function PointagePage() {
 
   return (
     <>
-      <PageHeader title={t('pointage.titre')} />
+      <PageHeader eyebrow="Présence du personnel" title={t('pointage.titre')} />
 
       {/* Tabs */}
       <div className="tabs" style={{ marginBottom: 16 }}>

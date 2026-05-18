@@ -7,7 +7,7 @@ import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 
-type Tab = 'etablissement' | 'pedagogie' | 'niveaux' | 'compte';
+type Tab = 'etablissement' | 'pedagogie' | 'niveaux' | 'compte' | 'bareme' | 'tarifs' | 'notifications' | 'securite';
 
 interface Niveau {
   id: string;
@@ -415,23 +415,34 @@ export function ParametresPage() {
 
   return (
     <>
-      <PageHeader title={t('parametre.titre')} />
+      <PageHeader eyebrow="Configuration" title={t('parametre.titre')} />
 
-      {/* Tabs */}
-      <div className="tabs">
-        <button className={`tab${tab === 'etablissement' ? ' active' : ''}`} onClick={() => setTab('etablissement')}>
-          {t('parametre.etablissement')}
-        </button>
-        <button className={`tab${tab === 'pedagogie' ? ' active' : ''}`} onClick={() => setTab('pedagogie')}>
-          {t('parametre.pedagogie')}
-        </button>
-        <button className={`tab${tab === 'niveaux' ? ' active' : ''}`} onClick={() => setTab('niveaux')}>
-          Niveaux
-        </button>
-        <button className={`tab${tab === 'compte' ? ' active' : ''}`} onClick={() => setTab('compte')}>
-          {t('parametre.mon_compte')}
-        </button>
-      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 24, alignItems: 'start' }}>
+        {/* Sidebar navigation */}
+        <div className="card" style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {([
+            { key: 'etablissement', label: t('parametre.etablissement') },
+            { key: 'pedagogie', label: t('parametre.pedagogie') },
+            { key: 'niveaux', label: 'Niveaux' },
+            { key: 'bareme', label: t('parametre.bareme_mentions') },
+            { key: 'tarifs', label: t('parametre.tarifs') },
+            { key: 'compte', label: t('parametre.mon_compte') },
+            { key: 'notifications', label: t('parametre.notifications_section') },
+            { key: 'securite', label: t('parametre.securite') },
+          ] as { key: Tab; label: string }[]).map(item => (
+            <button
+              key={item.key}
+              onClick={() => setTab(item.key)}
+              className={`sb-item${tab === item.key ? ' active' : ''}`}
+              style={{ borderRadius: 'var(--r-sm)' }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div>
 
       {/* ── Chargement ── */}
       {loading && (
@@ -903,6 +914,77 @@ export function ParametresPage() {
           </div>
         </>
       )}
+
+      {/* ── Barème des mentions ── */}
+      {!loading && tab === 'bareme' && (
+        <div className="card">
+          <div className="card-hd">
+            <h3 style={{ margin: 0 }}>{t('parametre.bareme_mentions')}</h3>
+          </div>
+          <div className="card-pad">
+            <div className="tbl-wrap">
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th>Mention</th>
+                    <th>Seuil min</th>
+                    <th>Seuil max</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { label: t('parametre.tres_bien'), min: 16, max: 20, variant: 'success' },
+                    { label: t('parametre.bien'), min: 14, max: 16, variant: 'info' },
+                    { label: t('parametre.assez_bien'), min: 12, max: 14, variant: 'info' },
+                    { label: t('parametre.passable'), min: 10, max: 12, variant: 'warning' },
+                    { label: t('parametre.insuffisant'), min: 0, max: 10, variant: 'error' },
+                  ].map(m => (
+                    <tr key={m.label}>
+                      <td><span className={`badge badge-${m.variant}`}>{m.label}</span></td>
+                      <td style={{ fontFamily: 'var(--font-mono)' }}>{m.min}</td>
+                      <td style={{ fontFamily: 'var(--font-mono)' }}>{m.max}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ marginTop: 16, padding: '12px 14px', background: 'var(--info-soft)', border: '1px solid var(--info-border)', borderRadius: 'var(--r-md)', fontSize: 13, color: 'var(--info-text)' }}>
+              Le barème des mentions est défini dans les paramètres globaux et peut évoluer selon le règlement de l'établissement. Contactez l'administrateur pour modifier les seuils.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Tarifs & mensualités ── */}
+      {!loading && tab === 'tarifs' && config && (
+        <div className="card">
+          <div className="card-hd">
+            <h3 style={{ margin: 0 }}>{t('parametre.tarifs')}</h3>
+            <Button onClick={saveConfig} loading={saving === 'notes'}>{t('actions.enregistrer')}</Button>
+          </div>
+          <div className="card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <Input
+              label={t('parametre.mensualite')}
+              type="number"
+              value={String(config.montant_mensualite)}
+              onChange={e => setConfig(c => c ? { ...c, montant_mensualite: Number(e.target.value) } : c)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── Notifications (placeholder) ── */}
+      {!loading && tab === 'notifications' && (
+        <div className="card empty">{t('parametre.section_construction')}</div>
+      )}
+
+      {/* ── Sécurité (placeholder) ── */}
+      {!loading && tab === 'securite' && (
+        <div className="card empty">{t('parametre.section_construction')}</div>
+      )}
+
+        </div>
+      </div>
     </>
   );
 }

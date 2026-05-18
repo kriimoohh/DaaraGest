@@ -753,6 +753,7 @@ export function ElevesPage() {
   return (
     <>
       <PageHeader
+          eyebrow="Inscription"
           title="Élèves"
           subtitle="Gestion des élèves inscrits"
           action={
@@ -849,6 +850,10 @@ export function ElevesPage() {
               options={PAGE_SIZE_OPTIONS}
             />
           </div>
+
+          <span style={{ fontSize: 12, color: 'var(--ink-3)', whiteSpace: 'nowrap', marginInlineStart: 'auto' }}>
+            {total} résultat{total !== 1 ? 's' : ''}
+          </span>
 
           {(filterSexe || filterStatut || filterClasse || search) && (
             <Button
@@ -1383,7 +1388,7 @@ export function ElevesPage() {
               {importResult.errors.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 160, overflowY: 'auto' }}>
                   {importResult.errors.map((e, i) => (
-                    <div key={i} style={{ fontSize: 12, color: 'var(--danger)', padding: '4px 12px', background: 'var(--danger-soft)', borderRadius: 'var(--r-sm)' }}>
+                    <div key={i} style={{ fontSize: 12, color: 'var(--danger-text)', padding: '4px 12px', background: 'var(--danger-soft)', borderRadius: 'var(--r-sm)' }}>
                       Ligne {e.ligne} : {e.message}
                     </div>
                   ))}

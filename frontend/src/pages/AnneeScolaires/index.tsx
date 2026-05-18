@@ -16,6 +16,7 @@ interface AnneeScolaire {
   date_debut: string;
   date_fin: string;
   active: boolean;
+  nb_eleves?: number;
 }
 
 const EMPTY = { libelle: '', date_debut: '', date_fin: '' };
@@ -115,6 +116,7 @@ export function AnneeScolairesPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Administration"
         title="Années scolaires"
         subtitle="Gérer les années scolaires de l'établissement"
         action={<Button onClick={openAdd}>+ Ajouter une année</Button>}
@@ -133,7 +135,7 @@ export function AnneeScolairesPage() {
             <table className="tbl">
               <thead>
                 <tr>
-                  {['Libellé', 'Début', 'Fin', 'Statut', 'Actions'].map((h) => (
+                  {['Libellé', 'Début', 'Fin', 'Élèves', 'Statut', 'Actions'].map((h) => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>
@@ -144,8 +146,11 @@ export function AnneeScolairesPage() {
                     <td>{a.libelle}</td>
                     <td>{fmt(a.date_debut)}</td>
                     <td>{fmt(a.date_fin)}</td>
+                    <td style={{ fontWeight: 600 }}>
+                      {a.nb_eleves != null ? a.nb_eleves : <span style={{ color: 'var(--ink-4)' }}>—</span>}
+                    </td>
                     <td>
-                      <Badge label={a.active ? 'Active' : 'Inactive'} variant={a.active ? 'success' : 'neutral'} />
+                      <Badge label={a.active ? 'Active' : 'Archivée'} variant={a.active ? 'success' : 'neutral'} />
                     </td>
                     <td>
                       <div className="row">
