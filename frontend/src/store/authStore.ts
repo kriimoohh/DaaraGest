@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware';
 export interface AuthUser {
   id: string;
   nom_fr: string;
+  prenom_fr?: string;
   nom_ar: string;
   identifiant: string;
   langue: string;
@@ -11,6 +12,7 @@ export interface AuthUser {
   role: string;
   etablissement_id: string;
   must_change_password?: boolean;
+  last_login?: string;
 }
 
 interface AuthState {

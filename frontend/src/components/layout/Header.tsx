@@ -144,28 +144,48 @@ export function Topbar({ onMenuClick }: TopbarProps) {
               </div>
 
               {profilTab === 'info' && (
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 16px', background: 'var(--paper-2)', border: '1px solid var(--rule)', borderRadius: 'var(--r-lg)', marginBottom: 16 }}>
-                    <div className="avatar avatar-xl" style={{ background: 'var(--terra-soft)', color: 'var(--terra-ink)' }}>{initials || '?'}</div>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 16 }}>{user?.nom_fr}</div>
-                      <div style={{ fontSize: 13, color: 'var(--ink-3)', textTransform: 'capitalize', marginTop: 2 }}>{role}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {/* Avatar + identité */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 16px', background: 'var(--paper-2)', border: '1px solid var(--rule)', borderRadius: 'var(--r-lg)' }}>
+                    <div className="avatar avatar-xl" style={{ background: 'var(--terra-soft)', color: 'var(--terra-ink)', flexShrink: 0 }}>{initials || '?'}</div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 16, lineHeight: 1.2 }}>
+                        {[user?.prenom_fr, user?.nom_fr].filter(Boolean).join(' ')}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--ink-3)', textTransform: 'capitalize', marginTop: 3 }}>{role}</div>
                       {user?.identifiant && (
-                        <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--ink-3)', marginTop: 4 }}>@{user.identifiant}</div>
+                        <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--ink-4)', marginTop: 4 }}>@{user.identifiant}</div>
                       )}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <button
-                      style={{ fontSize: 13, color: 'var(--terra-ink)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                      onClick={() => setProfilTab('password')}
-                    >
-                      Changer le mot de passe →
-                    </button>
-                    <button className="btn btn-danger btn-sm" onClick={() => { setProfilOpen(false); signOut(); }}>
-                      Déconnexion
-                    </button>
+
+                  {/* Infos */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 0, border: '1px solid var(--rule)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--rule)', fontSize: 13 }}>
+                      <span style={{ color: 'var(--ink-3)' }}>Langue</span>
+                      <span style={{ fontWeight: 500 }}>{user?.langue === 'ar' ? 'العربية' : 'Français'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--rule)', fontSize: 13 }}>
+                      <span style={{ color: 'var(--ink-3)' }}>Thème</span>
+                      <span style={{ fontWeight: 500 }}>{theme === 'dark' ? '🌙 Sombre' : '☀️ Clair'}</span>
+                    </div>
+                    {user?.last_login && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', fontSize: 13 }}>
+                        <span style={{ color: 'var(--ink-3)' }}>Dernière connexion</span>
+                        <span style={{ fontWeight: 500 }}>
+                          {new Date(user.last_login).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Changer mdp */}
+                  <button
+                    style={{ fontSize: 13, color: 'var(--terra-ink)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'start' }}
+                    onClick={() => setProfilTab('password')}
+                  >
+                    Changer le mot de passe →
+                  </button>
                 </div>
               )}
 
@@ -177,12 +197,19 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                 </div>
               )}
             </div>
-            {profilTab === 'password' && (
-              <div className="modal-foot">
+            <div className="modal-foot" style={{ justifyContent: profilTab === 'password' ? 'space-between' : 'flex-end' }}>
+              {profilTab === 'password' && (
                 <button className="btn btn-secondary" onClick={() => setProfilOpen(false)}>Annuler</button>
+              )}
+              {profilTab === 'info' && (
+                <button className="btn btn-danger btn-sm" onClick={() => { setProfilOpen(false); signOut(); }}>
+                  Déconnexion
+                </button>
+              )}
+              {profilTab === 'password' && (
                 <Button onClick={handleChangePassword} loading={saving}>Modifier le mot de passe</Button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}
