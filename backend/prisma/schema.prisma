@@ -12,8 +12,10 @@ model Etablissement {
   nom_fr      String
   adresse     String?
   telephone   String?
-  logo_url    String?
-  devise      String   @default("FCFA")
+  logo_url      String?
+  signature_url String?
+  cachet_url    String?
+  devise        String   @default("FCFA")
   actif       Boolean  @default(true)
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
@@ -34,6 +36,8 @@ model Etablissement {
   evaluations             Evaluation[]
   progressions_eleves     ProgressionEleve[]
   activites               Activite[]
+  document_templates      DocumentTemplate[]
+  documents_generes       DocumentGenere[]
 }
 
 model Role {
@@ -71,6 +75,7 @@ model Utilisateur {
   conversations_participees ConversationParticipant[]
   messages_envoyes    MessageConversation[]
   activites_responsable Activite[]          @relation("ActiviteResponsable")
+  documents_generes     DocumentGenere[]    @relation("DocumentsGeneres")
 }
 
 model Professeur {
@@ -679,3 +684,55 @@ model EvaluationActivite {
 
   inscription_activite InscriptionActivite @relation(fields: [inscription_activite_id], references: [id], onDelete: Cascade)
 }
+
+// ─── Documents administratifs ────────────────────────────────────────────────
+
+enum TypeDocument {
+  CERTIFICAT_SCOLARITE
+  ATTESTATION_INSCRIPTION
+  CONVOCATION_EXAMEN
+  FICHE_TRANSFERT
+  EMPLOI_DU_TEMPS_ELEVE
+  RELEVE_NOTES
+  CERTIFICAT_BONNE_CONDUITE
+  FICHE_RENSEIGNEMENTS
+  ATTESTATION_RESULTATS
+  LISTE_CLASSE
+  ATTESTATION_TRAVAIL
+  ORDRE_MISSION
+  FICHE_PAIE
+  PLANNING_COURS
+}
+
+model DocumentTemplate {
+  id               String       @id @default(uuid())
+  etablissement_id String
+  type             TypeDocument
+  nom              String
+  contenu_html     String
+  actif            Boolean      @default(true)
+  created_at       DateTime     @default(now())
+  updated_at       DateTime     @updatedAt
+
+  etablissement     Etablissement    @relation(fields: [etablissement_id], references: [id])
+  documents_generes DocumentGenere[]
+
+  @@unique([etablissement_id, type])
+}
+
+model DocumentGenere {
+  id                String       @id @default(uuid())
+  etablissement_id  String
+  template_id       String?
+  type              TypeDocument
+  destinataire_type String
+  destinataire_id   String
+  genere_par        String
+  genere_le         DateTime     @default(now())
+  parametres        Json?
+
+  etablissement Etablissement     @relation(fields: [etablissement_id], references: [id])
+  template      DocumentTemplate? @relation(fields: [template_id], references: [id])
+  utilisateur   Utilisateur       @relation("DocumentsGeneres", fields: [genere_par], references: [id])
+}
+
