@@ -7,6 +7,7 @@ import { ElevesPage } from './pages/Eleves';
 import { ProfesseursPage } from './pages/Professeurs';
 import { ClassesPage } from './pages/Classes';
 import { NotesPage } from './pages/Notes';
+import { EvaluationsPage } from './pages/Evaluations';
 import { BulletinsPage } from './pages/Bulletins';
 import { FinancesPage } from './pages/Finances';
 import { ParametresPage } from './pages/Parametres';
@@ -58,6 +59,9 @@ export default function App() {
           } />
           <Route path="/notes" element={
             <ProtectedRoute roles={ROLES.academique}><NotesPage /></ProtectedRoute>
+          } />
+          <Route path="/evaluations" element={
+            <ProtectedRoute roles={ROLES.academique}><EvaluationsPage /></ProtectedRoute>
           } />
           <Route path="/bulletins" element={
             <ProtectedRoute roles={ROLES.academique}><BulletinsPage /></ProtectedRoute>
