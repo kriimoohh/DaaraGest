@@ -165,7 +165,7 @@ export function EmploiDuTempsPage() {
   useEffect(() => {
     if (!canEdit) return;
     api.get<Matiere[]>('/api/v1/matieres?limit=200').then(r => setMatieres(r ?? [])).catch(() => {});
-    api.get<Professeur[]>('/api/v1/professeurs?limit=200').then(r => setProfesseurs(r ?? [])).catch(() => {});
+    api.get<{ data: Professeur[] }>('/api/v1/professeurs?limit=200').then(r => setProfesseurs(r?.data ?? [])).catch(() => {});
   }, [canEdit]);
 
   // Load emploi du temps
