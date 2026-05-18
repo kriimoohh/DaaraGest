@@ -20,6 +20,7 @@ import { AbsencesPage } from './pages/Absences';
 import { EmploiDuTempsPage } from './pages/EmploiDuTemps';
 import { CalendrierPage } from './pages/Calendrier';
 import { MessageriePage } from './pages/Messagerie';
+import { ActivitesPage } from './pages/Activites';
 import { PortailParentPage } from './pages/PortailParent';
 import './i18n';
 
@@ -66,6 +67,9 @@ export default function App() {
           } />
           <Route path="/progression" element={
             <ProtectedRoute roles={ROLES.gestion}><ProgressionPage /></ProtectedRoute>
+          } />
+          <Route path="/activites" element={
+            <ProtectedRoute roles={ROLES.academique}><ActivitesPage /></ProtectedRoute>
           } />
           <Route path="/bulletins" element={
             <ProtectedRoute roles={ROLES.academique}><BulletinsPage /></ProtectedRoute>
