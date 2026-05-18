@@ -82,13 +82,13 @@ export function Sidebar() {
   return (
     <aside className="sidebar">
       {/* Brand */}
-      <div className="sb-brand">
+      <NavLink to="/dashboard" className="sb-brand" style={{ textDecoration: 'none' }}>
         <div className="sb-mark">Dg</div>
         <div>
           <div className="sb-name">Daara<span style={{ color: 'var(--terra)' }}>Gest</span></div>
           <div className="sb-tag">Gestion scolaire</div>
         </div>
-      </div>
+      </NavLink>
 
       {/* Navigation */}
       <nav className="sb-nav">
