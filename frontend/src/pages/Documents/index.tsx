@@ -420,6 +420,8 @@ export function DocumentsPage() {
   const [extraParams, setExtraParams]     = useState<Record<string, string>>({});
   const [downloading, setDownloading] = useState(false);
   const [printing,    setPrinting]    = useState(false);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   // ── Historique tab state ───────────────────────────────────────────────────
   const [historique, setHistorique]   = useState<HistoriqueItem[]>([]);
@@ -526,6 +528,22 @@ export function DocumentsPage() {
       toast.success('Document ouvert — utilisez Ctrl+P pour imprimer');
     } catch (err) { toast.error((err as Error).message); }
     finally { setPrinting(false); }
+  };
+
+  const handleApercu = async () => {
+    if (!canGenerate || !selectedType || !destinataireId) return;
+    setPreviewLoading(true);
+    try {
+      const { html } = await api.post<{ html: string }>('/api/v1/documents/apercu', {
+        type: selectedType,
+        destinataire_id: destinataireId,
+      });
+      setPreviewHtml(html);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setPreviewLoading(false);
+    }
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -672,6 +690,23 @@ export function DocumentsPage() {
                     )}
                     Imprimer
                   </button>
+                  {selectedType && CARD_TYPES.has(selectedType) && (
+                    <button
+                      className="btn btn-ghost"
+                      onClick={handleApercu}
+                      disabled={!canGenerate || previewLoading}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, opacity: (!canGenerate || previewLoading) ? 0.5 : 1 }}
+                    >
+                      {previewLoading ? (
+                        <span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                      ) : (
+                        <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                        </svg>
+                      )}
+                      Aperçu
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -733,6 +768,68 @@ export function DocumentsPage() {
           </div>
         </div>
       )}
+      {/* ── Modal aperçu carte ── */}
+      {previewHtml && (() => {
+        // CR80: 85.6mm × 54mm ≈ 323×204px at 96dpi, displayed at 2×
+        const isProfCard = selectedType === 'CARTE_PROFESSEUR';
+        const naturalW = 323;
+        const naturalH = isProfCard ? 408 : 204; // prof card has recto+verso stacked
+        const scale = 2;
+        const displayW = naturalW * scale;
+        const displayH = naturalH * scale;
+        return (
+          <div
+            style={{
+              position: 'fixed', inset: 0, zIndex: 1000,
+              background: 'rgba(0,0,0,0.78)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: 24,
+            }}
+            onClick={() => setPreviewHtml(null)}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: displayW }}>
+                <span style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>
+                  Aperçu — {selectedType ? LABELS[selectedType] : ''}
+                </span>
+                <button
+                  onClick={() => setPreviewHtml(null)}
+                  style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 6, color: '#fff', cursor: 'pointer', padding: '4px 10px', fontSize: 13 }}
+                >
+                  ✕ Fermer
+                </button>
+              </div>
+
+              {/* Carte à l'échelle 2× — transform avec wrapper pour le layout */}
+              <div style={{
+                width: displayW,
+                maxHeight: 'calc(85vh - 100px)',
+                overflow: 'auto',
+                borderRadius: 8,
+                boxShadow: '0 8px 40px rgba(0,0,0,0.6)',
+              }}>
+                <div style={{ width: displayW, height: displayH, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
+                  <div style={{ position: 'absolute', top: 0, left: 0, width: naturalW, height: naturalH, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+                    <iframe
+                      srcDoc={previewHtml}
+                      title="Aperçu carte"
+                      sandbox="allow-same-origin"
+                      style={{ width: naturalW, height: naturalH, border: 'none', display: 'block' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, margin: 0 }}>
+                Aperçu 2× — format réel : 85,6 × 54 mm (CR80){isProfCard ? ' — recto + verso' : ''}
+              </p>
+            </div>
+          </div>
+        );
+      })()}
     </>
   );
 }
