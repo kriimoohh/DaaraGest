@@ -21,7 +21,7 @@ type DestType = 'eleve' | 'professeur' | 'classe';
 
 interface TemplateInfo { type: TypeDocument; nom: string; has_custom: boolean }
 interface Eleve { id: string; nom_fr: string; prenom_fr: string; matricule: string }
-interface Professeur { id: string; nom: string; prenom: string; identifiant: string }
+interface Professeur { id: string; nom_fr: string; prenom_fr?: string; identifiant: string }
 interface Classe { id: string; nom_fr: string; filiere: string }
 interface AnneeScolaire { id: string; libelle: string; active: boolean }
 interface HistoriqueItem {
@@ -589,7 +589,7 @@ export function DocumentsPage() {
                           <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--paper)', border: '1px solid var(--rule)', borderRadius: 'var(--r-md)', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', marginTop: 4 }}>
                             {searchLoading && <div style={{ padding: 10, fontSize: 13, color: 'var(--ink-3)', textAlign: 'center' }}>Recherche…</div>}
                             {elevesFound.map(e => (
-                              <button key={e.id} onClick={() => { setSelectedEleve(e); setEleveSearch(''); setElevesFound([]); }} style={{ display: 'flex', flexDirection: 'column', width: '100%', padding: '10px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'start', borderBottom: '1px solid var(--rule)' }}>
+                              <button key={e.id} onClick={() => { setSelectedEleve(e); setEleveSearch(''); setElevesFound([]); }} style={{ display: 'flex', flexDirection: 'column', width: '100%', padding: '10px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'start', borderBottom: '1px solid var(--rule)', color: 'var(--ink)' }}>
                                 <span style={{ fontSize: 13, fontWeight: 600 }}>{e.prenom_fr} {e.nom_fr}</span>
                                 <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>{e.matricule}</span>
                               </button>
@@ -606,7 +606,7 @@ export function DocumentsPage() {
                     <label className="field-label">Professeur</label>
                     <select className="input" value={selectedProfId} onChange={e => setSelectedProfId(e.target.value)}>
                       <option value="">Sélectionner un professeur…</option>
-                      {professeurs.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}
+                      {professeurs.map(p => <option key={p.id} value={p.id}>{[p.prenom_fr, p.nom_fr].filter(Boolean).join(' ')}</option>)}
                     </select>
                   </div>
                 )}
