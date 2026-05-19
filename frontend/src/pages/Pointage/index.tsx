@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -27,6 +28,7 @@ interface PresenceHistorique {
   id: string; date: string; statut: string;
   heure_arrivee: string | null; heure_depart: string | null;
   heures_prevues: number | null; heures_reelles: number | null; motif: string | null;
+  source?: string;
   professeur: { utilisateur: { nom_fr: string } };
 }
 
@@ -322,7 +324,7 @@ function Historique({ api }: { api: ReturnType<typeof useApi> }) {
             <table className="tbl">
               <thead>
                 <tr>
-                  {['Date', 'Professeur', 'Statut', 'Arrivée', 'Départ', 'Durée', 'Motif'].map(h => (
+                  {['Date', 'Professeur', 'Statut', 'Source', 'Arrivée', 'Départ', 'Durée', 'Motif'].map(h => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>
@@ -335,6 +337,11 @@ function Historique({ api }: { api: ReturnType<typeof useApi> }) {
                     </td>
                     <td>{r.professeur.utilisateur.nom_fr}</td>
                     <td><Badge label={statutLabel(r.statut)} variant={statutBadge(r.statut)} /></td>
+                    <td>
+                      {r.source === 'qr'
+                        ? <Badge label="QR" variant="info" />
+                        : <Badge label="Manuel" variant="neutral" />}
+                    </td>
                     <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{r.heure_arrivee ?? '—'}</td>
                     <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{r.heure_depart ?? '—'}</td>
                     <td>{r.heures_reelles != null ? <span style={{ fontWeight: 600 }}>{Number(r.heures_reelles)}h</span> : '—'}</td>
@@ -456,6 +463,7 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
 export function PointagePage() {
   const { t } = useTranslation();
   const api = useApi();
+  const navigate = useNavigate();
   const [tab, setTab] = useState<'saisie' | 'historique' | 'stats'>('saisie');
 
   const TABS = [
@@ -466,7 +474,18 @@ export function PointagePage() {
 
   return (
     <>
-      <PageHeader eyebrow="Présence du personnel" title={t('pointage.titre')} />
+      <PageHeader
+        eyebrow="Présence du personnel"
+        title={t('pointage.titre')}
+        action={
+          <Button
+            variant="secondary"
+            onClick={() => navigate('/scanner')}
+          >
+            Scanner QR
+          </Button>
+        }
+      />
 
       {/* Tabs */}
       <div className="tabs" style={{ marginBottom: 16 }}>

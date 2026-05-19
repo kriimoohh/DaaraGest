@@ -89,6 +89,7 @@ model Professeur {
   type_contrat   String    @default("permanent")
   salaire_base   Decimal?  @db.Decimal(10, 2)
   photo_url      String?
+  qr_token       String?   @unique
   created_at     DateTime  @default(now())
 
   utilisateur      Utilisateur          @relation(fields: [utilisateur_id], references: [id])
@@ -148,6 +149,7 @@ model PresenceProfesseur {
   heures_prevues  Decimal? @db.Decimal(4, 2)
   heures_reelles  Decimal? @db.Decimal(4, 2)  // calculé auto si arrivee+depart fournis
   motif           String?
+  source          String   @default("manuel")  // 'manuel' | 'qr'
   created_at      DateTime @default(now())
 
   professeur Professeur @relation(fields: [professeur_id], references: [id])
