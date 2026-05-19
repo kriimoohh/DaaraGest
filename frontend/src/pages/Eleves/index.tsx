@@ -453,6 +453,12 @@ export function ElevesPage() {
 
   // ── Fiche ──────────────────────────────────────────────────────────────────
 
+  function closeFiche() {
+    setFicheModal(null);
+    setShowProgression(false);
+    setProgression(null);
+  }
+
   async function openFiche(eleve: Eleve) {
     setFicheLoading(eleve.id);
     try {
@@ -1124,7 +1130,7 @@ export function ElevesPage() {
       {ficheModal && (
         <Modal
           isOpen={!!ficheModal}
-          onClose={() => setFicheModal(null)}
+          onClose={closeFiche}
           title=""
           size="lg"
         >
@@ -1340,11 +1346,11 @@ export function ElevesPage() {
               )}
               <div style={{ display: 'flex', gap: 8, marginInlineStart: 'auto' }}>
                 {isGestion && (
-                  <Button variant="secondary" onClick={() => { setFicheModal(null); openEdit(ficheModal); }}>
+                  <Button variant="secondary" onClick={() => { closeFiche(); openEdit(ficheModal); }}>
                     Modifier
                   </Button>
                 )}
-                <Button variant="secondary" onClick={() => setFicheModal(null)}>Fermer</Button>
+                <Button variant="secondary" onClick={closeFiche}>Fermer</Button>
               </div>
             </div>
           </div>

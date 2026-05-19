@@ -3,6 +3,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useApi } from '../../hooks/useApi';
+import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 import { API_BASE } from '../../lib/api';
 
@@ -243,6 +244,7 @@ function TemplateEditor({ type, templates, onSaved }: {
   onSaved: () => void;
 }) {
   const api = useApi();
+  const canEdit = useAuthStore(s => ['admin', 'directeur'].includes(s.user?.role ?? ''));
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [html, setHtml]         = useState('');
   const [dirty, setDirty]       = useState(false);
@@ -327,14 +329,16 @@ function TemplateEditor({ type, templates, onSaved }: {
           </svg>
           Aperçu
         </button>
-        {hasCustom && (
+        {canEdit && hasCustom && (
           <button className="btn btn-ghost btn-sm" onClick={handleReset} disabled={resetting} style={{ color: '#dc2626' }}>
             Réinitialiser
           </button>
         )}
-        <Button onClick={handleSave} loading={saving} disabled={!dirty}>
-          Sauvegarder
-        </Button>
+        {canEdit && (
+          <Button onClick={handleSave} loading={saving} disabled={!dirty}>
+            Sauvegarder
+          </Button>
+        )}
       </div>
 
       {/* Editor body */}
