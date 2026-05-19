@@ -5,6 +5,7 @@ import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { useApi } from '../../hooks/useApi';
+import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 
 interface AnneeScolaire { id: string; libelle: string; active: boolean; }
@@ -31,6 +32,7 @@ const DECISION_VARIANTS: Record<string, 'success' | 'danger' | 'warning' | 'neut
 
 export function ProgressionPage() {
   const api = useApi();
+  const canWrite = useAuthStore(s => ['admin', 'directeur'].includes(s.user?.role ?? ''));
 
   const [annees,       setAnnees]       = useState<AnneeScolaire[]>([]);
   const [anneeId,      setAnneeId]      = useState('');
@@ -137,9 +139,11 @@ export function ProgressionPage() {
               onChange={e => setAnneeId(e.target.value)}
               options={[{ value: '', label: 'Année scolaire...' }, ...annees.map(a => ({ value: a.id, label: a.libelle }))]}
             />
-            <Button onClick={handleGenerer} loading={generating} disabled={!anneeId} variant="secondary">
-              Générer propositions
-            </Button>
+            {canWrite && (
+              <Button onClick={handleGenerer} loading={generating} disabled={!anneeId} variant="secondary">
+                Générer propositions
+              </Button>
+            )}
           </div>
         }
       />
@@ -249,7 +253,7 @@ export function ProgressionPage() {
                             />
                           </td>
                           <td>
-                            <Button size="sm" onClick={() => openValidation(p)}>Valider</Button>
+                            {canWrite && <Button size="sm" onClick={() => openValidation(p)}>Valider</Button>}
                           </td>
                         </tr>
                       ))}
