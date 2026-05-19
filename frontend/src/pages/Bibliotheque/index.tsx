@@ -29,7 +29,6 @@ type Tab = 'livres' | 'emprunts' | 'retards';
 export function BibliothequeePage() {
   const api  = useApi();
   const role = useAuthStore(s => s.user?.role ?? '');
-  const userId = useAuthStore(s => s.user?.id ?? '');
   const canEdit   = ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'].includes(role);
   const canDelete = ['admin', 'directeur'].includes(role);
 
@@ -39,7 +38,7 @@ export function BibliothequeePage() {
   const [retards, setRetards]     = useState<Emprunt[]>([]);
   const [search, setSearch]       = useState('');
   const [loading, setLoading]     = useState(false);
-  const [total, setTotal]         = useState(0);
+  const [_total, setTotal]        = useState(0);
   const [page, setPage]           = useState(1);
 
   // Filtres emprunts
@@ -246,7 +245,7 @@ export function BibliothequeePage() {
       {tab === 'livres' && (
         <>
           <div style={{ marginBottom: 16 }}>
-            <SearchInput value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Rechercher titre, auteur, ISBN..." />
+            <SearchInput value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder="Rechercher titre, auteur, ISBN..." />
           </div>
           <div className="card">
             <div className="tbl-wrap">
@@ -275,7 +274,7 @@ export function BibliothequeePage() {
                       <td>
                         <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                           {canEdit && l.quantite_dispo > 0 && (
-                            <Button size="sm" variant="outline" onClick={() => openEmprunt(l.id)}>Emprunter</Button>
+                            <Button size="sm" variant="secondary" onClick={() => openEmprunt(l.id)}>Emprunter</Button>
                           )}
                           {canEdit && (
                             <Button size="sm" variant="ghost" onClick={() => openEditLivre(l)}>Modifier</Button>
@@ -335,12 +334,12 @@ export function BibliothequeePage() {
                         <td>
                           <Badge
                             label={e.statut === 'en_cours' ? 'En cours' : e.statut === 'rendu' ? 'Rendu' : 'Perdu'}
-                            variant={e.statut === 'rendu' ? 'success' : e.statut === 'perdu' ? 'danger' : 'outline'}
+                            variant={e.statut === 'rendu' ? 'success' : e.statut === 'perdu' ? 'danger' : 'neutral'}
                           />
                         </td>
                         <td>
                           {canEdit && e.statut === 'en_cours' && (
-                            <Button size="sm" variant="outline" onClick={() => enregistrerRetour(e.id)}>Retour</Button>
+                            <Button size="sm" variant="secondary" onClick={() => enregistrerRetour(e.id)}>Retour</Button>
                           )}
                         </td>
                       </tr>
@@ -379,7 +378,7 @@ export function BibliothequeePage() {
                         <td><Badge label={`+${joursRetard} j`} variant="danger" /></td>
                         <td>
                           {canEdit && (
-                            <Button size="sm" variant="outline" onClick={() => enregistrerRetour(e.id)}>Retour</Button>
+                            <Button size="sm" variant="secondary" onClick={() => enregistrerRetour(e.id)}>Retour</Button>
                           )}
                         </td>
                       </tr>
@@ -395,6 +394,7 @@ export function BibliothequeePage() {
       {/* Modal livre */}
       {livreModal && (
         <Modal
+          isOpen={livreModal}
           title={editLivre ? 'Modifier le livre' : 'Ajouter un livre'}
           onClose={() => setLivreModal(false)}
           footer={<><Button variant="ghost" onClick={() => setLivreModal(false)}>Annuler</Button><Button onClick={saveLivre} loading={saving}>Enregistrer</Button></>}
@@ -418,6 +418,7 @@ export function BibliothequeePage() {
       {/* Modal emprunt */}
       {empruntModal && (
         <Modal
+          isOpen={empruntModal}
           title="Nouvel emprunt"
           onClose={() => setEmpruntModal(false)}
           footer={<><Button variant="ghost" onClick={() => setEmpruntModal(false)}>Annuler</Button><Button onClick={creerEmprunt} loading={savingEmp}>Enregistrer</Button></>}
