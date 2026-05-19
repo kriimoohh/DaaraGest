@@ -7,8 +7,8 @@ import {
 
 export async function listerHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
-  const { annee_scolaire_id } = request.query as Record<string, string>;
-  return reply.send(await listerProgressions(etablissement_id, annee_scolaire_id));
+  const { annee_scolaire_id, classe_id, filiere } = request.query as Record<string, string>;
+  return reply.send(await listerProgressions(etablissement_id, annee_scolaire_id, classe_id, filiere));
 }
 
 export async function genererHandler(request: FastifyRequest, reply: FastifyReply) {
