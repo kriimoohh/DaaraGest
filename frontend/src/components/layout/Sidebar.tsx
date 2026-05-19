@@ -108,13 +108,15 @@ export function Sidebar() {
   return (
     <aside className="sidebar">
       {/* Brand */}
-      <NavLink to="/dashboard" className="sb-brand" style={{ textDecoration: 'none' }}>
-        <div className="sb-mark">Dg</div>
+      <div className="sb-brand">
+        <NavLink to="/dashboard" style={{ textDecoration: 'none' }}>
+          <div className="sb-mark">Dg</div>
+        </NavLink>
         <div>
           <div className="sb-name">Daara<span style={{ color: 'var(--terra)' }}>Gest</span></div>
           <div className="sb-tag">{t('app.tagline')}</div>
         </div>
-      </NavLink>
+      </div>
 
       {/* Navigation */}
       <nav className="sb-nav">
