@@ -1,6 +1,6 @@
 # DaaraGest
 
-Application web de gestion d'école franco-arabe, conçue pour les établissements scolaires au Sénégal. Gestion complète des élèves, professeurs, classes, notes, bulletins, finances, pointage, emploi du temps, messagerie interne et portail parents — avec interface bilingue Français/Arabe.
+Application web de gestion d'école franco-arabe, conçue pour les établissements scolaires au Sénégal. Gestion complète des élèves, professeurs, classes, notes, bulletins, finances, pointage, emploi du temps, messagerie interne, bibliothèque et portail parents — avec interface bilingue Français/Arabe et une landing page publique présentant la plateforme.
 
 ---
 
@@ -29,12 +29,16 @@ Application web de gestion d'école franco-arabe, conçue pour les établissemen
 
 | Module | Description |
 |--------|-------------|
+| **Landing page** | Page d'accueil publique présentant la plateforme, ses modules et les guides par rôle — bilingue FR/AR avec basculement thème |
 | **Élèves** | Inscription, fiche complète, matricule auto-généré `DG-YYYY-NNN`, import en masse via CSV |
 | **Professeurs** | Comptes liés à un utilisateur, spécialités, type de contrat, salaire de base |
 | **Classes** | Deux filières (Française / Arabe), niveaux, capacité, par année scolaire |
 | **Matières** | Coefficients, note max/min configurables par matière |
 | **Notes** | Saisie en masse par classe/matière/période, tri alphabétique, validation par matière |
+| **Évaluations** | Évaluations formatives (devoir, contrôle, examen) avec pondération |
 | **Bulletins** | 4 types (FR · AR · Combiné · Annuel), moyennes pondérées, classement, export PDF individuel ou classe entière |
+| **Progression** | Suivi de la progression académique des élèves par période et par classe |
+| **Activités** | Activités parascolaires et projets pédagogiques par classe |
 | **Absences élèves** | Saisie par classe, justification, alertes automatiques au-delà du seuil configurable |
 | **Pointage** | Saisie journalière présence/absence/retard/congé des professeurs, durée auto, historique, statistiques |
 | **Emploi du temps** | Créneaux horaires par classe/professeur/matière, jours actifs flexibles par établissement, détection de conflits |
@@ -42,9 +46,12 @@ Application web de gestion d'école franco-arabe, conçue pour les établissemen
 | **Notifications in-app** | Cloche avec badge, alertes d'absence, absences professeurs, refresh auto toutes les 60s |
 | **Messagerie interne** | Conversations filées, tout-à-tout + broadcast par rôle, raccourci Ctrl+Enter |
 | **Portail parents** | Page publique sans compte (lien UUID), notes, paiements, absences, informations de l'élève |
+| **Bibliothèque** | Catalogue des livres, gestion des prêts/retours, suivi du stock |
 | **Finances** | Paiements élèves (mensualités, inscriptions), reliquats, paiements professeurs, numéros de reçu auto |
+| **Documents officiels** | Génération de certificats de scolarité, attestations et documents PDF à partir de templates |
+| **Rapports** | Rapports synthétiques par classe, période, module |
 | **Utilisateurs** | Rôles depuis la DB, réinitialisation de mot de passe |
-| **Paramètres** | Établissement, barème des notes, montant mensualité, jours de cours configurables par établissement |
+| **Paramètres** | Établissement, barème des notes, niveaux, tarifs, préférences de notifications, sécurité du compte |
 | **Dashboard** | Statistiques clés, graphique des encaissements sur 6 mois (Recharts) |
 | **i18n FR/AR** | Interface complète bilingue avec basculement RTL instantané |
 | **Dark mode** | Persistant par utilisateur, actif dès la page de connexion |
@@ -474,6 +481,18 @@ Toutes les routes (sauf `/health`, `POST /api/v1/auth/login`, et `GET /api/v1/po
 | `GET` | `/api/v1/pointage?mois&annee&statut&professeur_id&page` | Historique paginé |
 | `GET` | `/api/v1/pointage/stats?mois&annee` | Stats par professeur (taux de présence) |
 
+### Auth (étendu)
+
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| `POST` | `/api/v1/auth/login` | Connexion · rate-limited 5 req/min |
+| `POST` | `/api/v1/auth/refresh` | Renouveler le token via refresh token |
+| `POST` | `/api/v1/auth/logout` | Déconnexion + révocation du refresh token |
+| `GET` | `/api/v1/auth/me` | Profil connecté |
+| `PUT` | `/api/v1/auth/change-password` | Changer le mot de passe |
+| `PUT` | `/api/v1/auth/profil` | Mettre à jour nom, langue, thème |
+| `DELETE` | `/api/v1/auth/sessions` | Révoquer toutes les sessions actives |
+
 ### Paramètres
 
 | Méthode | Route | Description |
@@ -482,6 +501,8 @@ Toutes les routes (sauf `/health`, `POST /api/v1/auth/login`, et `GET /api/v1/po
 | `PUT` | `/api/v1/parametres` | Modifier l'établissement |
 | `GET` | `/api/v1/parametres/notes` | Config notes (inclut `jours_cours`) |
 | `PUT` | `/api/v1/parametres/notes` | Modifier (note_max, note_min, seuils, jours_cours…) |
+| `GET` | `/api/v1/parametres/notifications` | Préférences de notifications de l'établissement |
+| `PUT` | `/api/v1/parametres/notifications` | Modifier les préférences de notifications |
 
 ### Utilisateurs
 
@@ -614,215 +635,78 @@ npm run test:coverage    # rapport HTML dans coverage/
 
 ## Roadmap — Phases à venir
 
-L'application est pleinement fonctionnelle dans son état actuel. Les phases suivantes constituent des améliorations prioritaires identifiées par comparaison avec des systèmes de gestion scolaire matures (notamment GibbonEdu).
+L'application est pleinement fonctionnelle. Les phases ci-dessous constituent des améliorations identifiées pour la prochaine itération.
+
+> **Modules déjà implémentés** : Évaluations formatives, Suivi de progression, Activités parascolaires, Bibliothèque scolaire, Portail parents, Documents officiels, Rapports, Refresh tokens silencieux, Gestion des sessions actives, Préférences de notifications.
 
 ---
 
-### Phase 3 — Suivi académique approfondi
-
-**Objectif** : passer d'un registre de notes à un vrai outil de pilotage pédagogique.
-
-#### 3.1 Évaluations formatives (devoir maison, contrôle, interrogation)
-
-**Pourquoi** : actuellement DaaraGest ne distingue pas les types de contrôles. Les professeurs ont besoin de suivre plusieurs notes par trimestre avec des pondérations différentes.
-
-**Backend**
-- Nouveau modèle `EvaluationFormative` :
-  ```
-  id, etablissement_id, classe_id, matiere_id, professeur_id,
-  annee_scolaire_id, periode (1|2|3), type (DEVOIR|CONTROLE|INTERRO|EXAMEN),
-  titre, date, note_max, coefficient, created_at
-  ```
-- Nouveau modèle `NoteFormative` :
-  ```
-  id, evaluation_id, eleve_id, valeur Decimal, commentaire?, absent Boolean
-  ```
-- Module `evaluations/` : CRUD + `POST /bulk` pour saisie de classe
-- Modifier la génération de bulletins : intégrer les notes formatives dans la moyenne trimestrielle si présentes (compatibilité descendante avec l'actuel `Note`)
-
-**Frontend**
-- Page `Evaluations/` : liste par classe/matière, formulaire de création
-- Saisie de notes par évaluation (même UX que Notes actuel)
-- Indicateur dans la page Bulletins : "moyennes issues de X évaluations formatives"
-
-**Paramètres**
-- ConfigNotes : `ponderation_formative Boolean @default(false)` — activer/désactiver la prise en compte
-
----
-
-#### 3.2 Suivi académique pluriannuel
-
-**Pourquoi** : impossible aujourd'hui de voir la progression d'un élève sur plusieurs années. Les établissements ont besoin de détecter les élèves en difficulté dès le trimestre 1.
-
-**Backend**
-- Nouveau modèle `HistoriqueAcademique` :
-  ```
-  id, etablissement_id, eleve_id, annee_scolaire_id, classe_id,
-  filiere (FR|AR), periode (0=annuel, 1|2|3),
-  moyenne_generale Decimal, rang Int?, mention String?,
-  decision (ADMIS|REDOUBLANT|EXCLU|EN_ATTENTE), created_at
-  ```
-- Peuplé automatiquement lors de la génération des bulletins
-- Endpoint `GET /api/v1/eleves/:id/historique` — toutes les années de l'élève
-
-**Frontend**
-- Onglet **Historique** dans la fiche élève : graphique linéaire (Recharts) de la moyenne générale par trimestre/année
-- Indicateurs : progression entre années, meilleure filière
-- Portail parent : onglet Historique visible par les parents
-
----
-
-#### 3.3 Activités parascolaires
-
-**Pourquoi** : les élèves peuvent participer à des clubs, sports ou ateliers. Ces activités apparaissent dans les bulletins de certains établissements.
-
-**Backend**
-- Nouveau modèle `Activite` :
-  ```
-  id, etablissement_id, nom, description?, responsable_id (Utilisateur),
-  type (SPORT|CLUB|ATELIER|AUTRE), max_participants Int?, actif Boolean
-  ```
-- Nouveau modèle `ParticipationActivite` :
-  ```
-  id, activite_id, eleve_id, annee_scolaire_id, date_inscription,
-  commentaire?, actif Boolean
-  ```
-- Module `activites/` : CRUD activités + gestion participants
-
-**Frontend**
-- Page `Activites/` accessible à admin, directeur, gestionnaire
-- Onglet dans la fiche élève : liste des activités de l'élève
-- Portail parent : activités visibles
-
----
-
-### Phase 4 — Rapports et analyses
+### Phase suivante — Analytique avancée
 
 **Objectif** : transformer les données accumulées en tableaux de bord décisionnels.
 
-#### 4.1 Tableau de bord analytique avancé
+#### Tableau de bord analytique avancé
 
-**Pourquoi** : le dashboard actuel n'affiche que des statistiques financières. La direction a besoin d'indicateurs pédagogiques et de présence en un coup d'œil.
+**Pourquoi** : le dashboard actuel affiche les statistiques financières et les KPI principaux. La direction a besoin d'indicateurs pédagogiques et de présence en un coup d'œil.
 
 **Backend**
-- Nouveau endpoint `GET /api/v1/stats/tableau-de-bord` retournant :
+- Endpoint `GET /api/v1/stats/tableau-de-bord` retournant :
   - Taux de présence élèves par classe (semaine / mois)
   - Taux de présence professeurs (semaine / mois)
   - Moyenne générale par classe et par filière
-  - Top 5 élèves + bottom 5 élèves de l'établissement
-  - Évolution des encaissements vs mois précédent
+  - Top 5 élèves + bottom 5 par établissement
   - Alertes actives (absences répétées, notes insuffisantes)
 
 **Frontend**
-- Nouveau composant `DashboardAnalytique` avec widgets
-- Graphiques : Recharts `AreaChart` pour tendances, `BarChart` pour comparaisons par classe
+- Widgets analytiques supplémentaires sur le Dashboard
+- Graphiques `AreaChart` pour tendances, `BarChart` pour comparaisons par classe
 - Filtres : année scolaire active, période, filière
 
 ---
 
-#### 4.2 Rapports exportables
+#### Suivi académique pluriannuel
 
-**Pourquoi** : les établissements ont besoin de rapports périodiques pour les réunions de conseil, les inspections et les parents.
+**Pourquoi** : impossible aujourd'hui de voir la progression d'un élève sur plusieurs années.
 
 **Backend**
-- Nouveau module `rapports/` :
-  - `GET /api/v1/rapports/presences-eleves?classe_id&mois` → PDF/CSV taux de présence par élève
-  - `GET /api/v1/rapports/presences-professeurs?mois` → PDF/CSV présence et retards des profs
-  - `GET /api/v1/rapports/resultats-classe?classe_id&periode` → PDF tableau récapitulatif des résultats
-  - `GET /api/v1/rapports/bilan-financier?mois&annee` → PDF bilan encaissements/reliquats
+- Modèle `HistoriqueAcademique` : peuplé à la génération des bulletins
+- Endpoint `GET /api/v1/eleves/:id/historique` — toutes les années de l'élève
 
 **Frontend**
-- Page `Rapports/` accessible à admin et directeur
-- Sélecteurs de type de rapport + filtres + bouton export
-- Téléchargement direct PDF ou CSV
+- Onglet **Historique** dans la fiche élève : graphique linéaire (Recharts)
+- Portail parent : onglet Historique visible par les parents
 
 ---
 
-#### 4.3 Bibliothèque scolaire (optionnel)
+### Infrastructure
 
-**Pourquoi** : GibbonEdu dispose d'un module bibliothèque complet. Utile si l'établissement prête des manuels scolaires.
+#### Migration Fastify 4 → 5
 
-**Backend**
-- Modèle `LivreStock` : ISBN, titre, auteur, quantité totale / disponible
-- Modèle `Emprunt` : eleve_id, livre_id, date_emprunt, date_retour_prevue, date_retour_effective, statut
-- Module `bibliotheque/` : CRUD livres + gestion emprunts + alertes retards
+`@fastify/jwt` et `@fastify/cookie` sont bloqués en v7.x car les v8+/v11+ requièrent Fastify 5.
 
-**Frontend**
-- Page `Bibliotheque/` : inventaire + liste des emprunts en cours
-- Alertes automatiques pour les retours en retard (notification in-app)
-
----
-
-### Phase 5 — Architecture et infrastructure
-
-**Objectif** : préparer l'application à la mise en production multi-établissements à grande échelle.
-
-#### 5.1 Migration Fastify 4 → 5
-
-**Pourquoi** : `@fastify/jwt` v8+ et `@fastify/cookie` v11+ requièrent Fastify 5. La migration débloque les mises à jour de sécurité des plugins.
-
-**Étapes**
 ```bash
 npm install fastify@^5 @fastify/jwt@^8 @fastify/cookie@^11 @fastify/cors@^10 @fastify/rate-limit@^10
-# Tester toutes les routes
-# Breaking change principal : reply.send() remplacé par return dans les handlers
 ```
 
----
+#### Pointage NFC
 
-#### 5.2 Refresh token silencieux
+Les modèles `ProfesseurCarte`, `Pointage` et `HeureTravail` sont déjà présents en schéma. Il manque uniquement la couche API de lecture des badges NFC.
 
-**Pourquoi** : le JWT expire après 7 jours et l'utilisateur est déconnecté sans avertissement.
+#### Application mobile (React Native)
 
-**Backend**
-- Nouveau modèle `RefreshToken` : `token (UUID)`, `utilisateur_id`, `expires_at`, `revoked`
-- Endpoint `POST /api/v1/auth/refresh` — échange un refresh token valide contre un nouveau JWT
-- Endpoint `POST /api/v1/auth/logout` — révoque le refresh token
-
-**Frontend**
-- Intercepteur dans `lib/api.ts` : si 401 reçu, tenter un refresh silencieux avant de rediriger vers login
-
----
-
-#### 5.3 Pointage NFC (prêt à l'implémentation)
-
-**Pourquoi** : les modèles `ProfesseurCarte`, `Pointage` et `HeureTravail` sont déjà présents en schéma. Il manque uniquement la couche API de lecture des badges.
-
-**Backend**
-- Endpoint public (API key) `POST /api/v1/pointage/badge` : reçoit `{ badge_uid }`, identifie le professeur, crée la présence automatiquement
-- Gestion de l'alternance entrée/sortie sur la même journée
-
-**Frontend**
-- Page `Pointage` : onglet **Mode kiosque** plein écran, affiche le nom du professeur identifié pendant 3 secondes
-- Paramètres : associer une `ProfesseurCarte` à un professeur via saisie du UID
-
----
-
-#### 5.4 Application mobile (React Native)
-
-**Pourquoi** : les professeurs saisissent leurs notes depuis leur téléphone. Une PWA ou app mobile permettrait la saisie hors-ligne avec synchronisation.
-
-**Approche recommandée**
-- Expo (React Native) en réutilisant la logique métier et les types TypeScript partagés
-- Mode hors-ligne : stockage local avec IndexedDB/SQLite + sync au retour réseau
-- Fonctions prioritaires : saisie notes, consultation emploi du temps, messagerie, portail parent
+Expo + partage des types TypeScript, mode hors-ligne pour la saisie de notes et la messagerie.
 
 ---
 
 ### Priorités suggérées
 
-| Phase | Module | Valeur métier | Complexité |
-|-------|--------|--------------|------------|
-| 3 | Suivi pluriannuel | ★★★★★ | ★★☆☆☆ |
-| 3 | Évaluations formatives | ★★★★☆ | ★★★☆☆ |
-| 4 | Dashboard analytique | ★★★★☆ | ★★★☆☆ |
-| 4 | Rapports exportables | ★★★★☆ | ★★★☆☆ |
-| 5 | Refresh token | ★★★☆☆ | ★★☆☆☆ |
-| 3 | Activités parascolaires | ★★☆☆☆ | ★★☆☆☆ |
-| 4 | Bibliothèque | ★★☆☆☆ | ★★★☆☆ |
-| 5 | Migration Fastify 5 | ★★☆☆☆ | ★★☆☆☆ |
-| 5 | Pointage NFC | ★★☆☆☆ | ★★★★☆ |
-| 5 | App mobile | ★★★★★ | ★★★★★ |
+| Module | Valeur métier | Complexité |
+|--------|--------------|------------|
+| Suivi pluriannuel | ★★★★★ | ★★☆☆☆ |
+| Dashboard analytique | ★★★★☆ | ★★★☆☆ |
+| Migration Fastify 5 | ★★☆☆☆ | ★★☆☆☆ |
+| Pointage NFC | ★★☆☆☆ | ★★★★☆ |
+| App mobile | ★★★★★ | ★★★★★ |
 
 ---
 

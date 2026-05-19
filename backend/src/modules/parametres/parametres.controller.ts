@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
-import { etablissementUpdateSchema, configNotesSchema } from './parametres.schema';
-import { getParametres, updateEtablissement, getConfigNotes, updateConfigNotes } from './parametres.service';
+import { etablissementUpdateSchema, configNotesSchema, configNotificationsSchema } from './parametres.schema';
+import { getParametres, updateEtablissement, getConfigNotes, updateConfigNotes, getConfigNotifications, updateConfigNotifications } from './parametres.service';
 
 export async function getParametresHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
@@ -41,6 +41,26 @@ export async function updateConfigNotesHandler(request: FastifyRequest, reply: F
   }
   try {
     const data = await updateConfigNotes(etablissement_id, parsed.data);
+    return reply.send(data);
+  } catch (err) {
+    return reply.status(400).send({ error: (err as Error).message });
+  }
+}
+
+export async function getConfigNotificationsHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const data = await getConfigNotifications(etablissement_id);
+  return reply.send(data);
+}
+
+export async function updateConfigNotificationsHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const parsed = configNotificationsSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: parsed.error.errors[0].message });
+  }
+  try {
+    const data = await updateConfigNotifications(etablissement_id, parsed.data);
     return reply.send(data);
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });

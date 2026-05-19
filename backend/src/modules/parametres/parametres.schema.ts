@@ -30,5 +30,13 @@ export const configNotesSchema = z.object({
   jours_cours: z.array(z.enum(['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'])).min(1, 'Au moins un jour de cours requis').optional(),
 });
 
+export const configNotificationsSchema = z.object({
+  notif_paiement_retard: z.boolean().optional(),
+  notif_absences_eleves: z.boolean().optional(),
+  notif_messages: z.boolean().optional(),
+  notif_inscriptions: z.boolean().optional(),
+});
+
 export type EtablissementUpdateInput = z.infer<typeof etablissementUpdateSchema>;
 export type ConfigNotesInput = z.infer<typeof configNotesSchema>;
+export type ConfigNotificationsInput = z.infer<typeof configNotificationsSchema>;

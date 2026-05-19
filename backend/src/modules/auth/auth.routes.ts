@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { loginHandler, logoutHandler, getMeHandler, changePasswordHandler, updateProfilHandler, refreshHandler } from './auth.controller';
+import { loginHandler, logoutHandler, getMeHandler, changePasswordHandler, updateProfilHandler, refreshHandler, revoquerSessionsHandler } from './auth.controller';
 import { authMiddleware } from '../../middlewares/auth.middleware';
 
 export async function authRoutes(fastify: FastifyInstance) {
@@ -13,4 +13,5 @@ export async function authRoutes(fastify: FastifyInstance) {
   fastify.get('/me', { preHandler: [authMiddleware] }, getMeHandler);
   fastify.put('/change-password', { preHandler: [authMiddleware] }, changePasswordHandler);
   fastify.put('/profil', { preHandler: [authMiddleware] }, updateProfilHandler);
+  fastify.delete('/sessions', { preHandler: [authMiddleware] }, revoquerSessionsHandler);
 }

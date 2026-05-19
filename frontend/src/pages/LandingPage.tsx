@@ -93,7 +93,16 @@ const T = {
           </svg>
         ),
         title: 'Documents officiels',
-        desc: 'Génération automatique de certificats de scolarité, attestations et autres documents en PDF prêts à imprimer.',
+        desc: 'Génération automatique de certificats de scolarité, attestations, inscriptions et autres documents officiels en PDF prêts à imprimer.',
+      },
+      {
+        icon: (
+          <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 016.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
+          </svg>
+        ),
+        title: 'Bibliothèque',
+        desc: 'Gestion du fonds documentaire de l\'école : catalogue des livres, prêts aux élèves et enseignants, suivi des retours et inventaire du stock.',
       },
     ],
     roles: [
@@ -118,6 +127,7 @@ const T = {
           { label: 'Notes & Évaluations', detail: 'Supervision de la saisie des notes, accès à toutes les évaluations par période et génération des bulletins PDF bilingues.' },
           { label: 'Finances', detail: 'Accès complet : paiements élèves, versements professeurs, retenues, reliquats et rapports financiers mensuels.' },
           { label: 'Documents officiels', detail: 'Génération de tous les documents officiels : certificats de scolarité, attestations et tout autre document en PDF.' },
+          { label: 'Bibliothèque', detail: 'Gestion complète du fonds documentaire : catalogue des livres, gestion des prêts, suivi des retours et état du stock.' },
           { label: 'Messagerie & Calendrier', detail: 'Messagerie avec tous les membres du personnel et gestion complète du calendrier scolaire.' },
           { label: 'Pointage & Absences', detail: 'Supervision du pointage des professeurs et suivi complet des absences des élèves avec statistiques.' },
         ],
@@ -137,6 +147,7 @@ const T = {
           { label: 'Absences des élèves', detail: 'Consultation et gestion du suivi des absences, taux de présence et alertes par classe.' },
           { label: 'Messagerie & Calendrier', detail: 'Messagerie interne avec l\'équipe et gestion des événements du calendrier scolaire.' },
           { label: 'Documents officiels', detail: 'Génération et consultation des certificats, attestations et documents officiels.' },
+          { label: 'Bibliothèque', detail: 'Consultation du catalogue et des prêts en cours dans la bibliothèque de l\'établissement.' },
         ],
       },
       gestionnaire: {
@@ -151,6 +162,7 @@ const T = {
           { label: 'Documents officiels', detail: 'Génération de certificats de scolarité, attestations et tous les documents officiels en PDF.' },
           { label: 'Emploi du temps', detail: 'Consultation et mise à jour des emplois du temps de toutes les classes.' },
           { label: 'Absences des élèves', detail: 'Consultation du suivi des absences et des statistiques de présence par classe.' },
+          { label: 'Bibliothèque', detail: 'Gestion des prêts de livres, retours et consultation du catalogue documentaire.' },
           { label: 'Messagerie & Calendrier', detail: 'Messagerie interne avec l\'équipe et accès au calendrier scolaire.' },
         ],
       },
@@ -163,6 +175,7 @@ const T = {
           { label: 'Finances', detail: 'Enregistrement des paiements de frais scolaires (mensualités, inscription, etc.), édition de reçus et suivi des reliquats.' },
           { label: 'Emploi du temps', detail: 'Consultation des emplois du temps par classe pour informer les familles.' },
           { label: 'Calendrier scolaire', detail: 'Consultation du calendrier des événements, examens et vacances scolaires.' },
+          { label: 'Bibliothèque', detail: 'Consultation du catalogue et gestion des prêts de livres aux élèves.' },
           { label: 'Messagerie', detail: 'Communication interne avec l\'équipe pédagogique et administrative.' },
         ],
       },
@@ -280,7 +293,16 @@ const T = {
           </svg>
         ),
         title: 'الوثائق الرسمية',
-        desc: 'إنشاء تلقائي لشهادات التمدرس والاعترافات وسائر الوثائق الرسمية PDF جاهزة للطباعة.',
+        desc: 'إنشاء تلقائي لشهادات التمدرس والاعترافات وشهادات التسجيل وسائر الوثائق الرسمية PDF جاهزة للطباعة.',
+      },
+      {
+        icon: (
+          <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 016.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
+          </svg>
+        ),
+        title: 'المكتبة',
+        desc: 'إدارة الرصيد الوثائقي للمدرسة: فهرس الكتب، إعارة الكتب للتلاميذ والأساتذة، متابعة الإرجاع وجرد المخزون.',
       },
     ],
     roles: [
@@ -305,6 +327,7 @@ const T = {
           { label: 'الدرجات والتقييمات', detail: 'الإشراف على إدخال الدرجات، الوصول لجميع التقييمات حسب الفصل وإنشاء شهادات النتائج ثنائية اللغة.' },
           { label: 'المالية', detail: 'وصول كامل: مدفوعات التلاميذ، مدفوعات الأساتذة، الاستقطاعات، المتأخرات والتقارير المالية الشهرية.' },
           { label: 'الوثائق الرسمية', detail: 'إنشاء جميع الوثائق الرسمية: شهادات التمدرس، الاعترافات وكل الوثائق الإدارية بصيغة PDF.' },
+          { label: 'المكتبة', detail: 'الإدارة الكاملة للرصيد الوثائقي: فهرس الكتب، إدارة الإعارات، متابعة الإرجاع وحالة المخزون.' },
           { label: 'المراسلة والتقويم', detail: 'المراسلة مع جميع أعضاء الهيئة وإدارة التقويم المدرسي بالكامل.' },
           { label: 'الحضور والغيابات', detail: 'الإشراف على سجل حضور الأساتذة والمتابعة الكاملة لغيابات التلاميذ مع الإحصاءات.' },
         ],
@@ -324,6 +347,7 @@ const T = {
           { label: 'غيابات التلاميذ', detail: 'الاطلاع وإدارة سجلات الغياب ونسب الحضور والتنبيهات حسب القسم.' },
           { label: 'المراسلة والتقويم', detail: 'المراسلة الداخلية مع الفريق وإدارة أحداث التقويم المدرسي.' },
           { label: 'الوثائق الرسمية', detail: 'إنشاء والاطلاع على شهادات التمدرس والاعترافات والوثائق الرسمية.' },
+          { label: 'المكتبة', detail: 'الاطلاع على الفهرس والإعارات الجارية في مكتبة المؤسسة.' },
         ],
       },
       gestionnaire: {
@@ -338,6 +362,7 @@ const T = {
           { label: 'الوثائق الرسمية', detail: 'إنشاء شهادات التمدرس والاعترافات وسائر الوثائق الرسمية بصيغة PDF.' },
           { label: 'جدول الحصص', detail: 'الاطلاع على وتحديث جداول حصص الأقسام.' },
           { label: 'غيابات التلاميذ', detail: 'الاطلاع على سجلات الغياب وإحصاءات الحضور حسب القسم.' },
+          { label: 'المكتبة', detail: 'إدارة إعارات الكتب والإرجاعات والاطلاع على الفهرس الوثائقي.' },
           { label: 'المراسلة والتقويم', detail: 'المراسلة الداخلية مع الفريق والوصول إلى التقويم المدرسي.' },
         ],
       },
@@ -350,6 +375,7 @@ const T = {
           { label: 'المالية', detail: 'تسجيل مدفوعات الرسوم الدراسية (أقساط، تسجيل...)، طباعة الوصولات ومتابعة المتأخرات.' },
           { label: 'جدول الحصص', detail: 'الاطلاع على جداول الحصص حسب القسم لإعلام الأسر.' },
           { label: 'التقويم المدرسي', detail: 'الاطلاع على تقويم الأحداث والامتحانات والعطل المدرسية.' },
+          { label: 'المكتبة', detail: 'الاطلاع على الفهرس وإدارة إعارات الكتب للتلاميذ.' },
           { label: 'المراسلة', detail: 'التواصل الداخلي مع الفريق التربوي والإداري.' },
         ],
       },
