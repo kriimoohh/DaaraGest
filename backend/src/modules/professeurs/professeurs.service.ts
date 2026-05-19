@@ -107,7 +107,7 @@ export async function modifierProfesseur(id: string, etablissement_id: string, d
 
   updateTasks.push(
     prisma.professeur.update({
-      where: { id },
+      where: { id: professeur.id },
       data: {
         specialite_fr: data.specialite_fr,
         specialite_ar: data.specialite_ar,
