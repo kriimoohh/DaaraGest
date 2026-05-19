@@ -453,6 +453,12 @@ export function ElevesPage() {
 
   // ── Fiche ──────────────────────────────────────────────────────────────────
 
+  function closeFiche() {
+    setFicheModal(null);
+    setShowProgression(false);
+    setProgression(null);
+  }
+
   async function openFiche(eleve: Eleve) {
     setFicheLoading(eleve.id);
     try {
@@ -820,7 +826,7 @@ export function ElevesPage() {
     }
   };
 
-  // ── Photo upload ──────────────────────────────────────────────────────────
+  // ── Photo upload / delete ──────────────────────────────────────────────────
 
   const handlePhotoUpload = async (dataUrl: string) => {
     if (!ficheModal || !dataUrl) return;
@@ -834,6 +840,20 @@ export function ElevesPage() {
     } catch (err) {
       setFicheModal(f => f ? { ...f, photo_url: prevPhoto } : f);
       toast.error((err as Error).message || 'Erreur upload photo');
+    } finally { setPhotoSaving(false); }
+  };
+
+  const handlePhotoDelete = async () => {
+    if (!ficheModal) return;
+    if (!confirm(`Supprimer la photo de ${ficheModal.prenom_fr} ${ficheModal.nom_fr} ?`)) return;
+    setPhotoSaving(true);
+    try {
+      await api.put(`/api/v1/eleves/${ficheModal.id}`, { photo_url: null });
+      setFicheModal(f => f ? { ...f, photo_url: undefined } : f);
+      toast.success('Photo supprimée');
+      fetchEleves();
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur suppression photo');
     } finally { setPhotoSaving(false); }
   };
 
@@ -1110,7 +1130,7 @@ export function ElevesPage() {
       {ficheModal && (
         <Modal
           isOpen={!!ficheModal}
-          onClose={() => setFicheModal(null)}
+          onClose={closeFiche}
           title=""
           size="lg"
         >
@@ -1118,23 +1138,35 @@ export function ElevesPage() {
             {/* ── En-tête identité ── */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 20, paddingBottom: 20, borderBottom: '1px solid var(--rule)' }}>
               {/* Avatar cliquable */}
-              <PhotoPicker onFile={handlePhotoUpload} onError={(m) => toast.error(m)} disabled={photoSaving}>
-                {(openPicker) => (
-                  <button type="button" onClick={openPicker} disabled={photoSaving}
-                    aria-label="Modifier la photo de l'élève"
-                    style={{ position: 'relative', flexShrink: 0, width: 80, height: 80, borderRadius: 16, overflow: 'hidden', border: '2px solid var(--rule)', cursor: 'pointer', padding: 0, background: 'transparent' }}>
-                    {ficheModal.photo_url
-                      ? <img src={ficheModal.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <div style={{ width: '100%', height: '100%', background: 'var(--terra)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700, color: '#fff' }}>
-                          {ficheModal.prenom_fr[0]}{ficheModal.nom_fr[0]}
-                        </div>
-                    }
-                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ color: '#fff', fontSize: 12 }}>{photoSaving ? '…' : '📷'}</span>
-                    </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                <PhotoPicker onFile={handlePhotoUpload} onError={(m) => toast.error(m)} disabled={photoSaving}>
+                  {(openPicker) => (
+                    <button type="button" onClick={openPicker} disabled={photoSaving}
+                      aria-label="Modifier la photo de l'élève"
+                      style={{ position: 'relative', width: 80, height: 80, borderRadius: 16, overflow: 'hidden', border: '2px solid var(--rule)', cursor: 'pointer', padding: 0, background: 'transparent' }}>
+                      {ficheModal.photo_url
+                        ? <img src={ficheModal.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : <div style={{ width: '100%', height: '100%', background: 'var(--terra)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700, color: '#fff' }}>
+                            {ficheModal.prenom_fr[0]}{ficheModal.nom_fr[0]}
+                          </div>
+                      }
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ color: '#fff', fontSize: 12 }}>{photoSaving ? '…' : '📷'}</span>
+                      </div>
+                    </button>
+                  )}
+                </PhotoPicker>
+                {ficheModal.photo_url && isAdmin && (
+                  <button
+                    type="button"
+                    onClick={handlePhotoDelete}
+                    disabled={photoSaving}
+                    style={{ fontSize: 11, color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px', borderRadius: 4 }}
+                  >
+                    ✕ Supprimer
                   </button>
                 )}
-              </PhotoPicker>
+              </div>
 
               {/* Nom + badges */}
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -1314,11 +1346,11 @@ export function ElevesPage() {
               )}
               <div style={{ display: 'flex', gap: 8, marginInlineStart: 'auto' }}>
                 {isGestion && (
-                  <Button variant="secondary" onClick={() => { setFicheModal(null); openEdit(ficheModal); }}>
+                  <Button variant="secondary" onClick={() => { closeFiche(); openEdit(ficheModal); }}>
                     Modifier
                   </Button>
                 )}
-                <Button variant="secondary" onClick={() => setFicheModal(null)}>Fermer</Button>
+                <Button variant="secondary" onClick={closeFiche}>Fermer</Button>
               </div>
             </div>
           </div>

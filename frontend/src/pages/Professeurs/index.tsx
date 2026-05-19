@@ -15,6 +15,7 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Pagination } from '../../components/ui/Pagination';
 import { PhotoPicker } from '../../components/ui/PhotoPicker';
+import { ActionMenu } from '../../components/ui/ActionMenu';
 
 interface QRData {
   dataUrl: string;
@@ -170,7 +171,7 @@ interface ProfesseurFormData {
   specialite_fr: string;
   telephone: string;
   type_contrat: string;
-  photo_url?: string;
+  photo_url?: string | null;
 }
 
 type FormErrors = Partial<Record<keyof ProfesseurFormData, string>>;
@@ -283,7 +284,7 @@ export function ProfesseursPage() {
         nom_ar: form.nom_ar,
         identifiant: form.identifiant, specialite_fr: form.specialite_fr,
         telephone: form.telephone, type_contrat: form.type_contrat,
-        photo_url: form.photo_url,
+        ...(form.photo_url !== undefined ? { photo_url: form.photo_url } : {}),
       };
       if (!editTarget && form.mot_de_passe) payload.mot_de_passe = form.mot_de_passe;
       if (editTarget) {
@@ -364,16 +365,32 @@ export function ProfesseursPage() {
     {
       key: 'actions',
       header: 'Actions',
-      width: '160px',
+      width: '120px',
       render: (row) => {
         const p = row as unknown as Professeur;
         return (
-          <>
-            <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>{t('actions.modifier')}</Button>
-            <Button size="sm" variant="ghost" onClick={() => setQrTarget(p)} title="QR Code pointage">QR</Button>
-            <Button size="sm" variant="ghost" loading={carteUniqueLoading === p.id} onClick={() => handleCarteUnique(p.id)} title="Carte ID CR80">🪪</Button>
-            {isAdmin && <Button size="sm" variant="danger" onClick={() => setConfirmDelete(p)}>{t('actions.supprimer')}</Button>}
-          </>
+          <div className="row">
+            <Button size="sm" variant="secondary" onClick={() => openEdit(p)}>{t('actions.modifier')}</Button>
+            <ActionMenu items={[
+              {
+                label: 'QR Code pointage',
+                icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x={3} y={3} width={7} height={7}/><rect x={14} y={3} width={7} height={7}/><rect x={3} y={14} width={7} height={7}/><path d="M14 14h3v3m0-3h3v3m-3 3h3"/></svg>,
+                onClick: () => setQrTarget(p),
+              },
+              {
+                label: carteUniqueLoading === p.id ? 'Génération…' : 'Carte ID (CR80)',
+                icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x={2} y={5} width={20} height={14} rx={2}/><line x1={2} y1={10} x2={22} y2={10}/></svg>,
+                onClick: () => handleCarteUnique(p.id),
+                disabled: carteUniqueLoading === p.id,
+              },
+              ...(isAdmin ? [{
+                label: t('actions.supprimer'),
+                icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>,
+                onClick: () => setConfirmDelete(p),
+                variant: 'danger' as const,
+              }] : []),
+            ]} />
+          </div>
         );
       },
     },
@@ -493,11 +510,27 @@ export function ProfesseursPage() {
                   </div>
 
                   {/* Actions */}
-                  <div style={{ padding: '8px 12px', borderTop: '1px solid var(--rule)', display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                    <button className="btn btn-ghost btn-sm" onClick={() => setQrTarget(p)} title="QR Code pointage" style={{ fontSize: 12 }}>QR</button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => handleCarteUnique(p.id)} title="Carte ID CR80" disabled={carteUniqueLoading === p.id} style={{ fontSize: 14 }}>🪪</button>
+                  <div style={{ padding: '8px 12px', borderTop: '1px solid var(--rule)', display: 'flex', gap: 4, justifyContent: 'space-between', alignItems: 'center' }}>
                     <button className="btn btn-secondary btn-sm" onClick={() => openEdit(p)}>{t('actions.modifier')}</button>
-                    {isAdmin && <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} onClick={() => setConfirmDelete(p)}>✕</button>}
+                    <ActionMenu items={[
+                      {
+                        label: 'QR Code pointage',
+                        icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x={3} y={3} width={7} height={7}/><rect x={14} y={3} width={7} height={7}/><rect x={3} y={14} width={7} height={7}/><path d="M14 14h3v3m0-3h3v3m-3 3h3"/></svg>,
+                        onClick: () => setQrTarget(p),
+                      },
+                      {
+                        label: carteUniqueLoading === p.id ? 'Génération…' : 'Carte ID (CR80)',
+                        icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x={2} y={5} width={20} height={14} rx={2}/><line x1={2} y1={10} x2={22} y2={10}/></svg>,
+                        onClick: () => handleCarteUnique(p.id),
+                        disabled: carteUniqueLoading === p.id,
+                      },
+                      ...(isAdmin ? [{
+                        label: t('actions.supprimer'),
+                        icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>,
+                        onClick: () => setConfirmDelete(p),
+                        variant: 'danger' as const,
+                      }] : []),
+                    ]} />
                   </div>
                 </div>
               );
@@ -525,35 +558,46 @@ export function ProfesseursPage() {
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <PhotoPicker onFile={handlePhotoSelect} onError={(m) => toast.error(m)} disabled={photoLoading}>
-                {(openPicker) => (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                <PhotoPicker onFile={handlePhotoSelect} onError={(m) => toast.error(m)} disabled={photoLoading}>
+                  {(openPicker) => (
+                    <button
+                      type="button"
+                      onClick={openPicker}
+                      disabled={photoLoading}
+                      aria-label="Modifier la photo du professeur"
+                      style={{
+                        position: 'relative', width: 88, height: 88, borderRadius: '50%',
+                        border: '2px dashed var(--rule-2)', background: 'var(--paper-2)',
+                        cursor: 'pointer', overflow: 'hidden', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 4,
+                        padding: 0,
+                      }}
+                    >
+                      {form.photo_url
+                        ? <img src={form.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : <span style={{ fontSize: 28 }}>👤</span>
+                      }
+                      <div style={{
+                        position: 'absolute', bottom: 0, insetInlineStart: 0, insetInlineEnd: 0,
+                        background: 'rgba(0,0,0,0.5)', padding: '4px 0',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <span style={{ color: '#fff', fontSize: 11 }}>{photoLoading ? '…' : '📷'}</span>
+                      </div>
+                    </button>
+                  )}
+                </PhotoPicker>
+                {form.photo_url && isAdmin && (
                   <button
                     type="button"
-                    onClick={openPicker}
-                    disabled={photoLoading}
-                    aria-label="Modifier la photo du professeur"
-                    style={{
-                      position: 'relative', width: 88, height: 88, borderRadius: '50%',
-                      border: '2px dashed var(--rule-2)', background: 'var(--paper-2)',
-                      cursor: 'pointer', overflow: 'hidden', display: 'flex',
-                      alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 4,
-                      padding: 0,
-                    }}
+                    onClick={() => setField('photo_url', null)}
+                    style={{ fontSize: 11, color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 8px', borderRadius: 4 }}
                   >
-                    {form.photo_url
-                      ? <img src={form.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <span style={{ fontSize: 28 }}>👤</span>
-                    }
-                    <div style={{
-                      position: 'absolute', bottom: 0, insetInlineStart: 0, insetInlineEnd: 0,
-                      background: 'rgba(0,0,0,0.5)', padding: '4px 0',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <span style={{ color: '#fff', fontSize: 11 }}>{photoLoading ? '…' : '📷'}</span>
-                    </div>
+                    ✕ Supprimer la photo
                   </button>
                 )}
-              </PhotoPicker>
+              </div>
             </div>
 
             <Input label={t('common.nom_fr')} value={form.nom_fr} onChange={(e) => setField('nom_fr', e.target.value)} error={formErrors.nom_fr} />
