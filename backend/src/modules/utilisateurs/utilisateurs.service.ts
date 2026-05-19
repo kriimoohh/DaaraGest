@@ -107,8 +107,10 @@ export async function supprimerUtilisateur(id: string, etablissement_id: string,
   const existing = await prisma.utilisateur.findFirst({ where: { id, etablissement_id } });
   if (!existing) throw new Error('Utilisateur introuvable');
 
+  // Suffixer l'identifiant pour libérer le slot unique et permettre sa réutilisation
+  const identifiantLibere = `${existing.identifiant}_deleted_${Date.now()}`;
   await logAction(etablissement_id, acteurId, 'DELETE', 'Utilisateur', id, { identifiant: existing.identifiant });
-  return prisma.utilisateur.update({ where: { id }, data: { actif: false } });
+  return prisma.utilisateur.update({ where: { id }, data: { actif: false, identifiant: identifiantLibere } });
 }
 
 export async function resetPassword(id: string, etablissement_id: string, data: ResetPasswordInput, acteurId: string) {

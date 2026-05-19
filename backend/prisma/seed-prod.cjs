@@ -11,6 +11,18 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('\n🏫  DaaraGest — Seed production\n');
 
+  // Court-circuit : si l'établissement + les rôles + un admin existent déjà,
+  // le seed a déjà tourné — on saute tout pour accélérer les redémarrages.
+  const [etabCount, roleCount, adminUser] = await Promise.all([
+    prisma.etablissement.count(),
+    prisma.role.count(),
+    prisma.utilisateur.findFirst({ where: { identifiant: 'admin' } }),
+  ]);
+  if (etabCount > 0 && roleCount >= 6 && adminUser) {
+    console.log('✅  Seed déjà effectué — démarrage immédiat.\n');
+    return;
+  }
+
   // ── Établissement ────────────────────────────────────────────────────────────
   let etab = await prisma.etablissement.findFirst();
   if (!etab) {
