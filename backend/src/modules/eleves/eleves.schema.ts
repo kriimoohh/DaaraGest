@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { photoUrlSchema } from '../../utils/photoUrl';
 
 export const parentSchema = z.object({
   nom_fr: z.string().min(1),
@@ -16,7 +17,7 @@ export const eleveSchema = z.object({
   date_naissance: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   lieu_naissance: z.string().optional(),
   sexe: z.enum(['M', 'F']),
-  photo_url: z.string().optional(),
+  photo_url: photoUrlSchema,
   parents: z.array(parentSchema).optional(),
 });
 

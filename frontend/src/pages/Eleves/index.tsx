@@ -16,6 +16,7 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Pagination } from '../../components/ui/Pagination';
 import { ActionMenu } from '../../components/ui/ActionMenu';
+import { PhotoPicker } from '../../components/ui/PhotoPicker';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -263,7 +264,6 @@ export function ElevesPage() {
   // Fiche complète modal
   const [ficheModal, setFicheModal] = useState<EleveFiche | null>(null);
   const [ficheLoading, setFicheLoading] = useState<string | null>(null);
-  const photoInputRef = useRef<HTMLInputElement>(null);
   const [photoSaving, setPhotoSaving] = useState(false);
 
   // Progression
@@ -822,22 +822,19 @@ export function ElevesPage() {
 
   // ── Photo upload ──────────────────────────────────────────────────────────
 
-  const handlePhotoUpload = (file: File) => {
-    if (!ficheModal) return;
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const base64 = ev.target?.result as string;
-      setPhotoSaving(true);
-      try {
-        await api.put(`/api/v1/eleves/${ficheModal.id}`, { photo_url: base64 });
-        setFicheModal(f => f ? { ...f, photo_url: base64 } : f);
-        toast.success('Photo mise à jour');
-        fetchEleves();
-      } catch (err) {
-        toast.error((err as Error).message || 'Erreur upload photo');
-      } finally { setPhotoSaving(false); }
-    };
-    reader.readAsDataURL(file);
+  const handlePhotoUpload = async (dataUrl: string) => {
+    if (!ficheModal || !dataUrl) return;
+    setPhotoSaving(true);
+    const prevPhoto = ficheModal.photo_url;
+    try {
+      await api.put(`/api/v1/eleves/${ficheModal.id}`, { photo_url: dataUrl });
+      setFicheModal(f => f ? { ...f, photo_url: dataUrl } : f);
+      toast.success('Photo mise à jour');
+      fetchEleves();
+    } catch (err) {
+      setFicheModal(f => f ? { ...f, photo_url: prevPhoto } : f);
+      toast.error((err as Error).message || 'Erreur upload photo');
+    } finally { setPhotoSaving(false); }
   };
 
   // ── Génération cartes ──────────────────────────────────────────────────────
@@ -1117,25 +1114,27 @@ export function ElevesPage() {
           title=""
           size="lg"
         >
-          <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }}
-            onChange={e => { if (e.target.files?.[0]) handlePhotoUpload(e.target.files[0]); e.target.value = ''; }} />
-
           <div>
             {/* ── En-tête identité ── */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 20, paddingBottom: 20, borderBottom: '1px solid var(--rule)' }}>
               {/* Avatar cliquable */}
-              <button type="button" onClick={() => photoInputRef.current?.click()} disabled={photoSaving}
-                style={{ position: 'relative', flexShrink: 0, width: 80, height: 80, borderRadius: 16, overflow: 'hidden', border: '2px solid var(--rule)', cursor: 'pointer' }}>
-                {ficheModal.photo_url
-                  ? <img src={ficheModal.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : <div style={{ width: '100%', height: '100%', background: 'var(--terra)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700, color: '#fff' }}>
-                      {ficheModal.prenom_fr[0]}{ficheModal.nom_fr[0]}
+              <PhotoPicker onFile={handlePhotoUpload} onError={(m) => toast.error(m)} disabled={photoSaving}>
+                {(openPicker) => (
+                  <button type="button" onClick={openPicker} disabled={photoSaving}
+                    aria-label="Modifier la photo de l'élève"
+                    style={{ position: 'relative', flexShrink: 0, width: 80, height: 80, borderRadius: 16, overflow: 'hidden', border: '2px solid var(--rule)', cursor: 'pointer', padding: 0, background: 'transparent' }}>
+                    {ficheModal.photo_url
+                      ? <img src={ficheModal.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <div style={{ width: '100%', height: '100%', background: 'var(--terra)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700, color: '#fff' }}>
+                          {ficheModal.prenom_fr[0]}{ficheModal.nom_fr[0]}
+                        </div>
+                    }
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ color: '#fff', fontSize: 12 }}>{photoSaving ? '…' : '📷'}</span>
                     </div>
-                }
-                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ color: '#fff', fontSize: 12 }}>{photoSaving ? '…' : '📷'}</span>
-                </div>
-              </button>
+                  </button>
+                )}
+              </PhotoPicker>
 
               {/* Nom + badges */}
               <div style={{ flex: 1, minWidth: 0 }}>

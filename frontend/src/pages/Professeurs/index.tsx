@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { API_BASE } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
@@ -14,6 +14,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Pagination } from '../../components/ui/Pagination';
+import { PhotoPicker } from '../../components/ui/PhotoPicker';
 
 interface QRData {
   dataUrl: string;
@@ -195,7 +196,6 @@ export function ProfesseursPage() {
   const [submitting, setSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Professeur | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const photoInputRef = useRef<HTMLInputElement>(null);
   const [photoLoading, setPhotoLoading] = useState(false);
   const [qrTarget, setQrTarget] = useState<Professeur | null>(null);
   const [carteUniqueLoading, setCarteUniqueLoading] = useState<string | null>(null);
@@ -243,16 +243,11 @@ export function ProfesseursPage() {
     setModalOpen(true);
   }
 
-  function handlePhotoSelect(file: File) {
-    const reader = new FileReader();
+  function handlePhotoSelect(dataUrl: string) {
+    if (!dataUrl) { setPhotoLoading(false); return; }
     setPhotoLoading(true);
-    reader.onload = (ev) => {
-      const base64 = ev.target?.result as string;
-      setForm((f) => ({ ...f, photo_url: base64 }));
-      setPhotoLoading(false);
-    };
-    reader.onerror = () => setPhotoLoading(false);
-    reader.readAsDataURL(file);
+    setForm((f) => ({ ...f, photo_url: dataUrl }));
+    setPhotoLoading(false);
   }
 
   function setField<K extends keyof ProfesseurFormData>(key: K, value: ProfesseurFormData[K]) {
@@ -500,37 +495,36 @@ export function ProfesseursPage() {
           size="lg"
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <input
-              ref={photoInputRef}
-              type="file"
-              accept="image/*"
-              style={{ display: 'none' }}
-              onChange={(e) => { if (e.target.files?.[0]) handlePhotoSelect(e.target.files[0]); e.target.value = ''; }}
-            />
             <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <button
-                type="button"
-                onClick={() => photoInputRef.current?.click()}
-                disabled={photoLoading}
-                style={{
-                  position: 'relative', width: 88, height: 88, borderRadius: '50%',
-                  border: '2px dashed var(--border)', background: 'var(--surface-2)',
-                  cursor: 'pointer', overflow: 'hidden', display: 'flex',
-                  alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 4,
-                }}
-              >
-                {form.photo_url
-                  ? <img src={form.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : <span style={{ fontSize: 28 }}>👤</span>
-                }
-                <div style={{
-                  position: 'absolute', bottom: 0, left: 0, right: 0,
-                  background: 'rgba(0,0,0,0.5)', padding: '4px 0',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <span style={{ color: '#fff', fontSize: 11 }}>{photoLoading ? '…' : '📷'}</span>
-                </div>
-              </button>
+              <PhotoPicker onFile={handlePhotoSelect} onError={(m) => toast.error(m)} disabled={photoLoading}>
+                {(openPicker) => (
+                  <button
+                    type="button"
+                    onClick={openPicker}
+                    disabled={photoLoading}
+                    aria-label="Modifier la photo du professeur"
+                    style={{
+                      position: 'relative', width: 88, height: 88, borderRadius: '50%',
+                      border: '2px dashed var(--rule-2)', background: 'var(--paper-2)',
+                      cursor: 'pointer', overflow: 'hidden', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 4,
+                      padding: 0,
+                    }}
+                  >
+                    {form.photo_url
+                      ? <img src={form.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <span style={{ fontSize: 28 }}>👤</span>
+                    }
+                    <div style={{
+                      position: 'absolute', bottom: 0, insetInlineStart: 0, insetInlineEnd: 0,
+                      background: 'rgba(0,0,0,0.5)', padding: '4px 0',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <span style={{ color: '#fff', fontSize: 11 }}>{photoLoading ? '…' : '📷'}</span>
+                    </div>
+                  </button>
+                )}
+              </PhotoPicker>
             </div>
 
             <Input label={t('common.nom_fr')} value={form.nom_fr} onChange={(e) => setField('nom_fr', e.target.value)} error={formErrors.nom_fr} />
