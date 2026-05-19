@@ -17,6 +17,7 @@ import { AnneeScolairesPage } from './pages/AnneeScolaires';
 import { MatieresPage } from './pages/Matieres';
 import { UtilisateursPage } from './pages/Utilisateurs';
 import { PointagePage } from './pages/Pointage';
+import { ScannerPage } from './pages/Pointage/Scanner';
 import { AbsencesPage } from './pages/Absences';
 import { EmploiDuTempsPage } from './pages/EmploiDuTemps';
 import { CalendrierPage } from './pages/Calendrier';
@@ -46,6 +47,7 @@ export default function App() {
         <Route path="/guide" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/portail/:token" element={<PortailParentPage />} />
+        <Route path="/scanner" element={<ScannerPage />} />
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<Dashboard />} />
 

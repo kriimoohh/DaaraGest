@@ -14,6 +14,115 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Pagination } from '../../components/ui/Pagination';
 
+interface QRData {
+  dataUrl: string;
+  token: string;
+  nom: string;
+}
+
+function QRCodeModal({ professeurId, nom, onClose, api }: {
+  professeurId: string; nom: string; onClose: () => void;
+  api: ReturnType<typeof useApi>;
+}) {
+  const [qrData, setQrData] = useState<QRData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [regenerating, setRegenerating] = useState(false);
+
+  const charger = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await api.get<QRData>(`/api/v1/pointage/qr/${professeurId}`);
+      setQrData(data);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, [professeurId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { charger(); }, [charger]);
+
+  const handleRegenerer = async () => {
+    if (!confirm(`Régénérer le QR code de ${nom} ? L'ancien QR code ne fonctionnera plus.`)) return;
+    setRegenerating(true);
+    try {
+      const data = await api.post<QRData>(`/api/v1/pointage/qr/${professeurId}/regenerer`, {});
+      setQrData(data);
+      toast.success('QR code régénéré');
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  const handleTelecharger = () => {
+    if (!qrData) return;
+    const a = document.createElement('a');
+    a.href = qrData.dataUrl;
+    a.download = `qr-${nom.replace(/\s+/g, '-').toLowerCase()}.png`;
+    a.click();
+  };
+
+  const handleImprimer = () => {
+    if (!qrData) return;
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(`
+      <html><head><title>QR Code — ${qrData.nom}</title>
+      <style>
+        body { font-family: system-ui; text-align: center; padding: 40px; }
+        img { width: 280px; height: 280px; }
+        h2 { margin-top: 20px; font-size: 22px; }
+        p { color: #666; font-size: 14px; }
+      </style>
+      </head><body>
+        <p style="font-size:13px;color:#999;letter-spacing:2px;text-transform:uppercase">DaaraGest — Pointage</p>
+        <img src="${qrData.dataUrl}" alt="QR Code" />
+        <h2>${qrData.nom}</h2>
+        <p>Scannez ce code pour enregistrer votre présence</p>
+      </body></html>
+    `);
+    win.document.close();
+    win.print();
+  };
+
+  return (
+    <Modal isOpen onClose={onClose} title={`QR Code — ${nom}`} size="sm">
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+        {loading ? (
+          <div style={{ padding: 40, color: 'var(--ink-3)' }}>Génération en cours…</div>
+        ) : qrData ? (
+          <>
+            <div style={{
+              background: '#fff', borderRadius: 12, padding: 16,
+              border: '1px solid var(--rule)', display: 'inline-block',
+            }}>
+              <img src={qrData.dataUrl} alt="QR Code" style={{ width: 240, height: 240, display: 'block' }} />
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--ink-3)', textAlign: 'center', margin: 0 }}>
+              Ce code est unique à {nom}.<br />À scanner sur la tablette de pointage.
+            </p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+              <Button size="sm" variant="secondary" onClick={handleTelecharger}>
+                Télécharger PNG
+              </Button>
+              <Button size="sm" variant="secondary" onClick={handleImprimer}>
+                Imprimer
+              </Button>
+              <Button size="sm" variant="danger" onClick={handleRegenerer} loading={regenerating}>
+                Régénérer
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div style={{ color: 'var(--danger)', padding: 20 }}>Erreur de chargement</div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 interface Professeur {
   id: string;
   nom_fr: string;
@@ -87,6 +196,7 @@ export function ProfesseursPage() {
   const [deleting, setDeleting] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [photoLoading, setPhotoLoading] = useState(false);
+  const [qrTarget, setQrTarget] = useState<Professeur | null>(null);
 
   const fetchProfs = useCallback(async () => {
     setLoading(true);
@@ -233,6 +343,7 @@ export function ProfesseursPage() {
         return (
           <>
             <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>{t('actions.modifier')}</Button>
+            <Button size="sm" variant="ghost" onClick={() => setQrTarget(p)} title="QR Code pointage">QR</Button>
             {isAdmin && <Button size="sm" variant="danger" onClick={() => setConfirmDelete(p)}>{t('actions.supprimer')}</Button>}
           </>
         );
@@ -285,6 +396,7 @@ export function ProfesseursPage() {
                   </div>
                   <div style={{ display: 'flex', gap: 4 }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(p)}>{t('actions.modifier')}</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setQrTarget(p)} title="QR Code pointage">QR</button>
                     {isAdmin && <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} onClick={() => setConfirmDelete(p)}>✕</button>}
                   </div>
                 </div>
@@ -393,6 +505,15 @@ export function ProfesseursPage() {
         loading={deleting}
         message={`Désactiver le professeur "${confirmDelete?.nom_fr ?? ''}" ?`}
       />
+
+      {qrTarget && (
+        <QRCodeModal
+          professeurId={qrTarget.id}
+          nom={`${qrTarget.prenom_fr ?? ''} ${qrTarget.nom_fr}`.trim()}
+          onClose={() => setQrTarget(null)}
+          api={api}
+        />
+      )}
     </>
   );
 }
