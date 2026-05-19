@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Html5Qrcode } from 'html5-qrcode';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -353,6 +354,13 @@ export function FinancesPage() {
   const [deleteTarget, setDeleteTarget] = useState<PaiementEleve | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Scanner QR élève
+  const [qrScanModal, setQrScanModal] = useState(false);
+  const [qrStarted, setQrStarted] = useState(false);
+  const [qrError, setQrError] = useState<string | null>(null);
+  const qrScannerRef = useRef<Html5Qrcode | null>(null);
+  const qrProcessing = useRef(false);
+
   const formatMontant = (v: number) => new Intl.NumberFormat('fr-FR').format(v) + ' FCFA';
 
   const TYPE_LABELS: Record<string, string> = {
@@ -461,6 +469,45 @@ export function FinancesPage() {
     } catch (err) {
       toast.error((err as Error).message || 'Erreur');
     } finally { setEditSaving(false); }
+  };
+
+  const stopQrScanner = useCallback(async () => {
+    if (qrScannerRef.current) {
+      try { await qrScannerRef.current.stop(); qrScannerRef.current.clear(); } catch { /* ignore */ }
+      qrScannerRef.current = null;
+    }
+    setQrStarted(false);
+  }, []);
+
+  const startQrScanner = async () => {
+    setQrError(null);
+    qrProcessing.current = false;
+    try {
+      const scanner = new Html5Qrcode('qr-paiement-reader');
+      qrScannerRef.current = scanner;
+      await scanner.start(
+        { facingMode: 'environment' },
+        { fps: 5, qrbox: { width: 220, height: 220 } },
+        (text) => {
+          if (qrProcessing.current) return;
+          qrProcessing.current = true;
+          try {
+            const [b64] = text.split('.');
+            const payload = JSON.parse(atob(b64.replace(/-/g, '+').replace(/_/g, '/')));
+            if (payload.type !== 'eleve') { setQrError('Ce QR code ne correspond pas à un élève'); qrProcessing.current = false; return; }
+            const found = allEleves.find(e => e.id === payload.id || e.matricule === payload.matricule);
+            if (!found) { setQrError(`Élève introuvable (${payload.matricule ?? payload.id})`); qrProcessing.current = false; return; }
+            stopQrScanner();
+            setQrScanModal(false);
+            setSelectedEleves([found]);
+            setModal(true);
+            toast.success(`Élève identifié : ${found.prenom_fr} ${found.nom_fr}`);
+          } catch { setQrError('QR code invalide'); qrProcessing.current = false; }
+        },
+        () => { /* non-détections ignorées */ }
+      );
+      setQrStarted(true);
+    } catch { setQrError("Impossible d'accéder à la caméra. Vérifiez les permissions."); }
   };
 
   const handleDelete = async () => {
@@ -610,6 +657,7 @@ export function FinancesPage() {
             <div style={{ flex: 1 }}>
               <SearchInput value={search} onChange={setSearch} placeholder="Rechercher un élève..." />
             </div>
+            <Button variant="secondary" onClick={() => { setQrError(null); setQrScanModal(true); }}>📷 Scanner QR</Button>
             <Button onClick={openModal}>+ Paiement</Button>
           </div>
 
@@ -779,6 +827,38 @@ export function FinancesPage() {
         title="Supprimer le paiement"
         message={deleteTarget ? `Supprimer le paiement de ${formatMontant(deleteTarget.montant)} pour ${deleteTarget.eleve.prenom_fr} ${deleteTarget.eleve.nom_fr} ? Cette action est irréversible.` : ''}
       />
+
+      {/* Modal Scanner QR élève */}
+      <Modal isOpen={qrScanModal} onClose={async () => { await stopQrScanner(); setQrScanModal(false); }} title="Scanner la carte élève" size="sm">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <p style={{ fontSize: 13, color: 'var(--ink-3)', margin: 0 }}>
+            Pointez la caméra sur le QR code de la carte scolaire de l'élève.
+          </p>
+          <div style={{ background: '#0f172a', borderRadius: 12, overflow: 'hidden', minHeight: 240, position: 'relative' }}>
+            <div id="qr-paiement-reader" style={{ width: '100%' }} />
+            {!qrStarted && (
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                <span style={{ fontSize: 36 }}>📷</span>
+                <button onClick={startQrScanner}
+                  style={{ background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                  Démarrer la caméra
+                </button>
+              </div>
+            )}
+          </div>
+          {qrError && (
+            <div style={{ padding: '8px 12px', background: '#fee2e2', borderRadius: 8, fontSize: 13, color: '#b91c1c' }}>
+              ⚠ {qrError}
+            </div>
+          )}
+          {qrStarted && (
+            <button onClick={stopQrScanner}
+              style={{ background: 'transparent', border: '1px solid var(--rule)', borderRadius: 8, padding: '7px 16px', fontSize: 13, cursor: 'pointer', color: 'var(--ink-3)' }}>
+              Arrêter la caméra
+            </button>
+          )}
+        </div>
+      </Modal>
     </>
   );
 }
