@@ -1,14 +1,17 @@
 import prisma from '../../config/database';
 
+const TOKEN_DUREE_MS = 365 * 24 * 60 * 60 * 1000; // 1 an
+
 export async function genererToken(etablissement_id: string, eleve_id: string) {
   const eleve = await prisma.eleve.findFirst({ where: { id: eleve_id, etablissement_id } });
   if (!eleve) throw new Error('Élève introuvable');
 
-  // Upsert: one token per student
+  const expires_at = new Date(Date.now() + TOKEN_DUREE_MS);
+
   return prisma.portailParentToken.upsert({
     where: { etablissement_id_eleve_id: { etablissement_id, eleve_id } },
-    create: { etablissement_id, eleve_id, actif: true },
-    update: { actif: true },
+    create: { etablissement_id, eleve_id, actif: true, expires_at },
+    update: { actif: true, expires_at },
     include: { eleve: { select: { nom_fr: true, prenom_fr: true, matricule: true } } },
   });
 }
@@ -25,6 +28,7 @@ export async function getPortailData(token: string) {
     include: { eleve: true, etablissement: { select: { nom_fr: true, logo_url: true } } },
   });
   if (!record || !record.actif) throw new Error('Lien invalide ou désactivé');
+  if (record.expires_at && record.expires_at < new Date()) throw new Error('Lien expiré — demandez un nouveau lien à l\'établissement');
 
   const eleve = record.eleve;
 

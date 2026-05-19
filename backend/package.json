@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "prisma generate && tsc",
-    "start": "prisma db push && node prisma/seed-prod.cjs && node dist/server.js",
+    "start": "prisma migrate deploy && node prisma/seed-prod.cjs && node dist/server.js",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:cleanup": "tsx prisma/cleanup.ts",

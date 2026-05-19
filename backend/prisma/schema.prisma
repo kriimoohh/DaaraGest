@@ -541,6 +541,7 @@ model PortailParentToken {
   eleve_id         String
   token            String    @unique @default(uuid())
   actif            Boolean   @default(true)
+  expires_at       DateTime?
   created_at       DateTime  @default(now())
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])

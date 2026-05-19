@@ -57,3 +57,12 @@ export async function closeBrowser(): Promise<void> {
     browser = null;
   }
 }
+
+export async function checkBrowser(): Promise<'ok' | 'unavailable'> {
+  try {
+    await getBrowser();
+    return 'ok';
+  } catch {
+    return 'unavailable';
+  }
+}
