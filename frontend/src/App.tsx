@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from './pages/Login';
+import { LandingPage } from './pages/LandingPage';
 import { Dashboard } from './pages/Dashboard';
 import { Layout } from './components/layout/Layout';
 import { ProtectedRoute } from './components/ui/ProtectedRoute';
@@ -39,10 +40,11 @@ export default function App() {
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/guide" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/portail/:token" element={<PortailParentPage />} />
         <Route element={<Layout />}>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
 
           <Route path="/eleves" element={
