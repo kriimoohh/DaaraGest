@@ -585,13 +585,13 @@ export function ProfesseursPage() {
       {/* ── Modal cartes professeurs en lot ──────────────────────────────────── */}
       <Modal isOpen={carteLotModal} onClose={() => setCarteLotModal(false)} title="Générer toutes les cartes professeurs (CR80)" size="sm">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ padding: '10px 14px', background: '#eff6ff', borderRadius: 8, fontSize: 13, color: '#1e40af' }}>
+          <div style={{ padding: '10px 14px', background: 'var(--info-soft)', borderRadius: 8, fontSize: 13, color: 'var(--info-text)' }}>
             🪪 Génère un PDF recto-verso au format <strong>Evolis Primacy CR80</strong> pour tous les professeurs. La photo est obligatoire — les profs sans photo sont ignorés et listés.
           </div>
           {carteLotErreurs.length > 0 && (
-            <div style={{ background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: 8, padding: '10px 14px', fontSize: 12 }}>
-              <strong style={{ color: '#92400e' }}>⚠ {carteLotErreurs.length} professeur(s) ignoré(s) :</strong>
-              <ul style={{ margin: '6px 0 0', paddingLeft: 16, color: '#78350f' }}>
+            <div style={{ background: 'var(--warning-soft)', border: '1px solid var(--warning-border)', borderRadius: 8, padding: '10px 14px', fontSize: 12 }}>
+              <strong style={{ color: 'var(--warning-text)' }}>⚠ {carteLotErreurs.length} professeur(s) ignoré(s) :</strong>
+              <ul style={{ margin: '6px 0 0', paddingLeft: 16, color: 'var(--warning-text)' }}>
                 {carteLotErreurs.map(e => <li key={e.id}>{e.message}</li>)}
               </ul>
             </div>
