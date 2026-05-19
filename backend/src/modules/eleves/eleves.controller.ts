@@ -14,6 +14,7 @@ import {
   bulkDesactiverEleves,
   bulkSupprimerEleves,
   bulkInscrireEleves,
+  getEleveQR,
   ImportRow,
 } from './eleves.service';
 
@@ -213,5 +214,16 @@ export async function importHandler(request: FastifyRequest, reply: FastifyReply
     return reply.status(201).send(await importerEleves(etablissement_id, body.rows, acteurId));
   } catch (err) {
     return reply.status(500).send({ error: (err as Error).message });
+  }
+}
+
+export async function getQRHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { id } = request.params as { id: string };
+  try {
+    return reply.send(await getEleveQR(etablissement_id, id));
+  } catch (err: unknown) {
+    const code = (err as { statusCode?: number }).statusCode ?? 500;
+    return reply.status(code).send({ error: (err as Error).message });
   }
 }

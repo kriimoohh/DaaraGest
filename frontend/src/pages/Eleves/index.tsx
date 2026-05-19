@@ -136,6 +136,76 @@ function formatDate(iso: string | undefined): string {
   return new Date(iso).toLocaleDateString('fr-FR');
 }
 
+// ── QR Code modal (élève) ──────────────────────────────────────────────────────
+
+interface EleveQRData { dataUrl: string; token: string; matricule: string; nom: string }
+
+function QRCodeEleveModal({ eleveId, nom, onClose, api }: {
+  eleveId: string; nom: string; onClose: () => void;
+  api: ReturnType<typeof useApi>;
+}) {
+  const [qrData, setQrData] = useState<EleveQRData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get<EleveQRData>(`/api/v1/eleves/${eleveId}/qr`)
+      .then(setQrData)
+      .catch(() => toast.error('Impossible de charger le QR'))
+      .finally(() => setLoading(false));
+  }, [eleveId]);
+
+  function handleDownload() {
+    if (!qrData) return;
+    const a = document.createElement('a');
+    a.href = qrData.dataUrl;
+    a.download = `qr-${nom.replace(/\s+/g, '-').toLowerCase()}.png`;
+    a.click();
+  }
+
+  function handlePrint() {
+    if (!qrData) return;
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(`
+      <html><head><title>QR Code — ${qrData.nom}</title>
+      <style>body{font-family:sans-serif;text-align:center;padding:40px}h2{margin-top:12px;font-size:18px}p{color:#555;font-size:13px}</style>
+      </head><body>
+        <img src="${qrData.dataUrl}" alt="QR Code" style="width:240px;height:240px;display:block;margin:0 auto;" />
+        <h2>${qrData.nom}</h2>
+        <p>${qrData.matricule}</p>
+        <script>window.onload=()=>{window.print()}</script>
+      </body></html>`);
+    win.document.close();
+  }
+
+  return (
+    <Modal isOpen onClose={onClose} title={`QR Code — ${nom}`} size="sm">
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+        {loading ? (
+          <div style={{ padding: 40, color: 'var(--ink-3)' }}>Chargement…</div>
+        ) : qrData ? (
+          <>
+            <div style={{ padding: 12, background: '#fff', borderRadius: 12, border: '1px solid var(--rule)', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+              <img src={qrData.dataUrl} alt="QR Code" style={{ width: 220, height: 220, display: 'block' }} />
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontWeight: 600, fontSize: 15 }}>{qrData.nom}</div>
+              <div style={{ fontSize: 12, color: 'var(--ink-3)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>{qrData.matricule}</div>
+              <div style={{ marginTop: 6, fontSize: 11, color: 'var(--ink-4)', background: 'var(--paper-2)', borderRadius: 6, padding: '4px 10px', display: 'inline-block' }}>
+                Identification &amp; paiement
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button variant="secondary" size="sm" onClick={handleDownload}>⬇ Télécharger</Button>
+              <Button variant="secondary" size="sm" onClick={handlePrint}>🖨 Imprimer</Button>
+            </div>
+          </>
+        ) : <div style={{ color: 'var(--danger-text)' }}>Erreur de chargement</div>}
+      </div>
+    </Modal>
+  );
+}
+
 // ── Sub-component ──────────────────────────────────────────────────────────────
 
 function FicheRow({ label, value }: { label: string; value: React.ReactNode }) {
@@ -229,6 +299,9 @@ export function ElevesPage() {
   const [importRows, setImportRows] = useState<Record<string, string>[]>([]);
   const [importResult, setImportResult] = useState<{ created: number; errors: { ligne: number; message: string }[] } | null>(null);
   const [importing, setImporting] = useState(false);
+
+  // QR Code élève
+  const [qrTarget, setQrTarget] = useState<Eleve | null>(null);
 
   // Génération cartes ID
   const [carteLotModal, setCarteLotModal] = useState(false);
@@ -642,6 +715,11 @@ export function ElevesPage() {
             icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x={2} y={5} width={20} height={14} rx={2}/><line x1={2} y1={10} x2={22} y2={10}/></svg>,
             onClick: () => handleCarteUnique(e.id),
             disabled: carteUniqueLoading === e.id,
+          },
+          {
+            label: 'Voir QR code',
+            icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x={3} y={3} width={7} height={7}/><rect x={14} y={3} width={7} height={7}/><rect x={3} y={14} width={7} height={7}/><path d="M14 14h3v3m0-3h3v3m-3 3h3"/></svg>,
+            onClick: () => setQrTarget(e),
           },
           ...(canInscrire ? [{
             label: t('actions.inscrire'),
@@ -1070,6 +1148,18 @@ export function ElevesPage() {
                   <Badge label={ficheModal.sexe === 'M' ? 'Masculin' : 'Féminin'} variant={ficheModal.sexe === 'M' ? 'info' : 'warning'} />
                 </div>
               </div>
+
+              {/* QR code inline */}
+              <button
+                title="Voir le QR code"
+                onClick={() => setQrTarget(ficheModal)}
+                style={{ flexShrink: 0, padding: 6, borderRadius: 10, border: '1px solid var(--rule)', background: 'var(--paper-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                  <rect x={3} y={3} width={7} height={7}/><rect x={14} y={3} width={7} height={7}/>
+                  <rect x={3} y={14} width={7} height={7}/><path d="M14 14h3v3m0-3h3v3m-3 3h3"/>
+                </svg>
+              </button>
             </div>
 
             {/* ── Informations personnelles ── */}
@@ -1465,6 +1555,16 @@ export function ElevesPage() {
           )}
         </div>
       </Modal>
+
+      {/* ── Modal QR Code élève ──────────────────────────────────────────────── */}
+      {qrTarget && (
+        <QRCodeEleveModal
+          eleveId={qrTarget.id}
+          nom={`${qrTarget.prenom_fr} ${qrTarget.nom_fr}`.trim()}
+          onClose={() => setQrTarget(null)}
+          api={api}
+        />
+      )}
 
       {/* ── Modal Génération cartes en lot ──────────────────────────────────── */}
       <Modal isOpen={carteLotModal} onClose={() => setCarteLotModal(false)} title="Générer cartes élèves en lot (CR80)" size="sm">
