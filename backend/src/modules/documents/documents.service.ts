@@ -1,6 +1,37 @@
+import crypto from 'crypto';
+import QRCode from 'qrcode';
 import prisma from '../../config/database';
-import { TypeDocument, GenererDocumentInput, UpsertTemplateInput, TYPE_DOCUMENT_VALUES } from './documents.schema';
-import { getDefaultTemplate, TYPE_DOCUMENT_LABELS } from './templates/defaults';
+import { TypeDocument, GenererDocumentInput, GenererCartesLotInput, UpsertTemplateInput, TYPE_DOCUMENT_VALUES, CARD_TYPES } from './documents.schema';
+import { getDefaultTemplate, TYPE_DOCUMENT_LABELS, getCardTemplate } from './templates/defaults';
+
+const QR_SECRET = process.env.QR_SECRET ?? 'daaragest-qr-secret-change-in-prod';
+
+function signQrPayload(payload: object): string {
+  const data = JSON.stringify(payload);
+  const sig = crypto.createHmac('sha256', QR_SECRET).update(data).digest('hex').slice(0, 16);
+  return Buffer.from(data).toString('base64url') + '.' + sig;
+}
+
+async function generateQrDataUrl(payload: object): Promise<string> {
+  const signed = signQrPayload(payload);
+  return QRCode.toDataURL(signed, { width: 300, margin: 1, errorCorrectionLevel: 'M' });
+}
+
+async function ensureEleveQrToken(eleveId: string): Promise<string> {
+  const eleve = await prisma.eleve.findUniqueOrThrow({ where: { id: eleveId } });
+  if (eleve.qr_token) return eleve.qr_token;
+  const token = crypto.randomUUID();
+  await prisma.eleve.update({ where: { id: eleveId }, data: { qr_token: token } });
+  return token;
+}
+
+async function ensureProfQrToken(profId: string): Promise<string> {
+  const prof = await prisma.professeur.findUniqueOrThrow({ where: { id: profId } });
+  if (prof.qr_token) return prof.qr_token;
+  const token = crypto.randomUUID();
+  await prisma.professeur.update({ where: { id: profId }, data: { qr_token: token } });
+  return token;
+}
 
 // ─── Helper: format date ──────────────────────────────────────────────────────
 
@@ -106,6 +137,10 @@ async function buildEleveVars(eleve_id: string, etablissement_id: string): Promi
     TABLEAU_NOTES: '',
     MOYENNE_ANNUELLE: '',
     DECISION: '',
+    PHOTO_ELEVE: eleve.photo_url
+      ? `<img src="${eleve.photo_url}" alt="Photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+      : '',
+    QR_CODE_ELEVE: '',
   };
 }
 
@@ -134,6 +169,10 @@ async function buildProfVars(prof_id: string, _etablissement_id: string): Promis
     HEURES_THEORIQUES: '0',
     HEURES_REELLES: '0',
     TABLEAU_PLANNING: '',
+    PHOTO_PROF: prof.photo_url
+      ? `<img src="${prof.photo_url}" alt="Photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+      : '',
+    QR_CODE_PROF: '',
   };
 }
 
@@ -367,12 +406,120 @@ export async function resetTemplate(etablissement_id: string, type: TypeDocument
   await prisma.documentTemplate.deleteMany({ where: { etablissement_id, type } });
 }
 
+async function genererCarteEleve(
+  eleveId: string,
+  etablissement_id: string,
+): Promise<{ html: string; eleve: { nom_fr: string; prenom_fr: string; photo_url: string | null } }> {
+  const eleve = await prisma.eleve.findUniqueOrThrow({
+    where: { id: eleveId },
+    include: {
+      inscriptions: {
+        where: { statut: 'actif' },
+        include: { classe_fr: true, classe_ar: true, annee_scolaire: true },
+        orderBy: { date_inscription: 'desc' },
+        take: 1,
+      },
+    },
+  });
+
+  if (!eleve.photo_url) {
+    throw Object.assign(new Error(`Photo manquante pour ${eleve.nom_fr} ${eleve.prenom_fr}`), { statusCode: 400 });
+  }
+
+  const token = await ensureEleveQrToken(eleveId);
+  const etab = await prisma.etablissement.findUniqueOrThrow({ where: { id: etablissement_id } });
+  const qrPayload = { type: 'eleve', id: eleveId, matricule: eleve.matricule, ets: etablissement_id };
+  const qrDataUrl = await generateQrDataUrl(qrPayload);
+
+  const inscription = eleve.inscriptions[0];
+  const vars: Record<string, string> = {
+    NOM_PRENOM_ELEVE: `${eleve.nom_fr} ${eleve.prenom_fr ?? ''}`.trim(),
+    NOM_ELEVE: eleve.nom_fr,
+    PRENOM_ELEVE: eleve.prenom_fr ?? '',
+    MATRICULE: eleve.matricule,
+    CLASSE_FR: inscription?.classe_fr?.nom_fr ?? '',
+    CLASSE_AR: inscription?.classe_ar?.nom_fr ?? '',
+    ANNEE_SCOLAIRE: inscription?.annee_scolaire?.libelle ?? '',
+    PHOTO_ELEVE: `<img src="${eleve.photo_url}" alt="Photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`,
+    QR_CODE_ELEVE: `<img src="${qrDataUrl}" alt="QR" style="width:100%;height:100%;">`,
+    NOM_ETABLISSEMENT: etab.nom_fr,
+    LOGO: etab.logo_url ? `<img src="${etab.logo_url}" alt="Logo" style="height:28px;object-fit:contain;">` : '',
+    DATE_AUJOURD_HUI: fmtDate(new Date()),
+    QR_TOKEN: token,
+  };
+
+  const tplHtml = getCardTemplate('CARTE_ELEVE');
+  const html = replaceVars(tplHtml, vars);
+  return { html, eleve: { nom_fr: eleve.nom_fr, prenom_fr: eleve.prenom_fr ?? '', photo_url: eleve.photo_url } };
+}
+
+async function genererCarteProfesseur(
+  profId: string,
+  etablissement_id: string,
+): Promise<{ html: string }> {
+  const prof = await prisma.professeur.findUniqueOrThrow({
+    where: { id: profId },
+    include: { utilisateur: true },
+  });
+
+  if (!prof.photo_url) {
+    const nom = `${prof.utilisateur.nom_fr} ${prof.utilisateur.prenom_fr ?? ''}`.trim();
+    throw Object.assign(new Error(`Photo manquante pour ${nom}`), { statusCode: 400 });
+  }
+
+  const token = await ensureProfQrToken(profId);
+  const etab = await prisma.etablissement.findUniqueOrThrow({ where: { id: etablissement_id } });
+  const qrPayload = { type: 'professeur', id: profId, token, ets: etablissement_id };
+  const qrDataUrl = await generateQrDataUrl(qrPayload);
+
+  const vars: Record<string, string> = {
+    NOM_PRENOM_PROF: `${prof.utilisateur.nom_fr} ${prof.utilisateur.prenom_fr ?? ''}`.trim(),
+    NOM_PROF: prof.utilisateur.nom_fr,
+    PRENOM_PROF: prof.utilisateur.prenom_fr ?? '',
+    SPECIALITE: prof.specialite_fr ?? '',
+    TYPE_CONTRAT: prof.type_contrat === 'permanent' ? 'Permanent' : 'Contractuel',
+    PHOTO_PROF: `<img src="${prof.photo_url}" alt="Photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`,
+    QR_CODE_PROF: `<img src="${qrDataUrl}" alt="QR" style="width:100%;height:100%;">`,
+    NOM_ETABLISSEMENT: etab.nom_fr,
+    LOGO: etab.logo_url ? `<img src="${etab.logo_url}" alt="Logo" style="height:28px;object-fit:contain;">` : '',
+    DATE_AUJOURD_HUI: fmtDate(new Date()),
+  };
+
+  const tplHtml = getCardTemplate('CARTE_PROFESSEUR');
+  const html = replaceVars(tplHtml, vars);
+  return { html };
+}
+
+async function renderCard(html: string): Promise<Buffer> {
+  const { renderPdfHtml } = await import('../../utils/browserPool');
+  return renderPdfHtml(html, {
+    width: '85.6mm',
+    height: '54mm',
+    printBackground: true,
+    margin: { top: '0', bottom: '0', left: '0', right: '0' },
+  });
+}
+
 export async function genererDocument(
   etablissement_id: string,
   genere_par: string,
   body: GenererDocumentInput,
 ): Promise<Buffer> {
   const { type, destinataire_type, destinataire_id, parametres } = body;
+
+  if (CARD_TYPES.has(type as 'CARTE_ELEVE' | 'CARTE_PROFESSEUR')) {
+    let html: string;
+    if (type === 'CARTE_ELEVE') {
+      ({ html } = await genererCarteEleve(destinataire_id, etablissement_id));
+    } else {
+      ({ html } = await genererCarteProfesseur(destinataire_id, etablissement_id));
+    }
+    const pdf = await renderCard(html);
+    await prisma.documentGenere.create({
+      data: { etablissement_id, type: type as TypeDocument, destinataire_type, destinataire_id, genere_par, parametres: {} },
+    });
+    return pdf;
+  }
 
   // Get template HTML
   const customTpl = await prisma.documentTemplate.findUnique({
@@ -496,6 +643,56 @@ export async function genererDocument(
   });
 
   return pdf;
+}
+
+export async function genererCartesLot(
+  etablissement_id: string,
+  genere_par: string,
+  body: GenererCartesLotInput,
+): Promise<{ pdf: Buffer; erreurs: { id: string; message: string }[] }> {
+  const { PDFDocument } = await import('pdf-lib');
+  const erreurs: { id: string; message: string }[] = [];
+  const pages: Buffer[] = [];
+
+  for (const id of body.ids) {
+    try {
+      let html: string;
+      if (body.type === 'CARTE_ELEVE') {
+        ({ html } = await genererCarteEleve(id, etablissement_id));
+      } else {
+        ({ html } = await genererCarteProfesseur(id, etablissement_id));
+      }
+      const cardPdf = await renderCard(html);
+      pages.push(cardPdf);
+      await prisma.documentGenere.create({
+        data: {
+          etablissement_id,
+          type: body.type as TypeDocument,
+          destinataire_type: body.type === 'CARTE_ELEVE' ? 'eleve' : 'professeur',
+          destinataire_id: id,
+          genere_par,
+          parametres: {},
+        },
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur inconnue';
+      erreurs.push({ id, message: msg });
+    }
+  }
+
+  if (pages.length === 0) {
+    throw Object.assign(new Error('Aucune carte générée — vérifiez que toutes les photos sont renseignées'), { statusCode: 400 });
+  }
+
+  const merged = await PDFDocument.create();
+  for (const pdfBuf of pages) {
+    const src = await PDFDocument.load(pdfBuf);
+    const copied = await merged.copyPages(src, src.getPageIndices());
+    copied.forEach(p => merged.addPage(p));
+  }
+
+  const mergedBytes = await merged.save();
+  return { pdf: Buffer.from(mergedBytes), erreurs };
 }
 
 export async function listerHistorique(etablissement_id: string, skip = 0, take = 50) {

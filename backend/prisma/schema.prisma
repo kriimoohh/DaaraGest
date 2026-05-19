@@ -307,6 +307,7 @@ model Eleve {
   lieu_naissance   String?
   sexe             String
   photo_url        String?
+  qr_token         String?  @unique
   actif            Boolean  @default(true)
   created_at       DateTime @default(now())
 
@@ -769,6 +770,8 @@ enum TypeDocument {
   ORDRE_MISSION
   FICHE_PAIE
   PLANNING_COURS
+  CARTE_ELEVE
+  CARTE_PROFESSEUR
 }
 
 model DocumentTemplate {
