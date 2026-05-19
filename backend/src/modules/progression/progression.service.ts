@@ -1,9 +1,34 @@
 import prisma from '../../config/database';
 import { ValiderProgressionInput } from './progression.schema';
 
-export async function listerProgressions(etablissement_id: string, annee_scolaire_id?: string) {
+export async function listerProgressions(
+  etablissement_id: string,
+  annee_scolaire_id?: string,
+  classe_id?: string,
+  filiere?: string,
+) {
   const where: Record<string, unknown> = { etablissement_id };
   if (annee_scolaire_id) where.annee_scolaire_id = annee_scolaire_id;
+
+  if (classe_id) {
+    where.eleve = {
+      inscriptions: {
+        some: {
+          ...(annee_scolaire_id ? { annee_scolaire_id } : {}),
+          OR: [{ classe_fr_id: classe_id }, { classe_ar_id: classe_id }],
+        },
+      },
+    };
+  } else if (filiere) {
+    where.eleve = {
+      inscriptions: {
+        some: {
+          ...(annee_scolaire_id ? { annee_scolaire_id } : {}),
+          ...(filiere === 'FR' ? { classe_fr_id: { not: null } } : { classe_ar_id: { not: null } }),
+        },
+      },
+    };
+  }
 
   return prisma.progressionEleve.findMany({
     where,
