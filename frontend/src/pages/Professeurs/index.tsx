@@ -436,36 +436,48 @@ export function ProfesseursPage() {
         {loading && <div className="empty">{t('common.chargement')}</div>}
 
         {!loading && view === 'grid' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
-            {profs.map(p => (
-              <div key={p.id} className="card card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div className="row gap-3">
-                  <div className="avatar avatar-lg" style={{ background: 'var(--indigo-soft)', color: 'var(--indigo-ink)', overflow: 'hidden' }}>
-                    {(p.professeur?.photo_url ?? p.photo_url)
-                      ? <img src={p.professeur?.photo_url ?? p.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-                      : `${p.prenom_fr?.[0] ?? ''}${p.nom_fr?.[0] ?? ''}`}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
+            {profs.map(p => {
+              const photo = p.professeur?.photo_url ?? p.photo_url;
+              const initiales = `${p.prenom_fr?.[0] ?? ''}${p.nom_fr?.[0] ?? ''}`.toUpperCase();
+              const contratLabel = p.type_contrat === 'permanent' ? 'Permanent' : p.type_contrat === 'vacataire' ? 'Vacataire' : p.type_contrat;
+              return (
+                <div key={p.id} className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                  {/* Header avec avatar */}
+                  <div style={{ padding: '20px 16px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, background: 'var(--paper-2)', borderBottom: '1px solid var(--rule)' }}>
+                    <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--indigo-soft)', color: 'var(--indigo-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700, overflow: 'hidden', flexShrink: 0 }}>
+                      {photo
+                        ? <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : initiales || '?'}
+                    </div>
+                    <div style={{ textAlign: 'center', minWidth: 0, width: '100%' }}>
+                      <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {[p.prenom_fr, p.nom_fr].filter(Boolean).join(' ')}
+                      </div>
+                      {p.specialite_fr && <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{p.specialite_fr}</div>}
+                      <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--ink-4)', marginTop: 4 }}>@{p.identifiant}</div>
+                    </div>
                   </div>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{p.prenom_fr} {p.nom_fr}</div>
-                    <div className="muted" style={{ fontSize: 12 }}>{p.specialite_fr}</div>
+
+                  {/* Infos */}
+                  <div style={{ padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
+                    <div>
+                      <div className="muted" style={{ fontSize: 11 }}>Contrat</div>
+                      <div style={{ fontWeight: 500 }}>{contratLabel}</div>
+                    </div>
+                    <Badge label={p.statut === 'actif' ? t('common.actif') : t('common.inactif')} variant={p.statut === 'actif' ? 'success' : 'neutral'} />
                   </div>
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    <button className="btn btn-ghost btn-sm" onClick={() => openEdit(p)}>{t('actions.modifier')}</button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => setQrTarget(p)} title="QR Code pointage">QR</button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => handleCarteUnique(p.id)} title="Carte ID CR80" disabled={carteUniqueLoading === p.id}>🪪</button>
+
+                  {/* Actions */}
+                  <div style={{ padding: '8px 12px', borderTop: '1px solid var(--rule)', display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setQrTarget(p)} title="QR Code pointage" style={{ fontSize: 12 }}>QR</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => handleCarteUnique(p.id)} title="Carte ID CR80" disabled={carteUniqueLoading === p.id} style={{ fontSize: 14 }}>🪪</button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => openEdit(p)}>{t('actions.modifier')}</button>
                     {isAdmin && <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} onClick={() => setConfirmDelete(p)}>✕</button>}
                   </div>
                 </div>
-                <div className="divider" style={{ margin: '4px 0' }} />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12 }}>
-                  <div><div className="muted">Contrat</div><div style={{ fontWeight: 500 }}>{p.type_contrat}</div></div>
-                  <div>
-                    <div className="muted">Statut</div>
-                    <Badge label={p.statut === 'actif' ? t('common.actif') : t('common.inactif')} variant={p.statut === 'actif' ? 'success' : 'neutral'} />
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
             {profs.length === 0 && <div className="empty" style={{ gridColumn: '1/-1' }}>Aucun professeur trouvé</div>}
           </div>
         )}

@@ -151,7 +151,7 @@ export async function bulkUpsertPresences(etablissement_id: string, data: BulkPr
 
 export async function getQRCode(etablissement_id: string, professeurId: string) {
   const prof = await prisma.professeur.findFirst({
-    where: { id: professeurId, utilisateur: { etablissement_id } },
+    where: { OR: [{ id: professeurId }, { utilisateur_id: professeurId }], utilisateur: { etablissement_id } },
     include: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } },
   });
   if (!prof) throw new Error('Professeur introuvable');
@@ -160,7 +160,7 @@ export async function getQRCode(etablissement_id: string, professeurId: string) 
   let token = prof.qr_token;
   if (!token) {
     token = randomUUID();
-    await prisma.professeur.update({ where: { id: professeurId }, data: { qr_token: token } });
+    await prisma.professeur.update({ where: { id: prof.id }, data: { qr_token: token } });
   }
 
   const dataUrl = await QRCode.toDataURL(token, { width: 300, margin: 2 });
@@ -173,12 +173,12 @@ export async function getQRCode(etablissement_id: string, professeurId: string) 
 
 export async function regenererQR(etablissement_id: string, professeurId: string) {
   const prof = await prisma.professeur.findFirst({
-    where: { id: professeurId, utilisateur: { etablissement_id } },
+    where: { OR: [{ id: professeurId }, { utilisateur_id: professeurId }], utilisateur: { etablissement_id } },
   });
   if (!prof) throw new Error('Professeur introuvable');
 
   const token = randomUUID();
-  await prisma.professeur.update({ where: { id: professeurId }, data: { qr_token: token } });
+  await prisma.professeur.update({ where: { id: prof.id }, data: { qr_token: token } });
   const dataUrl = await QRCode.toDataURL(token, { width: 300, margin: 2 });
   return { token, dataUrl };
 }
