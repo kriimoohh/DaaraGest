@@ -15,17 +15,21 @@ interface ActionMenuProps {
 export function ActionMenu({ items }: ActionMenuProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
-  const btnRef = useRef<HTMLButtonElement>(null);
+  const btnRef      = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
-    function handleClick(e: MouseEvent) {
-      if (btnRef.current && !btnRef.current.contains(e.target as Node)) {
+    function handleOutside(e: MouseEvent) {
+      const target = e.target as Node;
+      const insideBtn      = btnRef.current?.contains(target) ?? false;
+      const insideDropdown = dropdownRef.current?.contains(target) ?? false;
+      if (!insideBtn && !insideDropdown) {
         setOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
   }, [open]);
 
   function toggle() {
@@ -47,6 +51,7 @@ export function ActionMenu({ items }: ActionMenuProps) {
       </button>
       {open && (
         <div
+          ref={dropdownRef}
           className="action-menu-dropdown"
           style={{ position: 'fixed', top: pos.top, left: pos.left, transform: 'translateX(-100%)' }}
         >
