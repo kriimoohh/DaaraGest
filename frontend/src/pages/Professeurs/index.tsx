@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useApi } from '../../hooks/useApi';
+import { API_BASE } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
@@ -197,6 +198,10 @@ export function ProfesseursPage() {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [photoLoading, setPhotoLoading] = useState(false);
   const [qrTarget, setQrTarget] = useState<Professeur | null>(null);
+  const [carteUniqueLoading, setCarteUniqueLoading] = useState<string | null>(null);
+  const [carteLotModal, setCarteLotModal] = useState(false);
+  const [carteLotGenerating, setCarteLotGenerating] = useState(false);
+  const [carteLotErreurs, setCarteLotErreurs] = useState<{ id: string; message: string }[]>([]);
 
   const fetchProfs = useCallback(async () => {
     setLoading(true);
@@ -344,12 +349,57 @@ export function ProfesseursPage() {
           <>
             <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>{t('actions.modifier')}</Button>
             <Button size="sm" variant="ghost" onClick={() => setQrTarget(p)} title="QR Code pointage">QR</Button>
+            <Button size="sm" variant="ghost" loading={carteUniqueLoading === p.id} onClick={() => handleCarteUnique(p.id)} title="Carte ID CR80">🪪</Button>
             {isAdmin && <Button size="sm" variant="danger" onClick={() => setConfirmDelete(p)}>{t('actions.supprimer')}</Button>}
           </>
         );
       },
     },
   ];
+
+  async function handleCarteUnique(profId: string) {
+    setCarteUniqueLoading(profId);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/documents/generer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ type: 'CARTE_PROFESSEUR', destinataire_type: 'professeur', destinataire_id: profId }),
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({ error: 'Erreur' })); throw new Error(e.error ?? 'Erreur'); }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'carte_professeur.pdf'; a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Carte générée');
+    } catch (err) { toast.error((err as Error).message); }
+    finally { setCarteUniqueLoading(null); }
+  }
+
+  async function handleCarteLot() {
+    setCarteLotGenerating(true);
+    setCarteLotErreurs([]);
+    try {
+      const allProfs = await api.get<{ data: Professeur[] }>('/api/v1/professeurs?limit=500');
+      const ids = (allProfs.data ?? []).map(p => p.id);
+      if (!ids.length) { toast.error('Aucun professeur trouvé'); return; }
+      const res = await fetch(`${API_BASE}/api/v1/documents/generer-lot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ type: 'CARTE_PROFESSEUR', ids }),
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({ error: 'Erreur' })); throw new Error(e.error ?? 'Erreur'); }
+      const errsHeader = res.headers.get('X-Cartes-Erreurs');
+      if (errsHeader) setCarteLotErreurs(JSON.parse(errsHeader));
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'cartes_professeurs_lot.pdf'; a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`PDF généré — ${ids.length} carte(s)`);
+    } catch (err) { toast.error((err as Error).message); }
+    finally { setCarteLotGenerating(false); }
+  }
 
   return (
     <>
@@ -358,9 +408,14 @@ export function ProfesseursPage() {
           title="Professeurs"
           subtitle="Gestion du corps enseignant"
           action={
-            <Button onClick={openAdd} icon={<span>+</span>}>
-              Ajouter un professeur
-            </Button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button variant="secondary" onClick={() => { setCarteLotErreurs([]); setCarteLotModal(true); }}>
+                🪪 Cartes en lot
+              </Button>
+              <Button onClick={openAdd} icon={<span>+</span>}>
+                Ajouter un professeur
+              </Button>
+            </div>
           }
         />
 
@@ -514,6 +569,29 @@ export function ProfesseursPage() {
           api={api}
         />
       )}
+
+      {/* ── Modal cartes professeurs en lot ──────────────────────────────────── */}
+      <Modal isOpen={carteLotModal} onClose={() => setCarteLotModal(false)} title="Générer toutes les cartes professeurs (CR80)" size="sm">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ padding: '10px 14px', background: '#eff6ff', borderRadius: 8, fontSize: 13, color: '#1e40af' }}>
+            🪪 Génère un PDF recto-verso au format <strong>Evolis Primacy CR80</strong> pour tous les professeurs. La photo est obligatoire — les profs sans photo sont ignorés et listés.
+          </div>
+          {carteLotErreurs.length > 0 && (
+            <div style={{ background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: 8, padding: '10px 14px', fontSize: 12 }}>
+              <strong style={{ color: '#92400e' }}>⚠ {carteLotErreurs.length} professeur(s) ignoré(s) :</strong>
+              <ul style={{ margin: '6px 0 0', paddingLeft: 16, color: '#78350f' }}>
+                {carteLotErreurs.map(e => <li key={e.id}>{e.message}</li>)}
+              </ul>
+            </div>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button variant="ghost" onClick={() => setCarteLotModal(false)}>Annuler</Button>
+            <Button onClick={handleCarteLot} loading={carteLotGenerating}>
+              Générer PDF
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }

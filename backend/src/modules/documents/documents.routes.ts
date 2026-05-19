@@ -6,6 +6,7 @@ import { JwtPayload } from '../../utils/jwt';
 import {
   upsertTemplateSchema,
   genererDocumentSchema,
+  genererCartesLotSchema,
   TypeDocument,
   TYPE_DOCUMENT_VALUES,
 } from './documents.schema';
@@ -15,6 +16,7 @@ import {
   upsertTemplate,
   resetTemplate,
   genererDocument,
+  genererCartesLot,
   listerHistorique,
 } from './documents.service';
 
@@ -34,6 +36,30 @@ function isValidType(type: string): type is TypeDocument {
 }
 
 export async function documentsRoutes(fastify: FastifyInstance) {
+
+  // POST /generer-lot — Batch card generation (CARTE_ELEVE | CARTE_PROFESSEUR)
+  fastify.post(
+    '/generer-lot',
+    { preHandler: [authMiddleware, gestion] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const etablissement_id = getEtabId(request);
+      const genere_par = getUserId(request);
+
+      const parsed = genererCartesLotSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.status(400).send({ error: parsed.error.flatten() });
+      }
+
+      const { pdf, erreurs } = await genererCartesLot(etablissement_id, genere_par, parsed.data);
+
+      reply.header('Content-Type', 'application/pdf');
+      reply.header('Content-Disposition', `attachment; filename="${parsed.data.type.toLowerCase()}_lot.pdf"`);
+      if (erreurs.length > 0) {
+        reply.header('X-Cartes-Erreurs', JSON.stringify(erreurs));
+      }
+      return reply.send(pdf);
+    },
+  );
 
   // GET / — List all templates (with custom override status)
   fastify.get(
