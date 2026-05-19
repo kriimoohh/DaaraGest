@@ -408,9 +408,12 @@ export async function resetTemplate(etablissement_id: string, type: TypeDocument
   await prisma.documentTemplate.deleteMany({ where: { etablissement_id, type } });
 }
 
+const PHOTO_PLACEHOLDER = `<svg viewBox="0 0 24 24" fill="rgba(255,255,255,0.35)" style="width:55%;height:55%;"><path d="M12 12c2.7 0 4-1.3 4-4s-1.3-4-4-4-4 1.3-4 4 1.3 4 4 4zm0 2c-2.7 0-8 1.35-8 4v2h16v-2c0-2.65-5.3-4-8-4z"/></svg>`;
+
 async function genererCarteEleve(
   eleveId: string,
   etablissement_id: string,
+  previewMode = false,
 ): Promise<{ html: string; eleve: { nom_fr: string; prenom_fr: string; photo_url: string | null } }> {
   const eleve = await prisma.eleve.findUniqueOrThrow({
     where: { id: eleveId },
@@ -424,7 +427,7 @@ async function genererCarteEleve(
     },
   });
 
-  if (!eleve.photo_url) {
+  if (!eleve.photo_url && !previewMode) {
     throw Object.assign(new Error(`Photo manquante pour ${eleve.nom_fr} ${eleve.prenom_fr}`), { statusCode: 400 });
   }
 
@@ -442,7 +445,9 @@ async function genererCarteEleve(
     CLASSE_FR: inscription?.classe_fr?.nom_fr ?? '',
     CLASSE_AR: inscription?.classe_ar?.nom_fr ?? '',
     ANNEE_SCOLAIRE: inscription?.annee_scolaire?.libelle ?? '',
-    PHOTO_ELEVE: `<img src="${eleve.photo_url}" alt="Photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`,
+    PHOTO_ELEVE: eleve.photo_url
+      ? `<img src="${eleve.photo_url}" alt="Photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+      : PHOTO_PLACEHOLDER,
     QR_CODE_ELEVE: `<img src="${qrDataUrl}" alt="QR" style="width:100%;height:100%;">`,
     NOM_ETABLISSEMENT: etab.nom_fr,
     LOGO: etab.logo_url ? `<img src="${etab.logo_url}" alt="Logo" style="height:28px;object-fit:contain;">` : '',
@@ -458,13 +463,14 @@ async function genererCarteEleve(
 async function genererCarteProfesseur(
   profId: string,
   etablissement_id: string,
+  previewMode = false,
 ): Promise<{ html: string }> {
   const prof = await prisma.professeur.findFirstOrThrow({
     where: { OR: [{ id: profId }, { utilisateur_id: profId }], utilisateur: { etablissement_id } },
     include: { utilisateur: true },
   });
 
-  if (!prof.photo_url) {
+  if (!prof.photo_url && !previewMode) {
     const nom = `${prof.utilisateur.nom_fr} ${prof.utilisateur.prenom_fr ?? ''}`.trim();
     throw Object.assign(new Error(`Photo manquante pour ${nom}`), { statusCode: 400 });
   }
@@ -480,7 +486,9 @@ async function genererCarteProfesseur(
     PRENOM_PROF: prof.utilisateur.prenom_fr ?? '',
     SPECIALITE: prof.specialite_fr ?? '',
     TYPE_CONTRAT: prof.type_contrat === 'permanent' ? 'Permanent' : 'Contractuel',
-    PHOTO_PROF: `<img src="${prof.photo_url}" alt="Photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`,
+    PHOTO_PROF: prof.photo_url
+      ? `<img src="${prof.photo_url}" alt="Photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+      : PHOTO_PLACEHOLDER,
     QR_CODE_PROF: `<img src="${qrDataUrl}" alt="QR" style="width:100%;height:100%;">`,
     NOM_ETABLISSEMENT: etab.nom_fr,
     LOGO: etab.logo_url ? `<img src="${etab.logo_url}" alt="Logo" style="height:28px;object-fit:contain;">` : '',
@@ -701,13 +709,17 @@ export async function apercuCarte(
   etablissement_id: string,
   type: 'CARTE_ELEVE' | 'CARTE_PROFESSEUR',
   destinataire_id: string,
-): Promise<string> {
+): Promise<{ html: string; has_photo: boolean }> {
   if (type === 'CARTE_ELEVE') {
-    const { html } = await genererCarteEleve(destinataire_id, etablissement_id);
-    return html;
+    const { html, eleve } = await genererCarteEleve(destinataire_id, etablissement_id, true);
+    return { html, has_photo: !!eleve.photo_url };
   }
-  const { html } = await genererCarteProfesseur(destinataire_id, etablissement_id);
-  return html;
+  const prof = await prisma.professeur.findFirstOrThrow({
+    where: { OR: [{ id: destinataire_id }, { utilisateur_id: destinataire_id }], utilisateur: { etablissement_id } },
+    select: { photo_url: true },
+  });
+  const { html } = await genererCarteProfesseur(destinataire_id, etablissement_id, true);
+  return { html, has_photo: !!prof.photo_url };
 }
 
 export async function listerHistorique(etablissement_id: string, skip = 0, take = 50) {

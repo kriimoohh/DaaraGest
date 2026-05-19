@@ -126,8 +126,8 @@ export async function documentsRoutes(fastify: FastifyInstance) {
         return reply.status(400).send({ error: 'destinataire_id requis' });
       }
 
-      const html = await apercuCarte(etablissement_id, type, destinataire_id);
-      return reply.send({ html });
+      const result = await apercuCarte(etablissement_id, type, destinataire_id);
+      return reply.send(result);
     },
   );
 
