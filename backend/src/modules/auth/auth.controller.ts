@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { login, getMe, changePassword, updateProfil, creerRefreshToken, validerRefreshToken, revoquerRefreshToken } from './auth.service';
+import { login, getMe, changePassword, updateProfil, creerRefreshToken, validerRefreshToken, revoquerRefreshToken, revoquerTousTokens } from './auth.service';
 import { loginSchema } from './auth.schema';
 import { JwtPayload } from '../../utils/jwt';
 
@@ -108,4 +108,12 @@ export async function updateProfilHandler(request: FastifyRequest, reply: Fastif
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
   }
+}
+
+export async function revoquerSessionsHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { id } = request.user as JwtPayload;
+  await revoquerTousTokens(id);
+  reply.clearCookie('daaragest_token', { path: '/' });
+  reply.clearCookie('daaragest_refresh', { path: '/' });
+  return reply.send({ message: 'Toutes les sessions ont été révoquées' });
 }

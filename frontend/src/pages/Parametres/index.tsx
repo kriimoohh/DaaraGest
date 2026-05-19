@@ -42,6 +42,15 @@ interface ConfigNotes {
   jours_cours: string[];
 }
 
+interface ConfigNotifications {
+  notif_paiement_retard: boolean;
+  notif_absences_eleves: boolean;
+  notif_messages: boolean;
+  notif_inscriptions: boolean;
+  seuil_absences_alerte: number;
+  seuil_note_insuffisante: number;
+}
+
 const TOUS_JOURS = [
   { value: 'lundi',    label: 'Lundi' },
   { value: 'mardi',    label: 'Mardi' },
@@ -291,6 +300,15 @@ export function ParametresPage() {
   const [nouveauMdp, setNouveauMdp] = useState('');
   const [confirmMdp, setConfirmMdp] = useState('');
 
+  const [notifConfig, setNotifConfig] = useState<ConfigNotifications>({
+    notif_paiement_retard: true,
+    notif_absences_eleves: true,
+    notif_messages: true,
+    notif_inscriptions: false,
+    seuil_absences_alerte: 3,
+    seuil_note_insuffisante: 10,
+  });
+
   const fetchNiveaux = () =>
     api.get<Niveau[]>('/api/v1/niveaux').then(setNiveaux).catch(() => {});
 
@@ -299,8 +317,9 @@ export function ParametresPage() {
     Promise.all([
       api.get<Etablissement>('/api/v1/parametres'),
       api.get<Record<string, unknown>>('/api/v1/parametres/notes'),
+      api.get<ConfigNotifications>('/api/v1/parametres/notifications'),
     ])
-      .then(([etabData, rawNotes]) => {
+      .then(([etabData, rawNotes, rawNotif]) => {
         setEtab(etabData);
         if (rawNotes) {
           const nb = Number(rawNotes.nb_periodes) || 3;
@@ -314,6 +333,16 @@ export function ParametresPage() {
             montant_mensualite: Number(rawNotes.montant_mensualite),
             noms_periodes: buildPeriodes(nb, rawPeriodes),
             jours_cours: (rawNotes.jours_cours as string[]) ?? ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'],
+          });
+        }
+        if (rawNotif) {
+          setNotifConfig({
+            notif_paiement_retard: Boolean(rawNotif.notif_paiement_retard ?? true),
+            notif_absences_eleves: Boolean(rawNotif.notif_absences_eleves ?? true),
+            notif_messages: Boolean(rawNotif.notif_messages ?? true),
+            notif_inscriptions: Boolean(rawNotif.notif_inscriptions ?? false),
+            seuil_absences_alerte: Number(rawNotif.seuil_absences_alerte ?? 3),
+            seuil_note_insuffisante: Number(rawNotif.seuil_note_insuffisante ?? 10),
           });
         }
       })
@@ -407,7 +436,34 @@ export function ParametresPage() {
         nouveau_mot_de_passe: nouveauMdp,
       });
       setAncienMdp(''); setNouveauMdp(''); setConfirmMdp('');
-      toast.success('Mot de passe modifié');
+      toast.success(t('parametre.securite_mdp_ok'));
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    } finally { setSaving(null); }
+  };
+
+  const saveNotifications = async () => {
+    setSaving('notif');
+    try {
+      await api.put('/api/v1/parametres/notifications', {
+        notif_paiement_retard: notifConfig.notif_paiement_retard,
+        notif_absences_eleves: notifConfig.notif_absences_eleves,
+        notif_messages: notifConfig.notif_messages,
+        notif_inscriptions: notifConfig.notif_inscriptions,
+      });
+      toast.success(t('parametre.notif_ok'));
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    } finally { setSaving(null); }
+  };
+
+  const revoquerSessions = async () => {
+    if (!confirm(t('parametre.securite_deconnecter_tout') + ' ?')) return;
+    setSaving('sessions');
+    try {
+      await api.delete('/api/v1/auth/sessions');
+      toast.success(t('parametre.securite_deconnecter_confirm'));
+      setTimeout(() => { window.location.href = '/login'; }, 1500);
     } catch (err) {
       toast.error((err as Error).message || 'Erreur');
     } finally { setSaving(null); }
@@ -862,55 +918,9 @@ export function ParametresPage() {
             </div>
           </div>
 
-          {/* Mot de passe */}
-          <div className="card">
-            <div className="card-hd">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <SectionIcon path="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
-                <div>
-                  <h3 style={{ margin: 0 }}>{t('parametre.mdp')}</h3>
-                  <span className="sub">{t('parametre.mdp_desc')}</span>
-                </div>
-              </div>
-            </div>
-            <div className="card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <Input
-                label={t('parametre.mdp_actuel')}
-                type="password"
-                value={ancienMdp}
-                onChange={e => setAncienMdp(e.target.value)}
-              />
-              <div className="grid-2">
-                <Input
-                  label={t('parametre.mdp_nouveau')}
-                  type="password"
-                  value={nouveauMdp}
-                  onChange={e => setNouveauMdp(e.target.value)}
-                  placeholder="Minimum 8 caractères"
-                />
-                <Input
-                  label={t('parametre.mdp_confirmer')}
-                  type="password"
-                  value={confirmMdp}
-                  onChange={e => setConfirmMdp(e.target.value)}
-                />
-              </div>
-              {nouveauMdp.length > 0 && nouveauMdp.length < 8 && (
-                <div style={{ fontSize: 13, color: 'var(--warning-text)' }}>Minimum 8 caractères requis</div>
-              )}
-              {confirmMdp.length > 0 && nouveauMdp !== confirmMdp && (
-                <div style={{ fontSize: 13, color: 'var(--danger-text)' }}>Les mots de passe ne correspondent pas</div>
-              )}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
-                <Button
-                  onClick={savePassword}
-                  loading={saving === 'mdp'}
-                  disabled={!ancienMdp || !nouveauMdp || !confirmMdp}
-                >
-                  {t('parametre.mdp_modifier')}
-                </Button>
-              </div>
-            </div>
+          {/* Note sécurité */}
+          <div style={{ padding: '10px 14px', background: 'var(--info-soft)', border: '1px solid var(--info-border)', borderRadius: 'var(--r-md)', fontSize: 13, color: 'var(--info-text)' }}>
+            Pour changer votre mot de passe ou gérer vos sessions, rendez-vous dans l'onglet <strong>{t('parametre.securite')}</strong>.
           </div>
         </>
       )}
@@ -973,14 +983,142 @@ export function ParametresPage() {
         </div>
       )}
 
-      {/* ── Notifications (placeholder) ── */}
+      {/* ── Notifications ── */}
       {!loading && tab === 'notifications' && (
-        <div className="card empty">{t('parametre.section_construction')}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="card">
+            <div className="card-hd">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <SectionIcon path="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
+                <div>
+                  <h3 style={{ margin: 0 }}>{t('parametre.notif_titre')}</h3>
+                  <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--ink-3)' }}>{t('parametre.notif_desc')}</p>
+                </div>
+              </div>
+              <Button onClick={saveNotifications} loading={saving === 'notif'}>{t('actions.enregistrer')}</Button>
+            </div>
+            <div className="card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <Toggle
+                checked={notifConfig.notif_paiement_retard}
+                onChange={v => setNotifConfig(c => ({ ...c, notif_paiement_retard: v }))}
+                label={t('parametre.notif_paiement_retard')}
+                description={t('parametre.notif_paiement_retard_desc')}
+              />
+              <Toggle
+                checked={notifConfig.notif_absences_eleves}
+                onChange={v => setNotifConfig(c => ({ ...c, notif_absences_eleves: v }))}
+                label={t('parametre.notif_absences_eleves')}
+                description={t('parametre.notif_absences_eleves_desc')}
+              />
+              <Toggle
+                checked={notifConfig.notif_messages}
+                onChange={v => setNotifConfig(c => ({ ...c, notif_messages: v }))}
+                label={t('parametre.notif_messages')}
+                description={t('parametre.notif_messages_desc')}
+              />
+              <Toggle
+                checked={notifConfig.notif_inscriptions}
+                onChange={v => setNotifConfig(c => ({ ...c, notif_inscriptions: v }))}
+                label={t('parametre.notif_inscriptions')}
+                description={t('parametre.notif_inscriptions_desc')}
+              />
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-hd">
+              <div>
+                <h3 style={{ margin: 0 }}>{t('parametre.notif_seuils_titre')}</h3>
+                <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--ink-3)' }}>{t('parametre.notif_seuils_desc')}</p>
+              </div>
+            </div>
+            <div className="card-pad" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <Input
+                label={t('parametre.seuil_absences')}
+                type="number"
+                value={String(notifConfig.seuil_absences_alerte)}
+                onChange={e => setNotifConfig(c => ({ ...c, seuil_absences_alerte: Number(e.target.value) }))}
+              />
+              <Input
+                label={t('parametre.seuil_notes')}
+                type="number"
+                value={String(notifConfig.seuil_note_insuffisante)}
+                onChange={e => setNotifConfig(c => ({ ...c, seuil_note_insuffisante: Number(e.target.value) }))}
+              />
+            </div>
+            <div style={{ padding: '0 16px 16px' }}>
+              <div style={{ padding: '10px 14px', background: 'var(--info-soft)', border: '1px solid var(--info-border)', borderRadius: 'var(--r-md)', fontSize: 13, color: 'var(--info-text)' }}>
+                Ces seuils sont également utilisés dans la configuration pédagogique. Une modification ici sera reflétée dans l'onglet Pédagogie.
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* ── Sécurité (placeholder) ── */}
+      {/* ── Sécurité ── */}
       {!loading && tab === 'securite' && (
-        <div className="card empty">{t('parametre.section_construction')}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="card">
+            <div className="card-hd">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <SectionIcon path="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
+                <div>
+                  <h3 style={{ margin: 0 }}>{t('parametre.securite_mdp_titre')}</h3>
+                  <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--ink-3)' }}>{t('parametre.securite_mdp_desc')}</p>
+                </div>
+              </div>
+              <Button onClick={savePassword} loading={saving === 'mdp'}>{t('parametre.mdp_modifier')}</Button>
+            </div>
+            <div className="card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <Input
+                label={t('parametre.mdp_actuel')}
+                type="password"
+                value={ancienMdp}
+                onChange={e => setAncienMdp(e.target.value)}
+                autoComplete="current-password"
+              />
+              <Input
+                label={t('parametre.mdp_nouveau')}
+                type="password"
+                value={nouveauMdp}
+                onChange={e => setNouveauMdp(e.target.value)}
+                autoComplete="new-password"
+              />
+              <Input
+                label={t('parametre.mdp_confirmer')}
+                type="password"
+                value={confirmMdp}
+                onChange={e => setConfirmMdp(e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-hd">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <SectionIcon path="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z" />
+                <div>
+                  <h3 style={{ margin: 0 }}>{t('parametre.securite_sessions_titre')}</h3>
+                  <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--ink-3)' }}>{t('parametre.securite_sessions_desc')}</p>
+                </div>
+              </div>
+            </div>
+            <div className="card-pad">
+              <button
+                className="btn btn-secondary"
+                onClick={revoquerSessions}
+                disabled={saving === 'sessions'}
+                style={{ color: 'var(--danger-text)', borderColor: 'var(--danger-border)' }}
+              >
+                <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor" style={{ marginInlineEnd: 6 }}>
+                  <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
+                </svg>
+                {saving === 'sessions' ? '...' : t('parametre.securite_deconnecter_tout')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
         </div>
