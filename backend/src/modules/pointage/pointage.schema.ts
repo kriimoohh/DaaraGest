@@ -18,5 +18,10 @@ export const bulkPresenceSchema = z.object({
   presences: z.array(presenceSchema.omit({ date: true })).min(1),
 });
 
+export const scanQRSchema = z.object({
+  token: z.string().uuid('Token QR invalide'),
+});
+
 export type PresenceInput = z.infer<typeof presenceSchema>;
 export type BulkPresenceInput = z.infer<typeof bulkPresenceSchema>;
+export type ScanQRInput = z.infer<typeof scanQRSchema>;
