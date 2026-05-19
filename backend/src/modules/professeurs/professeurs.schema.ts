@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { photoUrlSchema } from '../../utils/photoUrl';
 
 export const professeurSchema = z.object({
   nom_fr: z.string().min(1),
@@ -11,7 +12,7 @@ export const professeurSchema = z.object({
   date_embauche: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   type_contrat: z.enum(['permanent', 'vacataire']).optional(),
   salaire_base: z.number().positive().optional(),
-  photo_url: z.string().optional(),
+  photo_url: photoUrlSchema,
 });
 
 export type ProfesseurInput = z.infer<typeof professeurSchema>;
