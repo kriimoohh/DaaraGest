@@ -551,11 +551,10 @@ export function ProfesseursPage() {
               onChange={(e) => setField('type_contrat', e.target.value)}
               error={formErrors.type_contrat}
               options={[
-                { value: '', label: t('common.selectionner') },
                 { value: 'permanent', label: t('professeur.permanent') },
                 { value: 'vacataire', label: t('professeur.vacataire') },
               ]}
-              placeholder="Choisir..."
+              placeholder={t('common.selectionner')}
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
               <Button variant="secondary" onClick={() => setModalOpen(false)}>{t('actions.annuler')}</Button>
