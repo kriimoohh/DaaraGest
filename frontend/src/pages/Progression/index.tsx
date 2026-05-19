@@ -8,6 +8,7 @@ import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
 
 interface AnneeScolaire { id: string; libelle: string; active: boolean; }
+interface Classe { id: string; nom_fr: string; filiere: string; }
 interface Progression {
   id: string;
   eleve_id: string;
@@ -31,11 +32,14 @@ const DECISION_VARIANTS: Record<string, 'success' | 'danger' | 'warning' | 'neut
 export function ProgressionPage() {
   const api = useApi();
 
-  const [annees,      setAnnees]      = useState<AnneeScolaire[]>([]);
-  const [anneeId,     setAnneeId]     = useState('');
+  const [annees,       setAnnees]       = useState<AnneeScolaire[]>([]);
+  const [anneeId,      setAnneeId]      = useState('');
+  const [classes,      setClasses]      = useState<Classe[]>([]);
+  const [classeId,     setClasseId]     = useState('');
+  const [filiereFilter, setFiliereFilter] = useState('');
   const [progressions, setProgressions] = useState<Progression[]>([]);
-  const [loading,     setLoading]     = useState(false);
-  const [generating,  setGenerating]  = useState(false);
+  const [loading,      setLoading]      = useState(false);
+  const [generating,   setGenerating]   = useState(false);
 
   // Modal validation
   const [editTarget,     setEditTarget]     = useState<Progression | null>(null);
@@ -55,14 +59,29 @@ export function ProgressionPage() {
       .catch(err => toast.error((err as Error).message));
   }, []);
 
+  useEffect(() => {
+    setClasseId('');
+    if (!anneeId) { setClasses([]); return; }
+    api.get<Classe[]>(`/api/v1/classes?annee_scolaire_id=${anneeId}`)
+      .then(setClasses)
+      .catch(err => toast.error((err as Error).message));
+  }, [anneeId]);
+
+  useEffect(() => { setClasseId(''); }, [filiereFilter]);
+
+  const classesFiltrees = classes.filter(c => !filiereFilter || c.filiere === filiereFilter);
+
   const loadProgressions = useCallback(() => {
     if (!anneeId) return;
     setLoading(true);
-    api.get<Progression[]>(`/api/v1/progression?annee_scolaire_id=${anneeId}`)
+    const params = new URLSearchParams({ annee_scolaire_id: anneeId });
+    if (classeId) params.set('classe_id', classeId);
+    else if (filiereFilter) params.set('filiere', filiereFilter);
+    api.get<Progression[]>(`/api/v1/progression?${params}`)
       .then(setProgressions)
       .catch(err => toast.error((err as Error).message))
       .finally(() => setLoading(false));
-  }, [anneeId]);
+  }, [anneeId, classeId, filiereFilter]);
 
   useEffect(() => { loadProgressions(); }, [loadProgressions]);
 
@@ -124,6 +143,41 @@ export function ProgressionPage() {
           </div>
         }
       />
+
+      {/* Filtres */}
+      {anneeId && (
+        <div className="row" style={{ gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+          <Select
+            label=""
+            value={filiereFilter}
+            onChange={e => setFiliereFilter(e.target.value)}
+            options={[
+              { value: '', label: 'Toutes les filières' },
+              { value: 'FR', label: 'Filière Française' },
+              { value: 'AR', label: 'Filière Arabe' },
+            ]}
+          />
+          <Select
+            label=""
+            value={classeId}
+            onChange={e => setClasseId(e.target.value)}
+            options={[
+              { value: '', label: 'Toutes les classes' },
+              ...classesFiltrees.map(c => ({ value: c.id, label: `${c.nom_fr} (${c.filiere})` })),
+            ]}
+          />
+          {(classeId || filiereFilter) && (
+            <button
+              className="tb-btn"
+              onClick={() => { setClasseId(''); setFiliereFilter(''); }}
+              title="Effacer les filtres"
+              style={{ fontSize: 12, color: 'var(--ink-3)', padding: '0 10px' }}
+            >
+              ✕ Effacer filtres
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Stats */}
       {total > 0 && (
