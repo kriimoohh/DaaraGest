@@ -96,16 +96,19 @@ DaaraGest/
 │       ├── config/
 │       │   └── roles.ts         # ROLE_GROUPS (DIRECTION, GESTION, ACADEMIQUE…)
 │       ├── middlewares/         # authMiddleware (return sur 401)
-│       ├── modules/             # 19 modules
-│       │   ├── auth/            # login, me
+│       ├── modules/             # 27 modules
+│       │   ├── auth/            # login, refresh, logout, me, change-password, profil
 │       │   ├── annees-scolaires/
 │       │   ├── classes/
 │       │   ├── eleves/          # + import CSV bulk
 │       │   ├── matieres/
 │       │   ├── niveaux/
 │       │   ├── notes/           # bulk upsert
+│       │   ├── evaluations/     # évaluations formatives, notes, moyennes
 │       │   ├── bulletins/       # 4 types + PDF Puppeteer
 │       │   ├── absences/        # absences élèves + alertes
+│       │   ├── progression/     # suivi pluriannuel, génération, historique élève
+│       │   ├── activites/       # activités parascolaires, séances, présences, évaluation
 │       │   ├── finances/        # paiements + reliquats + stats mensuelles
 │       │   ├── parametres/      # établissement + configNotes + jours_cours
 │       │   ├── pointage/        # présences manuelles + alertes
@@ -115,7 +118,11 @@ DaaraGest/
 │       │   ├── calendrier/      # événements scolaires
 │       │   ├── notifications/   # in-app, marquer lue(s)
 │       │   ├── messagerie/      # conversations, messages, broadcast
-│       │   └── portail-parent/  # tokens UUID, accès public
+│       │   ├── portail-parent/  # tokens UUID, accès public
+│       │   ├── documents/       # templates, génération PDF, aperçu, historique
+│       │   ├── stats/           # tableau de bord analytique direction
+│       │   ├── rapports/        # rapports presences, résultats, bilan financier
+│       │   └── bibliotheque/    # catalogue livres, emprunts, retours
 │       └── server.ts            # Fastify + CORS configurable + JWT fail-fast
 │
 └── frontend/
@@ -132,10 +139,10 @@ DaaraGest/
         └── store/               # authStore (Zustand + persist)
 ```
 
-### Modèles Prisma (31)
+### Modèles Prisma (44)
 
 **Établissement & Utilisateurs**
-`Etablissement` · `Role` · `Utilisateur`
+`Etablissement` · `Role` · `Utilisateur` · `RefreshToken`
 
 **Personnels**
 `Professeur` · `ProfesseurCarte` · `Pointage` · `HeureTravail` · `PresenceProfesseur` · `PaiementProfesseur`
@@ -146,11 +153,23 @@ DaaraGest/
 **Élèves**
 `Eleve` · `Parent` · `Inscription` · `PaiementEleve` · `Note` · `Bulletin` · `AbsenceEleve` · `AuditLog`
 
-**Phase 1 — Planification & Communication**
+**Évaluations & Progression**
+`Evaluation` · `NoteEvaluation` · `ProgressionEleve`
+
+**Activités parascolaires**
+`Activite` · `InscriptionActivite` · `SeanceActivite` · `PresenceActivite` · `EvaluationActivite`
+
+**Planification & Communication**
 `Creneau` · `EvenementCalendrier` · `Notification`
 
-**Phase 2 — Messagerie & Portail**
+**Messagerie & Portail**
 `Conversation` · `ConversationParticipant` · `MessageConversation` · `PortailParentToken`
+
+**Bibliothèque**
+`LivreStock` · `Emprunt`
+
+**Documents officiels**
+`DocumentTemplate` · `DocumentGenere`
 
 ### Isolation multi-établissements
 
@@ -278,8 +297,9 @@ npm run dev            # http://localhost:5173
 | `DATABASE_URL` | URL PostgreSQL (`postgresql://user:pass@host:5432/db`) | ✅ |
 | `JWT_SECRET` | Clé secrète JWT — le serveur **refuse de démarrer** si absente | ✅ |
 | `CORS_ORIGIN` | Origine autorisée (ex: `https://mon-ecole.sn`) | ✅ prod |
+| `COOKIE_DOMAIN` | Domaine du cookie httpOnly (ex: `.mon-ecole.sn`) | prod |
 | `PORT` | Port du serveur | défaut `3000` |
-| `JWT_EXPIRES_IN` | Durée des tokens | défaut `7d` |
+| `JWT_EXPIRES_IN` | Durée des tokens d'accès | défaut `7d` |
 | `NODE_ENV` | `development` ou `production` | — |
 
 ### `frontend/.env`
@@ -481,6 +501,95 @@ Toutes les routes (sauf `/health`, `POST /api/v1/auth/login`, et `GET /api/v1/po
 | `GET` | `/api/v1/pointage?mois&annee&statut&professeur_id&page` | Historique paginé |
 | `GET` | `/api/v1/pointage/stats?mois&annee` | Stats par professeur (taux de présence) |
 
+### Évaluations formatives
+
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| `GET` | `/api/v1/evaluations?classe_id&matiere_id&periode&annee_scolaire_id` | Liste |
+| `POST` | `/api/v1/evaluations` | Créer une évaluation |
+| `PUT` | `/api/v1/evaluations/:id` | Modifier |
+| `DELETE` | `/api/v1/evaluations/:id` | Supprimer (direction) |
+| `GET` | `/api/v1/evaluations/moyenne?classe_id&matiere_id&periode` | Moyenne pondérée |
+| `GET` | `/api/v1/evaluations/:id/notes` | Notes d'une évaluation |
+| `POST` | `/api/v1/evaluations/:id/notes/bulk` | Saisie en masse des notes |
+
+### Activités parascolaires
+
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| `GET` | `/api/v1/activites` | Liste des activités |
+| `POST` | `/api/v1/activites` | Créer une activité |
+| `PUT` | `/api/v1/activites/:id` | Modifier |
+| `DELETE` | `/api/v1/activites/:id` | Supprimer (direction) |
+| `GET` | `/api/v1/activites/:id/inscriptions` | Élèves inscrits |
+| `POST` | `/api/v1/activites/:id/inscriptions` | Inscrire un élève |
+| `DELETE` | `/api/v1/activites/:id/inscriptions/:eleve_id` | Désinscrire |
+| `GET` | `/api/v1/activites/:id/seances` | Séances de l'activité |
+| `POST` | `/api/v1/activites/:id/seances` | Créer une séance |
+| `DELETE` | `/api/v1/activites/:id/seances/:seance_id` | Supprimer une séance |
+| `GET` | `/api/v1/activites/:id/seances/:seance_id/presences` | Présences à une séance |
+| `POST` | `/api/v1/activites/:id/seances/:seance_id/presences/bulk` | Saisie présences en masse |
+| `POST` | `/api/v1/activites/inscriptions/:inscription_id/evaluation` | Évaluer un élève |
+
+### Progression pluriannuelle
+
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| `GET` | `/api/v1/progression` | Liste des progressions |
+| `POST` | `/api/v1/progression/generer` | Générer / mettre à jour les progressions |
+| `PUT` | `/api/v1/progression/:id/valider` | Valider une progression (direction) |
+| `GET` | `/api/v1/progression/eleve/:eleve_id/historique` | Historique académique d'un élève |
+
+### Niveaux
+
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| `GET` | `/api/v1/niveaux` | Liste des niveaux |
+| `POST` | `/api/v1/niveaux` | Créer un niveau (admin) |
+| `PUT` | `/api/v1/niveaux/:id` | Modifier (admin) |
+| `DELETE` | `/api/v1/niveaux/:id` | Supprimer (admin) |
+
+### Documents officiels
+
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| `GET` | `/api/v1/documents` | Lister les templates disponibles |
+| `GET` | `/api/v1/documents/historique?skip&take` | Historique des documents générés |
+| `POST` | `/api/v1/documents/generer` | Générer un document PDF |
+| `POST` | `/api/v1/documents/generer-lot` | Générer un lot de cartes PDF (CARTE_ELEVE · CARTE_PROFESSEUR) |
+| `POST` | `/api/v1/documents/apercu` | Aperçu HTML d'une carte (sans PDF ni historique) |
+| `GET` | `/api/v1/documents/:type` | Récupérer un template (personnalisé ou défaut) |
+| `PUT` | `/api/v1/documents/:type` | Créer ou modifier un template personnalisé (direction) |
+| `DELETE` | `/api/v1/documents/:type/reset` | Réinitialiser au template par défaut (direction) |
+
+### Statistiques analytiques
+
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| `GET` | `/api/v1/stats/tableau-de-bord` | KPIs direction : présences, moyennes, top/bottom élèves, alertes actives |
+
+### Rapports
+
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| `GET` | `/api/v1/rapports/presences-eleves?classe_id&periode&annee_scolaire_id` | Rapport présences élèves |
+| `GET` | `/api/v1/rapports/presences-professeurs?mois&annee` | Rapport présences professeurs |
+| `GET` | `/api/v1/rapports/resultats-classe?classe_id&periode&annee_scolaire_id` | Résultats par classe |
+| `GET` | `/api/v1/rapports/bilan-financier?mois&annee` | Bilan financier (direction) |
+
+### Bibliothèque
+
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| `GET` | `/api/v1/bibliotheque/livres` | Catalogue des livres |
+| `POST` | `/api/v1/bibliotheque/livres` | Ajouter un livre |
+| `PUT` | `/api/v1/bibliotheque/livres/:id` | Modifier un livre |
+| `DELETE` | `/api/v1/bibliotheque/livres/:id` | Supprimer (admin/directeur) |
+| `GET` | `/api/v1/bibliotheque/emprunts` | Liste des emprunts |
+| `POST` | `/api/v1/bibliotheque/emprunts` | Créer un emprunt |
+| `PUT` | `/api/v1/bibliotheque/emprunts/:id/retour` | Enregistrer un retour |
+| `GET` | `/api/v1/bibliotheque/emprunts/en-retard` | Emprunts en retard |
+
 ### Auth (étendu)
 
 | Méthode | Route | Description |
@@ -615,14 +724,23 @@ NODE_ENV=production
 
 ## Tests
 
-**28 tests** répartis en 4 fichiers, exécutés avec Vitest (zéro dépendance DB).
+**428 tests** répartis en 13 fichiers, exécutés avec Vitest (zéro dépendance DB).
 
-| Fichier | Fonctions testées |
-|---------|------------------|
+| Fichier | Domaine testé |
+|---------|--------------|
 | `bulletins.test.ts` | `appreciation()`, `calculerMoyenne()` pondérée, classement |
-| `pointage.test.ts` | `calcHeures()` (6 cas limites), validation statuts |
+| `pointage.test.ts` | `calcHeures()` (cas limites), validation statuts |
 | `eleves.test.ts` | `genererMatricule()` format/padding, validation formulaire |
 | `finances.test.ts` | Format reçu `REC-YYYYMMDD-XXXXX`, filtre impayé |
+| `notes.test.ts` | Validation notes, cas limites note_max/min |
+| `absences.test.ts` | Calculs taux présence, logique alertes |
+| `auth.test.ts` | Hash/vérification mot de passe, validation payload JWT |
+| `documents.test.ts` | Génération templates, rendu HTML, types de documents |
+| `rbac.test.ts` | Contrôle d'accès par rôle pour tous les groupes |
+| `security.test.ts` | Détection injection, validation entrées, escapeHtml |
+| `integration.test.ts` | Flux complets multi-modules (inscription → notes → bulletin) |
+| `metier.test.ts` | Règles métier : matricules, reçus, moyennes pondérées |
+| `validation.test.ts` | Schémas Zod, coercion, cas limites de validation |
 
 ```bash
 cd backend
@@ -637,44 +755,7 @@ npm run test:coverage    # rapport HTML dans coverage/
 
 L'application est pleinement fonctionnelle. Les phases ci-dessous constituent des améliorations identifiées pour la prochaine itération.
 
-> **Modules déjà implémentés** : Évaluations formatives, Suivi de progression, Activités parascolaires, Bibliothèque scolaire, Portail parents, Documents officiels, Rapports, Refresh tokens silencieux, Gestion des sessions actives, Préférences de notifications.
-
----
-
-### Phase suivante — Analytique avancée
-
-**Objectif** : transformer les données accumulées en tableaux de bord décisionnels.
-
-#### Tableau de bord analytique avancé
-
-**Pourquoi** : le dashboard actuel affiche les statistiques financières et les KPI principaux. La direction a besoin d'indicateurs pédagogiques et de présence en un coup d'œil.
-
-**Backend**
-- Endpoint `GET /api/v1/stats/tableau-de-bord` retournant :
-  - Taux de présence élèves par classe (semaine / mois)
-  - Taux de présence professeurs (semaine / mois)
-  - Moyenne générale par classe et par filière
-  - Top 5 élèves + bottom 5 par établissement
-  - Alertes actives (absences répétées, notes insuffisantes)
-
-**Frontend**
-- Widgets analytiques supplémentaires sur le Dashboard
-- Graphiques `AreaChart` pour tendances, `BarChart` pour comparaisons par classe
-- Filtres : année scolaire active, période, filière
-
----
-
-#### Suivi académique pluriannuel
-
-**Pourquoi** : impossible aujourd'hui de voir la progression d'un élève sur plusieurs années.
-
-**Backend**
-- Modèle `HistoriqueAcademique` : peuplé à la génération des bulletins
-- Endpoint `GET /api/v1/eleves/:id/historique` — toutes les années de l'élève
-
-**Frontend**
-- Onglet **Historique** dans la fiche élève : graphique linéaire (Recharts)
-- Portail parent : onglet Historique visible par les parents
+> **Modules déjà implémentés** : Évaluations formatives, Suivi de progression pluriannuel (`/progression`), Activités parascolaires, Bibliothèque scolaire, Portail parents, Documents officiels (templates + aperçu + lot), Rapports (`/rapports`), Tableau de bord analytique (`/stats/tableau-de-bord`), Refresh tokens silencieux, Gestion des sessions actives, Préférences de notifications.
 
 ---
 
@@ -702,8 +783,6 @@ Expo + partage des types TypeScript, mode hors-ligne pour la saisie de notes et 
 
 | Module | Valeur métier | Complexité |
 |--------|--------------|------------|
-| Suivi pluriannuel | ★★★★★ | ★★☆☆☆ |
-| Dashboard analytique | ★★★★☆ | ★★★☆☆ |
 | Migration Fastify 5 | ★★☆☆☆ | ★★☆☆☆ |
 | Pointage NFC | ★★☆☆☆ | ★★★★☆ |
 | App mobile | ★★★★★ | ★★★★★ |
