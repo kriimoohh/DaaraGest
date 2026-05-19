@@ -11,8 +11,7 @@ function cookieOptions(reply: FastifyReply) {
     httpOnly: true,
     secure: isProd,
     sameSite: isProd ? ('none' as const) : ('lax' as const),
-    // Partage le cookie entre dg.sakai.sn et api.dg.sakai.sn
-    domain: isProd ? '.dg.sakai.sn' : undefined,
+    domain: isProd ? (process.env.COOKIE_DOMAIN ?? '.dg.sakai.sn') : undefined,
     path: '/',
     maxAge: 24 * 60 * 60,
     signed: false,
