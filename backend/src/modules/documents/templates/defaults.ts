@@ -15,6 +15,8 @@ export const TYPE_DOCUMENT_LABELS: Record<TypeDocument, string> = {
   ORDRE_MISSION:           'Ordre de mission',
   FICHE_PAIE:              'Fiche de paie',
   PLANNING_COURS:          'Planning de cours',
+  CARTE_ELEVE:             'Carte d\'identité scolaire (élève)',
+  CARTE_PROFESSEUR:        'Carte d\'identité professeur',
 };
 
 // ─── Shared CSS ───────────────────────────────────────────────────────────────
@@ -335,6 +337,196 @@ const PLANNING_COURS = wrapPage('Planning de cours', `
   </table>
   {{TABLEAU_PLANNING}}`);
 
+// ─── Carte d'identité scolaire (élève) — CR80 85.6×54mm ──────────────────────
+
+const CARTE_ELEVE_HTML = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { width: 85.6mm; height: 54mm; font-family: Arial, sans-serif; }
+    .card {
+      width: 85.6mm; height: 54mm; position: relative; overflow: hidden;
+      background: linear-gradient(135deg, #0a6b52 0%, #0e5a9e 60%, #083a7a 100%);
+      color: #fff;
+    }
+    .card::before {
+      content: '';
+      position: absolute; top: -8mm; right: -8mm;
+      width: 32mm; height: 32mm; border-radius: 50%;
+      background: rgba(255,255,255,0.07);
+    }
+    .card::after {
+      content: '';
+      position: absolute; bottom: -4mm; left: 20mm;
+      width: 22mm; height: 22mm; border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+    }
+    .header {
+      display: flex; align-items: center; gap: 1.5mm;
+      padding: 2mm 3mm 1.5mm;
+      border-bottom: 0.4mm solid rgba(255,255,255,0.3);
+    }
+    .logo-wrap { flex-shrink: 0; height: 6mm; display: flex; align-items: center; }
+    .etab-name {
+      font-size: 5.5pt; font-weight: bold; letter-spacing: 0.2mm;
+      text-transform: uppercase; opacity: 0.95; line-height: 1.2;
+    }
+    .card-label {
+      font-size: 4pt; opacity: 0.7; letter-spacing: 0.3mm; text-transform: uppercase;
+      text-align: right; flex: 1;
+    }
+    .body { display: flex; padding: 2mm 2.5mm; gap: 2.5mm; flex: 1; }
+    .photo-wrap {
+      flex-shrink: 0; width: 18mm; height: 18mm; border-radius: 50%;
+      border: 0.7mm solid rgba(255,255,255,0.6);
+      overflow: hidden; background: rgba(255,255,255,0.15);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .photo-placeholder {
+      font-size: 16pt; opacity: 0.5;
+    }
+    .info { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 0.8mm; }
+    .student-name { font-size: 8pt; font-weight: bold; line-height: 1.2; }
+    .student-sub { font-size: 5.5pt; opacity: 0.85; line-height: 1.4; }
+    .bottom {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      padding: 0 2.5mm 1.5mm;
+    }
+    .matricule-badge {
+      font-size: 5pt; font-weight: bold; letter-spacing: 0.3mm;
+      background: rgba(255,255,255,0.2); border-radius: 1mm;
+      padding: 0.5mm 1.5mm;
+    }
+    .qr-wrap {
+      width: 15mm; height: 15mm; background: #fff; border-radius: 1mm;
+      padding: 0.5mm; display: flex; align-items: center; justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <div class="logo-wrap">{{LOGO}}</div>
+      <div class="etab-name">{{NOM_ETABLISSEMENT}}</div>
+      <div class="card-label">Carte scolaire</div>
+    </div>
+    <div class="body">
+      <div class="photo-wrap">{{PHOTO_ELEVE}}</div>
+      <div class="info">
+        <div class="student-name">{{NOM_PRENOM_ELEVE}}</div>
+        <div class="student-sub">Classe : {{CLASSE_FR}}</div>
+        <div class="student-sub">{{ANNEE_SCOLAIRE}}</div>
+      </div>
+      <div class="qr-wrap">{{QR_CODE_ELEVE}}</div>
+    </div>
+    <div class="bottom">
+      <div class="matricule-badge">{{MATRICULE}}</div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+// ─── Carte professeur — CR80 85.6×54mm recto + verso ─────────────────────────
+
+const CARTE_PROFESSEUR_HTML = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { width: 85.6mm; font-family: Arial, sans-serif; }
+    .card {
+      width: 85.6mm; height: 54mm; position: relative; overflow: hidden;
+      color: #fff;
+    }
+    .card-front {
+      background: linear-gradient(135deg, #5c1320 0%, #8b1a2e 50%, #6b1a2e 100%);
+    }
+    .card-back {
+      page-break-before: always;
+      background: linear-gradient(135deg, #5c1320 0%, #8b1a2e 50%, #6b1a2e 100%);
+    }
+    .gold { color: #f0c040; }
+    .gold-line {
+      height: 0.6mm; background: linear-gradient(90deg, transparent, #c9a227, transparent);
+      margin: 0 4mm;
+    }
+    .header {
+      display: flex; align-items: center; gap: 1.5mm;
+      padding: 2mm 3mm 1.5mm;
+    }
+    .logo-wrap { flex-shrink: 0; height: 6mm; display: flex; align-items: center; }
+    .etab-name { font-size: 5.5pt; font-weight: bold; letter-spacing: 0.2mm; text-transform: uppercase; line-height: 1.2; }
+    .card-label { font-size: 4pt; opacity: 0.7; letter-spacing: 0.3mm; text-transform: uppercase; text-align: right; flex: 1; }
+    .body { display: flex; padding: 1.5mm 2.5mm; gap: 2.5mm; }
+    .photo-wrap {
+      flex-shrink: 0; width: 18mm; height: 18mm; border-radius: 50%;
+      border: 0.7mm solid #c9a227;
+      overflow: hidden; background: rgba(255,255,255,0.1);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .info { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 1mm; }
+    .prof-name { font-size: 8pt; font-weight: bold; line-height: 1.2; }
+    .role-badge {
+      display: inline-block; font-size: 4.5pt; letter-spacing: 0.3mm; text-transform: uppercase;
+      background: #c9a227; color: #3d0a14; padding: 0.4mm 1.5mm; border-radius: 0.8mm; font-weight: bold;
+    }
+    .prof-sub { font-size: 5.5pt; opacity: 0.85; line-height: 1.4; }
+    .bottom { padding: 1mm 2.5mm 1.5mm; font-size: 4.5pt; opacity: 0.6; }
+
+    /* Verso */
+    .verso-body {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 46mm; gap: 2mm;
+    }
+    .qr-wrap-back {
+      width: 30mm; height: 30mm; background: #fff; border-radius: 1.5mm;
+      padding: 1mm; display: flex; align-items: center; justify-content: center;
+      border: 0.5mm solid #c9a227;
+    }
+    .scan-label { font-size: 5pt; opacity: 0.8; letter-spacing: 0.3mm; text-transform: uppercase; }
+    .verso-etab { font-size: 4.5pt; opacity: 0.5; }
+  </style>
+</head>
+<body>
+  <!-- RECTO -->
+  <div class="card card-front">
+    <div class="header">
+      <div class="logo-wrap">{{LOGO}}</div>
+      <div class="etab-name">{{NOM_ETABLISSEMENT}}</div>
+      <div class="card-label">Carte professeur</div>
+    </div>
+    <div class="gold-line"></div>
+    <div class="body">
+      <div class="photo-wrap">{{PHOTO_PROF}}</div>
+      <div class="info">
+        <div class="prof-name">{{NOM_PRENOM_PROF}}</div>
+        <div><span class="role-badge">Professeur</span></div>
+        <div class="prof-sub">{{SPECIALITE}}</div>
+        <div class="prof-sub">{{TYPE_CONTRAT}}</div>
+      </div>
+    </div>
+    <div class="gold-line"></div>
+    <div class="bottom">{{NOM_ETABLISSEMENT}} &nbsp;·&nbsp; {{DATE_AUJOURD_HUI}}</div>
+  </div>
+
+  <!-- VERSO -->
+  <div class="card card-back">
+    <div class="header" style="justify-content: center; padding-bottom: 0.5mm;">
+      <div class="etab-name" style="text-align:center; font-size:5pt;">{{NOM_ETABLISSEMENT}}</div>
+    </div>
+    <div class="gold-line"></div>
+    <div class="verso-body">
+      <div class="qr-wrap-back">{{QR_CODE_PROF}}</div>
+      <div class="scan-label gold">Scanner pour pointage</div>
+      <div class="verso-etab">{{NOM_PRENOM_PROF}}</div>
+    </div>
+  </div>
+</body>
+</html>`;
+
 // ─── Map ──────────────────────────────────────────────────────────────────────
 
 const TEMPLATES: Record<TypeDocument, string> = {
@@ -352,8 +544,19 @@ const TEMPLATES: Record<TypeDocument, string> = {
   ORDRE_MISSION:             ORDRE_MISSION,
   FICHE_PAIE:                FICHE_PAIE,
   PLANNING_COURS:            PLANNING_COURS,
+  CARTE_ELEVE:               CARTE_ELEVE_HTML,
+  CARTE_PROFESSEUR:          CARTE_PROFESSEUR_HTML,
+};
+
+const CARD_TEMPLATES: Record<'CARTE_ELEVE' | 'CARTE_PROFESSEUR', string> = {
+  CARTE_ELEVE:     CARTE_ELEVE_HTML,
+  CARTE_PROFESSEUR: CARTE_PROFESSEUR_HTML,
 };
 
 export function getDefaultTemplate(type: TypeDocument): string {
   return TEMPLATES[type];
+}
+
+export function getCardTemplate(type: 'CARTE_ELEVE' | 'CARTE_PROFESSEUR'): string {
+  return CARD_TEMPLATES[type];
 }

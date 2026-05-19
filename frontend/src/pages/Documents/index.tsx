@@ -12,7 +12,10 @@ type TypeDocument =
   | 'CERTIFICAT_SCOLARITE' | 'ATTESTATION_INSCRIPTION' | 'CONVOCATION_EXAMEN'
   | 'FICHE_TRANSFERT' | 'EMPLOI_DU_TEMPS_ELEVE' | 'RELEVE_NOTES'
   | 'CERTIFICAT_BONNE_CONDUITE' | 'FICHE_RENSEIGNEMENTS' | 'ATTESTATION_RESULTATS'
-  | 'LISTE_CLASSE' | 'ATTESTATION_TRAVAIL' | 'ORDRE_MISSION' | 'FICHE_PAIE' | 'PLANNING_COURS';
+  | 'LISTE_CLASSE' | 'ATTESTATION_TRAVAIL' | 'ORDRE_MISSION' | 'FICHE_PAIE' | 'PLANNING_COURS'
+  | 'CARTE_ELEVE' | 'CARTE_PROFESSEUR';
+
+const CARD_TYPES = new Set<TypeDocument>(['CARTE_ELEVE', 'CARTE_PROFESSEUR']);
 
 type DestType = 'eleve' | 'professeur' | 'classe';
 
@@ -44,6 +47,8 @@ const LABELS: Record<TypeDocument, string> = {
   ORDRE_MISSION:            'Ordre de mission',
   FICHE_PAIE:               'Fiche de paie',
   PLANNING_COURS:           'Planning de cours',
+  CARTE_ELEVE:              "Carte scolaire élève (CR80)",
+  CARTE_PROFESSEUR:         'Carte professeur (CR80)',
 };
 
 const DEST_TYPE: Record<TypeDocument, DestType> = {
@@ -61,6 +66,8 @@ const DEST_TYPE: Record<TypeDocument, DestType> = {
   ORDRE_MISSION:            'professeur',
   FICHE_PAIE:               'professeur',
   PLANNING_COURS:           'professeur',
+  CARTE_ELEVE:              'eleve',
+  CARTE_PROFESSEUR:         'professeur',
 };
 
 const GROUPS: { label: string; icon: string; types: TypeDocument[] }[] = [
@@ -79,6 +86,11 @@ const GROUPS: { label: string; icon: string; types: TypeDocument[] }[] = [
     icon: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
     types: ['ATTESTATION_TRAVAIL','ORDRE_MISSION','FICHE_PAIE','PLANNING_COURS'],
   },
+  {
+    label: "Cartes d'identité (CR80)",
+    icon: 'M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z',
+    types: ['CARTE_ELEVE','CARTE_PROFESSEUR'],
+  },
 ];
 
 const EXTRA_PARAMS: Record<TypeDocument, { key: string; label: string; type: 'text' | 'date' | 'number' | 'textarea' }[]> = {
@@ -90,6 +102,7 @@ const EXTRA_PARAMS: Record<TypeDocument, { key: string; label: string; type: 'te
   CERTIFICAT_SCOLARITE: [], ATTESTATION_INSCRIPTION: [], EMPLOI_DU_TEMPS_ELEVE: [],
   RELEVE_NOTES: [], CERTIFICAT_BONNE_CONDUITE: [], FICHE_RENSEIGNEMENTS: [],
   LISTE_CLASSE: [], ATTESTATION_TRAVAIL: [], PLANNING_COURS: [],
+  CARTE_ELEVE: [], CARTE_PROFESSEUR: [],
 };
 
 // ── Variables disponibles pour l'éditeur ──────────────────────────────────────
@@ -160,6 +173,15 @@ const VAR_GROUPS: { label: string; vars: { key: string; desc: string }[] }[] = [
       { key: 'TABLEAU_ELEVES',           desc: 'Liste numérotée des élèves' },
       { key: 'TABLEAU_EMPLOI_DU_TEMPS',  desc: "Grille horaire de l'élève" },
       { key: 'TABLEAU_PLANNING',         desc: 'Planning hebdo du professeur' },
+    ],
+  },
+  {
+    label: "Cartes d'identité (auto-générés)",
+    vars: [
+      { key: 'PHOTO_ELEVE',   desc: "Photo de l'élève (balise img, obligatoire)" },
+      { key: 'QR_CODE_ELEVE', desc: "QR code d'identification élève (img)" },
+      { key: 'PHOTO_PROF',    desc: "Photo du professeur (balise img, obligatoire)" },
+      { key: 'QR_CODE_PROF',  desc: 'QR code professeur (img, verso carte)' },
     ],
   },
 ];
@@ -538,6 +560,16 @@ export function DocumentsPage() {
                     Destinataire : {destType === 'eleve' ? 'Élève' : destType === 'professeur' ? 'Professeur' : 'Classe'}
                   </p>
                 </div>
+
+                {CARD_TYPES.has(selectedType) && (
+                  <div style={{ padding: '10px 14px', background: '#eff6ff', borderRadius: 8, border: '1px solid #bfdbfe', fontSize: 13, color: '#1e40af', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: 16, flexShrink: 0 }}>🪪</span>
+                    <div>
+                      <strong>Carte CR80 — format Evolis Primacy</strong><br />
+                      La photo est <strong>obligatoire</strong> pour générer cette carte. Pour imprimer plusieurs cartes d'un coup, utilisez le bouton "Générer en lot" depuis la page <strong>Élèves</strong> ou <strong>Professeurs</strong>.
+                    </div>
+                  </div>
+                )}
 
                 {destType === 'eleve' && (
                   <div>

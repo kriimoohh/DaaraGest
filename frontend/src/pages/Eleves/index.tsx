@@ -4,6 +4,7 @@ import Papa from 'papaparse';
 import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
+import { API_BASE } from '../../lib/api';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { SearchInput } from '../../components/ui/SearchInput';
@@ -228,6 +229,13 @@ export function ElevesPage() {
   const [importRows, setImportRows] = useState<Record<string, string>[]>([]);
   const [importResult, setImportResult] = useState<{ created: number; errors: { ligne: number; message: string }[] } | null>(null);
   const [importing, setImporting] = useState(false);
+
+  // Génération cartes ID
+  const [carteLotModal, setCarteLotModal] = useState(false);
+  const [carteLotClasseId, setCarteLotClasseId] = useState('');
+  const [carteLotGenerating, setCarteLotGenerating] = useState(false);
+  const [carteLotErreurs, setCarteLotErreurs] = useState<{ id: string; message: string }[]>([]);
+  const [carteUniqueLoading, setCarteUniqueLoading] = useState<string | null>(null);
 
   // Inscription
   const [inscModal, setInscModal] = useState<Eleve | null>(null);
@@ -629,6 +637,12 @@ export function ElevesPage() {
             icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
             onClick: () => openEdit(e),
           },
+          {
+            label: carteUniqueLoading === e.id ? 'Génération…' : 'Carte ID (CR80)',
+            icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x={2} y={5} width={20} height={14} rx={2}/><line x1={2} y1={10} x2={22} y2={10}/></svg>,
+            onClick: () => handleCarteUnique(e.id),
+            disabled: carteUniqueLoading === e.id,
+          },
           ...(canInscrire ? [{
             label: t('actions.inscrire'),
             icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx={9} cy={7} r={4}/><line x1={19} y1={8} x2={19} y2={14}/><line x1={22} y1={11} x2={16} y2={11}/></svg>,
@@ -748,6 +762,53 @@ export function ElevesPage() {
     reader.readAsDataURL(file);
   };
 
+  // ── Génération cartes ──────────────────────────────────────────────────────
+
+  async function handleCarteUnique(eleveId: string) {
+    setCarteUniqueLoading(eleveId);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/documents/generer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ type: 'CARTE_ELEVE', destinataire_type: 'eleve', destinataire_id: eleveId }),
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({ error: 'Erreur' })); throw new Error(e.error ?? 'Erreur'); }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'carte_eleve.pdf'; a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Carte générée');
+    } catch (err) { toast.error((err as Error).message); }
+    finally { setCarteUniqueLoading(null); }
+  }
+
+  async function handleCarteLot() {
+    if (!carteLotClasseId) return;
+    setCarteLotGenerating(true);
+    setCarteLotErreurs([]);
+    try {
+      const inscRes = await api.get<{ data: Eleve[] }>(`/api/v1/eleves?classe_id=${carteLotClasseId}&limit=200`);
+      const ids = (inscRes.data ?? []).map(e => e.id);
+      if (!ids.length) { toast.error('Aucun élève dans cette classe'); return; }
+      const res = await fetch(`${API_BASE}/api/v1/documents/generer-lot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ type: 'CARTE_ELEVE', ids }),
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({ error: 'Erreur' })); throw new Error(e.error ?? 'Erreur'); }
+      const errsHeader = res.headers.get('X-Cartes-Erreurs');
+      if (errsHeader) setCarteLotErreurs(JSON.parse(errsHeader));
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'cartes_eleves_lot.pdf'; a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`PDF généré — ${ids.length} carte(s)`);
+    } catch (err) { toast.error((err as Error).message); }
+    finally { setCarteLotGenerating(false); }
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -760,6 +821,9 @@ export function ElevesPage() {
             <div style={{ display: 'flex', gap: 8 }}>
               <input ref={fileInputRef} type="file" accept=".csv" style={{ display: 'none' }}
                 onChange={e => { if (e.target.files?.[0]) handleCsvFile(e.target.files[0]); e.target.value = ''; }} />
+              <Button variant="secondary" onClick={() => { setCarteLotClasseId(''); setCarteLotErreurs([]); setCarteLotModal(true); }}>
+                🪪 Cartes en lot
+              </Button>
               <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>
                 ⬆ Importer CSV
               </Button>
@@ -1399,6 +1463,36 @@ export function ElevesPage() {
               </div>
             </div>
           )}
+        </div>
+      </Modal>
+
+      {/* ── Modal Génération cartes en lot ──────────────────────────────────── */}
+      <Modal isOpen={carteLotModal} onClose={() => setCarteLotModal(false)} title="Générer cartes élèves en lot (CR80)" size="sm">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ padding: '10px 14px', background: '#eff6ff', borderRadius: 8, fontSize: 13, color: '#1e40af' }}>
+            🪪 Génère un PDF multi-pages au format <strong>Evolis Primacy CR80</strong> (85,6 × 54 mm). La photo est obligatoire — les élèves sans photo sont signalés.
+          </div>
+          <div className="field">
+            <label className="field-label">Classe</label>
+            <select className="input" value={carteLotClasseId} onChange={e => setCarteLotClasseId(e.target.value)}>
+              <option value="">Sélectionner une classe…</option>
+              {allClasses.map(c => <option key={c.id} value={c.id}>{c.nom_fr} ({c.filiere})</option>)}
+            </select>
+          </div>
+          {carteLotErreurs.length > 0 && (
+            <div style={{ background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: 8, padding: '10px 14px', fontSize: 12 }}>
+              <strong style={{ color: '#92400e' }}>⚠ {carteLotErreurs.length} élève(s) sans photo ignoré(s) :</strong>
+              <ul style={{ margin: '6px 0 0', paddingLeft: 16, color: '#78350f' }}>
+                {carteLotErreurs.map(e => <li key={e.id}>{e.message}</li>)}
+              </ul>
+            </div>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button variant="ghost" onClick={() => setCarteLotModal(false)}>Annuler</Button>
+            <Button onClick={handleCarteLot} loading={carteLotGenerating} disabled={!carteLotClasseId}>
+              Générer PDF
+            </Button>
+          </div>
         </div>
       </Modal>
     </>
