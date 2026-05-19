@@ -5,7 +5,7 @@
  * sans base de données réelle. Les services sont mockés au niveau du module Prisma.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import Fastify from 'fastify';
+import Fastify, { FastifyInstance } from 'fastify';
 import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
@@ -69,7 +69,7 @@ async function buildApp() {
   return app;
 }
 
-async function signToken(app: Fastify.FastifyInstance, payload: object): Promise<string> {
+async function signToken(app: FastifyInstance, payload: object): Promise<string> {
   return app.jwt.sign(payload, { expiresIn: '1h' });
 }
 
