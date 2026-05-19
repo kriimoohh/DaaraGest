@@ -1,4 +1,6 @@
 import prisma from '../../config/database';
+import { randomUUID } from 'crypto';
+import QRCode from 'qrcode';
 import { PresenceInput, BulkPresenceInput } from './pointage.schema';
 import { notifierRoles } from '../notifications/notifications.service';
 
@@ -145,6 +147,114 @@ export async function bulkUpsertPresences(etablissement_id: string, data: BulkPr
     results.push(r);
   }
   return { saved: results.length };
+}
+
+export async function getQRCode(etablissement_id: string, professeurId: string) {
+  const prof = await prisma.professeur.findFirst({
+    where: { id: professeurId, utilisateur: { etablissement_id } },
+    include: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } },
+  });
+  if (!prof) throw new Error('Professeur introuvable');
+
+  // Génère le token si absent
+  let token = prof.qr_token;
+  if (!token) {
+    token = randomUUID();
+    await prisma.professeur.update({ where: { id: professeurId }, data: { qr_token: token } });
+  }
+
+  const dataUrl = await QRCode.toDataURL(token, { width: 300, margin: 2 });
+  return {
+    dataUrl,
+    token,
+    nom: `${prof.utilisateur.prenom_fr ?? ''} ${prof.utilisateur.nom_fr}`.trim(),
+  };
+}
+
+export async function regenererQR(etablissement_id: string, professeurId: string) {
+  const prof = await prisma.professeur.findFirst({
+    where: { id: professeurId, utilisateur: { etablissement_id } },
+  });
+  if (!prof) throw new Error('Professeur introuvable');
+
+  const token = randomUUID();
+  await prisma.professeur.update({ where: { id: professeurId }, data: { qr_token: token } });
+  const dataUrl = await QRCode.toDataURL(token, { width: 300, margin: 2 });
+  return { token, dataUrl };
+}
+
+export async function scanQR(token: string) {
+  const prof = await prisma.professeur.findFirst({
+    where: { qr_token: token },
+    include: {
+      utilisateur: { select: { nom_fr: true, prenom_fr: true, etablissement_id: true } },
+    },
+  });
+  if (!prof) throw new Error('QR code invalide ou inconnu');
+
+  const now = new Date();
+  const dateJour = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const heure = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  const existant = await prisma.presenceProfesseur.findUnique({
+    where: { professeur_id_date: { professeur_id: prof.id, date: dateJour } },
+  });
+
+  let action: 'arrivee' | 'depart' | 'deja_complet';
+  let presence;
+
+  if (!existant) {
+    presence = await prisma.presenceProfesseur.create({
+      data: {
+        professeur_id: prof.id,
+        date: dateJour,
+        statut: 'present',
+        heure_arrivee: heure,
+        source: 'qr',
+      },
+    });
+    action = 'arrivee';
+  } else if (existant.heure_arrivee && !existant.heure_depart) {
+    const heuresAuto = calcHeures(existant.heure_arrivee, heure);
+    presence = await prisma.presenceProfesseur.update({
+      where: { id: existant.id },
+      data: {
+        heure_depart: heure,
+        heures_reelles: heuresAuto ?? undefined,
+        source: 'qr',
+      },
+    });
+    action = 'depart';
+  } else {
+    presence = existant;
+    action = 'deja_complet';
+  }
+
+  return {
+    action,
+    heure,
+    nom: `${prof.utilisateur.prenom_fr ?? ''} ${prof.utilisateur.nom_fr}`.trim(),
+    professeur_id: prof.id,
+    presence,
+  };
+}
+
+export async function getScansDuJour(etablissement_id: string) {
+  const today = new Date();
+  const dateJour = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+  return prisma.presenceProfesseur.findMany({
+    where: {
+      date: dateJour,
+      source: 'qr',
+      professeur: { utilisateur: { etablissement_id } },
+    },
+    include: {
+      professeur: { include: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } } },
+    },
+    orderBy: { created_at: 'desc' },
+    take: 20,
+  });
 }
 
 export async function getStatsMois(etablissement_id: string, mois: number, annee: number) {
