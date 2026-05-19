@@ -125,18 +125,35 @@ function QRCodeModal({ professeurId, nom, onClose, api }: {
   );
 }
 
+// Structure renvoyée par GET /api/v1/professeurs : un Utilisateur avec
+// les champs métier du professeur imbriqués sous `professeur`.
 interface Professeur {
   id: string;
   nom_fr: string;
   prenom_fr?: string;
   nom_ar: string;
   identifiant: string;
-  specialite_fr: string;
-  telephone: string;
-  type_contrat: 'permanent' | 'vacataire';
-  statut: 'actif' | 'inactif';
+  actif: boolean;
   photo_url?: string;
-  professeur?: { photo_url?: string };
+  professeur?: {
+    photo_url?: string;
+    specialite_fr?: string;
+    specialite_ar?: string;
+    telephone?: string;
+    type_contrat?: 'permanent' | 'vacataire';
+    date_embauche?: string;
+    salaire_base?: number;
+  };
+}
+
+function profSpecialite(p: Professeur): string {
+  return p.professeur?.specialite_fr ?? '';
+}
+function profTelephone(p: Professeur): string {
+  return p.professeur?.telephone ?? '';
+}
+function profContrat(p: Professeur): 'permanent' | 'vacataire' | undefined {
+  return p.professeur?.type_contrat;
 }
 
 interface ProfesseursResponse {
@@ -235,8 +252,9 @@ export function ProfesseursPage() {
       nom_fr: prof.nom_fr,
       nom_ar: prof.nom_ar,
       identifiant: prof.identifiant, mot_de_passe: '',
-      specialite_fr: prof.specialite_fr, telephone: prof.telephone,
-      type_contrat: prof.type_contrat,
+      specialite_fr: profSpecialite(prof),
+      telephone: profTelephone(prof),
+      type_contrat: profContrat(prof) ?? 'permanent',
       photo_url: prof.professeur?.photo_url ?? prof.photo_url,
     });
     setFormErrors({});
@@ -325,13 +343,22 @@ export function ProfesseursPage() {
       },
     },
     { key: 'identifiant', header: 'Identifiant' },
-    { key: 'specialite_fr', header: 'Spécialité' },
+    {
+      key: 'specialite_fr',
+      header: 'Spécialité',
+      render: (row) => {
+        const p = row as unknown as Professeur;
+        return profSpecialite(p) || <span className="muted">—</span>;
+      },
+    },
     {
       key: 'type_contrat',
       header: 'Contrat',
       render: (row) => {
         const p = row as unknown as Professeur;
-        return <Badge label={p.type_contrat === 'permanent' ? t('professeur.permanent') : t('professeur.vacataire')} variant={p.type_contrat === 'permanent' ? 'info' : 'warning'} />;
+        const contrat = profContrat(p);
+        if (!contrat) return <span className="muted">—</span>;
+        return <Badge label={contrat === 'permanent' ? t('professeur.permanent') : t('professeur.vacataire')} variant={contrat === 'permanent' ? 'info' : 'warning'} />;
       },
     },
     {
@@ -435,7 +462,9 @@ export function ProfesseursPage() {
             {profs.map(p => {
               const photo = p.professeur?.photo_url ?? p.photo_url;
               const initiales = `${p.prenom_fr?.[0] ?? ''}${p.nom_fr?.[0] ?? ''}`.toUpperCase();
-              const contratLabel = p.type_contrat === 'permanent' ? 'Permanent' : p.type_contrat === 'vacataire' ? 'Vacataire' : p.type_contrat;
+              const contrat = profContrat(p);
+              const contratLabel = contrat === 'permanent' ? 'Permanent' : contrat === 'vacataire' ? 'Vacataire' : '—';
+              const specialite = profSpecialite(p);
               return (
                 <div key={p.id} className="card" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                   {/* Header avec avatar */}
@@ -449,7 +478,7 @@ export function ProfesseursPage() {
                       <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {[p.prenom_fr, p.nom_fr].filter(Boolean).join(' ')}
                       </div>
-                      {p.specialite_fr && <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{p.specialite_fr}</div>}
+                      {specialite && <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{specialite}</div>}
                       <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--ink-4)', marginTop: 4 }}>@{p.identifiant}</div>
                     </div>
                   </div>
@@ -460,7 +489,7 @@ export function ProfesseursPage() {
                       <div className="muted" style={{ fontSize: 11 }}>Contrat</div>
                       <div style={{ fontWeight: 500 }}>{contratLabel}</div>
                     </div>
-                    <Badge label={p.statut === 'actif' ? t('common.actif') : t('common.inactif')} variant={p.statut === 'actif' ? 'success' : 'neutral'} />
+                    <Badge label={p.actif ? t('common.actif') : t('common.inactif')} variant={p.actif ? 'success' : 'neutral'} />
                   </div>
 
                   {/* Actions */}
