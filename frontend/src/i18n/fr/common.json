@@ -30,8 +30,10 @@
     "absences": "Absences élèves",
     "emploi_du_temps": "Emploi du temps",
     "calendrier": "Calendrier",
-    "messagerie": "Messagerie",
-    "documents": "Documents"
+    "messagerie":   "Messagerie",
+    "documents":    "Documents",
+    "rapports":     "Rapports",
+    "bibliotheque": "Bibliothèque"
   },
   "theme": {
     "light": "Mode clair",

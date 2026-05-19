@@ -30,8 +30,10 @@
     "absences": "غيابات التلاميذ",
     "emploi_du_temps": "جدول الحصص",
     "calendrier": "التقويم",
-    "messagerie": "الرسائل",
-    "documents": "الوثائق"
+    "messagerie":   "الرسائل",
+    "documents":    "الوثائق",
+    "rapports":     "التقارير",
+    "bibliotheque": "المكتبة"
   },
   "theme": {
     "light": "الوضع الفاتح",

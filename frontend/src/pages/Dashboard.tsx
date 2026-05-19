@@ -6,25 +6,55 @@ import { useApi } from '../hooks/useApi';
 interface Stats { nb_eleves: number; nb_professeurs: number; nb_classes: number; }
 interface MoisStat { label: string; mois: number; annee: number; total: number; }
 interface StatsMois { total_encaisse_eleves: number; nb_paiements_eleves: number; total_paye_professeurs: number; }
-interface PaiementRecent {
-  id: number;
-  recu: string;
-  eleve_nom: string;
-  classe: string;
-  type: string;
-  methode: string;
-  montant: number;
-  statut: string;
-  date: string;
+
+interface TauxPresence { semaine: { taux: number; presents: number; total: number }; mois: { taux: number; presents: number; total: number }; }
+interface MoyenneClasse { classe_id: string; classe_nom: string; filiere: string; nb_eleves: number; moyenne: number; }
+interface EleveRanked { eleve_id: string; nom: string; matricule: string; moyenne: number; classe: string; }
+interface FinancesEvol { mois_courant: number; mois_precedent: number; evolution_pct: number | null; }
+interface Alerte { type: string; eleve_id: string; nom: string; matricule: string; valeur: number; }
+
+interface TableauDeBord {
+  presence_eleves:      TauxPresence;
+  presence_professeurs: TauxPresence;
+  moyennes_classes:     MoyenneClasse[];
+  top5_eleves:          EleveRanked[];
+  bottom5_eleves:       EleveRanked[];
+  finances:             FinancesEvol;
+  alertes:              Alerte[];
 }
 
-function fmtNum(n: number) {
-  return new Intl.NumberFormat('fr-FR').format(n);
-}
+function fmtNum(n: number) { return new Intl.NumberFormat('fr-FR').format(n); }
 function fmtCompact(n: number) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}k`;
+  if (n >= 1_000)     return `${(n / 1_000).toFixed(0)}k`;
   return String(n);
+}
+function fmtPct(n: number) { return `${n.toFixed(1)}%`; }
+
+function TauxCard({ label, data }: { label: string; data?: TauxPresence }) {
+  if (!data) return (
+    <div className="card stat">
+      <div className="stat-label">{label}</div>
+      <div className="stat-value font-display">—</div>
+    </div>
+  );
+  const sem = data.semaine;
+  const moisd = data.mois;
+  const color = sem.taux >= 80 ? 'var(--success-text)' : sem.taux >= 60 ? 'var(--warning-text)' : 'var(--danger)';
+  return (
+    <div className="card" style={{ padding: '16px 18px' }}>
+      <div className="stat-label" style={{ marginBottom: 8 }}>{label}</div>
+      <div style={{ fontSize: 28, fontFamily: 'var(--font-display)', fontWeight: 700, color, lineHeight: 1 }}>
+        {fmtPct(sem.taux)}
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 4 }}>
+        Semaine : {sem.presents}/{sem.total} · Mois : {fmtPct(moisd.taux)}
+      </div>
+      <div style={{ marginTop: 10, height: 4, borderRadius: 2, background: 'var(--surface-2)' }}>
+        <div style={{ height: '100%', width: `${Math.min(sem.taux, 100)}%`, borderRadius: 2, background: color, transition: 'width .5s' }} />
+      </div>
+    </div>
+  );
 }
 
 export function Dashboard() {
@@ -32,11 +62,14 @@ export function Dashboard() {
   const { user } = useAuthStore();
   const api = useApi();
 
-  const [stats, setStats] = useState<Stats>({ nb_eleves: 0, nb_professeurs: 0, nb_classes: 0 });
-  const [statsMois, setStatsMois] = useState<StatsMois | null>(null);
+  const isDirection = ['admin', 'directeur'].includes(user?.role ?? '');
+
+  const [stats, setStats]               = useState<Stats>({ nb_eleves: 0, nb_professeurs: 0, nb_classes: 0 });
+  const [statsMois, setStatsMois]       = useState<StatsMois | null>(null);
   const [statsMensuels, setStatsMensuels] = useState<MoisStat[]>([]);
-  const [paiementsRecents, setPaiementsRecents] = useState<PaiementRecent[]>([]);
   const [etablissement, setEtablissement] = useState<{ nom_fr: string } | null>(null);
+  const [tdb, setTdb]                   = useState<TableauDeBord | null>(null);
+  const [tdbLoading, setTdbLoading]     = useState(false);
 
   useEffect(() => {
     Promise.allSettled([
@@ -46,8 +79,7 @@ export function Dashboard() {
       api.get<StatsMois>('/api/v1/finances/stats'),
       api.get<{ nom_fr: string }>('/api/v1/parametres'),
       api.get<MoisStat[]>('/api/v1/finances/stats-mensuels'),
-      api.get<{ items: PaiementRecent[] }>('/api/v1/finances/paiements-eleves?limit=6'),
-    ]).then(([eleves, profs, classes, finances, etab, mensuels, paiements]) => {
+    ]).then(([eleves, profs, classes, finances, etab, mensuels]) => {
       setStats({
         nb_eleves:      eleves.status    === 'fulfilled' ? (eleves.value as { total: number }).total : 0,
         nb_professeurs: profs.status     === 'fulfilled' ? (profs.value as { total: number }).total : 0,
@@ -56,11 +88,16 @@ export function Dashboard() {
       if (finances.status === 'fulfilled') setStatsMois(finances.value as StatsMois);
       if (etab.status === 'fulfilled') setEtablissement(etab.value as { nom_fr: string });
       if (mensuels.status === 'fulfilled') setStatsMensuels(mensuels.value as MoisStat[]);
-      if (paiements.status === 'fulfilled') {
-        const val = paiements.value as { items?: PaiementRecent[] } | PaiementRecent[];
-        setPaiementsRecents(Array.isArray(val) ? val : (val.items ?? []));
-      }
     });
+
+    if (isDirection) {
+      setTdbLoading(true);
+      api.get<TableauDeBord>('/api/v1/stats/tableau-de-bord')
+        .then(setTdb)
+        .catch(() => null)
+        .finally(() => setTdbLoading(false));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const isAr = i18n.language === 'ar';
@@ -70,8 +107,7 @@ export function Dashboard() {
     : (hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir');
 
   const displayName = (user?.nom_fr ?? '').split(' ')[0];
-
-  const maxMensuel = statsMensuels.length > 0 ? Math.max(...statsMensuels.map(m => m.total)) : 1;
+  const maxMensuel  = statsMensuels.length > 0 ? Math.max(...statsMensuels.map(m => m.total)) : 1;
 
   return (
     <>
@@ -128,9 +164,127 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Charts row */}
+      {/* ── Analytics (admin / directeur uniquement) ─────────────────────────── */}
+      {isDirection && (
+        <>
+          {tdbLoading ? (
+            <div className="card" style={{ padding: 24, textAlign: 'center', color: 'var(--ink-3)', marginBottom: 16 }}>Chargement des analytics…</div>
+          ) : tdb && (
+            <>
+              {/* Présences */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                <TauxCard label="Présence élèves" data={tdb.presence_eleves} />
+                <TauxCard label="Présence professeurs" data={tdb.presence_professeurs} />
+              </div>
+
+              {/* Moyennes classes + Top/Bottom */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 16, marginBottom: 16 }}>
+                {/* Moyennes par classe */}
+                <div className="card">
+                  <div className="card-hd">
+                    <h3>Moyennes par classe</h3>
+                    <span className="sub">{tdb.moyennes_classes.length} classe(s)</span>
+                  </div>
+                  <div className="card-pad">
+                    {tdb.moyennes_classes.length === 0 ? (
+                      <div className="empty">Pas encore de données</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {tdb.moyennes_classes.slice(0, 8).map(c => {
+                          const pct = (c.moyenne / 20) * 100;
+                          const col = c.moyenne >= 14 ? 'var(--success-text)' : c.moyenne >= 10 ? 'var(--terra)' : 'var(--danger)';
+                          return (
+                            <div key={c.classe_id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <div style={{ fontSize: 11, fontWeight: 500, width: 80, color: 'var(--ink-2)', flexShrink: 0 }}>{c.classe_nom}</div>
+                              <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--surface-2)' }}>
+                                <div style={{ height: '100%', width: `${pct}%`, borderRadius: 3, background: col }} />
+                              </div>
+                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: col, width: 32, textAlign: 'end' }}>{c.moyenne}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Top 5 / Bottom 5 */}
+                <div className="card">
+                  <div className="card-hd">
+                    <h3>Classement élèves</h3>
+                  </div>
+                  <div className="card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {tdb.top5_eleves.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--success-text)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>Top 5</div>
+                        {tdb.top5_eleves.map((e, i) => (
+                          <div key={e.eleve_id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0', borderBottom: '1px solid var(--border)' }}>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-4)', width: 14 }}>{i + 1}</span>
+                            <div style={{ flex: 1, fontSize: 12, fontWeight: 500 }}>{e.nom}</div>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--success-text)', fontWeight: 700 }}>{e.moyenne}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {tdb.bottom5_eleves.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--danger)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>À surveiller</div>
+                        {tdb.bottom5_eleves.map((e, i) => (
+                          <div key={e.eleve_id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0', borderBottom: '1px solid var(--border)' }}>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-4)', width: 14 }}>{i + 1}</span>
+                            <div style={{ flex: 1, fontSize: 12, fontWeight: 500 }}>{e.nom}</div>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--danger)', fontWeight: 700 }}>{e.moyenne}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {tdb.top5_eleves.length === 0 && tdb.bottom5_eleves.length === 0 && (
+                      <div className="empty">Pas encore de données de notes</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Alertes */}
+              {tdb.alertes.length > 0 && (
+                <div className="card" style={{ marginBottom: 16 }}>
+                  <div className="card-hd">
+                    <h3>Alertes actives</h3>
+                    <span className="badge badge-danger"><span className="badge-dot" />{tdb.alertes.length}</span>
+                  </div>
+                  <div className="tbl-wrap">
+                    <table className="tbl">
+                      <thead>
+                        <tr><th>Type</th><th>Élève</th><th>Matricule</th><th>Valeur</th></tr>
+                      </thead>
+                      <tbody>
+                        {tdb.alertes.map((a, i) => (
+                          <tr key={i}>
+                            <td>
+                              {a.type === 'absences_repetees'
+                                ? <span className="badge badge-warning"><span className="badge-dot" />Absences répétées</span>
+                                : <span className="badge badge-danger"><span className="badge-dot" />Note insuffisante</span>
+                              }
+                            </td>
+                            <td style={{ fontWeight: 500 }}>{a.nom}</td>
+                            <td className="mono">{a.matricule}</td>
+                            <td className="mono">
+                              {a.type === 'absences_repetees' ? `${a.valeur} absences` : `moy. ${a.valeur}/20`}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {/* Charts row — Finances */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }} className="mb-4">
-        {/* Encaissements 6 mois */}
         <div className="card">
           <div className="card-hd">
             <div>
@@ -141,6 +295,13 @@ export function Dashboard() {
                 </div>
               )}
             </div>
+            {isDirection && tdb && (
+              <div style={{ fontSize: 12, color: tdb.finances.evolution_pct !== null && tdb.finances.evolution_pct >= 0 ? 'var(--success-text)' : 'var(--danger)' }}>
+                {tdb.finances.evolution_pct !== null
+                  ? `${tdb.finances.evolution_pct >= 0 ? '+' : ''}${tdb.finances.evolution_pct}% vs mois préc.`
+                  : null}
+              </div>
+            )}
           </div>
           <div className="card-pad">
             {statsMensuels.length > 0 ? (
@@ -151,16 +312,10 @@ export function Dashboard() {
                   return (
                     <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                       <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-                        <div
-                          className={`bar${isLast ? ' active' : ''}`}
-                          style={{ height: Math.max(h, 4) + '%' }}
-                          title={fmtNum(m.total) + ' FCFA'}
-                        />
+                        <div className={`bar${isLast ? ' active' : ''}`} style={{ height: Math.max(h, 4) + '%' }} title={fmtNum(m.total) + ' FCFA'} />
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 500 }}>{m.label}</div>
-                      <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: isLast ? 'var(--terra-ink)' : 'var(--ink-2)' }}>
-                        {fmtCompact(m.total)}
-                      </div>
+                      <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: isLast ? 'var(--terra-ink)' : 'var(--ink-2)' }}>{fmtCompact(m.total)}</div>
                     </div>
                   );
                 })}
@@ -171,7 +326,6 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* Résumé financier */}
         <div className="card">
           <div className="card-hd">
             <h3>Ce mois</h3>
@@ -207,57 +361,6 @@ export function Dashboard() {
           </div>
         </div>
       </div>
-
-      {/* Recent payments */}
-      {paiementsRecents.length > 0 && (
-        <div className="card">
-          <div className="card-hd">
-            <h3>Paiements récents</h3>
-            <span className="badge badge-neutral">{paiementsRecents.length}</span>
-          </div>
-          <div className="tbl-wrap">
-            <table className="tbl">
-              <thead>
-                <tr>
-                  <th>Reçu</th>
-                  <th>Élève</th>
-                  <th>Classe</th>
-                  <th>Type</th>
-                  <th>Méthode</th>
-                  <th style={{ textAlign: 'end' }}>Montant</th>
-                  <th>Statut</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paiementsRecents.slice(0, 6).map(p => (
-                  <tr key={p.id}>
-                    <td className="mono">{p.recu}</td>
-                    <td>
-                      <div className="row gap-2">
-                        <div className="avatar avatar-sm" style={{ background: 'var(--terra-soft)', color: 'var(--terra-ink)' }}>
-                          {(p.eleve_nom || '').split(' ').map(w => w[0]).slice(0, 2).join('')}
-                        </div>
-                        <div style={{ fontWeight: 500 }}>{p.eleve_nom}</div>
-                      </div>
-                    </td>
-                    <td><span className="badge badge-outline">{p.classe}</span></td>
-                    <td className="muted">{p.type}</td>
-                    <td className="muted">{p.methode}</td>
-                    <td className="num" style={{ textAlign: 'end' }}>{fmtNum(p.montant)}</td>
-                    <td>
-                      {p.statut === 'payé' ? (
-                        <span className="badge badge-success"><span className="badge-dot" /> Payé</span>
-                      ) : (
-                        <span className="badge badge-danger"><span className="badge-dot" /> Impayé</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </>
   );
 }

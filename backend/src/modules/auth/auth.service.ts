@@ -78,6 +78,36 @@ export async function updateProfil(id: string, data: { nom_fr?: string; langue?:
   return prisma.utilisateur.update({ where: { id }, data });
 }
 
+// ─── Refresh token ────────────────────────────────────────────────────────────
+
+const REFRESH_EXPIRY_DAYS = 30;
+
+export async function creerRefreshToken(utilisateur_id: string): Promise<string> {
+  // Révoquer les anciens tokens de cet utilisateur
+  await prisma.refreshToken.updateMany({ where: { utilisateur_id, revoked: false }, data: { revoked: true } });
+
+  const expires_at = new Date(Date.now() + REFRESH_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+  const rt = await prisma.refreshToken.create({ data: { utilisateur_id, expires_at } });
+  return rt.token;
+}
+
+export async function validerRefreshToken(token: string) {
+  const rt = await prisma.refreshToken.findUnique({
+    where: { token },
+    include: { utilisateur: { include: { role: true } } },
+  });
+  if (!rt || rt.revoked || rt.expires_at < new Date()) return null;
+  return rt.utilisateur;
+}
+
+export async function revoquerRefreshToken(token: string) {
+  await prisma.refreshToken.updateMany({ where: { token }, data: { revoked: true } });
+}
+
+export async function revoquerTousTokens(utilisateur_id: string) {
+  await prisma.refreshToken.updateMany({ where: { utilisateur_id }, data: { revoked: true } });
+}
+
 export async function getMe(id: string) {
   const utilisateur = await prisma.utilisateur.findUnique({
     where: { id },

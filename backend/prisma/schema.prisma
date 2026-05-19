@@ -76,6 +76,7 @@ model Utilisateur {
   messages_envoyes    MessageConversation[]
   activites_responsable Activite[]          @relation("ActiviteResponsable")
   documents_generes     DocumentGenere[]    @relation("DocumentsGeneres")
+  refresh_tokens        RefreshToken[]
 }
 
 model Professeur {
@@ -315,6 +316,7 @@ model Eleve {
   progressions           ProgressionEleve[]
   inscriptions_activites InscriptionActivite[]
   presences_activites    PresenceActivite[]
+  emprunts               Emprunt[]
 }
 
 model Parent {
@@ -684,6 +686,64 @@ model EvaluationActivite {
   updated_at              DateTime @updatedAt
 
   inscription_activite InscriptionActivite @relation(fields: [inscription_activite_id], references: [id], onDelete: Cascade)
+}
+
+// ─── Phase 5.2 — Refresh tokens ─────────────────────────────────────────────
+
+model RefreshToken {
+  id             String   @id @default(uuid())
+  utilisateur_id String
+  token          String   @unique @default(uuid())
+  expires_at     DateTime
+  revoked        Boolean  @default(false)
+  created_at     DateTime @default(now())
+
+  utilisateur Utilisateur @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([utilisateur_id])
+}
+
+// ─── Phase 4.3 — Bibliothèque scolaire ──────────────────────────────────────
+
+model LivreStock {
+  id               String   @id @default(uuid())
+  etablissement_id String
+  isbn             String?
+  titre            String
+  auteur           String?
+  editeur          String?
+  annee_edition    Int?
+  categorie        String?
+  quantite_totale  Int      @default(1)
+  quantite_dispo   Int      @default(1)
+  actif            Boolean  @default(true)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  emprunts Emprunt[]
+
+  @@index([etablissement_id])
+}
+
+model Emprunt {
+  id                    String    @id @default(uuid())
+  etablissement_id      String
+  livre_id              String
+  eleve_id              String
+  date_emprunt          DateTime  @default(now()) @db.Date
+  date_retour_prevue    DateTime  @db.Date
+  date_retour_effective DateTime? @db.Date
+  statut                String    @default("en_cours") // 'en_cours' | 'rendu' | 'perdu'
+  cree_par              String
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
+
+  livre LivreStock @relation(fields: [livre_id], references: [id])
+  eleve Eleve      @relation(fields: [eleve_id], references: [id])
+
+  @@index([etablissement_id])
+  @@index([eleve_id])
 }
 
 // ─── Documents administratifs ────────────────────────────────────────────────
