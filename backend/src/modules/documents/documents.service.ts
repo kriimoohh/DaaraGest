@@ -697,6 +697,19 @@ export async function genererCartesLot(
   return { pdf: Buffer.from(mergedBytes), erreurs };
 }
 
+export async function apercuCarte(
+  etablissement_id: string,
+  type: 'CARTE_ELEVE' | 'CARTE_PROFESSEUR',
+  destinataire_id: string,
+): Promise<string> {
+  if (type === 'CARTE_ELEVE') {
+    const { html } = await genererCarteEleve(destinataire_id, etablissement_id);
+    return html;
+  }
+  const { html } = await genererCarteProfesseur(destinataire_id, etablissement_id);
+  return html;
+}
+
 export async function listerHistorique(etablissement_id: string, skip = 0, take = 50) {
   const [total, items] = await Promise.all([
     prisma.documentGenere.count({ where: { etablissement_id } }),

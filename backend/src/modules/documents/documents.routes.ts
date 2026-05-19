@@ -18,6 +18,7 @@ import {
   genererDocument,
   genererCartesLot,
   listerHistorique,
+  apercuCarte,
 } from './documents.service';
 
 const gestion   = requireRole(...ROLE_GROUPS.GESTION);
@@ -107,6 +108,26 @@ export async function documentsRoutes(fastify: FastifyInstance) {
         `attachment; filename="${parsed.data.type.toLowerCase()}.pdf"`,
       );
       return reply.send(pdf);
+    },
+  );
+
+  // POST /apercu — Return card HTML for preview (no PDF, no history entry)
+  fastify.post(
+    '/apercu',
+    { preHandler: [authMiddleware, gestion] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const etablissement_id = getEtabId(request);
+      const { type, destinataire_id } = request.body as { type: string; destinataire_id: string };
+
+      if (type !== 'CARTE_ELEVE' && type !== 'CARTE_PROFESSEUR') {
+        return reply.status(400).send({ error: 'Seules les cartes peuvent être prévisualisées' });
+      }
+      if (!destinataire_id) {
+        return reply.status(400).send({ error: 'destinataire_id requis' });
+      }
+
+      const html = await apercuCarte(etablissement_id, type, destinataire_id);
+      return reply.send({ html });
     },
   );
 
