@@ -1,6 +1,10 @@
 import prisma from '../../config/database';
+import crypto from 'crypto';
+import QRCode from 'qrcode';
 import { logAction } from '../../utils/audit';
 import { EleveInput, InscriptionInput } from './eleves.schema';
+
+const QR_SECRET = process.env.QR_SECRET ?? 'daaragest-qr-secret-change-in-prod';
 
 const VALID_SORT_FIELDS = ['nom_fr', 'prenom_fr', 'matricule', 'sexe', 'date_naissance'];
 
@@ -334,4 +338,30 @@ export async function bulkInscrireEleves(ids: string[], etablissement_id: string
     })),
     skipDuplicates: true,
   });
+}
+
+export async function getEleveQR(etablissement_id: string, eleveId: string) {
+  const eleve = await prisma.eleve.findFirst({
+    where: { id: eleveId, etablissement_id },
+  });
+  if (!eleve) throw Object.assign(new Error('Élève introuvable'), { statusCode: 404 });
+
+  let token = eleve.qr_token;
+  if (!token) {
+    token = crypto.randomUUID();
+    await prisma.eleve.update({ where: { id: eleveId }, data: { qr_token: token } });
+  }
+
+  const payload = { type: 'eleve', id: eleveId, matricule: eleve.matricule, ets: etablissement_id };
+  const data = JSON.stringify(payload);
+  const sig = crypto.createHmac('sha256', QR_SECRET).update(data).digest('hex').slice(0, 16);
+  const signed = Buffer.from(data).toString('base64url') + '.' + sig;
+
+  const dataUrl = await QRCode.toDataURL(signed, { width: 300, margin: 2, errorCorrectionLevel: 'M' });
+  return {
+    dataUrl,
+    token,
+    matricule: eleve.matricule,
+    nom: `${eleve.prenom_fr} ${eleve.nom_fr}`.trim(),
+  };
 }
