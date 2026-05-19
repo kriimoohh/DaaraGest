@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const loginSchema = z.object({
-  identifiant: z.string().min(1, 'Identifiant requis'),
+  identifiant: z.string().min(1, 'Identifiant requis').max(50),
   mot_de_passe: z.string().min(1, 'Mot de passe requis'),
 });
 

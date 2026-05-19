@@ -4,6 +4,7 @@ import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import prisma from './config/database';
+import { checkBrowser } from './utils/browserPool';
 import { authRoutes } from './modules/auth/auth.routes';
 import { anneeScolaireRoutes } from './modules/annees-scolaires/annees-scolaires.routes';
 import { matiereRoutes } from './modules/matieres/matieres.routes';
@@ -83,10 +84,14 @@ async function build() {
   fastify.get('/health', async (_req, reply) => {
     try {
       await prisma.$queryRaw`SELECT 1`;
-      return reply.send({ status: 'ok', db: 'ok', timestamp: new Date().toISOString() });
     } catch {
       return reply.status(503).send({ status: 'error', db: 'unreachable', timestamp: new Date().toISOString() });
     }
+    const pdf = await checkBrowser();
+    const allOk = pdf === 'ok';
+    return reply
+      .status(allOk ? 200 : 207)
+      .send({ status: allOk ? 'ok' : 'degraded', db: 'ok', pdf, timestamp: new Date().toISOString() });
   });
 
   await fastify.register(
