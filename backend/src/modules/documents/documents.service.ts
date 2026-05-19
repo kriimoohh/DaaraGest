@@ -457,8 +457,8 @@ async function genererCarteProfesseur(
   profId: string,
   etablissement_id: string,
 ): Promise<{ html: string }> {
-  const prof = await prisma.professeur.findUniqueOrThrow({
-    where: { id: profId },
+  const prof = await prisma.professeur.findFirstOrThrow({
+    where: { OR: [{ id: profId }, { utilisateur_id: profId }], utilisateur: { etablissement_id } },
     include: { utilisateur: true },
   });
 

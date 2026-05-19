@@ -84,8 +84,9 @@ export async function creerProfesseur(etablissement_id: string, data: Professeur
 }
 
 export async function modifierProfesseur(id: string, etablissement_id: string, data: Partial<ProfesseurInput>) {
+  // id peut être utilisateur_id ou professeur_id — on cherche les deux
   const professeur = await prisma.professeur.findFirst({
-    where: { id, utilisateur: { etablissement_id } },
+    where: { OR: [{ id }, { utilisateur_id: id }], utilisateur: { etablissement_id } },
     include: { utilisateur: true },
   });
   if (!professeur) throw new Error('Professeur introuvable');
@@ -126,7 +127,7 @@ export async function modifierProfesseur(id: string, etablissement_id: string, d
 
 export async function supprimerProfesseur(id: string, etablissement_id: string) {
   const professeur = await prisma.professeur.findFirst({
-    where: { id, utilisateur: { etablissement_id } },
+    where: { OR: [{ id }, { utilisateur_id: id }], utilisateur: { etablissement_id } },
     include: { utilisateur: true },
   });
   if (!professeur) throw new Error('Professeur introuvable');
