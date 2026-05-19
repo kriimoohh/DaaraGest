@@ -25,19 +25,33 @@ export async function genererProgressions(etablissement_id: string, annee_scolai
     include: { eleve: true },
   });
 
+  const eleve_ids = inscriptions.map(i => i.eleve_id);
+
+  // Charger toutes les notes + matières en une seule requête (élimine le N+1)
+  const toutesLesNotes = await prisma.note.findMany({
+    where: { eleve_id: { in: eleve_ids }, annee_scolaire_id },
+    include: { matiere: { select: { coeff_defaut: true } } },
+  });
+
+  // Grouper les notes par élève
+  const notesByEleve = new Map<string, typeof toutesLesNotes>();
+  for (const note of toutesLesNotes) {
+    const bucket = notesByEleve.get(note.eleve_id) ?? [];
+    bucket.push(note);
+    notesByEleve.set(note.eleve_id, bucket);
+  }
+
+  // Charger les progressions existantes en une seule requête
+  const existantes = await prisma.progressionEleve.findMany({
+    where: { eleve_id: { in: eleve_ids }, annee_scolaire_id },
+  });
+  const existantesMap = new Map(existantes.map(p => [p.eleve_id, p]));
+
   const created = [];
 
   for (const inscription of inscriptions) {
     const eleve_id = inscription.eleve_id;
-
-    // Calculer la moyenne annuelle à partir des notes (toutes périodes)
-    const notes = await prisma.note.findMany({
-      where: { eleve_id, annee_scolaire_id },
-      include: {
-        matiere: true,
-        annee_scolaire: false,
-      },
-    });
+    const notes    = notesByEleve.get(eleve_id) ?? [];
 
     let moyenne: number | null = null;
     if (notes.length > 0) {
@@ -53,24 +67,14 @@ export async function genererProgressions(etablissement_id: string, annee_scolai
 
     const decision_auto = moyenne === null ? 'admis' : (moyenne >= seuil ? 'admis' : 'redoublant');
 
-    // Upsert — ne pas écraser une décision déjà validée par le directeur
-    const existing = await prisma.progressionEleve.findUnique({
-      where: { eleve_id_annee_scolaire_id: { eleve_id, annee_scolaire_id } },
-    });
+    const existing = existantesMap.get(eleve_id);
 
     if (!existing) {
       const progression = await prisma.progressionEleve.create({
-        data: {
-          etablissement_id,
-          eleve_id,
-          annee_scolaire_id,
-          decision:     decision_auto,
-          decision_auto,
-        },
+        data: { etablissement_id, eleve_id, annee_scolaire_id, decision: decision_auto, decision_auto },
       });
       created.push(progression);
     } else if (!existing.validee) {
-      // Mettre à jour la proposition auto si pas encore validée
       await prisma.progressionEleve.update({
         where: { id: existing.id },
         data:  { decision_auto, decision: decision_auto },
