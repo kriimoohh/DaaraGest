@@ -452,6 +452,7 @@ export function ProfesseursPage() {
                   <div style={{ display: 'flex', gap: 4 }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(p)}>{t('actions.modifier')}</button>
                     <button className="btn btn-ghost btn-sm" onClick={() => setQrTarget(p)} title="QR Code pointage">QR</button>
+                    <button className="btn btn-ghost btn-sm" loading={carteUniqueLoading === p.id ? 'true' : undefined} onClick={() => handleCarteUnique(p.id)} title="Carte ID CR80">🪪</button>
                     {isAdmin && <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} onClick={() => setConfirmDelete(p)}>✕</button>}
                   </div>
                 </div>

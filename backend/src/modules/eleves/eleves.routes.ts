@@ -5,7 +5,7 @@ import { ROLE_GROUPS } from '../../config/roles';
 import {
   listerHandler, getHandler, progressionHandler, exportExcelHandler, creerHandler, modifierHandler, supprimerHandler,
   toggleActifHandler, inscrireHandler, importHandler,
-  bulkDesactiverHandler, bulkSupprimerHandler, bulkInscrireHandler,
+  bulkDesactiverHandler, bulkSupprimerHandler, bulkInscrireHandler, getQRHandler,
 } from './eleves.controller';
 
 const lecture        = requireRole(...ROLE_GROUPS.PRESENCE);
@@ -26,4 +26,5 @@ export async function eleveRoutes(fastify: FastifyInstance) {
   fastify.delete('/:id',             { preHandler: [authMiddleware, adminSeulement] }, supprimerHandler);
   fastify.patch('/:id/toggle-actif', { preHandler: [authMiddleware, gestion] }, toggleActifHandler);
   fastify.post('/:id/inscrire',      { preHandler: [authMiddleware, gestion] }, inscrireHandler);
+  fastify.get('/:id/qr',             { preHandler: [authMiddleware, lecture] }, getQRHandler);
 }
