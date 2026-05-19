@@ -26,10 +26,12 @@ async function ensureEleveQrToken(eleveId: string): Promise<string> {
 }
 
 async function ensureProfQrToken(profId: string): Promise<string> {
-  const prof = await prisma.professeur.findUniqueOrThrow({ where: { id: profId } });
+  const prof = await prisma.professeur.findFirstOrThrow({
+    where: { OR: [{ id: profId }, { utilisateur_id: profId }] },
+  });
   if (prof.qr_token) return prof.qr_token;
   const token = crypto.randomUUID();
-  await prisma.professeur.update({ where: { id: profId }, data: { qr_token: token } });
+  await prisma.professeur.update({ where: { id: prof.id }, data: { qr_token: token } });
   return token;
 }
 
@@ -147,8 +149,8 @@ async function buildEleveVars(eleve_id: string, etablissement_id: string): Promi
 // ─── Build prof vars ──────────────────────────────────────────────────────────
 
 async function buildProfVars(prof_id: string, _etablissement_id: string): Promise<Record<string, string>> {
-  const prof = await prisma.professeur.findUniqueOrThrow({
-    where: { id: prof_id },
+  const prof = await prisma.professeur.findFirstOrThrow({
+    where: { OR: [{ id: prof_id }, { utilisateur_id: prof_id }] },
     include: { utilisateur: true },
   });
 
