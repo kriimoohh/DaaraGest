@@ -221,7 +221,7 @@ export function RapportsPage() {
                       borderRadius: 'var(--r-sm)',
                       border: `1px solid ${format === f ? 'var(--terra)' : 'var(--border)'}`,
                       background: format === f ? 'var(--terra)' : 'transparent',
-                      color: format === f ? '#fff' : 'var(--ink-2)',
+                      color: format === f ? '#fff' : 'var(--ink)',
                       fontWeight: 600,
                       fontSize: 12,
                       cursor: 'pointer',
