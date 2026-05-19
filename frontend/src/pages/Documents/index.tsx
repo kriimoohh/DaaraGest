@@ -421,6 +421,7 @@ export function DocumentsPage() {
   const [downloading, setDownloading] = useState(false);
   const [printing,    setPrinting]    = useState(false);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [previewHasPhoto, setPreviewHasPhoto] = useState(true);
   const [previewLoading, setPreviewLoading] = useState(false);
 
   // ── Historique tab state ───────────────────────────────────────────────────
@@ -534,11 +535,12 @@ export function DocumentsPage() {
     if (!canGenerate || !selectedType || !destinataireId) return;
     setPreviewLoading(true);
     try {
-      const { html } = await api.post<{ html: string }>('/api/v1/documents/apercu', {
+      const { html, has_photo } = await api.post<{ html: string; has_photo: boolean }>('/api/v1/documents/apercu', {
         type: selectedType,
         destinataire_id: destinataireId,
       });
       setPreviewHtml(html);
+      setPreviewHasPhoto(has_photo);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -823,6 +825,11 @@ export function DocumentsPage() {
                 </div>
               </div>
 
+              {!previewHasPhoto && (
+                <div style={{ background: '#b45309', color: '#fff', borderRadius: 8, padding: '8px 14px', fontSize: 13, width: displayW, boxSizing: 'border-box' }}>
+                  ⚠ Aucune photo — l'aperçu affiche un placeholder. Ajoutez une photo pour pouvoir télécharger ou imprimer.
+                </div>
+              )}
               <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, margin: 0 }}>
                 Aperçu 2× — format réel : 85,6 × 54 mm (CR80){isProfCard ? ' — recto + verso' : ''}
               </p>
