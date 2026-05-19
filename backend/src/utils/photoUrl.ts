@@ -36,7 +36,8 @@ export function validatePhotoUrl(value: string): ValidationResult {
 
 export const photoUrlSchema = z
   .string()
+  .nullable()
   .optional()
-  .refine((v) => v === undefined || validatePhotoUrl(v).ok, {
+  .refine((v) => v == null || validatePhotoUrl(v).ok, {
     message: 'Photo invalide (formats acceptés : JPEG, PNG, WebP en data URL base64 ou URL HTTPS, max ~1.5 Mo)',
   });
