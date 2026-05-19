@@ -206,6 +206,10 @@ model ConfigNotes {
   seuil_absences_alerte   Int      @default(3)
   seuil_note_insuffisante Decimal  @default(10) @db.Decimal(5, 2)
   jours_cours             Json     @default("[\"lundi\",\"mardi\",\"mercredi\",\"jeudi\",\"vendredi\"]")
+  notif_paiement_retard   Boolean  @default(true)
+  notif_absences_eleves   Boolean  @default(true)
+  notif_messages          Boolean  @default(true)
+  notif_inscriptions      Boolean  @default(false)
   updated_at              DateTime @updatedAt
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])

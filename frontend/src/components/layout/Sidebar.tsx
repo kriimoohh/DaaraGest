@@ -6,8 +6,15 @@ import { api } from '../../lib/api';
 
 const NAV_SECTIONS = [
   {
-    label: 'Principal',
+    label: 'Accueil',
     labelAr: 'الرئيسية',
+    items: [
+      { key: 'accueil', path: '/', roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité', 'professeur', 'pointeur'] },
+    ],
+  },
+  {
+    label: 'Principal',
+    labelAr: 'الرئيسي',
     items: [
       { key: 'dashboard',   path: '/dashboard',       roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité', 'professeur', 'pointeur'] },
       { key: 'eleves',      path: '/eleves',           roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'] },
@@ -54,6 +61,7 @@ const NAV_SECTIONS = [
 ];
 
 const NAV_ICONS: Record<string, string> = {
+  accueil:          'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z',
   dashboard:        'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z',
   eleves:           'M12 3C9.79 3 8 4.79 8 7s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 10c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
   professeurs:      'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
@@ -132,7 +140,7 @@ export function Sidebar() {
               <div className="sb-section-label">{isAr ? section.labelAr : section.label}</div>
               <div>
                 {visible.map(item => {
-                  const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+                  const isActive = item.path === '/' ? location.pathname === '/' : location.pathname === item.path || location.pathname.startsWith(item.path + '/');
                   return (
                     <NavLink
                       key={item.key}
