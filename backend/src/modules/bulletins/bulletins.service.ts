@@ -132,6 +132,12 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
   const inscriptions = await getElevesClasse(classe_id, annee_scolaire_id);
   if (inscriptions.length === 0) return { message: 'Aucun élève inscrit', bulletins: [] };
 
+  // Nombre de périodes configurable par établissement (2 = semestres,
+  // 3 = trimestres, 6 = bimestres). Par défaut 3 si non défini.
+  const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
+  const nbPeriodes = config?.nb_periodes ?? 3;
+  const periodesAnnuelles = Array.from({ length: nbPeriodes }, (_, i) => i + 1);
+
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
   const matMapAnnuel: Record<string, MatiereAvecCoeff[]> = {};
   for (const f of filieres) matMapAnnuel[f] = await getMatieresDeclasse(classe_id, f);
@@ -140,7 +146,7 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
   const tousMatIdsAnnuel = filieres.flatMap(f => matMapAnnuel[f].map(m => m.id));
   const elevesIdsAnnuel = inscriptions.map(i => i.eleve_id);
   const toutesLesNotesAnnuel = await prisma.note.findMany({
-    where: { eleve_id: { in: elevesIdsAnnuel }, annee_scolaire_id, periode: { in: [1, 2, 3] }, matiere_id: { in: tousMatIdsAnnuel } },
+    where: { eleve_id: { in: elevesIdsAnnuel }, annee_scolaire_id, periode: { in: periodesAnnuelles }, matiere_id: { in: tousMatIdsAnnuel } },
     include: { matiere: true },
   });
   const notesByEleveAnnuel = new Map<string, typeof toutesLesNotesAnnuel>();
