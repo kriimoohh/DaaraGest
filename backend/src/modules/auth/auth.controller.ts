@@ -2,16 +2,16 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { login, getMe, changePassword, updateProfil, creerRefreshToken, validerRefreshToken, revoquerRefreshToken, revoquerTousTokens } from './auth.service';
 import { loginSchema } from './auth.schema';
 import { JwtPayload } from '../../utils/jwt';
+import { env, isProd } from '../../config/env';
 
-const TOKEN_EXPIRY = process.env.JWT_EXPIRES_IN ?? '24h';
+const TOKEN_EXPIRY = env.JWT_EXPIRES_IN;
 
-function cookieOptions(reply: FastifyReply) {
-  const isProd = process.env.NODE_ENV === 'production';
+function cookieOptions(_reply: FastifyReply) {
   return {
     httpOnly: true,
     secure: isProd,
     sameSite: isProd ? ('none' as const) : ('lax' as const),
-    domain: isProd ? process.env.COOKIE_DOMAIN : undefined,
+    domain: isProd ? env.COOKIE_DOMAIN : undefined,
     path: '/',
     maxAge: 24 * 60 * 60,
     signed: false,

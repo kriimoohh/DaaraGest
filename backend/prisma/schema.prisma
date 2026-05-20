@@ -77,6 +77,9 @@ model Utilisateur {
   activites_responsable Activite[]          @relation("ActiviteResponsable")
   documents_generes     DocumentGenere[]    @relation("DocumentsGeneres")
   refresh_tokens        RefreshToken[]
+
+  @@index([etablissement_id])
+  @@index([etablissement_id, actif])
 }
 
 model Professeur {
@@ -193,6 +196,9 @@ model AnneeScolaire {
   evaluations             Evaluation[]
   progressions_eleves     ProgressionEleve[]
   inscriptions_activites  InscriptionActivite[]
+
+  @@index([etablissement_id])
+  @@index([etablissement_id, active])
 }
 
 model ConfigNotes {
@@ -235,6 +241,9 @@ model Matiere {
   classe_matieres ClasseMatiere[]
   creneaux        Creneau[]
   evaluations     Evaluation[]
+
+  @@index([etablissement_id])
+  @@index([etablissement_id, active])
 }
 
 model Niveau {
@@ -269,6 +278,9 @@ model Classe {
   classe_matieres ClasseMatiere[]
   creneaux        Creneau[]
   evaluations     Evaluation[]
+
+  @@index([etablissement_id])
+  @@index([etablissement_id, annee_scolaire_id])
 }
 
 model ClasseMatiere {
@@ -324,6 +336,10 @@ model Eleve {
   inscriptions_activites InscriptionActivite[]
   presences_activites    PresenceActivite[]
   emprunts               Emprunt[]
+
+  @@index([etablissement_id])
+  @@index([etablissement_id, actif])
+  @@index([etablissement_id, nom_fr])
 }
 
 model Parent {
@@ -370,6 +386,9 @@ model PaiementEleve {
 
   eleve       Eleve        @relation(fields: [eleve_id], references: [id])
   inscription Inscription? @relation(fields: [inscription_id], references: [id])
+
+  @@index([eleve_id, mois, annee])
+  @@index([annee, mois])
 }
 
 model Note {
@@ -449,6 +468,8 @@ model AbsenceEleve {
   etablissement  Etablissement @relation(fields: [etablissement_id], references: [id])
 
   @@unique([eleve_id, classe_id, date])
+  @@index([etablissement_id, date])
+  @@index([eleve_id, date])
 }
 
 model Creneau {
@@ -470,6 +491,10 @@ model Creneau {
   classe         Classe        @relation(fields: [classe_id], references: [id])
   matiere        Matiere       @relation(fields: [matiere_id], references: [id])
   professeur     Professeur    @relation(fields: [professeur_id], references: [id])
+
+  @@index([etablissement_id])
+  @@index([professeur_id, annee_scolaire_id])
+  @@index([classe_id, annee_scolaire_id])
 }
 
 model EvenementCalendrier {
@@ -488,6 +513,9 @@ model EvenementCalendrier {
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
   createur      Utilisateur   @relation(fields: [createur_id], references: [id])
+
+  @@index([etablissement_id])
+  @@index([etablissement_id, date_debut, date_fin])
 }
 
 model Notification {
@@ -504,6 +532,9 @@ model Notification {
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
   destinataire  Utilisateur   @relation(fields: [destinataire_id], references: [id])
+
+  @@index([destinataire_id, lu, created_at])
+  @@index([etablissement_id, created_at])
 }
 
 model Conversation {
@@ -518,6 +549,8 @@ model Conversation {
   etablissement Etablissement            @relation(fields: [etablissement_id], references: [id])
   participants  ConversationParticipant[]
   messages      MessageConversation[]
+
+  @@index([etablissement_id, updated_at])
 }
 
 model ConversationParticipant {
@@ -557,6 +590,7 @@ model PortailParentToken {
   eleve         Eleve         @relation(fields: [eleve_id], references: [id])
 
   @@unique([etablissement_id, eleve_id])
+  @@index([etablissement_id])
 }
 
 // ─── Phase 3.1 — Évaluations formatives ─────────────────────────────────────
@@ -582,6 +616,9 @@ model Evaluation {
   matiere        Matiere          @relation(fields: [matiere_id], references: [id])
   annee_scolaire AnneeScolaire    @relation(fields: [annee_scolaire_id], references: [id])
   notes_eleves   NoteEvaluation[]
+
+  @@index([etablissement_id])
+  @@index([classe_id, matiere_id, periode, annee_scolaire_id])
 }
 
 model NoteEvaluation {
@@ -621,6 +658,7 @@ model ProgressionEleve {
   annee_scolaire AnneeScolaire @relation(fields: [annee_scolaire_id], references: [id])
 
   @@unique([eleve_id, annee_scolaire_id])
+  @@index([etablissement_id])
 }
 
 // ─── Phase 3.3 — Activités parascolaires ────────────────────────────────────
@@ -641,6 +679,9 @@ model Activite {
   responsable   Utilisateur?          @relation("ActiviteResponsable", fields: [responsable_id], references: [id])
   inscriptions  InscriptionActivite[]
   seances       SeanceActivite[]
+
+  @@index([etablissement_id])
+  @@index([etablissement_id, actif])
 }
 
 model InscriptionActivite {
@@ -804,5 +845,7 @@ model DocumentGenere {
   etablissement Etablissement     @relation(fields: [etablissement_id], references: [id])
   template      DocumentTemplate? @relation(fields: [template_id], references: [id])
   utilisateur   Utilisateur       @relation("DocumentsGeneres", fields: [genere_par], references: [id])
+
+  @@index([etablissement_id, genere_le])
 }
 
