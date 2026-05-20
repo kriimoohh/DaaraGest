@@ -187,6 +187,8 @@ function QRCodeEleveModal({ eleveId, nom, onClose, api }: {
         ) : qrData ? (
           <>
             <div style={{ padding: 12, background: '#fff', borderRadius: 12, border: '1px solid var(--rule)', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+              {/* QR code reste sur fond blanc même en dark mode : le scanner caméra
+                  nécessite un contraste élevé du QR pour la détection. */}
               <img src={qrData.dataUrl} alt="QR Code" style={{ width: 220, height: 220, display: 'block' }} />
             </div>
             <div style={{ textAlign: 'center' }}>
@@ -1615,7 +1617,7 @@ export function ElevesPage() {
           {carteLotErreurs.length > 0 && (
             <div style={{ background: 'var(--warning-soft)', border: '1px solid var(--warning-border)', borderRadius: 8, padding: '10px 14px', fontSize: 12 }}>
               <strong style={{ color: 'var(--warning-text)' }}>⚠ {carteLotErreurs.length} élève(s) sans photo ignoré(s) :</strong>
-              <ul style={{ margin: '6px 0 0', paddingLeft: 16, color: 'var(--warning-text)' }}>
+              <ul style={{ margin: '6px 0 0', paddingInlineStart: 16, color: 'var(--warning-text)' }}>
                 {carteLotErreurs.map(e => <li key={e.id}>{e.message}</li>)}
               </ul>
             </div>

@@ -1,12 +1,22 @@
 import prisma from '../../config/database';
 
-const TOKEN_DUREE_MS = 365 * 24 * 60 * 60 * 1000; // 1 an
+// Fallback : si pas d'année scolaire active, expire dans 90 jours (au lieu de 365).
+const TOKEN_FALLBACK_DUREE_MS = 90 * 24 * 60 * 60 * 1000;
+
+async function calculerExpiration(etablissement_id: string): Promise<Date> {
+  const annee = await prisma.anneeScolaire.findFirst({
+    where: { etablissement_id, active: true },
+    select: { date_fin: true },
+  });
+  if (annee?.date_fin) return annee.date_fin;
+  return new Date(Date.now() + TOKEN_FALLBACK_DUREE_MS);
+}
 
 export async function genererToken(etablissement_id: string, eleve_id: string) {
   const eleve = await prisma.eleve.findFirst({ where: { id: eleve_id, etablissement_id } });
   if (!eleve) throw new Error('Élève introuvable');
 
-  const expires_at = new Date(Date.now() + TOKEN_DUREE_MS);
+  const expires_at = await calculerExpiration(etablissement_id);
 
   return prisma.portailParentToken.upsert({
     where: { etablissement_id_eleve_id: { etablissement_id, eleve_id } },

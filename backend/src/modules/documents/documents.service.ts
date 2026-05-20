@@ -4,11 +4,15 @@ import prisma from '../../config/database';
 import { TypeDocument, GenererDocumentInput, GenererCartesLotInput, UpsertTemplateInput, TYPE_DOCUMENT_VALUES, CARD_TYPES } from './documents.schema';
 import { getDefaultTemplate, TYPE_DOCUMENT_LABELS, getCardTemplate } from './templates/defaults';
 
-const QR_SECRET = process.env.QR_SECRET ?? 'daaragest-qr-secret-change-in-prod';
+function getQrSecret(): string {
+  const secret = process.env.QR_SECRET;
+  if (!secret) throw new Error('QR_SECRET non configuré');
+  return secret;
+}
 
 function signQrPayload(payload: object): string {
   const data = JSON.stringify(payload);
-  const sig = crypto.createHmac('sha256', QR_SECRET).update(data).digest('hex').slice(0, 16);
+  const sig = crypto.createHmac('sha256', getQrSecret()).update(data).digest('hex').slice(0, 16);
   return Buffer.from(data).toString('base64url') + '.' + sig;
 }
 
@@ -50,14 +54,15 @@ async function buildCommonVars(etablissement_id: string): Promise<Record<string,
     where: { id: etablissement_id },
   });
 
+  const escapeAttr = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const logoHtml = etab.logo_url
-    ? `<img src="${etab.logo_url}" alt="Logo" style="height:60px;object-fit:contain;">`
+    ? `<img src="${escapeAttr(etab.logo_url)}" alt="Logo" style="height:60px;object-fit:contain;">`
     : '<div style="height:60px;"></div>';
   const signatureHtml = etab.signature_url
-    ? `<img src="${etab.signature_url}" alt="Signature" style="height:60px;object-fit:contain;">`
+    ? `<img src="${escapeAttr(etab.signature_url)}" alt="Signature" style="height:60px;object-fit:contain;">`
     : '<div style="height:60px;"></div>';
   const cachetHtml = etab.cachet_url
-    ? `<img src="${etab.cachet_url}" alt="Cachet" style="height:60px;object-fit:contain;">`
+    ? `<img src="${escapeAttr(etab.cachet_url)}" alt="Cachet" style="height:60px;object-fit:contain;">`
     : '<div style="height:60px;"></div>';
 
   // Active school year
@@ -140,7 +145,7 @@ async function buildEleveVars(eleve_id: string, etablissement_id: string): Promi
     MOYENNE_ANNUELLE: '',
     DECISION: '',
     PHOTO_ELEVE: eleve.photo_url
-      ? `<img src="${eleve.photo_url}" alt="Photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+      ? `<img src="${eleve.photo_url.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}" alt="Photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
       : '',
     QR_CODE_ELEVE: '',
   };
@@ -172,7 +177,7 @@ async function buildProfVars(prof_id: string, _etablissement_id: string): Promis
     HEURES_REELLES: '0',
     TABLEAU_PLANNING: '',
     PHOTO_PROF: prof.photo_url
-      ? `<img src="${prof.photo_url}" alt="Photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+      ? `<img src="${prof.photo_url.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}" alt="Photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
       : '',
     QR_CODE_PROF: '',
   };
@@ -354,9 +359,30 @@ async function buildListeClasse(classe_id: string, annee_scolaire_id: string, _e
 
 // ─── Replace vars ─────────────────────────────────────────────────────────────
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// Vars dont la valeur est du HTML construit côté serveur (img, tables) —
+// on les passe telles quelles. Tout le reste est échappé pour bloquer
+// l'injection de scripts via des champs utilisateurs (nom, motif, etc.).
+const HTML_KEYS = new Set([
+  'LOGO', 'SIGNATURE', 'CACHET',
+  'PHOTO_ELEVE', 'PHOTO_PROF',
+  'QR_CODE_ELEVE', 'QR_CODE_PROF',
+  'TABLEAU_NOTES', 'TABLEAU_EMPLOI_DU_TEMPS',
+  'TABLEAU_PLANNING', 'TABLEAU_ELEVES',
+  'LISTE_MATIERES',
+]);
+
 function replaceVars(html: string, vars: Record<string, string>): string {
   return Object.entries(vars).reduce(
-    (acc, [k, v]) => acc.replaceAll(`{{${k}}}`, v ?? ''),
+    (acc, [k, v]) => acc.replaceAll(`{{${k}}}`, HTML_KEYS.has(k) ? (v ?? '') : escapeHtml(v ?? '')),
     html,
   );
 }
