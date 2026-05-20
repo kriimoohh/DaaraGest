@@ -663,7 +663,7 @@ export function ProfesseursPage() {
           {carteLotErreurs.length > 0 && (
             <div style={{ background: 'var(--warning-soft)', border: '1px solid var(--warning-border)', borderRadius: 8, padding: '10px 14px', fontSize: 12 }}>
               <strong style={{ color: 'var(--warning-text)' }}>⚠ {carteLotErreurs.length} professeur(s) ignoré(s) :</strong>
-              <ul style={{ margin: '6px 0 0', paddingLeft: 16, color: 'var(--warning-text)' }}>
+              <ul style={{ margin: '6px 0 0', paddingInlineStart: 16, color: 'var(--warning-text)' }}>
                 {carteLotErreurs.map(e => <li key={e.id}>{e.message}</li>)}
               </ul>
             </div>
