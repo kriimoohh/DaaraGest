@@ -510,13 +510,108 @@ async function renderCard(html: string): Promise<Buffer> {
   });
 }
 
+async function buildA4DocumentHtml(
+  etablissement_id: string,
+  body: GenererDocumentInput,
+): Promise<{ html: string; customTplId: string | null }> {
+  const { type, destinataire_type, destinataire_id, parametres } = body;
+
+  const customTpl = await prisma.documentTemplate.findUnique({
+    where: { etablissement_id_type: { etablissement_id, type } },
+  });
+  let html = customTpl?.contenu_html ?? getDefaultTemplate(type);
+
+  const vars: Record<string, string> = {
+    ...(await buildCommonVars(etablissement_id)),
+    ...(parametres ?? {}),
+  };
+
+  if (destinataire_type === 'eleve') {
+    Object.assign(vars, await buildEleveVars(destinataire_id, etablissement_id));
+    if (parametres) Object.assign(vars, parametres);
+
+    if (type === 'RELEVE_NOTES') {
+      const inscription = await prisma.inscription.findFirst({
+        where: { eleve_id: destinataire_id, statut: 'actif' },
+        include: { annee_scolaire: true },
+        orderBy: { date_inscription: 'desc' },
+      });
+      if (inscription) {
+        const notes = await prisma.note.findMany({
+          where: { eleve_id: destinataire_id, annee_scolaire_id: inscription.annee_scolaire_id },
+          include: { matiere: true },
+          orderBy: [{ periode: 'asc' }, { matiere: { nom_fr: 'asc' } }],
+        });
+        vars.TABLEAU_NOTES = buildNotesTable(notes as Parameters<typeof buildNotesTable>[0]);
+        if (!vars.MOYENNE_ANNUELLE && notes.length > 0) {
+          const total = notes.reduce((s, n) => s + (n.valeur as unknown as { toNumber(): number }).toNumber(), 0);
+          vars.MOYENNE_ANNUELLE = (total / notes.length).toFixed(2);
+        }
+      }
+    }
+
+    if (type === 'EMPLOI_DU_TEMPS_ELEVE') {
+      const inscription = await prisma.inscription.findFirst({
+        where: { eleve_id: destinataire_id, statut: 'actif' },
+        orderBy: { date_inscription: 'desc' },
+      });
+      if (inscription?.classe_fr_id) {
+        vars.TABLEAU_EMPLOI_DU_TEMPS = await buildEmploiDuTemps(inscription.classe_fr_id);
+      }
+    }
+  } else if (destinataire_type === 'professeur') {
+    Object.assign(vars, await buildProfVars(destinataire_id, etablissement_id));
+    if (parametres) Object.assign(vars, parametres);
+
+    if (type === 'PLANNING_COURS') {
+      vars.TABLEAU_PLANNING = await buildPlanningCours(destinataire_id);
+    }
+
+    if (type === 'FICHE_PAIE') {
+      const paiement = await prisma.paiementProfesseur.findFirst({
+        where: { professeur_id: destinataire_id },
+        orderBy: [{ annee: 'desc' }, { mois: 'desc' }],
+      });
+      if (paiement) {
+        const MOIS_FR = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+          'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+        vars.MOIS_ANNEE = vars.MOIS_ANNEE || `${MOIS_FR[paiement.mois] ?? paiement.mois} ${paiement.annee}`;
+        vars.SALAIRE_BRUT = vars.SALAIRE_BRUT !== '0' ? vars.SALAIRE_BRUT : (paiement.montant_brut as unknown as { toNumber(): number }).toNumber().toLocaleString('fr-SN');
+        vars.RETENUES = vars.RETENUES !== '0' ? vars.RETENUES : (paiement.retenues as unknown as { toNumber(): number }).toNumber().toLocaleString('fr-SN');
+        vars.NET_A_PAYER = vars.NET_A_PAYER !== '0' ? vars.NET_A_PAYER : (paiement.net_a_payer as unknown as { toNumber(): number }).toNumber().toLocaleString('fr-SN');
+        vars.HEURES_THEORIQUES = vars.HEURES_THEORIQUES !== '0' ? vars.HEURES_THEORIQUES : (paiement.heures_theoriques ? (paiement.heures_theoriques as unknown as { toNumber(): number }).toNumber().toString() : '0');
+        vars.HEURES_REELLES = vars.HEURES_REELLES !== '0' ? vars.HEURES_REELLES : (paiement.heures_reelles ? (paiement.heures_reelles as unknown as { toNumber(): number }).toNumber().toString() : '0');
+      }
+    }
+  } else if (destinataire_type === 'classe') {
+    if (parametres) Object.assign(vars, parametres);
+
+    if (type === 'LISTE_CLASSE') {
+      const annee_scolaire_id = parametres?.annee_scolaire_id ?? '';
+      vars.TABLEAU_ELEVES = await buildListeClasse(destinataire_id, annee_scolaire_id, etablissement_id);
+
+      const classe = await prisma.classe.findUnique({
+        where: { id: destinataire_id },
+        include: { annee_scolaire: true },
+      });
+      if (classe) {
+        vars.CLASSE_FR = classe.nom_fr;
+        vars.ANNEE_SCOLAIRE = vars.ANNEE_SCOLAIRE || classe.annee_scolaire.libelle;
+      }
+    }
+  }
+
+  html = replaceVars(html, vars);
+  return { html, customTplId: customTpl?.id ?? null };
+}
+
 export async function genererDocument(
   etablissement_id: string,
   genere_par: string,
   body: GenererDocumentInput,
   previewMode = false,
 ): Promise<Buffer> {
-  const { type, destinataire_type, destinataire_id, parametres } = body;
+  const { type, destinataire_type, destinataire_id } = body;
 
   if (CARD_TYPES.has(type as 'CARTE_ELEVE' | 'CARTE_PROFESSEUR')) {
     let html: string;
@@ -534,107 +629,7 @@ export async function genererDocument(
     return pdf;
   }
 
-  // Get template HTML
-  const customTpl = await prisma.documentTemplate.findUnique({
-    where: { etablissement_id_type: { etablissement_id, type } },
-  });
-  let html = customTpl?.contenu_html ?? getDefaultTemplate(type);
-
-  // Build vars
-  const vars: Record<string, string> = {
-    ...(await buildCommonVars(etablissement_id)),
-    ...(parametres ?? {}),
-  };
-
-  if (destinataire_type === 'eleve') {
-    Object.assign(vars, await buildEleveVars(destinataire_id, etablissement_id));
-
-    // Apply parametres override again (they take priority)
-    if (parametres) Object.assign(vars, parametres);
-
-    if (type === 'RELEVE_NOTES') {
-      // Fetch active inscription to get annee_scolaire_id
-      const inscription = await prisma.inscription.findFirst({
-        where: { eleve_id: destinataire_id, statut: 'actif' },
-        include: { annee_scolaire: true },
-        orderBy: { date_inscription: 'desc' },
-      });
-      if (inscription) {
-        const notes = await prisma.note.findMany({
-          where: {
-            eleve_id: destinataire_id,
-            annee_scolaire_id: inscription.annee_scolaire_id,
-          },
-          include: { matiere: true },
-          orderBy: [{ periode: 'asc' }, { matiere: { nom_fr: 'asc' } }],
-        });
-        vars.TABLEAU_NOTES = buildNotesTable(notes as Parameters<typeof buildNotesTable>[0]);
-
-        if (!vars.MOYENNE_ANNUELLE && notes.length > 0) {
-          const total = notes.reduce((s, n) => s + (n.valeur as unknown as { toNumber(): number }).toNumber(), 0);
-          vars.MOYENNE_ANNUELLE = (total / notes.length).toFixed(2);
-        }
-      }
-    }
-
-    if (type === 'EMPLOI_DU_TEMPS_ELEVE') {
-      // Get classe_id from active inscription
-      const inscription = await prisma.inscription.findFirst({
-        where: { eleve_id: destinataire_id, statut: 'actif' },
-        orderBy: { date_inscription: 'desc' },
-      });
-      if (inscription?.classe_fr_id) {
-        vars.TABLEAU_EMPLOI_DU_TEMPS = await buildEmploiDuTemps(inscription.classe_fr_id);
-      }
-    }
-  } else if (destinataire_type === 'professeur') {
-    Object.assign(vars, await buildProfVars(destinataire_id, etablissement_id));
-
-    // Apply parametres override
-    if (parametres) Object.assign(vars, parametres);
-
-    if (type === 'PLANNING_COURS') {
-      vars.TABLEAU_PLANNING = await buildPlanningCours(destinataire_id);
-    }
-
-    if (type === 'FICHE_PAIE') {
-      // Fetch latest paiement for this professeur
-      const paiement = await prisma.paiementProfesseur.findFirst({
-        where: { professeur_id: destinataire_id },
-        orderBy: [{ annee: 'desc' }, { mois: 'desc' }],
-      });
-      if (paiement) {
-        const MOIS_FR = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-          'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-        vars.MOIS_ANNEE = vars.MOIS_ANNEE || `${MOIS_FR[paiement.mois] ?? paiement.mois} ${paiement.annee}`;
-        vars.SALAIRE_BRUT = vars.SALAIRE_BRUT !== '0' ? vars.SALAIRE_BRUT : (paiement.montant_brut as unknown as { toNumber(): number }).toNumber().toLocaleString('fr-SN');
-        vars.RETENUES = vars.RETENUES !== '0' ? vars.RETENUES : (paiement.retenues as unknown as { toNumber(): number }).toNumber().toLocaleString('fr-SN');
-        vars.NET_A_PAYER = vars.NET_A_PAYER !== '0' ? vars.NET_A_PAYER : (paiement.net_a_payer as unknown as { toNumber(): number }).toNumber().toLocaleString('fr-SN');
-        vars.HEURES_THEORIQUES = vars.HEURES_THEORIQUES !== '0' ? vars.HEURES_THEORIQUES : (paiement.heures_theoriques ? (paiement.heures_theoriques as unknown as { toNumber(): number }).toNumber().toString() : '0');
-        vars.HEURES_REELLES = vars.HEURES_REELLES !== '0' ? vars.HEURES_REELLES : (paiement.heures_reelles ? (paiement.heures_reelles as unknown as { toNumber(): number }).toNumber().toString() : '0');
-      }
-    }
-  } else if (destinataire_type === 'classe') {
-    // Apply parametres
-    if (parametres) Object.assign(vars, parametres);
-
-    if (type === 'LISTE_CLASSE') {
-      const annee_scolaire_id = parametres?.annee_scolaire_id ?? '';
-      vars.TABLEAU_ELEVES = await buildListeClasse(destinataire_id, annee_scolaire_id, etablissement_id);
-
-      // Also get classe name for header
-      const classe = await prisma.classe.findUnique({
-        where: { id: destinataire_id },
-        include: { annee_scolaire: true },
-      });
-      if (classe) {
-        vars.CLASSE_FR = classe.nom_fr;
-        vars.ANNEE_SCOLAIRE = vars.ANNEE_SCOLAIRE || classe.annee_scolaire.libelle;
-      }
-    }
-  }
-
-  html = replaceVars(html, vars);
+  const { html, customTplId } = await buildA4DocumentHtml(etablissement_id, body);
 
   const { renderPdfHtml } = await import('../../utils/browserPool');
   const pdf = await renderPdfHtml(html, {
@@ -647,17 +642,40 @@ export async function genererDocument(
     await prisma.documentGenere.create({
       data: {
         etablissement_id,
-        template_id: customTpl?.id ?? null,
+        template_id: customTplId,
         type,
         destinataire_type,
         destinataire_id,
         genere_par,
-        parametres: parametres ?? {},
+        parametres: body.parametres ?? {},
       },
     });
   }
 
   return pdf;
+}
+
+export async function apercuDocumentHtml(
+  etablissement_id: string,
+  body: GenererDocumentInput,
+): Promise<{ html: string; is_card: boolean; has_photo?: boolean }> {
+  const { type, destinataire_id } = body;
+
+  if (type === 'CARTE_ELEVE') {
+    const { html, eleve } = await genererCarteEleve(destinataire_id, etablissement_id, true);
+    return { html, is_card: true, has_photo: !!eleve.photo_url };
+  }
+  if (type === 'CARTE_PROFESSEUR') {
+    const prof = await prisma.professeur.findFirst({
+      where: { OR: [{ id: destinataire_id }, { utilisateur_id: destinataire_id }], utilisateur: { etablissement_id } },
+      select: { photo_url: true },
+    });
+    const { html } = await genererCarteProfesseur(destinataire_id, etablissement_id, true);
+    return { html, is_card: true, has_photo: !!prof?.photo_url };
+  }
+
+  const { html } = await buildA4DocumentHtml(etablissement_id, body);
+  return { html, is_card: false };
 }
 
 export async function genererCartesLot(
@@ -708,23 +726,6 @@ export async function genererCartesLot(
 
   const mergedBytes = await merged.save();
   return { pdf: Buffer.from(mergedBytes), erreurs };
-}
-
-export async function apercuCarte(
-  etablissement_id: string,
-  type: 'CARTE_ELEVE' | 'CARTE_PROFESSEUR',
-  destinataire_id: string,
-): Promise<{ html: string; has_photo: boolean }> {
-  if (type === 'CARTE_ELEVE') {
-    const { html, eleve } = await genererCarteEleve(destinataire_id, etablissement_id, true);
-    return { html, has_photo: !!eleve.photo_url };
-  }
-  const prof = await prisma.professeur.findFirstOrThrow({
-    where: { OR: [{ id: destinataire_id }, { utilisateur_id: destinataire_id }], utilisateur: { etablissement_id } },
-    select: { photo_url: true },
-  });
-  const { html } = await genererCarteProfesseur(destinataire_id, etablissement_id, true);
-  return { html, has_photo: !!prof.photo_url };
 }
 
 export async function listerHistorique(etablissement_id: string, skip = 0, take = 50) {
