@@ -32,24 +32,26 @@ export async function listerHandler(request: FastifyRequest, reply: FastifyReply
 }
 
 export async function upsertHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { etablissement_id, id } = request.user as JwtPayload;
+  const { etablissement_id, id, role } = request.user as JwtPayload;
   const parsed = absenceSchema.safeParse(request.body);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
   try {
-    return reply.status(201).send(await upsertAbsence(etablissement_id, parsed.data, id));
+    return reply.status(201).send(await upsertAbsence(etablissement_id, parsed.data, id, role));
   } catch (err) {
-    return reply.status(400).send({ error: (err as Error).message });
+    const status = (err as { statusCode?: number }).statusCode ?? 400;
+    return reply.status(status).send({ error: (err as Error).message });
   }
 }
 
 export async function bulkHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { etablissement_id, id } = request.user as JwtPayload;
+  const { etablissement_id, id, role } = request.user as JwtPayload;
   const parsed = bulkAbsenceSchema.safeParse(request.body);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
   try {
-    return reply.status(201).send(await bulkUpsertAbsences(etablissement_id, parsed.data, id));
+    return reply.status(201).send(await bulkUpsertAbsences(etablissement_id, parsed.data, id, role));
   } catch (err) {
-    return reply.status(400).send({ error: (err as Error).message });
+    const status = (err as { statusCode?: number }).statusCode ?? 400;
+    return reply.status(status).send({ error: (err as Error).message });
   }
 }
 

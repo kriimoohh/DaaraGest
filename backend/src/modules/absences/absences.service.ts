@@ -1,6 +1,7 @@
 import prisma from '../../config/database';
 import { AbsenceInput, BulkAbsenceInput } from './absences.schema';
 import { notifierRoles } from '../notifications/notifications.service';
+import { assertProfPeutAccederClasse } from '../../utils/teachingPolicy';
 
 export async function getElevesJour(
   etablissement_id: string,
@@ -76,11 +77,15 @@ export async function listerAbsences(
   return { total, page, limit, data: items };
 }
 
-export async function upsertAbsence(etablissement_id: string, data: AbsenceInput, cree_par: string) {
+export async function upsertAbsence(etablissement_id: string, data: AbsenceInput, cree_par: string, role?: string) {
   const eleve = await prisma.eleve.findFirst({ where: { id: data.eleve_id, etablissement_id } });
   if (!eleve) throw new Error('Élève introuvable');
   const classe = await prisma.classe.findFirst({ where: { id: data.classe_id, etablissement_id } });
   if (!classe) throw new Error('Classe introuvable');
+
+  if (role) {
+    await assertProfPeutAccederClasse(role, cree_par, data.classe_id);
+  }
 
   const date = new Date(data.date);
   const payload = {
@@ -112,9 +117,14 @@ export async function bulkUpsertAbsences(
   etablissement_id: string,
   data: BulkAbsenceInput,
   cree_par: string,
+  role?: string,
 ) {
   const classe = await prisma.classe.findFirst({ where: { id: data.classe_id, etablissement_id } });
   if (!classe) throw new Error('Classe introuvable');
+
+  if (role) {
+    await assertProfPeutAccederClasse(role, cree_par, data.classe_id);
+  }
 
   // Charger tous les élèves valides en une seule requête (élimine le N+1)
   const eleveIds = data.absences.map(a => a.eleve_id);

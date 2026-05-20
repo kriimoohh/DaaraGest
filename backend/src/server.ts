@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
+import { Prisma } from '@prisma/client';
 import prisma from './config/database';
 import { checkBrowser } from './utils/browserPool';
 import { authRoutes } from './modules/auth/auth.routes';
@@ -49,7 +50,21 @@ if (process.env.NODE_ENV === 'production' && !process.env.COOKIE_DOMAIN) {
   console.warn('[AVERTISSEMENT] COOKIE_DOMAIN non défini en production — les cookies n\'auront pas de domain explicite.');
 }
 
-const fastify = Fastify({ logger: true });
+const fastify = Fastify({
+  logger: {
+    redact: {
+      paths: [
+        'req.body.mot_de_passe',
+        'req.body.ancien_mot_de_passe',
+        'req.body.nouveau_mot_de_passe',
+        'req.headers.cookie',
+        'req.headers.authorization',
+        'res.headers["set-cookie"]',
+      ],
+      remove: true,
+    },
+  },
+});
 
 async function build() {
   // Support plusieurs origines séparées par des virgules
@@ -138,11 +153,28 @@ async function build() {
     { prefix: '/api/v1' }
   );
 
-  fastify.setErrorHandler((error: FastifyError, _request, reply) => {
-    fastify.log.error(error);
-    reply.status(error.statusCode ?? 500).send({
-      error: error.message ?? 'Erreur interne du serveur',
-    });
+  fastify.setErrorHandler((error: FastifyError, request, reply) => {
+    fastify.log.error({ err: error, url: request.url }, 'request error');
+
+    if (error.validation) {
+      return reply.status(400).send({ error: error.message });
+    }
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      const status = error.code === 'P2025' ? 404 : 400;
+      return reply.status(status).send({
+        error: status === 404 ? 'Ressource introuvable' : 'Données invalides',
+      });
+    }
+    if (error instanceof Prisma.PrismaClientValidationError) {
+      return reply.status(400).send({ error: 'Données invalides' });
+    }
+
+    const statusCode = error.statusCode ?? 500;
+    if (statusCode < 500) {
+      return reply.status(statusCode).send({ error: error.message ?? 'Requête invalide' });
+    }
+    return reply.status(500).send({ error: 'Erreur interne du serveur' });
   });
 
   return fastify;
