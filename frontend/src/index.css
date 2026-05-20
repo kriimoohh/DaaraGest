@@ -72,6 +72,12 @@
   --shadow-sm: 0 1px 2px rgba(27,24,18,0.04);
   --shadow:    0 4px 16px rgba(27,24,18,0.08);
   --shadow-lg: 0 12px 40px rgba(27,24,18,0.16);
+
+  /* Alias de compatibilité — tokens référencés dans le code mais non définis. */
+  --surface-2: var(--paper-2);
+  --border: var(--rule);
+  --radius: var(--r-md);
+  --text-muted: var(--ink-3);
 }
 
 [data-theme="dark"] {
@@ -661,6 +667,8 @@ html[dir="rtl"] .app { grid-template-columns: 1fr var(--sidebar-w); direction: r
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ─── Tabs ─── */
 .tabs {
