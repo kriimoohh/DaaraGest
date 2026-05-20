@@ -64,14 +64,15 @@ export async function pdfHandler(request: FastifyRequest, reply: FastifyReply) {
 }
 
 export async function observationHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { etablissement_id, id: userId } = request.user as JwtPayload;
+  const { etablissement_id, id: userId, role } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
   const parsed = observationSchema.safeParse(request.body);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
   try {
-    return reply.send(await mettreAJourObservation(id, etablissement_id, parsed.data, userId));
+    return reply.send(await mettreAJourObservation(id, etablissement_id, parsed.data, userId, role));
   } catch (err) {
-    return reply.status(404).send({ error: (err as Error).message });
+    const status = (err as { statusCode?: number }).statusCode ?? 404;
+    return reply.status(status).send({ error: (err as Error).message });
   }
 }
 

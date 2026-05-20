@@ -25,6 +25,12 @@ interface AuthState {
   setGlobalTheme: (theme: 'light' | 'dark') => void;
 }
 
+// Note sécurité : le token JWT n'est JAMAIS stocké côté client (ni ici ni
+// ailleurs en JS). L'authentification est gérée par le cookie httpOnly
+// `daaragest_token`, inaccessible au JavaScript et donc immunisé contre
+// l'exfiltration via XSS. L'objet `user` ci-dessous n'est qu'un cache de
+// préférences UI (langue, theme, role) — il est revalidé à chaque mount
+// du Layout via un appel à `/auth/me`.
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({

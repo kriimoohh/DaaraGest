@@ -15,7 +15,9 @@ export async function logAction(
     await prisma.auditLog.create({
       data: { etablissement_id, utilisateur_id, action, entite, entite_id, details: (details ?? {}) as Prisma.InputJsonValue },
     });
-  } catch {
-    // Non-bloquant : un échec de log ne doit pas faire échouer l'opération métier
+  } catch (err) {
+    // Non-bloquant : un échec de log ne doit pas faire échouer l'opération métier,
+    // mais on émet sur stderr pour ne pas perdre silencieusement la trace.
+    console.warn('[audit] échec d\'écriture du log', { action, entite, entite_id, err: (err as Error).message });
   }
 }

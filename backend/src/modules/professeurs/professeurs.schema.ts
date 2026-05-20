@@ -1,11 +1,15 @@
 import { z } from 'zod';
 import { photoUrlSchema } from '../../utils/photoUrl';
+import { validerForceMotDePasse } from '../../utils/passwordPolicy';
 
 export const professeurSchema = z.object({
   nom_fr: z.string().min(1),
   nom_ar: z.string().default(''),
   identifiant: z.string().min(1),
-  mot_de_passe: z.string().min(6),
+  mot_de_passe: z.string().refine(
+    (val) => validerForceMotDePasse(val).valide,
+    (val) => ({ message: `Mot de passe insuffisant : ${validerForceMotDePasse(val).raisons.join(', ')}` }),
+  ),
   specialite_fr: z.string().optional(),
   specialite_ar: z.string().optional(),
   telephone: z.string().optional(),

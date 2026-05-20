@@ -1,6 +1,8 @@
 import prisma from '../../config/database';
 import { GenererBulletinInput, GenererBulletinAnnuelInput, ObservationInput } from './bulletins.schema';
 import { renderPdfHtml } from '../../utils/browserPool';
+import { assertProfPeutAccederClasse } from '../../utils/teachingPolicy';
+import { logAction } from '../../utils/audit';
 
 function appreciation(m: number): string {
   if (m >= 16) return 'Très bien — Félicitations du conseil';
@@ -130,6 +132,12 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
   const inscriptions = await getElevesClasse(classe_id, annee_scolaire_id);
   if (inscriptions.length === 0) return { message: 'Aucun élève inscrit', bulletins: [] };
 
+  // Nombre de périodes configurable par établissement (2 = semestres,
+  // 3 = trimestres, 6 = bimestres). Par défaut 3 si non défini.
+  const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
+  const nbPeriodes = config?.nb_periodes ?? 3;
+  const periodesAnnuelles = Array.from({ length: nbPeriodes }, (_, i) => i + 1);
+
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
   const matMapAnnuel: Record<string, MatiereAvecCoeff[]> = {};
   for (const f of filieres) matMapAnnuel[f] = await getMatieresDeclasse(classe_id, f);
@@ -138,7 +146,7 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
   const tousMatIdsAnnuel = filieres.flatMap(f => matMapAnnuel[f].map(m => m.id));
   const elevesIdsAnnuel = inscriptions.map(i => i.eleve_id);
   const toutesLesNotesAnnuel = await prisma.note.findMany({
-    where: { eleve_id: { in: elevesIdsAnnuel }, annee_scolaire_id, periode: { in: [1, 2, 3] }, matiere_id: { in: tousMatIdsAnnuel } },
+    where: { eleve_id: { in: elevesIdsAnnuel }, annee_scolaire_id, periode: { in: periodesAnnuelles }, matiere_id: { in: tousMatIdsAnnuel } },
     include: { matiere: true },
   });
   const notesByEleveAnnuel = new Map<string, typeof toutesLesNotesAnnuel>();
@@ -221,11 +229,41 @@ export async function mettreAJourObservation(
   etablissement_id: string,
   data: ObservationInput,
   valide_par: string,
+  role?: string,
 ) {
   const bulletin = await prisma.bulletin.findFirst({ where: { id, eleve: { etablissement_id } } });
   if (!bulletin) throw new Error('Bulletin introuvable');
 
-  return prisma.bulletin.update({
+  if (role) {
+    const inscription = await prisma.inscription.findFirst({
+      where: { eleve_id: bulletin.eleve_id, annee_scolaire_id: bulletin.annee_scolaire_id },
+      select: { classe_fr_id: true, classe_ar_id: true },
+    });
+    const candidateClasses = [
+      bulletin.filiere === 'AR' ? null : inscription?.classe_fr_id,
+      bulletin.filiere === 'FR' ? null : inscription?.classe_ar_id,
+    ].filter((c): c is string => Boolean(c));
+    if (candidateClasses.length === 0) {
+      throw new Error('Inscription introuvable pour ce bulletin');
+    }
+    let acces = false;
+    for (const classe_id of candidateClasses) {
+      try {
+        await assertProfPeutAccederClasse(role, valide_par, classe_id);
+        acces = true;
+        break;
+      } catch {
+        // essai suivant
+      }
+    }
+    if (!acces) {
+      const err = new Error('Vous n\'enseignez pas dans la classe de cet élève');
+      (err as { statusCode?: number }).statusCode = 403;
+      throw err;
+    }
+  }
+
+  const updated = await prisma.bulletin.update({
     where: { id },
     data: {
       observation_fr: data.observation_fr ?? bulletin.observation_fr,
@@ -235,6 +273,15 @@ export async function mettreAJourObservation(
       valide_le: new Date(),
     },
   });
+
+  await logAction(etablissement_id, valide_par, 'UPDATE', 'Bulletin', id, {
+    action: 'observation',
+    has_fr: data.observation_fr !== undefined,
+    has_ar: data.observation_ar !== undefined,
+    has_prof: data.observation_prof !== undefined,
+  });
+
+  return updated;
 }
 
 // ─── PDF individuel ──────────────────────────────────────────────────────────

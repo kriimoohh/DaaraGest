@@ -18,25 +18,27 @@ export async function listerHandler(request: FastifyRequest, reply: FastifyReply
 }
 
 export async function creerHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { etablissement_id, id } = request.user as JwtPayload;
+  const { etablissement_id, id, role } = request.user as JwtPayload;
   const parsed = evaluationSchema.safeParse(request.body);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
   try {
-    return reply.status(201).send(await creerEvaluation(etablissement_id, parsed.data, id));
+    return reply.status(201).send(await creerEvaluation(etablissement_id, parsed.data, id, role));
   } catch (err) {
-    return reply.status(400).send({ error: (err as Error).message });
+    const status = (err as { statusCode?: number }).statusCode ?? 400;
+    return reply.status(status).send({ error: (err as Error).message });
   }
 }
 
 export async function modifierHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { etablissement_id } = request.user as JwtPayload;
+  const { etablissement_id, id: acteurId, role } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
   const parsed = evaluationSchema.partial().safeParse(request.body);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
   try {
-    return reply.send(await modifierEvaluation(id, etablissement_id, parsed.data));
+    return reply.send(await modifierEvaluation(id, etablissement_id, parsed.data, role, acteurId));
   } catch (err) {
-    return reply.status(400).send({ error: (err as Error).message });
+    const status = (err as { statusCode?: number }).statusCode ?? 400;
+    return reply.status(status).send({ error: (err as Error).message });
   }
 }
 
@@ -62,14 +64,15 @@ export async function listerNotesHandler(request: FastifyRequest, reply: Fastify
 }
 
 export async function bulkNotesHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { etablissement_id } = request.user as JwtPayload;
+  const { etablissement_id, id: acteurId, role } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
   const parsed = bulkNotesEvaluationSchema.safeParse(request.body);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
   try {
-    return reply.status(201).send(await bulkUpsertNotesEvaluation(id, etablissement_id, parsed.data.notes));
+    return reply.status(201).send(await bulkUpsertNotesEvaluation(id, etablissement_id, parsed.data.notes, role, acteurId));
   } catch (err) {
-    return reply.status(400).send({ error: (err as Error).message });
+    const status = (err as { statusCode?: number }).statusCode ?? 400;
+    return reply.status(status).send({ error: (err as Error).message });
   }
 }
 

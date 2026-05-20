@@ -320,8 +320,8 @@ function TemplateEditor({ type, templates, onSaved }: {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: '1px solid var(--rule)', flexWrap: 'wrap' }}>
         <div style={{ flex: 1 }}>
           <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>{LABELS[type]}</span>
-          {dirty && <span style={{ fontSize: 11, marginLeft: 8, color: 'var(--warning)' }}>● Non sauvegardé</span>}
-          {hasCustom && !dirty && <span style={{ fontSize: 11, marginLeft: 8, padding: '1px 7px', borderRadius: 4, background: 'var(--success-soft)', color: 'var(--success-text)' }}>✓ Template personnalisé</span>}
+          {dirty && <span style={{ fontSize: 11, marginInlineStart: 8, color: 'var(--warning)' }}>● Non sauvegardé</span>}
+          {hasCustom && !dirty && <span style={{ fontSize: 11, marginInlineStart: 8, padding: '1px 7px', borderRadius: 4, background: 'var(--success-soft)', color: 'var(--success-text)' }}>✓ Template personnalisé</span>}
         </div>
         <button className="btn btn-ghost btn-sm" onClick={handlePreview} title="Aperçu dans un nouvel onglet">
           <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: 5 }}>

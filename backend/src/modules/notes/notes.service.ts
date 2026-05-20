@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { logAction } from '../../utils/audit';
+import { assertProfPeutModifierNotes } from '../../utils/teachingPolicy';
 import { NoteItem } from './notes.schema';
 
 export async function listerNotes(
@@ -29,8 +30,24 @@ export async function listerNotes(
   });
 }
 
-export async function bulkUpsertNotes(notes: NoteItem[], insertOnly = false, acteurId?: string, etablissement_id?: string, classe_id?: string) {
+export async function bulkUpsertNotes(
+  notes: NoteItem[],
+  insertOnly = false,
+  acteurId?: string,
+  etablissement_id?: string,
+  classe_id?: string,
+  role?: string,
+) {
   if (notes.length === 0) return [];
+
+  // Précharger toutes les matières concernées en une seule requête (élimine le N+1)
+  const matiereIds = [...new Set(notes.map(n => n.matiere_id))];
+
+  // Policy : un professeur ne peut modifier que les notes des classes/matières
+  // où il a une affectation ProfMatiereClasse.
+  if (role && acteurId && classe_id) {
+    await assertProfPeutModifierNotes(role, acteurId, classe_id, matiereIds);
+  }
 
   // Si classe_id fourni, vérifier que toutes les matières sont dans le programme de la classe
   if (classe_id) {
@@ -45,9 +62,6 @@ export async function bulkUpsertNotes(notes: NoteItem[], insertOnly = false, act
       }
     }
   }
-
-  // Précharger toutes les matières concernées en une seule requête (élimine le N+1)
-  const matiereIds = [...new Set(notes.map(n => n.matiere_id))];
   const matieres = await prisma.matiere.findMany({ where: { id: { in: matiereIds } } });
   const matiereMap = new Map(matieres.map(m => [m.id, m]));
 

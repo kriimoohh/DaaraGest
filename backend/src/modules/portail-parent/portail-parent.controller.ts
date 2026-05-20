@@ -27,6 +27,19 @@ export async function revoquerHandler(request: FastifyRequest, reply: FastifyRep
 
 export async function portailHandler(request: FastifyRequest, reply: FastifyReply) {
   const { token } = request.params as { token: string };
+  // Log d'accès au portail parent : utile pour audit forensique en cas de fuite
+  // de lien WhatsApp/SMS. Ne loggue que les 8 premiers caractères du token pour
+  // limiter la surface en cas de fuite des logs.
+  request.log.info(
+    {
+      portail_parent_access: {
+        token_prefix: token.slice(0, 8),
+        ip: request.ip,
+        ua: request.headers['user-agent'],
+      },
+    },
+    'portail-parent access',
+  );
   try {
     return reply.send(await getPortailData(token));
   } catch (err) {
