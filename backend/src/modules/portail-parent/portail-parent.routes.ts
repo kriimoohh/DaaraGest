@@ -7,8 +7,16 @@ import { genererHandler, revoquerHandler, portailHandler, listerTokensHandler } 
 const gestion = requireRole(...ROLE_GROUPS.GESTION);
 
 export async function portailParentRoutes(fastify: FastifyInstance) {
-  // Public (no auth) — token-based
-  fastify.get('/acces/:token', portailHandler);
+  // Public (no auth) — token-based + rate-limit serré pour limiter l'exploitation
+  // d'un lien WhatsApp leaké (30 req/min/IP)
+  fastify.get('/acces/:token', {
+    config: {
+      rateLimit: {
+        max: 30,
+        timeWindow: '1 minute',
+      },
+    },
+  }, portailHandler);
 
   // Authenticated (gestionnaire+)
   fastify.get('/',                    { preHandler: [authMiddleware, gestion] }, listerTokensHandler);

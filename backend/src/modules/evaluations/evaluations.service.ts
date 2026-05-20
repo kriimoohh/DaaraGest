@@ -1,4 +1,5 @@
 import prisma from '../../config/database';
+import { assertProfPeutModifierNotes } from '../../utils/teachingPolicy';
 import { EvaluationInput, NoteEvaluationItem } from './evaluations.schema';
 
 export async function listerEvaluations(
@@ -25,12 +26,16 @@ export async function listerEvaluations(
   });
 }
 
-export async function creerEvaluation(etablissement_id: string, data: EvaluationInput, created_by: string) {
+export async function creerEvaluation(etablissement_id: string, data: EvaluationInput, created_by: string, role?: string) {
   const classe = await prisma.classe.findFirst({ where: { id: data.classe_id, etablissement_id } });
   if (!classe) throw new Error('Classe introuvable');
 
   const matiere = await prisma.matiere.findFirst({ where: { id: data.matiere_id, etablissement_id } });
   if (!matiere) throw new Error('Matière introuvable');
+
+  if (role) {
+    await assertProfPeutModifierNotes(role, created_by, data.classe_id, [data.matiere_id]);
+  }
 
   return prisma.evaluation.create({
     data: {
@@ -53,9 +58,13 @@ export async function creerEvaluation(etablissement_id: string, data: Evaluation
   });
 }
 
-export async function modifierEvaluation(id: string, etablissement_id: string, data: Partial<EvaluationInput>) {
+export async function modifierEvaluation(id: string, etablissement_id: string, data: Partial<EvaluationInput>, role?: string, acteurId?: string) {
   const existing = await prisma.evaluation.findFirst({ where: { id, etablissement_id } });
   if (!existing) throw new Error('Évaluation introuvable');
+
+  if (role && acteurId) {
+    await assertProfPeutModifierNotes(role, acteurId, existing.classe_id, [existing.matiere_id]);
+  }
 
   return prisma.evaluation.update({
     where: { id },
@@ -93,9 +102,15 @@ export async function bulkUpsertNotesEvaluation(
   evaluation_id: string,
   etablissement_id: string,
   notes: NoteEvaluationItem[],
+  role?: string,
+  acteurId?: string,
 ) {
   const evaluation = await prisma.evaluation.findFirst({ where: { id: evaluation_id, etablissement_id } });
   if (!evaluation) throw new Error('Évaluation introuvable');
+
+  if (role && acteurId) {
+    await assertProfPeutModifierNotes(role, acteurId, evaluation.classe_id, [evaluation.matiere_id]);
+  }
 
   const noteMax = Number(evaluation.note_max);
   for (const note of notes) {

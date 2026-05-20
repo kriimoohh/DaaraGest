@@ -1,6 +1,7 @@
 import prisma from '../../config/database';
 import { GenererBulletinInput, GenererBulletinAnnuelInput, ObservationInput } from './bulletins.schema';
 import { renderPdfHtml } from '../../utils/browserPool';
+import { assertProfPeutAccederClasse } from '../../utils/teachingPolicy';
 
 function appreciation(m: number): string {
   if (m >= 16) return 'Très bien — Félicitations du conseil';
@@ -221,9 +222,39 @@ export async function mettreAJourObservation(
   etablissement_id: string,
   data: ObservationInput,
   valide_par: string,
+  role?: string,
 ) {
   const bulletin = await prisma.bulletin.findFirst({ where: { id, eleve: { etablissement_id } } });
   if (!bulletin) throw new Error('Bulletin introuvable');
+
+  if (role) {
+    const inscription = await prisma.inscription.findFirst({
+      where: { eleve_id: bulletin.eleve_id, annee_scolaire_id: bulletin.annee_scolaire_id },
+      select: { classe_fr_id: true, classe_ar_id: true },
+    });
+    const candidateClasses = [
+      bulletin.filiere === 'AR' ? null : inscription?.classe_fr_id,
+      bulletin.filiere === 'FR' ? null : inscription?.classe_ar_id,
+    ].filter((c): c is string => Boolean(c));
+    if (candidateClasses.length === 0) {
+      throw new Error('Inscription introuvable pour ce bulletin');
+    }
+    let acces = false;
+    for (const classe_id of candidateClasses) {
+      try {
+        await assertProfPeutAccederClasse(role, valide_par, classe_id);
+        acces = true;
+        break;
+      } catch {
+        // essai suivant
+      }
+    }
+    if (!acces) {
+      const err = new Error('Vous n\'enseignez pas dans la classe de cet élève');
+      (err as { statusCode?: number }).statusCode = 403;
+      throw err;
+    }
+  }
 
   return prisma.bulletin.update({
     where: { id },

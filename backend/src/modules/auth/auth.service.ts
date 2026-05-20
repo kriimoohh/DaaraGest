@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import prisma from '../../config/database';
 import { JwtPayload } from '../../utils/jwt';
+import { assertMotDePasseValide } from '../../utils/passwordPolicy';
 
 export async function login(identifiant: string, mot_de_passe: string) {
   const utilisateur = await prisma.utilisateur.findUnique({
@@ -55,7 +56,7 @@ export async function changePassword(id: string, ancien: string, nouveau: string
   if (!utilisateur) throw new Error('Utilisateur introuvable');
   const valid = await bcrypt.compare(ancien, utilisateur.mot_de_passe);
   if (!valid) throw new Error('Mot de passe actuel incorrect');
-  if (nouveau.length < 8) throw new Error('Le nouveau mot de passe doit contenir au moins 8 caractères');
+  assertMotDePasseValide(nouveau);
   const hash = await bcrypt.hash(nouveau, 10);
   await prisma.utilisateur.update({
     where: { id },
