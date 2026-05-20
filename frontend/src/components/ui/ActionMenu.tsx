@@ -15,16 +15,13 @@ interface ActionMenuProps {
 export function ActionMenu({ items }: ActionMenuProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
-  const btnRef      = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
 
+  // Fermer sur clic extérieur (mousedown en dehors du bouton)
   useEffect(() => {
     if (!open) return;
     function handleOutside(e: MouseEvent) {
-      const target = e.target as Node;
-      const insideBtn      = btnRef.current?.contains(target) ?? false;
-      const insideDropdown = dropdownRef.current?.contains(target) ?? false;
-      if (!insideBtn && !insideDropdown) {
+      if (btnRef.current && !btnRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
@@ -51,9 +48,11 @@ export function ActionMenu({ items }: ActionMenuProps) {
       </button>
       {open && (
         <div
-          ref={dropdownRef}
           className="action-menu-dropdown"
           style={{ position: 'fixed', top: pos.top, left: pos.left, transform: 'translateX(-100%)' }}
+          // stopPropagation sur mousedown : empêche le listener document de
+          // fermer le menu avant que le click sur l'item ait le temps de s'exécuter
+          onMouseDown={e => e.stopPropagation()}
         >
           {items.map((item, i) => (
             <button
