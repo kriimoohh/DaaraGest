@@ -121,7 +121,7 @@ function EleveSearchPicker({ eleves, selected, onChange }: EleveSearchPickerProp
             <span key={e.id}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 999, fontSize: 12, background: 'var(--success-soft)', color: 'var(--success-text)', border: '1px solid var(--success-border)' }}>
               {e.prenom_fr} {e.nom_fr} <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--success)' }}>({e.matricule})</span>
-              <button onClick={() => remove(e.id)} style={{ marginLeft: 2, background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0 }}>×</button>
+              <button onClick={() => remove(e.id)} aria-label={`Retirer ${e.nom_fr}`} style={{ marginInlineStart: 2, background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0 }}>×</button>
             </span>
           ))}
         </div>
@@ -794,7 +794,7 @@ export function FinancesPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>
               Élève : <strong style={{ color: 'var(--ink)' }}>{editTarget.eleve.prenom_fr} {editTarget.eleve.nom_fr}</strong>
-              <span className="font-mono" style={{ fontSize: 11, color: 'var(--ink-3)', marginLeft: 8 }}>({editTarget.eleve.matricule})</span>
+              <span className="font-mono" style={{ fontSize: 11, color: 'var(--ink-3)', marginInlineStart: 8 }}>({editTarget.eleve.matricule})</span>
             </p>
             <div className="grid-2">
               <Select label={t('finance.type')} value={editForm.type} onChange={e => setEditForm(f => ({ ...f, type: e.target.value }))}

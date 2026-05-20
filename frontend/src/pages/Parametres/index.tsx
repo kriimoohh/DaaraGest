@@ -100,8 +100,8 @@ function Toggle({ checked, onChange, label, description }: {
       >
         <span style={{
           position: 'absolute', top: 3, width: 18, height: 18,
-          left: checked ? 22 : 3, borderRadius: 9, background: '#fff',
-          transition: 'left 0.18s', boxShadow: '0 1px 4px rgba(0,0,0,0.18)',
+          insetInlineStart: checked ? 22 : 3, borderRadius: 9, background: 'var(--card)',
+          transition: 'inset-inline-start 0.18s', boxShadow: '0 1px 4px rgba(0,0,0,0.18)',
           display: 'block',
         }} />
       </button>
