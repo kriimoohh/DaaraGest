@@ -427,6 +427,7 @@ export function DocumentsPage() {
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [previewHasPhoto, setPreviewHasPhoto] = useState(true);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
 
   // ── Historique tab state ───────────────────────────────────────────────────
   const [historique, setHistorique]   = useState<HistoriqueItem[]>([]);
@@ -539,17 +540,38 @@ export function DocumentsPage() {
     if (!canGenerate || !selectedType || !destinataireId) return;
     setPreviewLoading(true);
     try {
-      const { html, has_photo } = await api.post<{ html: string; has_photo: boolean }>('/api/v1/documents/apercu', {
-        type: selectedType,
-        destinataire_id: destinataireId,
-      });
-      setPreviewHtml(html);
-      setPreviewHasPhoto(has_photo);
+      if (CARD_TYPES.has(selectedType)) {
+        const { html, has_photo } = await api.post<{ html: string; has_photo: boolean }>('/api/v1/documents/apercu', {
+          type: selectedType,
+          destinataire_id: destinataireId,
+        });
+        setPreviewHtml(html);
+        setPreviewHasPhoto(has_photo);
+      } else {
+        const res = await fetch(`${API_BASE}/api/v1/documents/apercu-pdf`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+          body: JSON.stringify({
+            type: selectedType,
+            destinataire_type: DEST_TYPE[selectedType],
+            destinataire_id: destinataireId,
+            parametres: Object.keys(extraParams).length ? extraParams : undefined,
+          }),
+        });
+        if (!res.ok) { const e = await res.json().catch(() => ({ error: 'Erreur' })); throw new Error(e.error ?? 'Erreur'); }
+        const blob = await res.blob();
+        if (previewPdfUrl) URL.revokeObjectURL(previewPdfUrl);
+        setPreviewPdfUrl(URL.createObjectURL(blob));
+      }
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
       setPreviewLoading(false);
     }
+  };
+
+  const closePdfPreview = () => {
+    if (previewPdfUrl) URL.revokeObjectURL(previewPdfUrl);
+    setPreviewPdfUrl(null);
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -696,23 +718,21 @@ export function DocumentsPage() {
                     )}
                     Imprimer
                   </button>
-                  {selectedType && CARD_TYPES.has(selectedType) && (
-                    <button
-                      className="btn btn-ghost"
-                      onClick={handleApercu}
-                      disabled={!canGenerate || previewLoading}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, opacity: (!canGenerate || previewLoading) ? 0.5 : 1 }}
-                    >
-                      {previewLoading ? (
-                        <span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-                      ) : (
-                        <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
-                        </svg>
-                      )}
-                      Aperçu
-                    </button>
-                  )}
+                  <button
+                    className="btn btn-ghost"
+                    onClick={handleApercu}
+                    disabled={!canGenerate || previewLoading || downloading || printing}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, opacity: (!canGenerate || previewLoading || downloading || printing) ? 0.5 : 1 }}
+                  >
+                    {previewLoading ? (
+                      <span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                    ) : (
+                      <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                      </svg>
+                    )}
+                    Aperçu
+                  </button>
                 </div>
               </div>
             )}
@@ -774,6 +794,53 @@ export function DocumentsPage() {
           </div>
         </div>
       )}
+      {/* ── Modal aperçu PDF (documents A4) ── */}
+      {previewPdfUrl && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(0,0,0,0.78)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 24,
+          }}
+          onClick={closePdfPreview}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ display: 'flex', flexDirection: 'column', gap: 14, width: 'min(900px, 100%)', height: 'min(90vh, 1100px)' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>
+                Aperçu — {selectedType ? LABELS[selectedType] : ''}
+              </span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <a
+                  href={previewPdfUrl}
+                  download={`${selectedType ? LABELS[selectedType].toLowerCase().replace(/\s+/g, '_') : 'document'}.pdf`}
+                  style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 6, color: '#fff', textDecoration: 'none', padding: '4px 10px', fontSize: 13 }}
+                >
+                  ↓ Télécharger
+                </a>
+                <button
+                  onClick={closePdfPreview}
+                  style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 6, color: '#fff', cursor: 'pointer', padding: '4px 10px', fontSize: 13 }}
+                >
+                  ✕ Fermer
+                </button>
+              </div>
+            </div>
+            <iframe
+              src={previewPdfUrl}
+              title="Aperçu document"
+              style={{ flex: 1, width: '100%', border: 'none', borderRadius: 8, background: '#fff', boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}
+            />
+            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, margin: 0, textAlign: 'center' }}>
+              Aperçu — cet aperçu n'est pas enregistré dans l'historique.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ── Modal aperçu carte ── */}
       {previewHtml && (() => {
         // CR80: 85.6mm × 54mm ≈ 323×204px at 96dpi, displayed at 2×

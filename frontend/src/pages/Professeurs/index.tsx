@@ -368,6 +368,7 @@ export function ProfesseursPage() {
       width: '120px',
       render: (row) => {
         const p = row as unknown as Professeur;
+        const hasPhoto = !!(p.professeur?.photo_url ?? p.photo_url);
         return (
           <div className="row">
             <Button size="sm" variant="secondary" onClick={() => openEdit(p)}>{t('actions.modifier')}</Button>
@@ -378,10 +379,12 @@ export function ProfesseursPage() {
                 onClick: () => setQrTarget(p),
               },
               {
-                label: carteUniqueLoading === p.id ? 'Génération…' : 'Carte ID (CR80)',
+                label: carteUniqueLoading === p.id
+                  ? 'Génération…'
+                  : hasPhoto ? 'Carte ID (CR80)' : 'Carte ID — ajouter une photo d\'abord',
                 icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x={2} y={5} width={20} height={14} rx={2}/><line x1={2} y1={10} x2={22} y2={10}/></svg>,
                 onClick: () => handleCarteUnique(p.id),
-                disabled: carteUniqueLoading === p.id,
+                disabled: !hasPhoto || carteUniqueLoading === p.id,
               },
               ...(isAdmin ? [{
                 label: t('actions.supprimer'),
@@ -519,10 +522,12 @@ export function ProfesseursPage() {
                         onClick: () => setQrTarget(p),
                       },
                       {
-                        label: carteUniqueLoading === p.id ? 'Génération…' : 'Carte ID (CR80)',
+                        label: carteUniqueLoading === p.id
+                          ? 'Génération…'
+                          : photo ? 'Carte ID (CR80)' : 'Carte ID — ajouter une photo d\'abord',
                         icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x={2} y={5} width={20} height={14} rx={2}/><line x1={2} y1={10} x2={22} y2={10}/></svg>,
                         onClick: () => handleCarteUnique(p.id),
-                        disabled: carteUniqueLoading === p.id,
+                        disabled: !photo || carteUniqueLoading === p.id,
                       },
                       ...(isAdmin ? [{
                         label: t('actions.supprimer'),

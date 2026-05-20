@@ -717,10 +717,12 @@ export function ElevesPage() {
             onClick: () => openEdit(e),
           },
           {
-            label: carteUniqueLoading === e.id ? 'Génération…' : 'Carte ID (CR80)',
+            label: carteUniqueLoading === e.id
+              ? 'Génération…'
+              : e.photo_url ? 'Carte ID (CR80)' : 'Carte ID — ajouter une photo d\'abord',
             icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x={2} y={5} width={20} height={14} rx={2}/><line x1={2} y1={10} x2={22} y2={10}/></svg>,
             onClick: () => handleCarteUnique(e.id),
-            disabled: carteUniqueLoading === e.id,
+            disabled: !e.photo_url || carteUniqueLoading === e.id,
           },
           {
             label: 'Voir QR code',
