@@ -52,7 +52,7 @@ async function buildCommonVars(etablissement_id: string): Promise<Record<string,
 
   const logoHtml = etab.logo_url
     ? `<img src="${etab.logo_url}" alt="Logo" style="height:60px;object-fit:contain;">`
-    : '';
+    : '<div style="height:60px;"></div>';
   const signatureHtml = etab.signature_url
     ? `<img src="${etab.signature_url}" alt="Signature" style="height:60px;object-fit:contain;">`
     : '<div style="height:60px;"></div>';
@@ -514,20 +514,23 @@ export async function genererDocument(
   etablissement_id: string,
   genere_par: string,
   body: GenererDocumentInput,
+  previewMode = false,
 ): Promise<Buffer> {
   const { type, destinataire_type, destinataire_id, parametres } = body;
 
   if (CARD_TYPES.has(type as 'CARTE_ELEVE' | 'CARTE_PROFESSEUR')) {
     let html: string;
     if (type === 'CARTE_ELEVE') {
-      ({ html } = await genererCarteEleve(destinataire_id, etablissement_id));
+      ({ html } = await genererCarteEleve(destinataire_id, etablissement_id, previewMode));
     } else {
-      ({ html } = await genererCarteProfesseur(destinataire_id, etablissement_id));
+      ({ html } = await genererCarteProfesseur(destinataire_id, etablissement_id, previewMode));
     }
     const pdf = await renderCard(html);
-    await prisma.documentGenere.create({
-      data: { etablissement_id, type: type as TypeDocument, destinataire_type, destinataire_id, genere_par, parametres: {} },
-    });
+    if (!previewMode) {
+      await prisma.documentGenere.create({
+        data: { etablissement_id, type: type as TypeDocument, destinataire_type, destinataire_id, genere_par, parametres: {} },
+      });
+    }
     return pdf;
   }
 
@@ -640,17 +643,19 @@ export async function genererDocument(
     margin: { top: '15mm', bottom: '15mm', left: '15mm', right: '15mm' },
   });
 
-  await prisma.documentGenere.create({
-    data: {
-      etablissement_id,
-      template_id: customTpl?.id ?? null,
-      type,
-      destinataire_type,
-      destinataire_id,
-      genere_par,
-      parametres: parametres ?? {},
-    },
-  });
+  if (!previewMode) {
+    await prisma.documentGenere.create({
+      data: {
+        etablissement_id,
+        template_id: customTpl?.id ?? null,
+        type,
+        destinataire_type,
+        destinataire_id,
+        genere_par,
+        parametres: parametres ?? {},
+      },
+    });
+  }
 
   return pdf;
 }

@@ -111,6 +111,30 @@ export async function documentsRoutes(fastify: FastifyInstance) {
     },
   );
 
+  // POST /apercu-pdf — Generate PDF for preview (no history entry)
+  fastify.post(
+    '/apercu-pdf',
+    { preHandler: [authMiddleware, gestion] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const etablissement_id = getEtabId(request);
+      const genere_par = getUserId(request);
+
+      const parsed = genererDocumentSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.status(400).send({ error: parsed.error.flatten() });
+      }
+
+      const pdf = await genererDocument(etablissement_id, genere_par, parsed.data, true);
+
+      reply.header('Content-Type', 'application/pdf');
+      reply.header(
+        'Content-Disposition',
+        `inline; filename="apercu_${parsed.data.type.toLowerCase()}.pdf"`,
+      );
+      return reply.send(pdf);
+    },
+  );
+
   // POST /apercu — Return card HTML for preview (no PDF, no history entry)
   fastify.post(
     '/apercu',
