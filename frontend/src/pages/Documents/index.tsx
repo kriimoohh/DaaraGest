@@ -425,9 +425,9 @@ export function DocumentsPage() {
   const [downloading, setDownloading] = useState(false);
   const [printing,    setPrinting]    = useState(false);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [previewIsCard, setPreviewIsCard] = useState(false);
   const [previewHasPhoto, setPreviewHasPhoto] = useState(true);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
 
   // ── Historique tab state ───────────────────────────────────────────────────
   const [historique, setHistorique]   = useState<HistoriqueItem[]>([]);
@@ -540,38 +540,20 @@ export function DocumentsPage() {
     if (!canGenerate || !selectedType || !destinataireId) return;
     setPreviewLoading(true);
     try {
-      if (CARD_TYPES.has(selectedType)) {
-        const { html, has_photo } = await api.post<{ html: string; has_photo: boolean }>('/api/v1/documents/apercu', {
-          type: selectedType,
-          destinataire_id: destinataireId,
-        });
-        setPreviewHtml(html);
-        setPreviewHasPhoto(has_photo);
-      } else {
-        const res = await fetch(`${API_BASE}/api/v1/documents/apercu-pdf`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-          body: JSON.stringify({
-            type: selectedType,
-            destinataire_type: DEST_TYPE[selectedType],
-            destinataire_id: destinataireId,
-            parametres: Object.keys(extraParams).length ? extraParams : undefined,
-          }),
-        });
-        if (!res.ok) { const e = await res.json().catch(() => ({ error: 'Erreur' })); throw new Error(e.error ?? 'Erreur'); }
-        const blob = await res.blob();
-        if (previewPdfUrl) URL.revokeObjectURL(previewPdfUrl);
-        setPreviewPdfUrl(URL.createObjectURL(blob));
-      }
+      const { html, is_card, has_photo } = await api.post<{ html: string; is_card: boolean; has_photo?: boolean }>('/api/v1/documents/apercu', {
+        type: selectedType,
+        destinataire_type: DEST_TYPE[selectedType],
+        destinataire_id: destinataireId,
+        parametres: Object.keys(extraParams).length ? extraParams : undefined,
+      });
+      setPreviewHtml(html);
+      setPreviewIsCard(is_card);
+      setPreviewHasPhoto(has_photo ?? true);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
       setPreviewLoading(false);
     }
-  };
-
-  const closePdfPreview = () => {
-    if (previewPdfUrl) URL.revokeObjectURL(previewPdfUrl);
-    setPreviewPdfUrl(null);
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -794,62 +776,75 @@ export function DocumentsPage() {
           </div>
         </div>
       )}
-      {/* ── Modal aperçu PDF (documents A4) ── */}
-      {previewPdfUrl && (
-        <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 1000,
-            background: 'rgba(0,0,0,0.78)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: 24,
-          }}
-          onClick={closePdfPreview}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{ display: 'flex', flexDirection: 'column', gap: 14, width: 'min(900px, 100%)', height: 'min(90vh, 1100px)' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>
-                Aperçu — {selectedType ? LABELS[selectedType] : ''}
-              </span>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <a
-                  href={previewPdfUrl}
-                  download={`${selectedType ? LABELS[selectedType].toLowerCase().replace(/\s+/g, '_') : 'document'}.pdf`}
-                  style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 6, color: '#fff', textDecoration: 'none', padding: '4px 10px', fontSize: 13 }}
-                >
-                  ↓ Télécharger
-                </a>
-                <button
-                  onClick={closePdfPreview}
-                  style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 6, color: '#fff', cursor: 'pointer', padding: '4px 10px', fontSize: 13 }}
-                >
-                  ✕ Fermer
-                </button>
+      {/* ── Modal aperçu (HTML — fonctionne dans tous les navigateurs) ── */}
+      {previewHtml && (() => {
+        if (previewIsCard) {
+          // CR80: 85.6mm × 54mm ≈ 323×204px at 96dpi, displayed at 2×
+          const isProfCard = selectedType === 'CARTE_PROFESSEUR';
+          const naturalW = 323;
+          const naturalH = isProfCard ? 408 : 204; // prof card has recto+verso stacked
+          const scale = 2;
+          const displayW = naturalW * scale;
+          const displayH = naturalH * scale;
+          return (
+            <div
+              style={{
+                position: 'fixed', inset: 0, zIndex: 1000,
+                background: 'rgba(0,0,0,0.78)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: 24,
+              }}
+              onClick={() => setPreviewHtml(null)}
+            >
+              <div
+                onClick={e => e.stopPropagation()}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: displayW }}>
+                  <span style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>
+                    Aperçu — {selectedType ? LABELS[selectedType] : ''}
+                  </span>
+                  <button
+                    onClick={() => setPreviewHtml(null)}
+                    style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 6, color: '#fff', cursor: 'pointer', padding: '4px 10px', fontSize: 13 }}
+                  >
+                    ✕ Fermer
+                  </button>
+                </div>
+
+                <div style={{
+                  width: displayW,
+                  maxHeight: 'calc(85vh - 100px)',
+                  overflow: 'auto',
+                  borderRadius: 8,
+                  boxShadow: '0 8px 40px rgba(0,0,0,0.6)',
+                }}>
+                  <div style={{ width: displayW, height: displayH, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, width: naturalW, height: naturalH, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+                      <iframe
+                        srcDoc={previewHtml}
+                        title="Aperçu carte"
+                        sandbox="allow-same-origin"
+                        style={{ width: naturalW, height: naturalH, border: 'none', display: 'block' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {!previewHasPhoto && (
+                  <div style={{ background: '#b45309', color: '#fff', borderRadius: 8, padding: '8px 14px', fontSize: 13, width: displayW, boxSizing: 'border-box' }}>
+                    ⚠ Aucune photo — l'aperçu affiche un placeholder. Ajoutez une photo pour pouvoir télécharger ou imprimer.
+                  </div>
+                )}
+                <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, margin: 0 }}>
+                  Aperçu 2× — format réel : 85,6 × 54 mm (CR80){isProfCard ? ' — recto + verso' : ''}
+                </p>
               </div>
             </div>
-            <iframe
-              src={previewPdfUrl}
-              title="Aperçu document"
-              style={{ flex: 1, width: '100%', border: 'none', borderRadius: 8, background: '#fff', boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}
-            />
-            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, margin: 0, textAlign: 'center' }}>
-              Aperçu — cet aperçu n'est pas enregistré dans l'historique.
-            </p>
-          </div>
-        </div>
-      )}
+          );
+        }
 
-      {/* ── Modal aperçu carte ── */}
-      {previewHtml && (() => {
-        // CR80: 85.6mm × 54mm ≈ 323×204px at 96dpi, displayed at 2×
-        const isProfCard = selectedType === 'CARTE_PROFESSEUR';
-        const naturalW = 323;
-        const naturalH = isProfCard ? 408 : 204; // prof card has recto+verso stacked
-        const scale = 2;
-        const displayW = naturalW * scale;
-        const displayH = naturalH * scale;
+        // Document A4 (rendu HTML, fonctionne partout)
         return (
           <div
             style={{
@@ -862,9 +857,9 @@ export function DocumentsPage() {
           >
             <div
               onClick={e => e.stopPropagation()}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}
+              style={{ display: 'flex', flexDirection: 'column', gap: 14, width: 'min(820px, 100%)', height: 'min(90vh, 1100px)' }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: displayW }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>
                   Aperçu — {selectedType ? LABELS[selectedType] : ''}
                 </span>
@@ -875,34 +870,14 @@ export function DocumentsPage() {
                   ✕ Fermer
                 </button>
               </div>
-
-              {/* Carte à l'échelle 2× — transform avec wrapper pour le layout */}
-              <div style={{
-                width: displayW,
-                maxHeight: 'calc(85vh - 100px)',
-                overflow: 'auto',
-                borderRadius: 8,
-                boxShadow: '0 8px 40px rgba(0,0,0,0.6)',
-              }}>
-                <div style={{ width: displayW, height: displayH, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
-                  <div style={{ position: 'absolute', top: 0, left: 0, width: naturalW, height: naturalH, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
-                    <iframe
-                      srcDoc={previewHtml}
-                      title="Aperçu carte"
-                      sandbox="allow-same-origin"
-                      style={{ width: naturalW, height: naturalH, border: 'none', display: 'block' }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {!previewHasPhoto && (
-                <div style={{ background: '#b45309', color: '#fff', borderRadius: 8, padding: '8px 14px', fontSize: 13, width: displayW, boxSizing: 'border-box' }}>
-                  ⚠ Aucune photo — l'aperçu affiche un placeholder. Ajoutez une photo pour pouvoir télécharger ou imprimer.
-                </div>
-              )}
-              <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, margin: 0 }}>
-                Aperçu 2× — format réel : 85,6 × 54 mm (CR80){isProfCard ? ' — recto + verso' : ''}
+              <iframe
+                srcDoc={previewHtml}
+                title="Aperçu document"
+                sandbox="allow-same-origin"
+                style={{ flex: 1, width: '100%', border: 'none', borderRadius: 8, background: '#fff', boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}
+              />
+              <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, margin: 0, textAlign: 'center' }}>
+                Aperçu HTML — rendu très proche du PDF final. Cliquez sur Télécharger pour le PDF imprimable.
               </p>
             </div>
           </div>
