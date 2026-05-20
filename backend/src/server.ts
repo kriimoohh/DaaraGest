@@ -5,6 +5,7 @@ import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import { Prisma } from '@prisma/client';
 import prisma from './config/database';
+import { env, isProd } from './config/env';
 import { checkBrowser } from './utils/browserPool';
 import { authRoutes } from './modules/auth/auth.routes';
 import { anneeScolaireRoutes } from './modules/annees-scolaires/annees-scolaires.routes';
@@ -33,20 +34,11 @@ import { statsRoutes } from './modules/stats/stats.routes';
 import { rapportsRoutes } from './modules/rapports/rapports.routes';
 import { bibliothequeRoutes } from './modules/bibliotheque/bibliotheque.routes';
 
-const jwtSecret = process.env.JWT_SECRET;
-if (!jwtSecret) {
-  console.error('[ERREUR] JWT_SECRET non défini. Définissez cette variable d\'environnement.');
-  process.exit(1);
-}
-// Après le guard, jwtSecret est garanti non-undefined
-const JWT_SECRET: string = jwtSecret as string;
+// La validation des variables d'environnement (JWT_SECRET, QR_SECRET, etc.)
+// est faite au boot dans config/env.ts via Zod. On en récupère les valeurs.
+const JWT_SECRET = env.JWT_SECRET;
 
-if (!process.env.QR_SECRET) {
-  console.error('[ERREUR] QR_SECRET non défini. Définissez cette variable d\'environnement (utilisée pour signer les QR codes).');
-  process.exit(1);
-}
-
-if (process.env.NODE_ENV === 'production' && !process.env.COOKIE_DOMAIN) {
+if (isProd && !env.COOKIE_DOMAIN) {
   console.warn('[AVERTISSEMENT] COOKIE_DOMAIN non défini en production — les cookies n\'auront pas de domain explicite.');
 }
 
@@ -68,11 +60,7 @@ const fastify = Fastify({
 
 async function build() {
   // Support plusieurs origines séparées par des virgules
-  const corsRaw = process.env.CORS_ORIGIN ?? 'http://localhost:5173';
-  const corsOrigins = corsRaw.split(',').map(s => s.trim()).filter(Boolean);
-  if (!process.env.CORS_ORIGIN) {
-    fastify.log.warn('[CORS] CORS_ORIGIN non défini — utilisation du défaut localhost:5173');
-  }
+  const corsOrigins = env.CORS_ORIGIN.split(',').map(s => s.trim()).filter(Boolean);
   await fastify.register(cors, {
     origin: corsOrigins.length === 1 ? corsOrigins[0] : corsOrigins,
     credentials: true,
@@ -102,7 +90,7 @@ async function build() {
     reply.header('X-Frame-Options', 'DENY');
     reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
     reply.header('Permissions-Policy', 'microphone=(), geolocation=()');
-    if (process.env.NODE_ENV === 'production') {
+    if (isProd) {
       reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }
     return payload;
@@ -182,7 +170,7 @@ async function build() {
 
 async function start() {
   const app = await build();
-  const port = Number(process.env.PORT ?? 3000);
+  const port = env.PORT;
   try {
     await app.listen({ port, host: '0.0.0.0' });
   } catch (err) {
