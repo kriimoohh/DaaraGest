@@ -40,6 +40,15 @@ if (!jwtSecret) {
 // Après le guard, jwtSecret est garanti non-undefined
 const JWT_SECRET: string = jwtSecret as string;
 
+if (!process.env.QR_SECRET) {
+  console.error('[ERREUR] QR_SECRET non défini. Définissez cette variable d\'environnement (utilisée pour signer les QR codes).');
+  process.exit(1);
+}
+
+if (process.env.NODE_ENV === 'production' && !process.env.COOKIE_DOMAIN) {
+  console.warn('[AVERTISSEMENT] COOKIE_DOMAIN non défini en production — les cookies n\'auront pas de domain explicite.');
+}
+
 const fastify = Fastify({ logger: true });
 
 async function build() {

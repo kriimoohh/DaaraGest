@@ -11,7 +11,7 @@ function cookieOptions(reply: FastifyReply) {
     httpOnly: true,
     secure: isProd,
     sameSite: isProd ? ('none' as const) : ('lax' as const),
-    domain: isProd ? (process.env.COOKIE_DOMAIN ?? '.dg.sakai.sn') : undefined,
+    domain: isProd ? process.env.COOKIE_DOMAIN : undefined,
     path: '/',
     maxAge: 24 * 60 * 60,
     signed: false,

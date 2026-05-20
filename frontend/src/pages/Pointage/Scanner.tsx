@@ -24,9 +24,9 @@ interface ScanDuJour {
 }
 
 const ACTION_LABELS = {
-  arrivee: { label: 'Arrivée enregistrée', bg: '#22c55e', icon: '✓' },
-  depart: { label: 'Départ enregistré', bg: '#3b82f6', icon: '✓' },
-  deja_complet: { label: 'Déjà enregistré aujourd\'hui', bg: '#f59e0b', icon: '⚠' },
+  arrivee: { label: 'Arrivée enregistrée', bg: 'var(--success)', icon: '✓' },
+  depart: { label: 'Départ enregistré', bg: 'var(--info)', icon: '✓' },
+  deja_complet: { label: 'Déjà enregistré aujourd\'hui', bg: 'var(--warning)', icon: '⚠' },
 };
 
 export function ScannerPage() {
@@ -177,23 +177,23 @@ export function ScannerPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#0f172a',
+      background: 'var(--paper)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       padding: '24px 16px',
-      fontFamily: 'system-ui, sans-serif',
-      color: '#f1f5f9',
+      fontFamily: 'var(--font-sans)',
+      color: 'var(--ink)',
     }}>
       {/* En-tête */}
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <div style={{ fontSize: 13, letterSpacing: 2, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 6 }}>
+        <div style={{ fontSize: 13, letterSpacing: 2, color: 'var(--ink-3)', textTransform: 'uppercase', marginBottom: 6 }}>
           DaaraGest
         </div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: '#f1f5f9' }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: 'var(--ink)', fontFamily: 'var(--font-display)' }}>
           Pointage par QR Code
         </h1>
-        <p style={{ fontSize: 13, color: '#64748b', marginTop: 6 }}>
+        <p style={{ fontSize: 13, color: 'var(--ink-3)', marginTop: 6 }}>
           Scannez votre QR code pour enregistrer votre présence
         </p>
       </div>
@@ -202,22 +202,23 @@ export function ScannerPage() {
       <div style={{
         width: '100%',
         maxWidth: 420,
-        background: '#1e293b',
-        borderRadius: 16,
+        background: 'var(--card)',
+        borderRadius: 'var(--r-lg)',
         overflow: 'hidden',
         position: 'relative',
-        border: '1px solid #334155',
+        border: '1px solid var(--rule)',
+        boxShadow: 'var(--shadow)',
       }}>
         {/* Overlay feedback */}
         {overlayVisible && (
           <div style={{
             position: 'absolute', inset: 0, zIndex: 10,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            background: error ? 'rgba(239,68,68,0.95)' : feedbackInfo ? `${feedbackInfo.bg}ee` : 'transparent',
-            borderRadius: 16,
+            background: error ? 'var(--danger)' : feedbackInfo ? feedbackInfo.bg : 'transparent',
+            borderRadius: 'var(--r-lg)',
             transition: 'background 0.2s',
           }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>
+            <div style={{ fontSize: 48, marginBottom: 12, color: '#fff' }}>
               {error ? '✗' : feedbackInfo?.icon}
             </div>
             <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', textAlign: 'center', padding: '0 24px' }}>
@@ -225,10 +226,10 @@ export function ScannerPage() {
             </div>
             {feedback && (
               <>
-                <div style={{ fontSize: 28, fontWeight: 800, color: '#fff', marginTop: 12 }}>
+                <div style={{ fontSize: 28, fontWeight: 800, color: '#fff', marginTop: 12, fontFamily: 'var(--font-display)' }}>
                   {feedback.nom}
                 </div>
-                <div style={{ fontSize: 18, color: 'rgba(255,255,255,0.85)', marginTop: 6 }}>
+                <div style={{ fontSize: 18, color: 'rgba(255,255,255,0.85)', marginTop: 6, fontFamily: 'var(--font-mono)' }}>
                   {feedback.heure}
                 </div>
               </>
@@ -243,15 +244,18 @@ export function ScannerPage() {
             padding: 32, display: 'flex', flexDirection: 'column',
             alignItems: 'center', gap: 16,
           }}>
-            <div style={{ fontSize: 48 }}>📷</div>
-            <p style={{ fontSize: 14, color: '#94a3b8', textAlign: 'center', margin: 0 }}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+            <p style={{ fontSize: 14, color: 'var(--ink-3)', textAlign: 'center', margin: 0 }}>
               Cliquez sur le bouton ci-dessous pour démarrer la caméra
             </p>
             <button
               onClick={startScanner}
               style={{
-                background: '#3b82f6', color: '#fff', border: 'none',
-                borderRadius: 10, padding: '12px 32px', fontSize: 15,
+                background: 'var(--terra)', color: '#fff', border: 'none',
+                borderRadius: 'var(--r-md)', padding: '12px 32px', fontSize: 15,
                 fontWeight: 600, cursor: 'pointer',
               }}
             >
@@ -265,8 +269,8 @@ export function ScannerPage() {
         <button
           onClick={stopScanner}
           style={{
-            marginTop: 12, background: 'transparent', color: '#64748b',
-            border: '1px solid #334155', borderRadius: 8, padding: '8px 20px',
+            marginTop: 12, background: 'transparent', color: 'var(--ink-3)',
+            border: '1px solid var(--rule)', borderRadius: 'var(--r-sm)', padding: '8px 20px',
             fontSize: 13, cursor: 'pointer',
           }}
         >
@@ -277,28 +281,28 @@ export function ScannerPage() {
       {/* Derniers scans de la session */}
       {historique.length > 0 && (
         <div style={{ width: '100%', maxWidth: 420, marginTop: 20 }}>
-          <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8, letterSpacing: 1, textTransform: 'uppercase' }}>
+          <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 8, letterSpacing: 1, textTransform: 'uppercase' }}>
             Cette session
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {historique.map(h => (
               <div key={h.id} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                background: '#1e293b', borderRadius: 8, padding: '10px 14px',
-                border: '1px solid #334155',
+                background: 'var(--card)', borderRadius: 'var(--r-sm)', padding: '10px 14px',
+                border: '1px solid var(--rule)',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{
                     width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                    background: h.action === 'arrivee' ? '#22c55e' : '#3b82f6',
+                    background: h.action === 'arrivee' ? 'var(--success)' : 'var(--info)',
                   }} />
-                  <span style={{ fontSize: 14, fontWeight: 500 }}>{h.nom}</span>
+                  <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--ink)' }}>{h.nom}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 12, color: '#94a3b8' }}>
+                  <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>
                     {h.action === 'arrivee' ? 'Arrivée' : 'Départ'}
                   </span>
-                  <span style={{ fontFamily: 'monospace', fontSize: 13, color: '#cbd5e1' }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--ink-2)' }}>
                     {h.heure}
                   </span>
                 </div>
@@ -314,13 +318,13 @@ export function ScannerPage() {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           marginBottom: 8,
         }}>
-          <div style={{ fontSize: 12, color: '#64748b', letterSpacing: 1, textTransform: 'uppercase' }}>
+          <div style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 1, textTransform: 'uppercase' }}>
             Pointages du jour
           </div>
           <button
             onClick={chargerScansDuJour}
             style={{
-              background: 'transparent', border: 'none', color: '#64748b',
+              background: 'transparent', border: 'none', color: 'var(--ink-3)',
               cursor: 'pointer', fontSize: 11, padding: '2px 8px',
             }}
           >
@@ -329,7 +333,7 @@ export function ScannerPage() {
         </div>
 
         {scansDuJour.length === 0 ? (
-          <div style={{ color: '#475569', fontSize: 13, textAlign: 'center', padding: '12px 0' }}>
+          <div style={{ color: 'var(--ink-4)', fontSize: 13, textAlign: 'center', padding: '12px 0' }}>
             Aucun scan aujourd'hui
           </div>
         ) : (
@@ -337,18 +341,18 @@ export function ScannerPage() {
             {scansDuJour.map(s => (
               <div key={s.id} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                background: '#1e293b', borderRadius: 8, padding: '8px 14px',
-                border: '1px solid #334155',
+                background: 'var(--card)', borderRadius: 'var(--r-sm)', padding: '8px 14px',
+                border: '1px solid var(--rule)',
               }}>
-                <span style={{ fontSize: 13 }}>
+                <span style={{ fontSize: 13, color: 'var(--ink)' }}>
                   {s.professeur.utilisateur.prenom_fr} {s.professeur.utilisateur.nom_fr}
                 </span>
-                <div style={{ display: 'flex', gap: 10, fontSize: 12, fontFamily: 'monospace' }}>
+                <div style={{ display: 'flex', gap: 10, fontSize: 12, fontFamily: 'var(--font-mono)' }}>
                   {s.heure_arrivee && (
-                    <span style={{ color: '#4ade80' }}>↑ {s.heure_arrivee}</span>
+                    <span style={{ color: 'var(--success)' }}>↑ {s.heure_arrivee}</span>
                   )}
                   {s.heure_depart && (
-                    <span style={{ color: '#60a5fa' }}>↓ {s.heure_depart}</span>
+                    <span style={{ color: 'var(--info)' }}>↓ {s.heure_depart}</span>
                   )}
                 </div>
               </div>
