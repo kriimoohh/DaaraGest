@@ -2,6 +2,7 @@ import prisma from '../../config/database';
 import { GenererBulletinInput, GenererBulletinAnnuelInput, ObservationInput } from './bulletins.schema';
 import { renderPdfHtml } from '../../utils/browserPool';
 import { assertProfPeutAccederClasse } from '../../utils/teachingPolicy';
+import { logAction } from '../../utils/audit';
 
 function appreciation(m: number): string {
   if (m >= 16) return 'Très bien — Félicitations du conseil';
@@ -256,7 +257,7 @@ export async function mettreAJourObservation(
     }
   }
 
-  return prisma.bulletin.update({
+  const updated = await prisma.bulletin.update({
     where: { id },
     data: {
       observation_fr: data.observation_fr ?? bulletin.observation_fr,
@@ -266,6 +267,15 @@ export async function mettreAJourObservation(
       valide_le: new Date(),
     },
   });
+
+  await logAction(etablissement_id, valide_par, 'UPDATE', 'Bulletin', id, {
+    action: 'observation',
+    has_fr: data.observation_fr !== undefined,
+    has_ar: data.observation_ar !== undefined,
+    has_prof: data.observation_prof !== undefined,
+  });
+
+  return updated;
 }
 
 // ─── PDF individuel ──────────────────────────────────────────────────────────
