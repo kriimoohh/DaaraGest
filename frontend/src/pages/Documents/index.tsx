@@ -14,6 +14,8 @@ type TypeDocument =
   | 'FICHE_TRANSFERT' | 'EMPLOI_DU_TEMPS_ELEVE' | 'RELEVE_NOTES'
   | 'CERTIFICAT_BONNE_CONDUITE' | 'FICHE_RENSEIGNEMENTS' | 'ATTESTATION_RESULTATS'
   | 'LISTE_CLASSE' | 'ATTESTATION_TRAVAIL' | 'ORDRE_MISSION' | 'FICHE_PAIE' | 'PLANNING_COURS'
+  | 'CERTIFICAT_TRAVAIL_PERMANENT' | 'CERTIFICAT_TRAVAIL_STAGIAIRE' | 'ATTESTATION_SERVICE'
+  | 'AUTORISATION_ABSENCE_ELEVE' | 'BILLET_ENTREE'
   | 'CARTE_ELEVE' | 'CARTE_PROFESSEUR';
 
 const CARD_TYPES = new Set<TypeDocument>(['CARTE_ELEVE', 'CARTE_PROFESSEUR']);
@@ -44,12 +46,17 @@ const LABELS: Record<TypeDocument, string> = {
   FICHE_RENSEIGNEMENTS:     'Fiche de renseignements',
   ATTESTATION_RESULTATS:    'Attestation de résultats',
   LISTE_CLASSE:             'Liste de classe',
-  ATTESTATION_TRAVAIL:      'Attestation de travail',
-  ORDRE_MISSION:            'Ordre de mission',
-  FICHE_PAIE:               'Fiche de paie',
-  PLANNING_COURS:           'Planning de cours',
-  CARTE_ELEVE:              "Carte scolaire élève (CR80)",
-  CARTE_PROFESSEUR:         'Carte professeur (CR80)',
+  ATTESTATION_TRAVAIL:          'Attestation de travail',
+  ORDRE_MISSION:                'Ordre de mission',
+  FICHE_PAIE:                   'Fiche de paie',
+  PLANNING_COURS:               'Planning de cours',
+  CERTIFICAT_TRAVAIL_PERMANENT: 'Certificat de travail (permanent)',
+  CERTIFICAT_TRAVAIL_STAGIAIRE: 'Certificat de travail (stagiaire)',
+  ATTESTATION_SERVICE:          'Attestation de travail',
+  AUTORISATION_ABSENCE_ELEVE:   "Autorisation d'absence (élève)",
+  BILLET_ENTREE:                "Billet d'entrée",
+  CARTE_ELEVE:                  "Carte scolaire élève (CR80)",
+  CARTE_PROFESSEUR:             'Carte professeur (CR80)',
 };
 
 const DEST_TYPE: Record<TypeDocument, DestType> = {
@@ -63,19 +70,24 @@ const DEST_TYPE: Record<TypeDocument, DestType> = {
   FICHE_RENSEIGNEMENTS:     'eleve',
   ATTESTATION_RESULTATS:    'eleve',
   LISTE_CLASSE:             'classe',
-  ATTESTATION_TRAVAIL:      'professeur',
-  ORDRE_MISSION:            'professeur',
-  FICHE_PAIE:               'professeur',
-  PLANNING_COURS:           'professeur',
-  CARTE_ELEVE:              'eleve',
-  CARTE_PROFESSEUR:         'professeur',
+  ATTESTATION_TRAVAIL:          'professeur',
+  ORDRE_MISSION:                'professeur',
+  FICHE_PAIE:                   'professeur',
+  PLANNING_COURS:               'professeur',
+  CERTIFICAT_TRAVAIL_PERMANENT: 'professeur',
+  CERTIFICAT_TRAVAIL_STAGIAIRE: 'professeur',
+  ATTESTATION_SERVICE:          'professeur',
+  AUTORISATION_ABSENCE_ELEVE:   'eleve',
+  BILLET_ENTREE:                'eleve',
+  CARTE_ELEVE:                  'eleve',
+  CARTE_PROFESSEUR:             'professeur',
 };
 
 const GROUPS: { label: string; icon: string; types: TypeDocument[] }[] = [
   {
     label: 'Documents élèves',
     icon: 'M12 3C9.79 3 8 4.79 8 7s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 10c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
-    types: ['CERTIFICAT_SCOLARITE','ATTESTATION_INSCRIPTION','CONVOCATION_EXAMEN','FICHE_TRANSFERT','EMPLOI_DU_TEMPS_ELEVE','RELEVE_NOTES','CERTIFICAT_BONNE_CONDUITE','FICHE_RENSEIGNEMENTS','ATTESTATION_RESULTATS'],
+    types: ['CERTIFICAT_SCOLARITE','ATTESTATION_INSCRIPTION','CONVOCATION_EXAMEN','FICHE_TRANSFERT','EMPLOI_DU_TEMPS_ELEVE','RELEVE_NOTES','CERTIFICAT_BONNE_CONDUITE','FICHE_RENSEIGNEMENTS','ATTESTATION_RESULTATS','AUTORISATION_ABSENCE_ELEVE','BILLET_ENTREE'],
   },
   {
     label: 'Documents de classe',
@@ -85,7 +97,7 @@ const GROUPS: { label: string; icon: string; types: TypeDocument[] }[] = [
   {
     label: 'Documents professeurs',
     icon: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
-    types: ['ATTESTATION_TRAVAIL','ORDRE_MISSION','FICHE_PAIE','PLANNING_COURS'],
+    types: ['ATTESTATION_TRAVAIL','CERTIFICAT_TRAVAIL_PERMANENT','CERTIFICAT_TRAVAIL_STAGIAIRE','ATTESTATION_SERVICE','ORDRE_MISSION','FICHE_PAIE','PLANNING_COURS'],
   },
   {
     label: "Cartes d'identité (CR80)",
@@ -100,6 +112,28 @@ const EXTRA_PARAMS: Record<TypeDocument, { key: string; label: string; type: 'te
   ORDRE_MISSION:          [{ key: 'DESTINATION', label: 'Destination', type: 'text' }, { key: 'DATE_DEBUT_MISSION', label: 'Date de début', type: 'date' }, { key: 'DATE_FIN_MISSION', label: 'Date de fin', type: 'date' }, { key: 'OBJET_MISSION', label: 'Objet de la mission', type: 'textarea' }],
   FICHE_PAIE:             [{ key: 'MOIS_ANNEE', label: 'Mois / Année (ex: Mai 2026)', type: 'text' }, { key: 'SALAIRE_BRUT', label: 'Salaire brut (FCFA)', type: 'number' }, { key: 'RETENUES', label: 'Retenues (FCFA)', type: 'number' }, { key: 'NET_A_PAYER', label: 'Net à payer (FCFA)', type: 'number' }],
   ATTESTATION_RESULTATS:  [{ key: 'MOYENNE_ANNUELLE', label: 'Moyenne annuelle /20', type: 'number' }],
+  CERTIFICAT_TRAVAIL_PERMANENT: [
+    { key: 'POSTE_OCCUPE',      label: 'Poste occupé',             type: 'text' },
+    { key: 'DATE_FIN_CONTRAT',  label: 'Date de fin de contrat',   type: 'date' },
+  ],
+  CERTIFICAT_TRAVAIL_STAGIAIRE: [
+    { key: 'POSTE_OCCUPE',        label: 'Poste occupé / Qualité', type: 'text' },
+    { key: 'PERIODE_STAGE_DEBUT', label: 'Début du stage',         type: 'date' },
+    { key: 'PERIODE_STAGE_FIN',   label: 'Fin du stage',           type: 'date' },
+  ],
+  ATTESTATION_SERVICE: [
+    { key: 'POSTE_OCCUPE', label: 'Poste occupé / Qualité', type: 'text' },
+  ],
+  AUTORISATION_ABSENCE_ELEVE: [
+    { key: 'DATE_DEBUT_ABSENCE',  label: "Date de début d'absence", type: 'date' },
+    { key: 'DATE_FIN_ABSENCE',    label: "Date de fin d'absence",   type: 'date' },
+    { key: 'DATE_RETOUR_ABSENCE', label: 'Date de retour prévue',   type: 'date' },
+    { key: 'HEURE_RETOUR',        label: 'Heure de retour',         type: 'text' },
+    { key: 'MOTIF_ABSENCE',       label: "Motif de l'absence",      type: 'textarea' },
+  ],
+  BILLET_ENTREE: [
+    { key: 'HEURE_RETARD', label: "Heure d'arrivée", type: 'text' },
+  ],
   CERTIFICAT_SCOLARITE: [], ATTESTATION_INSCRIPTION: [], EMPLOI_DU_TEMPS_ELEVE: [],
   RELEVE_NOTES: [], CERTIFICAT_BONNE_CONDUITE: [], FICHE_RENSEIGNEMENTS: [],
   LISTE_CLASSE: [], ATTESTATION_TRAVAIL: [], PLANNING_COURS: [],
@@ -118,6 +152,7 @@ const VAR_GROUPS: { label: string; vars: { key: string; desc: string }[] }[] = [
       { key: 'ANNEE_SCOLAIRE',      desc: 'Année scolaire active' },
       { key: 'DATE_AUJOURD_HUI',    desc: "Date du jour" },
       { key: 'REF_DOCUMENT',        desc: 'Référence auto-générée' },
+      { key: 'NOM_DIRECTEUR',       desc: 'Nom du/de la directeur(trice)' },
       { key: 'LOGO',                desc: 'Logo (balise img)' },
       { key: 'SIGNATURE',           desc: 'Signature directeur (img)' },
       { key: 'CACHET',              desc: 'Cachet établissement (img)' },
@@ -132,20 +167,29 @@ const VAR_GROUPS: { label: string; vars: { key: string; desc: string }[] }[] = [
       { key: 'MATRICULE',         desc: 'Matricule' },
       { key: 'DATE_NAISSANCE',    desc: 'Date de naissance' },
       { key: 'SEXE',              desc: 'Masculin / Féminin' },
-      { key: 'CLASSE_FR',         desc: 'Classe filière française' },
-      { key: 'CLASSE_AR',         desc: 'Classe filière arabe' },
-      { key: 'FILIERE',           desc: 'Filière' },
+      { key: 'CLASSE_FR',           desc: 'Classe filière française' },
+      { key: 'CLASSE_AR',           desc: 'Classe filière arabe' },
+      { key: 'FILIERE',             desc: 'Filière' },
+      { key: 'MOTIF_ABSENCE',       desc: "Motif d'absence" },
+      { key: 'DATE_DEBUT_ABSENCE',  desc: 'Date début absence' },
+      { key: 'DATE_FIN_ABSENCE',    desc: 'Date fin absence' },
+      { key: 'DATE_RETOUR_ABSENCE', desc: 'Date de retour' },
+      { key: 'HEURE_RETARD',        desc: "Heure d'arrivée (billet)" },
     ],
   },
   {
     label: 'Professeur',
     vars: [
-      { key: 'NOM_PRENOM_PROF',  desc: 'Prénom + Nom' },
-      { key: 'NOM_PROF',         desc: 'Nom' },
-      { key: 'PRENOM_PROF',      desc: 'Prénom' },
-      { key: 'SPECIALITE',       desc: 'Spécialité' },
-      { key: 'TYPE_CONTRAT',     desc: 'Type de contrat' },
-      { key: 'DATE_EMBAUCHE',    desc: "Date d'embauche" },
+      { key: 'NOM_PRENOM_PROF',     desc: 'Prénom + Nom' },
+      { key: 'NOM_PROF',            desc: 'Nom' },
+      { key: 'PRENOM_PROF',         desc: 'Prénom' },
+      { key: 'SPECIALITE',          desc: 'Spécialité' },
+      { key: 'TYPE_CONTRAT',        desc: 'Type de contrat' },
+      { key: 'DATE_EMBAUCHE',       desc: "Date d'embauche" },
+      { key: 'POSTE_OCCUPE',        desc: 'Poste occupé' },
+      { key: 'PERIODE_STAGE_DEBUT', desc: 'Début du stage' },
+      { key: 'PERIODE_STAGE_FIN',   desc: 'Fin du stage' },
+      { key: 'DATE_FIN_CONTRAT',    desc: 'Date de fin de contrat' },
     ],
   },
   {

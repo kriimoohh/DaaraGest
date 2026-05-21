@@ -15,6 +15,7 @@ model Etablissement {
   logo_url      String?
   signature_url String?
   cachet_url    String?
+  nom_directeur String?
   devise        String   @default("FCFA")
   actif       Boolean  @default(true)
   created_at  DateTime @default(now())
@@ -38,6 +39,7 @@ model Etablissement {
   activites               Activite[]
   document_templates      DocumentTemplate[]
   documents_generes       DocumentGenere[]
+  demandes_absence_prof   DemandeAbsenceProfesseur[]
 }
 
 model Role {
@@ -76,6 +78,7 @@ model Utilisateur {
   messages_envoyes    MessageConversation[]
   activites_responsable Activite[]          @relation("ActiviteResponsable")
   documents_generes     DocumentGenere[]    @relation("DocumentsGeneres")
+  demandes_traitees     DemandeAbsenceProfesseur[] @relation("DemandesTraitees")
   refresh_tokens        RefreshToken[]
 
   @@index([etablissement_id])
@@ -103,6 +106,7 @@ model Professeur {
   paiements        PaiementProfesseur[]
   matieres_classes ProfMatiereClasse[]
   creneaux         Creneau[]
+  demandes_absence DemandeAbsenceProfesseur[]
 }
 
 // TODO(NFC): Ces trois modèles sont réservés au futur module de pointage automatique
@@ -811,6 +815,11 @@ enum TypeDocument {
   ORDRE_MISSION
   FICHE_PAIE
   PLANNING_COURS
+  CERTIFICAT_TRAVAIL_PERMANENT
+  CERTIFICAT_TRAVAIL_STAGIAIRE
+  ATTESTATION_SERVICE
+  AUTORISATION_ABSENCE_ELEVE
+  BILLET_ENTREE
   CARTE_ELEVE
   CARTE_PROFESSEUR
 }
@@ -849,3 +858,25 @@ model DocumentGenere {
   @@index([etablissement_id, genere_le])
 }
 
+model DemandeAbsenceProfesseur {
+  id               String    @id @default(uuid())
+  etablissement_id String
+  professeur_id    String
+  date_debut       DateTime
+  date_fin         DateTime
+  motif            String
+  type_absence     String
+  statut           String    @default("EN_ATTENTE")
+  commentaire      String?
+  traite_par       String?
+  traite_le        DateTime?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
+  professeur    Professeur    @relation(fields: [professeur_id], references: [id])
+  traiteur      Utilisateur?  @relation("DemandesTraitees", fields: [traite_par], references: [id])
+
+  @@index([etablissement_id, statut])
+  @@index([professeur_id])
+}

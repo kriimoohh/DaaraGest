@@ -20,6 +20,7 @@ interface Etablissement {
   nom_fr: string;
   adresse?: string;
   telephone?: string;
+  nom_directeur?: string;
   logo_url?: string;
   signature_url?: string;
   cachet_url?: string;
@@ -392,6 +393,7 @@ export function ParametresPage() {
       await api.put('/api/v1/parametres', {
         nom_fr: etab.nom_fr, adresse: etab.adresse,
         telephone: etab.telephone, devise: etab.devise,
+        nom_directeur: etab.nom_directeur || null,
         logo_url: etab.logo_url || undefined,
         signature_url: etab.signature_url || undefined,
         cachet_url: etab.cachet_url || undefined,
@@ -554,6 +556,12 @@ export function ParametresPage() {
                     onChange={e => setEtab(p => p ? { ...p, telephone: e.target.value } : p)}
                   />
                 </div>
+                <Input
+                  label="Nom du/de la Directeur(trice)"
+                  placeholder="Ex : Adama NDIAYE"
+                  value={etab.nom_directeur ?? ''}
+                  onChange={e => setEtab(p => p ? { ...p, nom_directeur: e.target.value } : p)}
+                />
                 <Input
                   label={t('common.devise')}
                   value={etab.devise}

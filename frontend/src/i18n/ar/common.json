@@ -34,7 +34,8 @@
     "messagerie":   "الرسائل",
     "documents":    "الوثائق",
     "rapports":     "التقارير",
-    "bibliotheque": "المكتبة"
+    "bibliotheque": "المكتبة",
+    "demandes_absence_prof": "الإجازات والتصاريح"
   },
   "theme": {
     "light": "الوضع الفاتح",
