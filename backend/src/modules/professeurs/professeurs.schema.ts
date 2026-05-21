@@ -14,9 +14,13 @@ export const professeurSchema = z.object({
   specialite_ar: z.string().optional(),
   telephone: z.string().optional(),
   date_embauche: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  type_contrat: z.enum(['permanent', 'vacataire']).optional(),
+  type_contrat: z.enum(['permanent', 'vacataire', 'stagiaire']).optional(),
   salaire_base: z.number().positive().optional(),
   photo_url: photoUrlSchema,
+  poste_fr: z.string().optional(),
+  date_fin_contrat: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  date_debut_stage: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  date_fin_stage:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
 });
 
 export type ProfesseurInput = z.infer<typeof professeurSchema>;

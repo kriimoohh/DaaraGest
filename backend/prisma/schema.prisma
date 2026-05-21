@@ -86,17 +86,21 @@ model Utilisateur {
 }
 
 model Professeur {
-  id             String    @id @default(uuid())
-  utilisateur_id String    @unique
-  specialite_fr  String?
-  specialite_ar  String?
-  telephone      String?
-  date_embauche  DateTime?
-  type_contrat   String    @default("permanent")
-  salaire_base   Decimal?  @db.Decimal(10, 2)
-  photo_url      String?
-  qr_token       String?   @unique
-  created_at     DateTime  @default(now())
+  id               String    @id @default(uuid())
+  utilisateur_id   String    @unique
+  specialite_fr    String?
+  specialite_ar    String?
+  telephone        String?
+  date_embauche    DateTime?
+  type_contrat     String    @default("permanent")
+  salaire_base     Decimal?  @db.Decimal(10, 2)
+  photo_url        String?
+  qr_token         String?   @unique
+  poste_fr         String?
+  date_fin_contrat DateTime?
+  date_debut_stage DateTime?
+  date_fin_stage   DateTime?
+  created_at       DateTime  @default(now())
 
   utilisateur      Utilisateur          @relation(fields: [utilisateur_id], references: [id])
   cartes_nfc       ProfesseurCarte[]

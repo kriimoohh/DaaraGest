@@ -187,10 +187,10 @@ async function buildProfVars(prof_id: string, _etablissement_id: string): Promis
       ? `<img src="${prof.photo_url.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}" alt="Photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
       : '',
     QR_CODE_PROF: '',
-    POSTE_OCCUPE: '',
-    PERIODE_STAGE_DEBUT: '',
-    PERIODE_STAGE_FIN: '',
-    DATE_FIN_CONTRAT: '',
+    POSTE_OCCUPE:        prof.poste_fr ?? '',
+    PERIODE_STAGE_DEBUT: fmtDate(prof.date_debut_stage),
+    PERIODE_STAGE_FIN:   fmtDate(prof.date_fin_stage),
+    DATE_FIN_CONTRAT:    fmtDate(prof.date_fin_contrat),
   };
 }
 
