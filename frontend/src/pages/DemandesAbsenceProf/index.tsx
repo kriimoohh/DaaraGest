@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -82,13 +82,13 @@ export function DemandesAbsenceProfPage() {
       .finally(() => setLoading(false));
   };
 
-  // Initial load
-  useState(() => {
+  useEffect(() => {
     refresh();
     api.get<{ data: Professeur[] }>('/api/v1/professeurs?limit=200')
       .then(d => setProfesseurs(d.data ?? []))
       .catch(() => {});
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filtered = demandes.filter(d => !filtreStatut || d.statut === filtreStatut);
 
@@ -98,13 +98,7 @@ export function DemandesAbsenceProfPage() {
     }
     setSaving(true);
     try {
-      const res = await fetch('/api/v1/demandes-absence-prof', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) throw new Error(((await res.json()) as { error?: string }).error ?? 'Erreur');
+      await api.post('/api/v1/demandes-absence-prof', form);
       toast.success('Demande enregistrée');
       setShowModal(false);
       setForm({ professeur_id: '', date_debut: '', date_fin: '', type_absence: 'CONGE_ANNUEL', motif: '' });
@@ -118,13 +112,10 @@ export function DemandesAbsenceProfPage() {
     if (!showTraiterModal) return;
     setSaving(true);
     try {
-      const res = await fetch(`/api/v1/demandes-absence-prof/${showTraiterModal.id}/traiter`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ statut: showTraiterModal.action, commentaire }),
+      await api.patch(`/api/v1/demandes-absence-prof/${showTraiterModal.id}/traiter`, {
+        statut: showTraiterModal.action,
+        commentaire,
       });
-      if (!res.ok) throw new Error(((await res.json()) as { error?: string }).error ?? 'Erreur');
       toast.success(showTraiterModal.action === 'APPROUVE' ? 'Demande approuvée' : 'Demande refusée');
       setShowTraiterModal(null);
       setCommentaire('');
@@ -136,8 +127,12 @@ export function DemandesAbsenceProfPage() {
 
   async function handleDelete(id: string) {
     if (!confirm('Supprimer cette demande ?')) return;
-    await fetch(`/api/v1/demandes-absence-prof/${id}`, { method: 'DELETE', credentials: 'include' });
-    refresh();
+    try {
+      await api.delete(`/api/v1/demandes-absence-prof/${id}`);
+      refresh();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Erreur');
+    }
   }
 
   return (
