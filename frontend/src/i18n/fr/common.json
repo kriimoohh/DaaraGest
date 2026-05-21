@@ -34,7 +34,8 @@
     "messagerie":   "Messagerie",
     "documents":    "Documents",
     "rapports":     "Rapports",
-    "bibliotheque": "Bibliothèque"
+    "bibliotheque": "Bibliothèque",
+    "demandes_absence_prof": "Congés & Permissions"
   },
   "theme": {
     "light": "Mode clair",

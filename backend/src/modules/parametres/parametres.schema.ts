@@ -13,6 +13,7 @@ export const etablissementUpdateSchema = z.object({
   nom_fr: z.string().min(1).optional(),
   adresse: z.string().optional(),
   telephone: z.string().optional(),
+  nom_directeur: z.string().optional().nullable(),
   logo_url: z.string().optional().nullable(),
   signature_url: z.string().url().optional().nullable(),
   cachet_url: z.string().url().optional().nullable(),
