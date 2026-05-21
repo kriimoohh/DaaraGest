@@ -112,18 +112,10 @@ const EXTRA_PARAMS: Record<TypeDocument, { key: string; label: string; type: 'te
   ORDRE_MISSION:          [{ key: 'DESTINATION', label: 'Destination', type: 'text' }, { key: 'DATE_DEBUT_MISSION', label: 'Date de début', type: 'date' }, { key: 'DATE_FIN_MISSION', label: 'Date de fin', type: 'date' }, { key: 'OBJET_MISSION', label: 'Objet de la mission', type: 'textarea' }],
   FICHE_PAIE:             [{ key: 'MOIS_ANNEE', label: 'Mois / Année (ex: Mai 2026)', type: 'text' }, { key: 'SALAIRE_BRUT', label: 'Salaire brut (FCFA)', type: 'number' }, { key: 'RETENUES', label: 'Retenues (FCFA)', type: 'number' }, { key: 'NET_A_PAYER', label: 'Net à payer (FCFA)', type: 'number' }],
   ATTESTATION_RESULTATS:  [{ key: 'MOYENNE_ANNUELLE', label: 'Moyenne annuelle /20', type: 'number' }],
-  CERTIFICAT_TRAVAIL_PERMANENT: [
-    { key: 'POSTE_OCCUPE',      label: 'Poste occupé',             type: 'text' },
-    { key: 'DATE_FIN_CONTRAT',  label: 'Date de fin de contrat',   type: 'date' },
-  ],
-  CERTIFICAT_TRAVAIL_STAGIAIRE: [
-    { key: 'POSTE_OCCUPE',        label: 'Poste occupé / Qualité', type: 'text' },
-    { key: 'PERIODE_STAGE_DEBUT', label: 'Début du stage',         type: 'date' },
-    { key: 'PERIODE_STAGE_FIN',   label: 'Fin du stage',           type: 'date' },
-  ],
-  ATTESTATION_SERVICE: [
-    { key: 'POSTE_OCCUPE', label: 'Poste occupé / Qualité', type: 'text' },
-  ],
+  // POSTE_OCCUPE / DATE_FIN_CONTRAT / PERIODE_STAGE_* : pré-remplis depuis la fiche professeur.
+  CERTIFICAT_TRAVAIL_PERMANENT: [],
+  CERTIFICAT_TRAVAIL_STAGIAIRE: [],
+  ATTESTATION_SERVICE:          [],
   AUTORISATION_ABSENCE_ELEVE: [
     { key: 'DATE_DEBUT_ABSENCE',  label: "Date de début d'absence", type: 'date' },
     { key: 'DATE_FIN_ABSENCE',    label: "Date de fin d'absence",   type: 'date' },

@@ -141,11 +141,17 @@ interface Professeur {
     specialite_fr?: string;
     specialite_ar?: string;
     telephone?: string;
-    type_contrat?: 'permanent' | 'vacataire';
+    type_contrat?: 'permanent' | 'vacataire' | 'stagiaire';
     date_embauche?: string;
     salaire_base?: number;
+    poste_fr?: string | null;
+    date_fin_contrat?: string | null;
+    date_debut_stage?: string | null;
+    date_fin_stage?: string | null;
   };
 }
+
+type TypeContrat = 'permanent' | 'vacataire' | 'stagiaire';
 
 function profSpecialite(p: Professeur): string {
   return p.professeur?.specialite_fr ?? '';
@@ -153,8 +159,14 @@ function profSpecialite(p: Professeur): string {
 function profTelephone(p: Professeur): string {
   return p.professeur?.telephone ?? '';
 }
-function profContrat(p: Professeur): 'permanent' | 'vacataire' | undefined {
+function profContrat(p: Professeur): TypeContrat | undefined {
   return p.professeur?.type_contrat;
+}
+
+// Coupe l'éventuelle partie heure d'un ISO datetime → 'YYYY-MM-DD'
+function toDateInput(s: string | null | undefined): string {
+  if (!s) return '';
+  return s.length >= 10 ? s.substring(0, 10) : '';
 }
 
 interface ProfesseursResponse {
@@ -172,6 +184,11 @@ interface ProfesseurFormData {
   telephone: string;
   type_contrat: string;
   photo_url?: string | null;
+  poste_fr: string;
+  date_embauche: string;
+  date_fin_contrat: string;
+  date_debut_stage: string;
+  date_fin_stage: string;
 }
 
 type FormErrors = Partial<Record<keyof ProfesseurFormData, string>>;
@@ -179,6 +196,7 @@ type FormErrors = Partial<Record<keyof ProfesseurFormData, string>>;
 const EMPTY_FORM: ProfesseurFormData = {
   nom_fr: '', nom_ar: '',
   identifiant: '', mot_de_passe: '', specialite_fr: '', telephone: '', type_contrat: '',
+  poste_fr: '', date_embauche: '', date_fin_contrat: '', date_debut_stage: '', date_fin_stage: '',
 };
 
 // Labels définis dans le composant via t() pour la traduction
@@ -257,6 +275,11 @@ export function ProfesseursPage() {
       telephone: profTelephone(prof),
       type_contrat: profContrat(prof) ?? 'permanent',
       photo_url: prof.professeur?.photo_url ?? prof.photo_url,
+      poste_fr:         prof.professeur?.poste_fr ?? '',
+      date_embauche:    toDateInput(prof.professeur?.date_embauche),
+      date_fin_contrat: toDateInput(prof.professeur?.date_fin_contrat),
+      date_debut_stage: toDateInput(prof.professeur?.date_debut_stage),
+      date_fin_stage:   toDateInput(prof.professeur?.date_fin_stage),
     });
     setFormErrors({});
     setModalOpen(true);
@@ -279,12 +302,18 @@ export function ProfesseursPage() {
     if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
     setSubmitting(true);
     try {
+      const isStagiaire = form.type_contrat === 'stagiaire';
       const payload: Record<string, unknown> = {
         nom_fr: form.nom_fr,
         nom_ar: form.nom_ar,
         identifiant: form.identifiant, specialite_fr: form.specialite_fr,
         telephone: form.telephone, type_contrat: form.type_contrat,
         ...(form.photo_url !== undefined ? { photo_url: form.photo_url } : {}),
+        poste_fr:         form.poste_fr || undefined,
+        date_embauche:    form.date_embauche || undefined,
+        date_fin_contrat: form.date_fin_contrat ? form.date_fin_contrat : null,
+        date_debut_stage: isStagiaire && form.date_debut_stage ? form.date_debut_stage : null,
+        date_fin_stage:   isStagiaire && form.date_fin_stage   ? form.date_fin_stage   : null,
       };
       if (!editTarget && form.mot_de_passe) payload.mot_de_passe = form.mot_de_passe;
       if (editTarget) {
@@ -625,9 +654,46 @@ export function ProfesseursPage() {
               options={[
                 { value: 'permanent', label: t('professeur.permanent') },
                 { value: 'vacataire', label: t('professeur.vacataire') },
+                { value: 'stagiaire', label: t('professeur.stagiaire') },
               ]}
               placeholder={t('common.selectionner')}
             />
+            <Input
+              label={t('professeur.poste_occupe')}
+              placeholder="Ex: Professeur principal, Surveillant général…"
+              value={form.poste_fr}
+              onChange={(e) => setField('poste_fr', e.target.value)}
+            />
+            <div className="grid-2">
+              <Input
+                label={t('professeur.date_embauche')}
+                type="date"
+                value={form.date_embauche}
+                onChange={(e) => setField('date_embauche', e.target.value)}
+              />
+              <Input
+                label={t('professeur.date_fin_contrat')}
+                type="date"
+                value={form.date_fin_contrat}
+                onChange={(e) => setField('date_fin_contrat', e.target.value)}
+              />
+            </div>
+            {form.type_contrat === 'stagiaire' && (
+              <div className="grid-2">
+                <Input
+                  label={t('professeur.date_debut_stage')}
+                  type="date"
+                  value={form.date_debut_stage}
+                  onChange={(e) => setField('date_debut_stage', e.target.value)}
+                />
+                <Input
+                  label={t('professeur.date_fin_stage')}
+                  type="date"
+                  value={form.date_fin_stage}
+                  onChange={(e) => setField('date_fin_stage', e.target.value)}
+                />
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
               <Button variant="secondary" onClick={() => setModalOpen(false)}>{t('actions.annuler')}</Button>
               <Button onClick={handleSubmit} loading={submitting}>

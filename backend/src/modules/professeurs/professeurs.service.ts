@@ -76,6 +76,10 @@ export async function creerProfesseur(etablissement_id: string, data: Professeur
       type_contrat: data.type_contrat ?? 'permanent',
       salaire_base: data.salaire_base,
       photo_url: data.photo_url,
+      poste_fr: data.poste_fr,
+      date_fin_contrat: data.date_fin_contrat ? new Date(data.date_fin_contrat) : undefined,
+      date_debut_stage: data.date_debut_stage ? new Date(data.date_debut_stage) : undefined,
+      date_fin_stage:   data.date_fin_stage   ? new Date(data.date_fin_stage)   : undefined,
     },
     include: { utilisateur: true },
   });
@@ -105,6 +109,10 @@ export async function modifierProfesseur(id: string, etablissement_id: string, d
     );
   }
 
+  // null → clear, undefined → no change, string → parse Date
+  const parseDate = (v: string | null | undefined) =>
+    v === undefined ? undefined : v === null ? null : new Date(v);
+
   updateTasks.push(
     prisma.professeur.update({
       where: { id: professeur.id },
@@ -116,6 +124,10 @@ export async function modifierProfesseur(id: string, etablissement_id: string, d
         type_contrat: data.type_contrat,
         salaire_base: data.salaire_base,
         photo_url: data.photo_url,
+        poste_fr: data.poste_fr,
+        date_fin_contrat: parseDate(data.date_fin_contrat),
+        date_debut_stage: parseDate(data.date_debut_stage),
+        date_fin_stage:   parseDate(data.date_fin_stage),
       },
       include: { utilisateur: true },
     })
