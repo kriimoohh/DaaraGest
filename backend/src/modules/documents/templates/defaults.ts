@@ -1,22 +1,27 @@
 import { TypeDocument } from '../documents.schema';
 
 export const TYPE_DOCUMENT_LABELS: Record<TypeDocument, string> = {
-  CERTIFICAT_SCOLARITE:    'Certificat de scolarité',
-  ATTESTATION_INSCRIPTION: 'Attestation d\'inscription',
-  CONVOCATION_EXAMEN:      'Convocation aux examens',
-  FICHE_TRANSFERT:         'Fiche de transfert',
-  EMPLOI_DU_TEMPS_ELEVE:   'Emploi du temps (élève)',
-  RELEVE_NOTES:            'Relevé de notes',
-  CERTIFICAT_BONNE_CONDUITE: 'Certificat de bonne conduite',
-  FICHE_RENSEIGNEMENTS:    'Fiche de renseignements',
-  ATTESTATION_RESULTATS:   'Attestation de résultats',
-  LISTE_CLASSE:            'Liste de classe',
-  ATTESTATION_TRAVAIL:     'Attestation de travail',
-  ORDRE_MISSION:           'Ordre de mission',
-  FICHE_PAIE:              'Fiche de paie',
-  PLANNING_COURS:          'Planning de cours',
-  CARTE_ELEVE:             'Carte d\'identité scolaire (élève)',
-  CARTE_PROFESSEUR:        'Carte d\'identité professeur',
+  CERTIFICAT_SCOLARITE:         'Certificat de scolarité',
+  ATTESTATION_INSCRIPTION:      "Attestation d'inscription",
+  CONVOCATION_EXAMEN:           'Convocation aux examens',
+  FICHE_TRANSFERT:              'Fiche de transfert',
+  EMPLOI_DU_TEMPS_ELEVE:        "Emploi du temps (élève)",
+  RELEVE_NOTES:                 'Relevé de notes',
+  CERTIFICAT_BONNE_CONDUITE:    'Certificat de bonne conduite',
+  FICHE_RENSEIGNEMENTS:         'Fiche de renseignements',
+  ATTESTATION_RESULTATS:        'Attestation de résultats',
+  LISTE_CLASSE:                 'Liste de classe',
+  ATTESTATION_TRAVAIL:          'Attestation de travail',
+  ORDRE_MISSION:                'Ordre de mission',
+  FICHE_PAIE:                   'Fiche de paie',
+  PLANNING_COURS:               'Planning de cours',
+  CERTIFICAT_TRAVAIL_PERMANENT: 'Certificat de travail (permanent)',
+  CERTIFICAT_TRAVAIL_STAGIAIRE: 'Certificat de travail (stagiaire)',
+  ATTESTATION_SERVICE:          'Attestation de travail',
+  AUTORISATION_ABSENCE_ELEVE:   "Autorisation d'absence (élève)",
+  BILLET_ENTREE:                "Billet d'entrée",
+  CARTE_ELEVE:                  "Carte d'identité scolaire (élève)",
+  CARTE_PROFESSEUR:             "Carte d'identité professeur",
 };
 
 // ─── Shared CSS ───────────────────────────────────────────────────────────────
@@ -63,6 +68,7 @@ const SHARED_FOOTER = `
   <div class="footer">
     <div class="signature-block">
       <p>Le/La Directeur(trice)</p>
+      <p style="font-size:13px;font-weight:bold;margin:4px 0 2px;min-width:200px;border-bottom:1px solid #333;">{{NOM_DIRECTEUR}}</p>
       {{SIGNATURE}}
       <p style="margin-top:4px;font-size:11px">Signature et cachet</p>
     </div>
@@ -337,6 +343,109 @@ const PLANNING_COURS = wrapPage('Planning de cours', `
   </table>
   {{TABLEAU_PLANNING}}`);
 
+// ─── Nouveaux documents prof et élève ────────────────────────────────────────
+
+const CERTIFICAT_TRAVAIL_PERMANENT_TPL = wrapPage('Certificat de travail', `
+  <div class="doc-title">Certificat de travail</div>
+  <div class="ref-line">Réf. : {{REF_DOCUMENT}}</div>
+  <div class="body-text">
+    <p>Je soussigné(e), <strong>{{NOM_DIRECTEUR}}</strong>, Directeur(trice) de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong>,
+    certifie par la présente que :</p>
+    <table class="info-table">
+      <tr><td>Nom et prénom</td><td><strong>{{NOM_PRENOM_PROF}}</strong></td></tr>
+      <tr><td>Spécialité / Poste</td><td>{{SPECIALITE}}</td></tr>
+      <tr><td>Type de contrat</td><td>Permanent</td></tr>
+      <tr><td>Date de prise de service</td><td>{{DATE_EMBAUCHE}}</td></tr>
+      <tr><td>Poste occupé</td><td>{{POSTE_OCCUPE}}</td></tr>
+    </table>
+    <p>est employé(e) en qualité de <strong>{{POSTE_OCCUPE}}</strong> au sein de notre établissement depuis le
+    <strong>{{DATE_EMBAUCHE}}</strong> jusqu'au <strong>{{DATE_FIN_CONTRAT}}</strong>.</p>
+    <p>Ce certificat est délivré à l'intéressé(e) sur sa demande pour servir et valoir ce que de droit.</p>
+  </div>`);
+
+const CERTIFICAT_TRAVAIL_STAGIAIRE_TPL = wrapPage('Certificat de travail (stagiaire)', `
+  <div class="doc-title">Certificat de travail</div>
+  <div class="ref-line">Réf. : {{REF_DOCUMENT}}</div>
+  <div class="body-text">
+    <p>Je soussigné(e), <strong>{{NOM_DIRECTEUR}}</strong>, Directeur(trice) de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong>,
+    certifie par la présente que :</p>
+    <table class="info-table">
+      <tr><td>Nom et prénom</td><td><strong>{{NOM_PRENOM_PROF}}</strong></td></tr>
+      <tr><td>Qualité</td><td>Enseignant(e) stagiaire</td></tr>
+      <tr><td>Poste occupé</td><td>{{POSTE_OCCUPE}}</td></tr>
+    </table>
+    <p>a effectué un stage dans notre établissement sur la période suivante :</p>
+    <ul style="font-size:13px;line-height:2;margin-left:20px;">
+      <li>Du <strong>{{PERIODE_STAGE_DEBUT}}</strong> au <strong>{{PERIODE_STAGE_FIN}}</strong> en qualité de <strong>{{POSTE_OCCUPE}}</strong>.</li>
+    </ul>
+    <p>Il nous quitte libre de tout engagement. Ce certificat est délivré à l'intéressé(e) pour servir et valoir ce que de droit.</p>
+  </div>`);
+
+const ATTESTATION_SERVICE_TPL = wrapPage('Attestation de travail', `
+  <div class="doc-title">Attestation de travail</div>
+  <div class="ref-line">Réf. : {{REF_DOCUMENT}}</div>
+  <div class="body-text">
+    <p>Je soussigné(e), <strong>{{NOM_DIRECTEUR}}</strong>, Directeur(trice) de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong>,
+    atteste que :</p>
+    <table class="info-table">
+      <tr><td>Nom et prénom</td><td><strong>{{NOM_PRENOM_PROF}}</strong></td></tr>
+      <tr><td>Spécialité / Poste</td><td>{{SPECIALITE}}</td></tr>
+      <tr><td>En service depuis le</td><td>{{DATE_EMBAUCHE}}</td></tr>
+      <tr><td>En qualité de</td><td>{{POSTE_OCCUPE}}</td></tr>
+    </table>
+    <p>est en service dans notre établissement depuis le <strong>{{DATE_EMBAUCHE}}</strong>
+    en qualité de <strong>{{POSTE_OCCUPE}}</strong>.</p>
+    <p>En foi de quoi, cette présente attestation lui est délivrée pour servir et valoir ce que de droit.</p>
+  </div>`);
+
+const AUTORISATION_ABSENCE_ELEVE_TPL = wrapPage("Autorisation d'absence", `
+  <div class="doc-title">Autorisation exceptionnelle d'absence</div>
+  <div class="doc-subtitle">(Élève)</div>
+  <div class="ref-line">Année scolaire : {{ANNEE_SCOLAIRE}} &nbsp;|&nbsp; Fait à _____, le {{DATE_AUJOURD_HUI}}</div>
+  <div class="body-text" style="margin-top:24px;">
+    <p>L'élève <strong>{{NOM_PRENOM_ELEVE}}</strong> de la classe de <strong>{{CLASSE_FR}}</strong>
+    est autorisé(e) à s'absenter du <strong>{{DATE_DEBUT_ABSENCE}}</strong> au <strong>{{DATE_FIN_ABSENCE}}</strong>
+    pour le motif suivant :</p>
+    <div style="margin:20px 0;padding:12px 16px;border-left:4px solid #1a5276;background:#f5f9fc;font-size:13px;">
+      {{MOTIF_ABSENCE}}
+    </div>
+    <p>Date de retour prévue : le <strong>{{DATE_RETOUR_ABSENCE}}</strong> à <strong>{{HEURE_RETOUR}}</strong> h.</p>
+  </div>
+  <div style="margin-top:40px;display:flex;justify-content:space-between;">
+    <div style="text-align:center;">
+      <p style="font-size:12px;">Le/La Directeur(trice)</p>
+      <p style="font-size:13px;font-weight:bold;min-width:180px;border-bottom:1px solid #333;margin:4px 0 2px;">{{NOM_DIRECTEUR}}</p>
+      {{SIGNATURE}}
+    </div>
+    <div style="text-align:center;font-size:11px;color:#555;align-self:flex-end;">
+      Cachet de l'établissement<br>{{CACHET}}
+    </div>
+  </div>`);
+
+const BILLET_ENTREE_TPL = wrapPage("Billet d'entrée", `
+  <div style="max-width:400px;margin:40px auto;border:2px solid #1a5276;border-radius:8px;padding:24px;">
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:14px;font-weight:bold;color:#1a5276;text-transform:uppercase;letter-spacing:1px;">Billet d'entrée</div>
+      <div style="font-size:11px;color:#777;">Année scolaire {{ANNEE_SCOLAIRE}}</div>
+    </div>
+    <table class="info-table">
+      <tr><td>Élève</td><td><strong>{{NOM_PRENOM_ELEVE}}</strong></td></tr>
+      <tr><td>Classe</td><td>{{CLASSE_FR}}</td></tr>
+      <tr><td>Date</td><td>{{DATE_AUJOURD_HUI}}</td></tr>
+      <tr><td>Heure d'arrivée</td><td><strong>{{HEURE_RETARD}}</strong> h</td></tr>
+    </table>
+    <p style="font-size:12px;margin-top:16px;">
+      L'élève sus-mentionné(e) ayant justifié son retard est autorisé(e) à entrer en classe.
+    </p>
+    <div style="margin-top:20px;display:flex;justify-content:space-between;align-items:flex-end;">
+      <div style="text-align:center;">
+        <p style="font-size:11px;">Le/La Directeur(trice)</p>
+        <p style="font-size:12px;font-weight:bold;min-width:140px;border-bottom:1px solid #333;margin:4px 0 2px;">{{NOM_DIRECTEUR}}</p>
+        {{SIGNATURE}}
+      </div>
+    </div>
+  </div>`);
+
 // ─── Carte d'identité scolaire (élève) — CR80 85.6×54mm ──────────────────────
 
 const CARTE_ELEVE_HTML = `<!DOCTYPE html>
@@ -530,22 +639,27 @@ const CARTE_PROFESSEUR_HTML = `<!DOCTYPE html>
 // ─── Map ──────────────────────────────────────────────────────────────────────
 
 const TEMPLATES: Record<TypeDocument, string> = {
-  CERTIFICAT_SCOLARITE:      CERTIFICAT_SCOLARITE,
-  ATTESTATION_INSCRIPTION:   ATTESTATION_INSCRIPTION,
-  CONVOCATION_EXAMEN:        CONVOCATION_EXAMEN,
-  FICHE_TRANSFERT:           FICHE_TRANSFERT,
-  EMPLOI_DU_TEMPS_ELEVE:     EMPLOI_DU_TEMPS_ELEVE,
-  RELEVE_NOTES:              RELEVE_NOTES,
-  CERTIFICAT_BONNE_CONDUITE: CERTIFICAT_BONNE_CONDUITE,
-  FICHE_RENSEIGNEMENTS:      FICHE_RENSEIGNEMENTS,
-  ATTESTATION_RESULTATS:     ATTESTATION_RESULTATS,
-  LISTE_CLASSE:              LISTE_CLASSE,
-  ATTESTATION_TRAVAIL:       ATTESTATION_TRAVAIL,
-  ORDRE_MISSION:             ORDRE_MISSION,
-  FICHE_PAIE:                FICHE_PAIE,
-  PLANNING_COURS:            PLANNING_COURS,
-  CARTE_ELEVE:               CARTE_ELEVE_HTML,
-  CARTE_PROFESSEUR:          CARTE_PROFESSEUR_HTML,
+  CERTIFICAT_SCOLARITE:         CERTIFICAT_SCOLARITE,
+  ATTESTATION_INSCRIPTION:      ATTESTATION_INSCRIPTION,
+  CONVOCATION_EXAMEN:           CONVOCATION_EXAMEN,
+  FICHE_TRANSFERT:              FICHE_TRANSFERT,
+  EMPLOI_DU_TEMPS_ELEVE:        EMPLOI_DU_TEMPS_ELEVE,
+  RELEVE_NOTES:                 RELEVE_NOTES,
+  CERTIFICAT_BONNE_CONDUITE:    CERTIFICAT_BONNE_CONDUITE,
+  FICHE_RENSEIGNEMENTS:         FICHE_RENSEIGNEMENTS,
+  ATTESTATION_RESULTATS:        ATTESTATION_RESULTATS,
+  LISTE_CLASSE:                 LISTE_CLASSE,
+  ATTESTATION_TRAVAIL:          ATTESTATION_TRAVAIL,
+  ORDRE_MISSION:                ORDRE_MISSION,
+  FICHE_PAIE:                   FICHE_PAIE,
+  PLANNING_COURS:               PLANNING_COURS,
+  CERTIFICAT_TRAVAIL_PERMANENT: CERTIFICAT_TRAVAIL_PERMANENT_TPL,
+  CERTIFICAT_TRAVAIL_STAGIAIRE: CERTIFICAT_TRAVAIL_STAGIAIRE_TPL,
+  ATTESTATION_SERVICE:          ATTESTATION_SERVICE_TPL,
+  AUTORISATION_ABSENCE_ELEVE:   AUTORISATION_ABSENCE_ELEVE_TPL,
+  BILLET_ENTREE:                BILLET_ENTREE_TPL,
+  CARTE_ELEVE:                  CARTE_ELEVE_HTML,
+  CARTE_PROFESSEUR:             CARTE_PROFESSEUR_HTML,
 };
 
 const CARD_TEMPLATES: Record<'CARTE_ELEVE' | 'CARTE_PROFESSEUR', string> = {

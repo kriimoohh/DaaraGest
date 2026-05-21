@@ -30,6 +30,7 @@ import { evaluationsRoutes } from './modules/evaluations/evaluations.routes';
 import { activitesRoutes } from './modules/activites/activites.routes';
 import { progressionRoutes } from './modules/progression/progression.routes';
 import { documentsRoutes } from './modules/documents/documents.routes';
+import { demandesAbsenceProfRoutes } from './modules/demandes-absence-prof/demandes-absence.routes';
 import { statsRoutes } from './modules/stats/stats.routes';
 import { rapportsRoutes } from './modules/rapports/rapports.routes';
 import { bibliothequeRoutes } from './modules/bibliotheque/bibliotheque.routes';
@@ -134,6 +135,7 @@ async function build() {
       await api.register(activitesRoutes,   { prefix: '/activites' });
       await api.register(progressionRoutes, { prefix: '/progression' });
       await api.register(documentsRoutes,   { prefix: '/documents' });
+      await api.register(demandesAbsenceProfRoutes, { prefix: '/demandes-absence-prof' });
       await api.register(statsRoutes,       { prefix: '/stats' });
       await api.register(rapportsRoutes,    { prefix: '/rapports' });
       await api.register(bibliothequeRoutes,{ prefix: '/bibliotheque' });

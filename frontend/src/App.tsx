@@ -27,6 +27,7 @@ import { DocumentsPage } from './pages/Documents';
 import { PortailParentPage } from './pages/PortailParent';
 import { RapportsPage } from './pages/Rapports';
 import { BibliothequeePage } from './pages/Bibliotheque';
+import { DemandesAbsenceProfPage } from './pages/DemandesAbsenceProf';
 import './i18n';
 
 // Mêmes listes que la Sidebar — source de vérité unique côté frontend
@@ -107,6 +108,9 @@ export default function App() {
           } />
           <Route path="/bibliotheque" element={
             <ProtectedRoute roles={ROLES.gestion}><BibliothequeePage /></ProtectedRoute>
+          } />
+          <Route path="/demandes-absence-prof" element={
+            <ProtectedRoute roles={ROLES.gestion}><DemandesAbsenceProfPage /></ProtectedRoute>
           } />
           <Route path="/utilisateurs" element={
             <ProtectedRoute roles={ROLES.adminOnly}><UtilisateursPage /></ProtectedRoute>

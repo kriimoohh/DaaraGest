@@ -83,6 +83,7 @@ async function buildCommonVars(etablissement_id: string): Promise<Record<string,
     CACHET: cachetHtml,
     DATE_AUJOURD_HUI: fmtDate(today),
     REF_DOCUMENT: refDoc,
+    NOM_DIRECTEUR: etab.nom_directeur ?? '',
   };
 }
 
@@ -148,6 +149,12 @@ async function buildEleveVars(eleve_id: string, etablissement_id: string): Promi
       ? `<img src="${eleve.photo_url.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}" alt="Photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
       : '',
     QR_CODE_ELEVE: '',
+    MOTIF_ABSENCE: '',
+    DATE_DEBUT_ABSENCE: '',
+    DATE_FIN_ABSENCE: '',
+    DATE_RETOUR_ABSENCE: '',
+    HEURE_RETOUR: '',
+    HEURE_RETARD: '',
   };
 }
 
@@ -180,6 +187,10 @@ async function buildProfVars(prof_id: string, _etablissement_id: string): Promis
       ? `<img src="${prof.photo_url.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}" alt="Photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
       : '',
     QR_CODE_PROF: '',
+    POSTE_OCCUPE: '',
+    PERIODE_STAGE_DEBUT: '',
+    PERIODE_STAGE_FIN: '',
+    DATE_FIN_CONTRAT: '',
   };
 }
 
