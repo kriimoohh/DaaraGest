@@ -63,7 +63,7 @@ export function UtilisateursPage() {
       setUsers(res.data ?? []);
       setTotal(res.total ?? 0);
     } catch {
-      toast.error('Erreur lors du chargement');
+      toast.error(t('utilisateur.err_chargement'));
     } finally {
       setLoading(false);
     }
@@ -84,11 +84,11 @@ export function UtilisateursPage() {
 
   const handleSave = async () => {
     if (!form.identifiant || !form.nom_fr) {
-      toast.error('Identifiant et nom de famille sont requis');
+      toast.error(t('utilisateur.err_identifiant_nom'));
       return;
     }
     if (!edit && !form.mot_de_passe) {
-      toast.error('Le mot de passe est requis pour un nouvel utilisateur');
+      toast.error(t('utilisateur.err_mdp_requis'));
       return;
     }
     setSaving(true);
@@ -104,31 +104,31 @@ export function UtilisateursPage() {
       if (edit) {
         const updated = await api.put<Utilisateur>(`/api/v1/utilisateurs/${edit.id}`, payload);
         setUsers(prev => prev.map(u => u.id === edit.id ? updated : u));
-        toast.success('Utilisateur modifié');
+        toast.success(t('utilisateur.ok_modifie'));
         setModal(false);
       } else {
         await api.post('/api/v1/utilisateurs', payload);
-        toast.success('Utilisateur créé');
+        toast.success(t('utilisateur.ok_cree'));
         setModal(false);
         charger();
       }
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message);
     } finally {
       setSaving(false);
     }
   };
 
   const handleReset = async () => {
-    if (!resetModal || !newPwd) { toast.error('Nouveau mot de passe requis'); return; }
+    if (!resetModal || !newPwd) { toast.error(t('utilisateur.err_nouveau_mdp')); return; }
     setResetting(true);
     try {
       await api.put(`/api/v1/utilisateurs/${resetModal.id}/reset-password`, { nouveau_mot_de_passe: newPwd });
-      toast.success('Mot de passe réinitialisé');
+      toast.success(t('utilisateur.ok_mdp_reinit'));
       setResetModal(null);
       setNewPwd('');
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message);
     } finally {
       setResetting(false);
     }
@@ -139,11 +139,11 @@ export function UtilisateursPage() {
     setDeleting(true);
     try {
       await api.delete(`/api/v1/utilisateurs/${confirm.id}`);
-      toast.success('Utilisateur désactivé');
+      toast.success(t('utilisateur.ok_desactive'));
       setConfirm(null);
       charger();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message);
     } finally {
       setDeleting(false);
     }
@@ -159,15 +159,15 @@ export function UtilisateursPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Administration"
-        title="Utilisateurs"
-        subtitle="Gérer les comptes utilisateurs"
-        action={<Button onClick={openAdd}>+ Ajouter un utilisateur</Button>}
+        eyebrow={t('utilisateur.administration')}
+        title={t('utilisateur.titre')}
+        subtitle={t('utilisateur.subtitle')}
+        action={<Button onClick={openAdd}>{t('utilisateur.ajouter_btn')}</Button>}
       />
 
       <div className="filter-row">
         <div style={{ flex: 1, minWidth: 192 }}>
-          <SearchInput value={search} onChange={setSearch} placeholder="Rechercher..." />
+          <SearchInput value={search} onChange={setSearch} placeholder={t('utilisateur.rechercher')} />
         </div>
         <Select
           value={roleFilter}
@@ -181,20 +181,24 @@ export function UtilisateursPage() {
 
       <div className="card">
         {loading ? (
-          <div className="empty">Chargement...</div>
+          <div className="empty">{t('common.chargement')}</div>
         ) : users.length === 0 ? (
           <div className="empty" style={{ flexDirection: 'column', gap: 8 }}>
             <span style={{ fontSize: 36 }}>👥</span>
-            <p>Aucun utilisateur trouvé.</p>
+            <p>{t('utilisateur.aucun_trouve')}</p>
           </div>
         ) : (
           <div className="tbl-wrap">
             <table className="tbl">
               <thead>
                 <tr>
-                  {['Identifiant', 'Prénom', 'Nom', 'Rôle', 'Langue', 'Statut', 'Actions'].map((h) => (
-                    <th key={h}>{h}</th>
-                  ))}
+                  <th>{t('utilisateur.col_identifiant')}</th>
+                  <th>{t('utilisateur.col_prenom')}</th>
+                  <th>{t('utilisateur.col_nom')}</th>
+                  <th>{t('utilisateur.role')}</th>
+                  <th>{t('utilisateur.langue')}</th>
+                  <th>{t('utilisateur.col_statut')}</th>
+                  <th>{t('utilisateur.col_actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -208,12 +212,12 @@ export function UtilisateursPage() {
                     </td>
                     <td>{u.langue.toUpperCase()}</td>
                     <td>
-                      <Badge label={u.actif ? 'Actif' : 'Inactif'} variant={u.actif ? 'success' : 'neutral'} />
+                      <Badge label={u.actif ? t('common.actif') : t('common.inactif')} variant={u.actif ? 'success' : 'neutral'} />
                     </td>
                     <td>
                       <div className="row">
                         <Button size="sm" variant="ghost" onClick={() => openEdit(u)}>{t('actions.modifier')}</Button>
-                        <Button size="sm" variant="secondary" onClick={() => { setResetModal(u); setNewPwd(''); }}>Mot de passe</Button>
+                        <Button size="sm" variant="secondary" onClick={() => { setResetModal(u); setNewPwd(''); }}>{t('utilisateur.btn_mdp')}</Button>
                         <Button size="sm" variant="danger" onClick={() => setConfirm(u)}>{t('actions.desactiver')}</Button>
                       </div>
                     </td>
@@ -227,10 +231,10 @@ export function UtilisateursPage() {
       <Pagination page={page} total={total} limit={20} onChange={setPage} />
 
       {/* Modal création/édition */}
-      <Modal isOpen={modal} onClose={() => setModal(false)} title={edit ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur'} size="lg">
+      <Modal isOpen={modal} onClose={() => setModal(false)} title={edit ? t('utilisateur.modifier_titre') : t('utilisateur.nouveau_titre')} size="lg">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div className="grid-2">
-            <Input label="Prénom" value={form.prenom_fr} onChange={(e) => setForm((f) => ({ ...f, prenom_fr: e.target.value }))} />
+            <Input label={t('common.prenom_fr')} value={form.prenom_fr} onChange={(e) => setForm((f) => ({ ...f, prenom_fr: e.target.value }))} />
             <Input label={t('common.nom_fr')} value={form.nom_fr} onChange={(e) => setForm((f) => ({ ...f, nom_fr: e.target.value }))} />
           </div>
           <Input label={t('auth.identifiant')} value={form.identifiant} onChange={(e) => setForm((f) => ({ ...f, identifiant: e.target.value }))} />
@@ -250,7 +254,7 @@ export function UtilisateursPage() {
               label={t('utilisateur.langue')}
               value={form.langue}
               onChange={(e) => setForm((f) => ({ ...f, langue: e.target.value }))}
-              options={[{ value: 'fr', label: 'Français' }, { value: 'ar', label: t('classe.filiere_ar') }]}
+              options={[{ value: 'fr', label: t('utilisateur.francais') }, { value: 'ar', label: t('utilisateur.arabe') }]}
             />
             <Input label={t('common.email')} type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
           </div>
@@ -262,10 +266,10 @@ export function UtilisateursPage() {
       </Modal>
 
       {/* Modal reset password */}
-      <Modal isOpen={!!resetModal} onClose={() => setResetModal(null)} title="Réinitialiser le mot de passe" size="sm">
+      <Modal isOpen={!!resetModal} onClose={() => setResetModal(null)} title={t('utilisateur.reset_mdp')} size="sm">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <p style={{ fontSize: 13, color: 'var(--ink-3)' }}>
-            Nouveau mot de passe pour <strong>{resetModal?.identifiant}</strong>
+            {t('utilisateur.nouveau_mdp_pour')} <strong>{resetModal?.identifiant}</strong>
           </p>
           <Input label={t('utilisateur.nouveau_mdp')} type="password" value={newPwd} onChange={(e) => setNewPwd(e.target.value)} />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
@@ -280,8 +284,8 @@ export function UtilisateursPage() {
         onClose={() => setConfirm(null)}
         onConfirm={handleDelete}
         loading={deleting}
-        title="Désactiver l'utilisateur"
-        message={`Désactiver le compte de "${confirm?.identifiant}" ?`}
+        title={t('utilisateur.desactiver')}
+        message={t('utilisateur.confirm_desactiver_msg', { id: confirm?.identifiant ?? '' })}
       />
     </>
   );

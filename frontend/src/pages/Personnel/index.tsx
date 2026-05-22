@@ -27,6 +27,7 @@ function QRCodeModal({ personnelId, nom, onClose, api }: {
   personnelId: string; nom: string; onClose: () => void;
   api: ReturnType<typeof useApi>;
 }) {
+  const { t } = useTranslation();
   const [qrData, setQrData] = useState<QRData | null>(null);
   const [loading, setLoading] = useState(true);
   const [regenerating, setRegenerating] = useState(false);
@@ -46,12 +47,12 @@ function QRCodeModal({ personnelId, nom, onClose, api }: {
   useEffect(() => { charger(); }, [charger]);
 
   const handleRegenerer = async () => {
-    if (!confirm(`Régénérer le QR code de ${nom} ? L'ancien QR code ne fonctionnera plus.`)) return;
+    if (!confirm(t('personnel.qr_confirm_regen', { nom }))) return;
     setRegenerating(true);
     try {
       const data = await api.post<QRData>(`/api/v1/pointage/qr/${personnelId}/regenerer`, {});
       setQrData(data);
-      toast.success('QR code régénéré');
+      toast.success(t('personnel.qr_ok_regen'));
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -80,10 +81,10 @@ function QRCodeModal({ personnelId, nom, onClose, api }: {
         p { color: #666; font-size: 14px; }
       </style>
       </head><body>
-        <p style="font-size:13px;color:#999;letter-spacing:2px;text-transform:uppercase">DaaraGest — Pointage</p>
+        <p style="font-size:13px;color:#999;letter-spacing:2px;text-transform:uppercase">${t('personnel.qr_pointage')}</p>
         <img src="${qrData.dataUrl}" alt="QR Code" />
         <h2>${qrData.nom}</h2>
-        <p>Scannez ce code pour enregistrer votre présence</p>
+        <p>${t('personnel.qr_scan_msg')}</p>
       </body></html>
     `);
     win.document.close();
@@ -91,10 +92,10 @@ function QRCodeModal({ personnelId, nom, onClose, api }: {
   };
 
   return (
-    <Modal isOpen onClose={onClose} title={`QR Code — ${nom}`} size="sm">
+    <Modal isOpen onClose={onClose} title={t('personnel.qr_titre', { nom })} size="sm">
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
         {loading ? (
-          <div style={{ padding: 40, color: 'var(--ink-3)' }}>Génération en cours…</div>
+          <div style={{ padding: 40, color: 'var(--ink-3)' }}>{t('personnel.qr_generating')}</div>
         ) : qrData ? (
           <>
             <div style={{
@@ -104,22 +105,22 @@ function QRCodeModal({ personnelId, nom, onClose, api }: {
               <img src={qrData.dataUrl} alt="QR Code" style={{ width: 240, height: 240, display: 'block' }} />
             </div>
             <p style={{ fontSize: 12, color: 'var(--ink-3)', textAlign: 'center', margin: 0 }}>
-              Ce code est unique à {nom}.<br />À scanner sur la tablette de pointage.
+              {t('personnel.qr_scan_msg')}
             </p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
               <Button size="sm" variant="secondary" onClick={handleTelecharger}>
-                Télécharger PNG
+                {t('personnel.qr_telecharger')}
               </Button>
               <Button size="sm" variant="secondary" onClick={handleImprimer}>
-                Imprimer
+                {t('personnel.qr_imprimer')}
               </Button>
               <Button size="sm" variant="danger" onClick={handleRegenerer} loading={regenerating}>
-                Régénérer
+                {t('personnel.qr_regenerer')}
               </Button>
             </div>
           </>
         ) : (
-          <div style={{ color: 'var(--danger)', padding: 20 }}>Erreur de chargement</div>
+          <div style={{ color: 'var(--danger)', padding: 20 }}>{t('personnel.qr_err_load')}</div>
         )}
       </div>
     </Modal>
@@ -374,11 +375,11 @@ export function PersonnelPage() {
       } else {
         await api.post('/api/v1/personnel', payload);
       }
-      toast.success(editTarget ? 'Professeur modifié' : 'Professeur créé');
+      toast.success(t(editTarget ? 'personnel.ok_modifie' : 'personnel.ok_cree'));
       setModalOpen(false);
       fetchProfs();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erreur lors de l'enregistrement";
+      const msg = err instanceof Error ? err.message : t('personnel.err_enregistrement');
       setError(msg);
       toast.error(msg);
     } finally {
@@ -391,11 +392,11 @@ export function PersonnelPage() {
     setDeleting(true);
     try {
       await api.delete(`/api/v1/personnel/${confirmDelete.id}`);
-      toast.success('Professeur désactivé');
+      toast.success(t('personnel.ok_desactive'));
       setConfirmDelete(null);
       fetchProfs();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message);
     } finally {
       setDeleting(false);
     }
@@ -495,7 +496,7 @@ export function PersonnelPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = 'carte_professeur.pdf'; a.click();
       URL.revokeObjectURL(url);
-      toast.success('Carte générée');
+      toast.success(t('personnel.ok_carte_generee'));
     } catch (err) { toast.error((err as Error).message); }
     finally { setCarteUniqueLoading(null); }
   }
@@ -506,7 +507,7 @@ export function PersonnelPage() {
     try {
       const allProfs = await api.get<{ data: PersonnelRow[] }>('/api/v1/personnel?limit=500');
       const ids = (allProfs.data ?? []).map(p => p.id);
-      if (!ids.length) { toast.error('Aucun professeur trouvé'); return; }
+      if (!ids.length) { toast.error(t('personnel.err_aucun_trouve')); return; }
       const res = await fetch(`${API_BASE}/api/v1/documents/generer-lot`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -520,7 +521,7 @@ export function PersonnelPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = 'cartes_professeurs_lot.pdf'; a.click();
       URL.revokeObjectURL(url);
-      toast.success(`PDF généré — ${ids.length} carte(s)`);
+      toast.success(t('personnel.ok_pdf_lot', { count: ids.length }));
     } catch (err) { toast.error((err as Error).message); }
     finally { setCarteLotGenerating(false); }
   }
@@ -528,16 +529,16 @@ export function PersonnelPage() {
   return (
     <>
       <PageHeader
-          eyebrow="Ressources humaines"
-          title="Personnel"
-          subtitle="Gestion du personnel de l'établissement"
+          eyebrow={t('personnel.rh')}
+          title={t('personnel.titre')}
+          subtitle={t('personnel.subtitle')}
           action={
             <div style={{ display: 'flex', gap: 8 }}>
               <Button variant="secondary" onClick={() => { setCarteLotErreurs([]); setCarteLotModal(true); }}>
-                🪪 Cartes en lot
+                🪪 {t('personnel.cartes_lot')}
               </Button>
               <Button onClick={openAdd} icon={<span>+</span>}>
-                Ajouter un membre
+                {t('personnel.ajouter')}
               </Button>
             </div>
           }
@@ -550,7 +551,7 @@ export function PersonnelPage() {
         )}
 
         <div className="filter-row">
-          <SearchInput value={search} onChange={setSearch} placeholder="Rechercher par nom ou identifiant..." />
+          <SearchInput value={search} onChange={setSearch} placeholder={t('personnel.rechercher')} />
           <div className="row" style={{ marginInlineStart: 'auto', background: 'var(--paper-2)', border: '1px solid var(--rule)', borderRadius: 6, padding: 2 }}>
             <button className={`btn btn-sm ${view === 'grid' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => setView('grid')}>{t('professeur.vue_cartes')}</button>
             <button className={`btn btn-sm ${view === 'table' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => setView('table')}>{t('professeur.vue_liste')}</button>
@@ -588,7 +589,7 @@ export function PersonnelPage() {
                   {/* Infos */}
                   <div style={{ padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
                     <div>
-                      <div className="muted" style={{ fontSize: 11 }}>Contrat</div>
+                      <div className="muted" style={{ fontSize: 11 }}>{t('personnel.contrat_label')}</div>
                       <div style={{ fontWeight: 500 }}>{contratLabel}</div>
                     </div>
                     <Badge label={p.actif ? t('common.actif') : t('common.inactif')} variant={p.actif ? 'success' : 'neutral'} />
@@ -622,7 +623,7 @@ export function PersonnelPage() {
                 </div>
               );
             })}
-            {profs.length === 0 && <div className="empty" style={{ gridColumn: '1/-1' }}>Aucun professeur trouvé</div>}
+            {profs.length === 0 && <div className="empty" style={{ gridColumn: '1/-1' }}>{t('personnel.aucun_trouve')}</div>}
           </div>
         )}
 
@@ -652,7 +653,7 @@ export function PersonnelPage() {
                       type="button"
                       onClick={openPicker}
                       disabled={photoLoading}
-                      aria-label="Modifier la photo du professeur"
+                      aria-label={t('personnel.modifier_photo_aria')}
                       style={{
                         position: 'relative', width: 88, height: 88, borderRadius: '50%',
                         border: '2px dashed var(--rule-2)', background: 'var(--paper-2)',
@@ -697,13 +698,13 @@ export function PersonnelPage() {
             </div>
             <div className="grid-2">
               <Select
-                label="Fonction"
+                label={t('personnel.fonction')}
                 value={form.fonction}
                 onChange={(e) => setField('fonction', e.target.value)}
                 options={fonctions.map(f => ({ value: f.code, label: f.libelle_fr }))}
               />
               <Select
-                label="Sexe"
+                label={t('personnel.sexe')}
                 value={form.sexe}
                 onChange={(e) => setField('sexe', e.target.value as Sexe)}
                 options={[
@@ -735,7 +736,7 @@ export function PersonnelPage() {
             />
             <Input
               label={t('professeur.poste_occupe')}
-              placeholder="Ex: Professeur principal, Surveillant général…"
+              placeholder={t('personnel.poste_placeholder')}
               value={form.poste_fr}
               onChange={(e) => setField('poste_fr', e.target.value)}
             />
@@ -798,23 +799,21 @@ export function PersonnelPage() {
       )}
 
       {/* ── Modal cartes professeurs en lot ──────────────────────────────────── */}
-      <Modal isOpen={carteLotModal} onClose={() => setCarteLotModal(false)} title="Générer toutes les cartes professeurs (CR80)" size="sm">
+      <Modal isOpen={carteLotModal} onClose={() => setCarteLotModal(false)} title={t('personnel.carte_lot_titre')} size="sm">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ padding: '10px 14px', background: 'var(--info-soft)', borderRadius: 8, fontSize: 13, color: 'var(--info-text)' }}>
-            🪪 Génère un PDF recto-verso au format <strong>Evolis Primacy CR80</strong> pour tous les professeurs. La photo est obligatoire — les profs sans photo sont ignorés et listés.
-          </div>
+          <div style={{ padding: '10px 14px', background: 'var(--info-soft)', borderRadius: 8, fontSize: 13, color: 'var(--info-text)' }} dangerouslySetInnerHTML={{ __html: t('personnel.carte_lot_desc') }} />
           {carteLotErreurs.length > 0 && (
             <div style={{ background: 'var(--warning-soft)', border: '1px solid var(--warning-border)', borderRadius: 8, padding: '10px 14px', fontSize: 12 }}>
-              <strong style={{ color: 'var(--warning-text)' }}>⚠ {carteLotErreurs.length} professeur(s) ignoré(s) :</strong>
+              <strong style={{ color: 'var(--warning-text)' }}>⚠ {t('personnel.carte_lot_ignores', { count: carteLotErreurs.length })}</strong>
               <ul style={{ margin: '6px 0 0', paddingInlineStart: 16, color: 'var(--warning-text)' }}>
                 {carteLotErreurs.map(e => <li key={e.id}>{e.message}</li>)}
               </ul>
             </div>
           )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <Button variant="ghost" onClick={() => setCarteLotModal(false)}>Annuler</Button>
+            <Button variant="ghost" onClick={() => setCarteLotModal(false)}>{t('actions.annuler')}</Button>
             <Button onClick={handleCarteLot} loading={carteLotGenerating}>
-              Générer PDF
+              {t('personnel.generer_pdf', 'Générer PDF')}
             </Button>
           </div>
         </div>
