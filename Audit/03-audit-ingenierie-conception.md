@@ -2,61 +2,59 @@
 
 > Périmètre : architecture logicielle, qualité de code, tests, performances, scalabilité, observabilité, DX, CI/CD.
 
-**Note globale : 7/10** — architecture saine, perfs réfléchies, mais composants frontend XXL, indexation DB faible, pas de CI ni d'observabilité.
+**Note globale : 7.5/10** (↑ de 7/10) — CI/CD en place, indexes DB déployés massivement (41 vs 7), config env centralisée. Mais le frontend monolithique reste (Eleves 1635 lignes), aucun cache applicatif/PDF, aucune observabilité prod, et toujours pas d'ESLint/Prettier ni de tests frontend.
 
 ---
 
-## ✅ Points forts
+## ✅ Acquis depuis l'audit précédent (2026-05-19)
 
-### Architecture backend MVC modulaire
-27 modules backend, chacun avec un découpage clair : `controller / service / routes / schema`. Lisibilité élevée, testabilité élevée.
+| Ancien constat | État | Référence |
+|---|---|---|
+| E2 — Indexation Prisma insuffisante (7 indexes) | ✅ **Corrigé** | **41 indexes** désormais, dont multi-tenant systématique (Eleve, Classe, Matiere, Utilisateur, Notification, etc.). Migration `20260520000000_add_perf_indexes` |
+| E3 — Migration timestamp corrompu | 🟡 **Toléré** | `20260519400000_carte_id_qr_token` toujours présente, mais entourée par 7 migrations postérieures (May 20–22) qui ont validé son application. Pas de blocage immédiat |
+| E4 — Pas de CI/CD | ✅ **Corrigé** | [.github/workflows/ci.yml](../.github/workflows/ci.yml) : job backend (type-check, tests, build) + frontend (type-check, build) sur push main + PR. Concurrency cancel + cache npm |
+| E7 — `$executeRawUnsafe` séquences matricule | ❌ **Non corrigé** | [eleves.service.ts:174](../backend/src/modules/eleves/eleves.service.ts#L174) — toujours présent |
+| E10 — `dist/` traqué par git | ✅ **Corrigé** | `git ls-files backend/dist frontend/dist` → 0 fichier |
+| E11 — Variables d'env non centralisées | ✅ **Corrigé** | [config/env.ts](../backend/src/config/env.ts) — Zod validation stricte, fail-fast au boot, fallback test-safe |
+| E18 — Notes : pas de validation prof ∈ classe | ✅ **Corrigé** | [teachingPolicy.ts](../backend/src/utils/teachingPolicy.ts) (cf. Sécu H1) |
 
-### Suite de tests exemplaire
-- **428 tests Vitest** sans DB (logique pure + Fastify inject), 13 fichiers
-- Exécution **2.7 s** — déterministe, rapide, CI-friendly
-- Couvre : auth, RBAC, bulletins, pointage, finances, notes, absences, documents, security, integration, métier, validation
+## 🆕 Améliorations à noter
 
-### Typage TypeScript strict
-- Aucun `any` toléré
-- Zod validation aux frontières HTTP
-- Payload JWT revalidé à chaque requête ([auth.middleware.ts:13](../backend/src/middlewares/auth.middleware.ts#L13))
-
-### Pool Puppeteer maison
-[browserPool.ts](../backend/src/utils/browserPool.ts) avec `MAX_CONCURRENT=3`. Protège la RAM — un point critique pour Puppeteer.
-
-### Optimisations N+1 documentées et appliquées
-- Bulletins ([bulletins.service.ts:83-91](../backend/src/modules/bulletins/bulletins.service.ts#L83)) : fetch groupé + map en mémoire
-- Stats mensuels ([finances.service.ts:217-232](../backend/src/modules/finances/finances.service.ts#L217)) : groupBy en une requête
-- Progression ([eleves.service.ts:113-150](../backend/src/modules/eleves/eleves.service.ts#L113)) : 4 requêtes au lieu de N×4
-
-### Migrations Prisma versionnées
-9 migrations + seed idempotent par UUIDs stables ([seed.ts:11-30](../backend/prisma/seed.ts#L11)).
-
-### Healthcheck multi-composant
-[server.ts:87-98](../backend/src/server.ts#L87) — `/health` teste DB + Puppeteer, renvoie 207 si dégradé.
-
-### Documentation
-[README.md](../README.md) ~750 lignes : tables d'API, schémas, dette technique listée, workflow.
+- **Tests** : 428 ✅ → **461 ✅** en **1.42s** (de 2.7s) — couverture étendue + perfs améliorées
+- **Migrations Prisma** : 9 → **29** (refactor `Personnel`, fonctions configurables, contrats personnel, sexe utilisateur, domaines/grilles IEF, indexes de perf)
+- **Modules backend** : 27 → **33** (+ `personnel`, `demandes-absence-personnel`, `evaluations`, `fonctions`, `rapports`, `progression`)
 
 ---
 
-## 🔴 Dette structurelle
+## ✅ Points forts inchangés
 
-### E1 — Composants frontend monolithiques
+- **Architecture backend MVC modulaire** — pattern `controller / service / routes / schema / test` systématique
+- **Typage TypeScript strict** — aucun `any` toléré, Zod aux frontières HTTP, payload JWT revalidé à chaque requête
+- **Pool Puppeteer maison** ([browserPool.ts](../backend/src/utils/browserPool.ts)) avec `MAX_CONCURRENT=3`
+- **N+1 optimisations** documentées et maintenues (bulletins fetch groupé, finances groupBy, eleves progression batchée)
+- **Healthcheck multi-composant** : `/health` teste DB + Puppeteer, renvoie 207 si dégradé ([server.ts:101-117](../backend/src/server.ts#L101))
+- **Documentation** : `README.md` exhaustif + dossier `Audit/`
 
-| Page | Lignes |
-|---|---|
-| [Eleves/index.tsx](../frontend/src/pages/Eleves/index.tsx) | **1600** |
-| [Parametres/index.tsx](../frontend/src/pages/Parametres/index.tsx) | 1128 |
-| [Classes/index.tsx](../frontend/src/pages/Classes/index.tsx) | 1081 |
-| [Finances/index.tsx](../frontend/src/pages/Finances/index.tsx) | 864 |
-| [Documents/index.tsx](../frontend/src/pages/Documents/index.tsx) | 842 |
+---
 
-**Problème :**
-- Mélange list + form + modal + filtres + state local
-- Inline styles disséminés (124 occurrences dans Eleves seul)
-- Test unitaire frontend impossible
-- Re-render coûteux (un changement de filtre re-rend la page entière)
+## 🔴 Dette structurelle restante
+
+### E1 — Composants frontend monolithiques (aggravation)
+
+| Page | Lignes (HEAD) | Δ vs audit précédent |
+|---|---|---|
+| [Eleves/index.tsx](../frontend/src/pages/Eleves/index.tsx) | **1635** | +35 |
+| [Parametres/index.tsx](../frontend/src/pages/Parametres/index.tsx) | **1310** | +182 |
+| [Classes/index.tsx](../frontend/src/pages/Classes/index.tsx) | 1081 | = |
+| [Documents/index.tsx](../frontend/src/pages/Documents/index.tsx) | **926** | +84 |
+| [Finances/index.tsx](../frontend/src/pages/Finances/index.tsx) | 864 | = |
+| [Personnel/index.tsx](../frontend/src/pages/Personnel/index.tsx) | **824** | nouveau (refactor) |
+
+La dette **augmente** au lieu de décroître. Plus aucun découpage en sous-composants n'a été initié. **Inline styles** :
+- Eleves : **125** occurrences (vs 124)
+- Parametres : **110** occurrences (vs 101)
+- Documents : 94
+- Dashboard : 44
 
 **Fix :** découper en sous-composants par responsabilité :
 ```
@@ -74,118 +72,170 @@ Eleves/
 
 ---
 
-### E2 — Indexation Prisma insuffisante
+### E2 — Aucun cache applicatif ni cache PDF
+- Aucune dépendance `lru-cache` détectée
+- `parametres`, `niveaux`, `matieres`, `Etablissement.logo_url`, `ConfigNotes.nb_periodes` relus à chaque génération de PDF (sur un export classe entière = 200 bulletins, ~2000 requêtes redondantes)
+- Aucun cache disque/S3 sur les PDFs eux-mêmes — chaque téléchargement relance Puppeteer
 
-**Schema :** 7 `@@index` pour **44 modèles**. Le multi-tenant scale par `etablissement_id`, **non indexé** sur :
-- `Eleve`, `Classe`, `Matiere`, `Utilisateur`, `Notification`, `Conversation`
-- `Creneau`, `EvenementCalendrier`, `DocumentTemplate`, `DocumentGenere`
-- `Activite`, `Evaluation`, `AnneeScolaire`, `PortailParentToken` (a `@@unique` mais pas d'index simple)
+**Fix :**
+1. Cache mémoire LRU 5 min sur lectures `Etablissement`, `ConfigNotes`, `Matiere`, `Niveau` (read-mostly)
+2. Cache PDF par `bulletin_id` (clé : `bulletin_id + updated_at`) avec invalidation sur changement note/observation
+3. Signature SHA-256 stockée dans `Bulletin.pdf_hash`
 
-**Conséquence :** full-table scan dès quelques milliers de lignes par table.
-
-**Fix :** ajouter dans `schema.prisma` :
-```prisma
-model Eleve {
-  // ...
-  @@index([etablissement_id])
-  @@index([etablissement_id, actif])
-}
-
-model Classe {
-  // ...
-  @@index([etablissement_id, annee_scolaire_id])
-}
-
-model Notification {
-  // ...
-  @@index([destinataire_id, lu, created_at])
-}
-
-model PaiementEleve {
-  // ...
-  @@index([eleve_id, mois, annee])
-  @@index([annee, mois])  // pour stats-mensuels
-}
-
-model AbsenceEleve {
-  // ...
-  @@index([etablissement_id, date])
-}
-```
-
-Puis `npx prisma migrate dev --name add_perf_indexes`.
-
-**Effort :** 30 min + migration · **Impact :** latence divisée par 10-100 sur les listings filtrés.
+**Effort :** 1 j · **Impact :** -90% latence re-téléchargement, -40% requêtes DB sur exports.
 
 ---
 
-### E3 — Migration Prisma avec timestamp corrompu
+### E3 — Pas d'ESLint ni de Prettier
+- Aucun fichier `.eslintrc*` ou `eslint.config.*` détecté
+- Pas de `npm run lint` dans `package.json`
+- Pas de Husky / lint-staged
+- La CI ne lint pas
 
+**Risque :** style cohérent visuellement mais pas garanti, conventions futures non protégées, code reviews qui doivent vérifier des règles que l'outil ferait.
+
+**Fix :** ajouter `eslint-config-typescript` + Prettier + script CI :
+```yaml
+- name: Lint
+  working-directory: backend
+  run: npm run lint
+```
+
+**Effort :** 1 h · **Impact :** cohérence long terme + auto-fix.
+
+---
+
+### E4 — Pas d'observabilité production
+- Aucun Sentry, OpenTelemetry, Prometheus, Datadog
+- Pas d'endpoint `/metrics` (seul `/health` existe)
+- Pas de métrique métier (bulletins/mois, PDFs/jour, latence p95, taux d'erreur par module)
+- À 50+ établissements, opérer à l'aveugle
+
+**Fix minimal :**
+1. Sentry pour les erreurs (`@sentry/node` + `@sentry/react`) avec capture des `setErrorHandler`
+2. Endpoint `/metrics` Prometheus avec compteurs : `daaragest_pdf_generated_total`, `daaragest_login_failed_total`, `daaragest_bulk_delete_eleves_total`
+
+**Effort :** 0.5 j · **Impact :** détection précoce des incidents.
+
+---
+
+### E5 — Aucun test frontend
+- 461 tests backend en 1.42s ✅
+- **0 tests frontend** (aucun `*.test.tsx` ni `*.spec.tsx`)
+- Composants comme `Modal`, `Table`, `ActionMenu`, `Toast`, hooks `useApi`, `useTheme` non couverts
+- Logique métier UI (filtres, formulaires CSV, calculs locaux) non testée
+
+**Fix :** introduire Vitest + React Testing Library + Playwright pour les flows critiques.
+
+**Effort :** 0.5 j pour le setup + 2-3 j de tests des composants UI · **Impact :** parité de couverture.
+
+---
+
+### E6 — Pas de TanStack Query / SWR
+[useApi.ts](../frontend/src/hooks/useApi.ts) custom → pas de cache, pas de retry, pas d'optimistic update, pas de stale-while-revalidate, pas de dedup automatique. Conséquences observables :
+- Chaque navigation refetch toutes les données
+- Sidebar refetch les compteurs élèves/profs/classes alors que Dashboard les avait déjà chargés
+
+**Fix :** introduire `@tanstack/react-query` (~14 kb gzip) — gain qualité massif.
+
+**Effort :** 2 j de migration progressive · **Impact :** UX + perf réseau.
+
+---
+
+### E7 — `Record<string, unknown>` pour les `where` Prisma
+Toujours présent :
+- [eleves.service.ts](../backend/src/modules/eleves/eleves.service.ts) — 1 occurrence
+- [finances.service.ts](../backend/src/modules/finances/finances.service.ts) — 3 occurrences
+
+Casse la type-safety Prisma. Drift garanti entre schéma et requêtes.
+
+**Fix :** utiliser `Prisma.EleveWhereInput` / `Prisma.PaiementEleveWhereInput`.
+
+**Effort :** 4 h (refactor service par service) · **Impact :** détection à la compilation des erreurs de filtre.
+
+---
+
+### E8 — Gestion d'erreurs encore hétérogène
+Toujours un mix :
+- `throw new Error("string")` (la majorité)
+- Une seule classe `ForbiddenError` dans [teachingPolicy.ts:4-9](../backend/src/utils/teachingPolicy.ts#L4) (bon début)
+- Erreurs Prisma non typées (bien traitées par `setErrorHandler` désormais)
+
+Aucune hiérarchie d'erreurs métier publique (`NotFoundError`, `ValidationError`, `ConflictError`).
+
+**Fix :** étendre la pattern `ForbiddenError` à un fichier dédié `utils/errors.ts` :
+```ts
+export class HttpError extends Error {
+  constructor(public statusCode: number, message: string) { super(message); }
+}
+export class NotFoundError extends HttpError { constructor(msg = 'Introuvable') { super(404, msg); } }
+export class ConflictError extends HttpError { constructor(msg = 'Conflit') { super(409, msg); } }
+```
+
+**Effort :** 0.5 j · **Impact :** cohérence + meilleur diagnostic en logs.
+
+---
+
+### E9 — Pas de versioning de schéma JSON
+Champs `Json` toujours sans Zod schema :
+- `ConfigNotes.noms_periodes`
+- `Conversation.cibles_roles`
+- `DocumentGenere.parametres`
+- `AuditLog.details`
+
+Drift garanti à terme (un dev ajoute un champ, un autre lit l'ancien).
+
+**Fix :** Zod schemas pour ces champs, sérialisation/désérialisation aux frontières du service.
+
+**Effort :** 0.5 j · **Impact :** évite la corruption de données.
+
+---
+
+### E10 — Schémas Zod `.string().min(1)` au lieu de `.uuid()`
+Cf. [02-audit-cybersecurite.md → H4](./02-audit-cybersecurite.md#h4--uuid-toujours-absent-des-schemas-zod). Dette toujours présente.
+
+---
+
+### E11 — Migration timestamp `20260519400000` toujours là
 **Dossier :** `prisma/migrations/20260519400000_carte_id_qr_token`
 
-`20260519400000` interprété en `YYYYMMDDhhmmss` = `2026-05-19 40:00:00` → **heure invalide** (40h). Soit le timestamp est un compteur séquentiel maison (pas convention Prisma), soit un bug. À renommer en `20260519140000` ou similaire avant tout `migrate resolve` en environnement neuf.
+Toujours nommée avec un timestamp `40:00:00` invalide. Cependant 7 migrations postérieures (`20260520000000`, `20260521100000` … `20260522120000`) se sont appliquées dessus, donc dans la pratique elle ne bloque plus un fresh deploy : Prisma trie alphanumériquement et l'ordre tient.
 
-**Effort :** 5 min · **Impact :** évite un crash potentiel sur déploiement fresh.
+**Fix optionnel :** la renommer en `20260519140000_carte_id_qr_token` via `npx prisma migrate resolve` (à coordonner si des envs existent déjà avec l'ancien nom).
 
----
-
-### E4 — Pas de CI/CD
-
-- Aucun `.github/workflows/` détecté
-- 428 tests ne tournent **jamais automatiquement**
-- Aucune validation PR (lint, type-check, test)
-- Aucun pre-commit hook (Husky / lint-staged)
-
-**Fix :** ajouter `.github/workflows/ci.yml` :
-```yaml
-name: CI
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '20' }
-      - run: npm ci --prefix backend
-      - run: npm test --prefix backend
-      - run: npm run build --prefix backend
-      - run: npm ci --prefix frontend
-      - run: npm run build --prefix frontend
-```
-
-**Effort :** 2 h · **Impact :** régression détectée à chaque PR.
+**Effort :** 15 min (ou laisser tel quel — risque résiduel faible) · **Impact :** propreté.
 
 ---
 
-### E5 — Pas d'ESLint ni Prettier
-- Style cohérent visuellement mais pas garanti
-- Aucun `npm run lint`
-- Conventions à venir non protégées
+### E12 — Bundle frontend non splitté
+[vite.config.ts](../frontend/vite.config.ts) configure le minimum vital. Pas de code-splitting manuel, pas de `manualChunks`, pas de lazy-loading des pages.
 
-**Effort :** 1 h pour setup standard · **Impact :** cohérence long terme.
+Conséquences :
+- Bundle initial = toute l'app (Eleves 1635 L + Parametres 1310 L + …)
+- TTI sur connexion 3G (Sénégal) potentiellement long
+
+**Fix :** `React.lazy` + `Suspense` sur chaque page, `manualChunks` pour `recharts`/`html5-qrcode` (libs lourdes utilisées sur 1-2 écrans).
+
+**Effort :** 1 h · **Impact :** TTI -40%.
 
 ---
 
-## 🟠 Conception applicative
+### E13 — Pas de stratégie de versioning API
+`/api/v1/...` partout ([server.ts:145](../backend/src/server.ts#L145)) mais aucune documentation de la politique. Breaking changes futurs problématiques (mobile app à venir).
 
-### E6 — Pas de couche permission fine
-Cf. [02-audit-cybersecurite.md → H1](./02-audit-cybersecurite.md#h1--autorisation-horizontale-faible-notes--bulletins--évaluations). `ROLE_GROUPS` traite tous les profs identiquement. Manque une `Policy` par module qui consulte `ProfMatiereClasse` / `Inscription`.
+**Fix doc :** documenter dans README la politique :
+- Major bump = breaking
+- Header `X-API-Deprecation-Date` pour les routes en sunset
+- Préfixe `/api/v2` lors d'un changement breaking sans casser v1
 
-**Pattern recommandé :**
-```ts
-// services/policies/notes.policy.ts
-export async function canEditNotes(user: JwtPayload, classe_id: string, matiere_id: string) {
-  if (['admin','directeur','gestionnaire'].includes(user.role)) return true;
-  if (user.role !== 'professeur') return false;
-  return await prisma.profMatiereClasse.findFirst({
-    where: { professeur: { utilisateur_id: user.id }, classe_id, matiere_id },
-  }) !== null;
-}
-```
+**Effort :** 1 h · **Impact :** prépare le scale-out.
 
-### E7 — `$executeRawUnsafe` pour les séquences matricule
-[eleves.service.ts:170](../backend/src/modules/eleves/eleves.service.ts#L170) — crée une séquence Postgres par établissement par année (`seq_matricule_{etab}_{annee}`). À 100 établissements × 10 ans = 1000 séquences encombrant le DB.
+---
+
+## 🟡 Conception applicative
+
+### E14 — `$executeRawUnsafe` toujours utilisé pour les séquences matricule
+[eleves.service.ts:174](../backend/src/modules/eleves/eleves.service.ts#L174) — crée toujours une séquence Postgres par établissement par année. À 100 établissements × 10 ans = 1000 séquences. Surface SQL inutile.
 
 **Alternative propre :**
 ```prisma
@@ -196,127 +246,24 @@ model MatriculeCounter {
   @@id([etablissement_id, annee])
 }
 ```
-Puis transaction `findUnique → update last_value++` avec lock optimiste (`@@version`).
+Puis transaction `findUnique → update last_value++` avec lock optimiste.
 
-**Effort :** 0.5 j (migration + service) · **Impact :** DB schema propre.
+**Effort :** 0.5 j · **Impact :** DB propre + 0 SQL brut.
 
-### E8 — Gestion d'erreurs hétérogène
-Mix de :
-- `throw new Error("string")` (la majorité)
-- `Object.assign(new Error(), { statusCode })`
-- Erreurs Prisma non typées
+---
 
-Aucune classe d'erreur métier (`NotFoundError`, `ForbiddenError`, `ValidationError`). Le `setErrorHandler` se contente du message brut → fuite info (cf. Sécu H5).
+### E15 — `process.env` direct dans 2 fichiers hors config
+Audit env centralisé OK ([config/env.ts](../backend/src/config/env.ts)), mais 2 accès restent en dehors :
+- [eleves.service.ts:7](../backend/src/modules/eleves/eleves.service.ts#L7) — `process.env.QR_SECRET`
+- [documents.service.ts:8](../backend/src/modules/documents/documents.service.ts#L8) — idem
 
-**Fix :** hierarchie d'erreurs maison :
+Ils valident bien (`throw if !secret`) mais devraient importer `env` :
 ```ts
-class HttpError extends Error {
-  constructor(public statusCode: number, message: string) { super(message); }
-}
-class NotFoundError extends HttpError { constructor(msg = 'Introuvable') { super(404, msg); } }
-class ForbiddenError extends HttpError { constructor(msg = 'Accès refusé') { super(403, msg); } }
+import { env } from '../../config/env';
+function getQrSecret(): string { return env.QR_SECRET; }
 ```
 
-### E9 — Frontend : pas de TanStack Query / SWR
-[useApi.ts](../frontend/src/hooks/useApi.ts) custom → pas de cache, pas de retry, pas d'optimistic update, pas de stale-while-revalidate, pas de dedup automatique.
-
-Conséquences observables :
-- La Sidebar refetch les compteurs élèves/profs/classes au mount alors que le Dashboard les a déjà chargés ([Sidebar.tsx:106-118](../frontend/src/components/layout/Sidebar.tsx#L106))
-- Chaque navigation de page refetch les données
-
-**Fix :** introduire `@tanstack/react-query` (~14 kb gzip) — gain qualité massif.
-
-**Effort :** 2 j de migration progressive · **Impact :** UX + perf réseau.
-
-### E10 — `dist/` semble traqué par git
-Vu dans `ls -la` initial : `backend/dist/` et `frontend/dist/` présents.
-
-**Fix :** vérifier `.gitignore` et purger via `git rm -r --cached backend/dist frontend/dist`.
-
-### E11 — Variables d'env non centralisées / typées
-`process.env.XXX` éparpillé à 11+ endroits dans le backend. Aucun fail-fast unifié, aucun type, aucune doc auto.
-
-**Fix :**
-```ts
-// config/env.ts
-import { z } from 'zod';
-
-const envSchema = z.object({
-  DATABASE_URL: z.string().url(),
-  JWT_SECRET: z.string().min(32),
-  QR_SECRET: z.string().min(32),
-  JWT_EXPIRES_IN: z.string().default('24h'),
-  CORS_ORIGIN: z.string().default('http://localhost:5173'),
-  COOKIE_DOMAIN: z.string().optional(),
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.coerce.number().default(3000),
-});
-
-export const env = envSchema.parse(process.env);
-```
-
-Import `env.JWT_SECRET` partout, typage garanti.
-
-**Effort :** 1 h · **Impact :** sécurité + DX + doc.
-
-### E12 — Pas d'observabilité prod
-- Pas de Sentry / OpenTelemetry / Prometheus / Datadog
-- Pas de métrique métier (bulletins/mois, PDFs/jour, latence p95, taux d'erreur par module)
-- À 100 établissements, opérer à l'aveugle
-
-**Fix minimal :**
-1. Sentry pour les erreurs (`@sentry/node` + `@sentry/react`)
-2. Endpoint `/metrics` Prometheus (compteurs : `daaragest_pdf_generated_total`, `daaragest_login_failed_total`)
-
-**Effort :** 0.5 j · **Impact :** détection précoce des incidents.
-
-### E13 — `Record<string, unknown>` pour les `where` Prisma
-Généralisé dans les services ([eleves.service.ts:24](../backend/src/modules/eleves/eleves.service.ts#L24), [finances.service.ts:25](../backend/src/modules/finances/finances.service.ts#L25), …). Casse la type-safety Prisma. Drift garanti entre schéma et requêtes.
-
-**Fix :** utiliser `Prisma.EleveWhereInput` / `Prisma.PaiementEleveWhereInput`.
-
-**Effort :** 1 j (refactor service par service) · **Impact :** détection compilation des erreurs de filtre.
-
-### E14 — Pas de versioning de schéma JSON
-Champs `Json` sans schéma typé :
-- `ConfigNotes.noms_periodes`
-- `Conversation.cibles_roles`
-- `DocumentGenere.parametres`
-- `AuditLog.details`
-
-Drift garanti à terme (un dev ajoute un champ, un autre lit l'ancien).
-
-**Fix :** Zod schemas pour ces champs, sérialisation/désérialisation aux frontières du service.
-
-### E15 — Schémas Zod assouplis à `.string().min(1)` au lieu de `.uuid()`
-Dette connue (README). Le seed utilise désormais des UUIDs valides v4. Revenir à `.uuid()` est possible sans casser le seed.
-
-**Effort :** 2 h (revue de tous les schémas + tests) · **Impact :** validation stricte.
-
-### E16 — Pas de cache applicatif
-`parametres`, `niveaux`, `matieres`, `Etablissement.logo_url` lus à chaque requête → relancé à chaque PDF. Pour 200 bulletins/classe × 10 classes = 2000 requêtes redondantes par export.
-
-**Fix :** cache mémoire LRU 5 min (`lru-cache` package) sur les lectures `Etablissement`, `ConfigNotes`, `Matiere` (read-mostly).
-
-**Effort :** 2 h · **Impact :** -40% requêtes DB sur exports massifs.
-
-### E17 — PDF non cachés / non signés
-Chaque téléchargement bulletin = relance Puppeteer. Pour 200 bulletins × 10 classes = 2000 invocations.
-
-**Fix :**
-1. Cache disque/S3 du PDF par `bulletin_id`
-2. Invalidation sur changement de note ou observation
-3. Signature SHA-256 stockée dans `Bulletin.pdf_hash` pour vérifier l'intégrité
-
-**Effort :** 1 j · **Impact :** -90% latence sur re-téléchargement.
-
-### E18 — Notes : pas de validation prof ∈ classe
-Cf. Sécu H1.
-
-### E19 — Pas de stratégie de versioning API
-`/api/v1/...` partout mais aucune stratégie de migration. Breaking changes futurs problématiques.
-
-**Fix doc :** documenter la politique (Major bump = breaking, Header `X-API-Deprecation-Date` pour les routes en sunset).
+**Effort :** 5 min · **Impact :** cohérence DX, type-safety.
 
 ---
 
@@ -324,33 +271,36 @@ Cf. Sécu H1.
 
 | Priorité | Action | Effort | Impact |
 |---|---|---|---|
-| 🟠 P1 | **E2** : ajouter `@@index([etablissement_id])` | 30 min + migration | Lenteur >1000 lignes |
-| 🟠 P1 | **E4** : CI GitHub Actions tests + build | 2 h | Régressions silencieuses |
-| 🟠 P1 | **E11** : config/env.ts centralisé Zod | 1 h | Fail-fast + doc + sécurité |
-| 🟠 P1 | **E3** : renommer migration corrompue | 5 min | Évite crash fresh deploy |
-| 🟠 P1 | **E5** : ESLint + Prettier | 1 h | Cohérence |
-| 🟠 P1 | **E10** : exclure `dist/` de git | 5 min | Repo propre |
-| 🟡 P2 | **E12** : Sentry + endpoint /metrics | 0.5 j | Observabilité |
-| 🟡 P2 | **E8** : hiérarchie d'erreurs typées | 0.5 j | Cohérence + sécurité |
+| 🟠 P1 | **E3** : ESLint + Prettier + intégration CI | 1 h | Cohérence + auto-fix |
+| 🟠 P1 | **E4** : Sentry backend + frontend | 0.5 j | Observabilité essentielle |
+| 🟠 P1 | **E15** : `process.env` direct → `env` importé | 5 min | DX + type-safety |
+| 🟠 P1 | **E2** : cache LRU sur lectures read-mostly | 2 h | -40% requêtes DB exports |
+| 🟠 P1 | **E12** : code-splitting Vite + React.lazy | 1 h | TTI -40% |
+| 🟡 P2 | **E2** : cache PDF par bulletin_id | 1 j | -90% latence re-téléchargement |
+| 🟡 P2 | **E5** : Vitest + RTL setup + 5 tests composants UI | 0.5 j | Parité couverture |
+| 🟡 P2 | **E8** : `utils/errors.ts` hiérarchie typée | 0.5 j | Diagnostic + cohérence |
 | 🟡 P2 | **E1** : découper Eleves/index.tsx | 1 j | Maintenabilité |
-| 🟡 P2 | **E9** : TanStack Query | 2 j | UX + perf réseau |
-| 🟡 P2 | **E16** : cache lectures parametres/matieres | 2 h | -40% requêtes DB |
-| 🟡 P2 | **E17** : cache PDF + invalidation | 1 j | -90% latence re-téléchargement |
-| 🟡 P2 | **E15** : revenir à `.uuid()` Zod | 2 h | Validation stricte |
-| 🟢 P3 | **E1 (autres pages)** : Parametres, Classes, Finances, Documents | 4 j | Maintenabilité globale |
-| 🟢 P3 | **E13** : `Prisma.XxxWhereInput` partout | 1 j | Type-safety |
-| 🟢 P3 | **E14** : Zod schemas pour champs Json | 0.5 j | Évite drift |
-| 🟢 P3 | **E7** : remplacer séquences raw par table compteur | 0.5 j | DB propre |
-| 🟢 P3 | **E19** : doc politique versioning API | 1 h | Préparer scale-out |
+| 🟡 P2 | **E6** : TanStack Query (migration progressive) | 2 j | UX + perf réseau |
+| 🟡 P2 | **E10** : `.uuid()` Zod | 2 h | Validation stricte (cf. Sécu H4) |
+| 🟢 P3 | **E1 (autres pages)** : Parametres, Classes, Documents | 4 j | Maintenabilité globale |
+| 🟢 P3 | **E7** : `Prisma.XxxWhereInput` partout | 4 h | Type-safety |
+| 🟢 P3 | **E9** : Zod schemas pour champs Json | 0.5 j | Évite drift |
+| 🟢 P3 | **E14** : remplacer séquences raw par table compteur | 0.5 j | DB propre |
+| 🟢 P3 | **E13** : doc politique versioning API | 1 h | Préparer scale-out |
+| 🔵 P4 | **E11** : renommer migration timestamp `20260519400000` | 15 min | Propreté |
 
 ---
 
 ## 📊 Verdict ingénierie
 
-**Architecture saine** au niveau backend (MVC modulaire + Zod + Prisma), **428 tests verts en 2.7 s** = qualité rare. Les choix de pool Puppeteer, élimination N+1, healthcheck multi-composant témoignent d'une **vraie sensibilité perf**.
+**Trajectoire saine** : la CI ([ci.yml](../.github/workflows/ci.yml)) est en place, les **41 indexes Prisma** verrouillent la perf multi-tenant, [`config/env.ts`](../backend/src/config/env.ts) centralise et valide. Les **461 tests** en 1.42s confirment la culture qualité côté backend.
 
-Mais la **dette frontend** est sérieuse : `Eleves/index.tsx` à 1600 lignes n'est plus maintenable. L'**absence de CI** est un risque immédiat (régression au prochain merge). L'**indexation DB** plombera la perf dès >2000 élèves par établissement.
+Mais la **dette frontend s'aggrave** : `Eleves/index.tsx` est passé de 1600 à 1635 lignes, `Parametres` de 1128 à 1310. Aucun découpage n'a été initié. À ce rythme, **maintenabilité ↓** rapidement.
 
-Les **P1** demandent ~6 h cumulées et débloquent les principaux risques. Le frontend monolithique (E1) demande plus de temps mais peut se traiter page par page sans urgence.
+Deux manques tactiques :
+- **Pas d'observabilité prod** (Sentry/Prometheus) → naviguer à vue dès 10 établissements
+- **Pas de cache PDF** → Puppeteer relancé pour le moindre re-téléchargement
 
-Une fois P1 + observabilité (E12) traités, le produit atteint un niveau **production-ready** confortable pour 10-50 établissements.
+Les **P1 (ESLint + Sentry + cache LRU + code-splitting + env import)** demandent **~1 j cumulé** et débloquent les principaux risques opérationnels. Le frontend monolithique demande plus de temps mais peut se traiter page par page.
+
+Une fois P1 traité, le produit atteint un niveau **production-ready** confortable pour 10-50 établissements ; au-delà, P2 (cache PDF, tests frontend, découpage Eleves) deviennent obligatoires.

@@ -2,356 +2,226 @@
 
 > Périmètre : système de design (tokens, palette, typo), composants UI, layouts, landing page, dark mode, RTL, accessibilité (WCAG).
 
-**Note globale : 7.5/10** — identité graphique singulière et système solide, mais bugs visuels silencieux et incohérences à corriger.
+**Note globale : 8.5/10** (↑ de 7.5/10) — tous les P0 critiques (tokens fantômes, animations, Scanner identitaire) sont corrigés. Reste l'inflation des inline styles et l'absence d'échelles centralisées (spacing, typo).
 
 ---
 
-## ✨ Points forts
+## ✅ Acquis depuis l'audit précédent (2026-05-19)
 
-### Identité graphique singulière et culturellement ancrée
-- Palette **terracotta / papier chaud / encre brune** rare dans l'univers SaaS éducatif
-- Référence visuelle au *daara* sénégalais (papier, latérite, encre) — cohérente et reconnaissable
-- 4 polices typées par rôle :
-  - **Fraunces** (display, titres, KPI)
-  - **Instrument Sans** (UI, paragraphes)
-  - **JetBrains Mono** (matricules, reçus) — `font-feature-settings: 'tnum', 'zero'` ([index.css:146](../frontend/src/index.css#L146))
-  - **Noto Naskh Arabic** (RTL)
-- Logo en deux variantes : monogramme `Dg` ([LogoIcon.tsx](../frontend/src/components/ui/LogoIcon.tsx)) + planchette *lawh* stylisée ([LogoMark.tsx](../frontend/src/components/ui/LogoMark.tsx))
-- 3 variantes de couleur du logo (terra / paper / inverse) — pensé.
+| Ancien constat | État | Référence |
+|---|---|---|
+| V1 — Variables CSS fantômes (4 tokens non définis) | ✅ **Corrigé** | [index.css:76-80](../frontend/src/index.css#L76) — alias `--surface-2 → --paper-2`, `--border → --rule`, `--radius → --r-md`, `--text-muted → --ink-3` |
+| V2 — `@keyframes pulse` manquant | ✅ **Corrigé** | [index.css:670](../frontend/src/index.css#L670) — `@keyframes pulse` + `@keyframes spin` globaux |
+| V3 — Scanner.tsx hors design system | ✅ **Corrigé** | [Pointage/Scanner.tsx](../frontend/src/pages/Pointage/Scanner.tsx) — 0 occurrences de la palette Tailwind slate/blue, utilise désormais `var(--paper)`, `var(--card)`, `var(--success)`, `var(--info)`, `var(--warning)`, `var(--danger)` |
+| V13 — Contraste WCAG `--ink-3` | ✅ **Corrigé** | [index.css:18-19](../frontend/src/index.css#L18) — `--ink-3: #6A604F` (4.51:1 AA), `--ink-4: #8C7E66` (3.06:1 AA grand texte). Commentaire WCAG inline |
+| V15 — Pas de `prefers-reduced-motion` | ✅ **Corrigé** | [index.css:675-682](../frontend/src/index.css#L675) — `@media (prefers-reduced-motion: reduce)` désactive animations/transitions |
+| V14 — `aria-label` rares | 🟡 **Partiellement** | 13 occurrences `aria-label` dans le frontend. Boutons critiques (Modal close, Burger, Toast close) couverts, mais Topbar/Tabs/Sidebar/NotificationBell encore minces |
 
-### Système de tokens solide
-- **64 variables CSS** : `--paper`, `--ink-4`, `--terra-deep`, `--sahel-soft`, `--indigo-ink`, sémantiques (`--success`, `--warning`, `--danger`, `--info`) ([index.css:6-75](../frontend/src/index.css#L6))
-- **Dark mode complet et réfléchi** : 36 variables inversées, pas une simple inversion (terracotta passe de `#B85433` à `#E8825F` plus chaud) ([index.css:77-115](../frontend/src/index.css#L77))
-- Bascule fluide via `data-theme` sur `<html>` ([useTheme.ts:11](../frontend/src/hooks/useTheme.ts#L11)), synchronisée DB
-- Tokens de **radius** (xs/sm/md/lg/xl), **shadow** (sm/md/lg), **layout** (sidebar-w, topbar-h)
+## 🆕 Détails du nouveau système
 
-### RTL natif dans le CSS principal
-- Propriétés logiques systématiques : `border-inline-end`, `inset-inline-start`, `padding-inline-start`, `margin-inline-start`
-- Sidebar et grille `app` inversent leurs colonnes en RTL ([index.css:155](../frontend/src/index.css#L155))
-- Polices switchées automatiquement : `html[dir="rtl"] body { font-family: var(--font-arabic)… }` ([index.css:132-134](../frontend/src/index.css#L132))
-
-### Composants UI propres
-- [Button](../frontend/src/components/ui/Button.tsx) : 5 variants × 3 sizes + spinner intégré
-- [Modal](../frontend/src/components/ui/Modal.tsx) : gère Escape + scroll-lock + click outside (lignes 22-31)
-- [Table](../frontend/src/components/ui/Table.tsx) : skeleton rows + tri + état vide
-- [Badge](../frontend/src/components/ui/Badge.tsx) : 8 variants sémantiques + outline + accent
-- [ToastContainer](../frontend/src/components/ui/Toast.tsx) : icônes SVG colorées par type
-
-### Responsive 3 paliers
-[index.css:798-860](../frontend/src/index.css#L798) :
-- **≤ 1024px** : sidebar collapse en rail d'icônes (72px), grilles 4 col → 2 col
-- **≤ 640px** : sidebar drawer avec backdrop, burger menu, grilles → 1 col, tables scrollables
-- `@media print` masque sidebar/topbar
-
-### Bonnes pratiques accessibilité ponctuelles
-- `:focus-visible` avec outline `terra-soft` 3px, offset 2px ([index.css:502-506](../frontend/src/index.css#L502))
-- `aria-label` sur Modal close, Toast close, Burger menu, ActionMenu trigger
-- Transitions courtes (`0.12s` à `0.2s`)
+- **47 variables CSS** définies dans `:root` + **36 inversions** dans `[data-theme="dark"]`
+- **Palette enrichie** : terra (terracotta), sahel (or), indigo (cachet) — 3 axes accent
+- **5 radius** (`--r-xs` à `--r-xl`), 3 shadows (sm/md/lg), 2 layout (sidebar/topbar)
+- **4 polices** : Fraunces (display), Instrument Sans (UI), JetBrains Mono (matricules), Noto Naskh (RTL)
+- **9 variantes de Badge**, 5 variants × 3 sizes pour Button, Modal a11y-safe (Escape + scroll-lock)
 
 ---
 
-## 🔴 Critiques (P0) — bugs visuels silencieux
+## ✅ Points forts inchangés
 
-### V1 — Variables CSS référencées mais **non définies**
-
-Le grep révèle **16+ références** à 4 tokens qui n'existent **pas** dans [index.css](../frontend/src/index.css) :
-
-| Token utilisé | Occurrences | Devrait être | Symptôme visuel |
-|---|---|---|---|
-| `var(--surface-2)` | 8 | `var(--paper-2)` | Barre de progression / panneau sans fond |
-| `var(--border)` | 5 | `var(--rule)` | Bordure invisible |
-| `var(--radius)` | 2 | `var(--r-md)` | Coins **non arrondis** |
-| `var(--text-muted)` | 1 | `var(--ink-3)` | Texte couleur par défaut (foncé) |
-
-**Occurrences concrètes :**
-
-- [Dashboard.tsx:53](../frontend/src/pages/Dashboard.tsx#L53) — Barre de progression "présence élèves" : **track invisible**
-- [Dashboard.tsx:199](../frontend/src/pages/Dashboard.tsx#L199) — Barres moyennes par classe : track invisible
-- [Dashboard.tsx:221,233](../frontend/src/pages/Dashboard.tsx#L221) — Top5/Bottom5 élèves : séparateurs absents
-- [Evaluations/index.tsx:356-357](../frontend/src/pages/Evaluations/index.tsx#L356) — Carte "évaluation sans note" : ni fond ni bordure
-- [Rapports/index.tsx:131](../frontend/src/pages/Rapports/index.tsx#L131) — Cartes type rapport non sélectionnées : invisibles
-- [Rapports/index.tsx:212](../frontend/src/pages/Rapports/index.tsx#L212) — Bordure top
-- [Rapports/index.tsx:222](../frontend/src/pages/Rapports/index.tsx#L222) — Boutons format export
-- [Classes/index.tsx:927](../frontend/src/pages/Classes/index.tsx#L927) — Panel info en haut, fond transparent
-- [Professeurs/index.tsx:517](../frontend/src/pages/Professeurs/index.tsx#L517) — Zone photo prof en upload sans fond
-- [Bibliotheque/index.tsx:217](../frontend/src/pages/Bibliotheque/index.tsx#L217) — Tabs livres/emprunts sans border
-- [Bibliotheque/index.tsx:452](../frontend/src/pages/Bibliotheque/index.tsx#L452) — Grille livre sans border
-- [Parametres/index.tsx:795](../frontend/src/pages/Parametres/index.tsx#L795) — "Aucun niveau défini" non muted
-- [index.css:945, 960](../frontend/src/index.css#L945) — `.action-menu-btn` et `.action-menu-dropdown` : **coins droits**
-
-**Fix immédiat** (option A — aliasing dans `:root`) :
-```css
-:root {
-  /* ... existing ... */
-  /* Alias rétrocompatibilité (à supprimer après migration) */
-  --surface-2: var(--paper-2);
-  --border: var(--rule);
-  --radius: var(--r-md);
-  --text-muted: var(--ink-3);
-}
-```
-
-**Fix propre** (option B — find+replace) :
-```bash
-# Backend root
-cd frontend/src
-grep -rl '--surface-2' . | xargs sed -i '' 's/--surface-2/--paper-2/g'
-grep -rl '--border)' . | xargs sed -i '' 's/--border)/--rule)/g'
-grep -rl '--radius)' . | xargs sed -i '' 's/--radius)/--r-md)/g'
-grep -rl '--text-muted' . | xargs sed -i '' 's/--text-muted/--ink-3/g'
-```
-
-**Effort :** 15 min · **Impact :** corrige ~16 bugs visuels actuels.
+- **Identité graphique singulière** : terracotta + papier chaud + encre brune, référence visuelle au *daara*
+- **Dark mode complet** — 36 variables inversées, basculement fluide via `data-theme` ([useTheme.ts](../frontend/src/hooks/useTheme.ts)), synchronisé DB
+- **RTL natif** — propriétés logiques (`border-inline-end`, `inset-inline-start`), polices switchées automatiquement, sidebar et grille `app` inversent leurs colonnes ([index.css:138-140](../frontend/src/index.css#L138))
+- **Responsive 3 paliers** — ≤1024 px sidebar collapse 72 px, ≤640 px drawer + burger, `@media print`
+- **Composants UI propres** — Button, Modal, Table (avec skeleton), Badge, Toast, ActionMenu, NotificationBell, PhotoPicker, ConfirmModal
 
 ---
 
-### V2 — Animation `pulse` référencée mais non définie
+## 🟠 Hautes (P1) restantes
 
-**Fichier :** [Table.tsx:27](../frontend/src/components/ui/Table.tsx#L27)
+### V1 — Inline styles toujours massifs (aggravation)
+**Volume actuel :**
 
-```tsx
-<div style={{ height: 14, background: 'var(--paper-3)', borderRadius: 4,
-              animation: 'pulse 1.5s ease-in-out infinite' }} />
-```
-
-`@keyframes pulse` **n'existe pas** dans [index.css](../frontend/src/index.css) (seules `fadeIn` et `slideUp` y sont). Les skeleton rows s'affichent **figés** au lieu de pulser → l'utilisateur croit que ça a planté pendant un chargement.
-
-**Fix :** ajouter dans `index.css` :
-```css
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: 0.4; }
-}
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-```
-(Le `@keyframes spin` est aussi utilisé via inline `<style>` dans [Login.tsx:139](../frontend/src/pages/Login.tsx#L139) — devrait être global.)
-
-**Effort :** 2 min · **Impact :** skeletons enfin animés, spinner centralisé.
-
----
-
-### V3 — La page Scanner QR est **hors design system**
-
-**Fichier :** [Pointage/Scanner.tsx:180-300](../frontend/src/pages/Pointage/Scanner.tsx#L180)
-
-Utilise une **palette Tailwind slate/blue hardcodée** :
-```
-#0f172a (fond), #1e293b (carte), #334155 (border),
-#94a3b8 #64748b (texte secondaire), #3b82f6 (bouton), #f1f5f9 (texte principal)
-```
-
-Aucun rapport avec la palette daara. Pour un utilisateur qui scanne son QR au quotidien, c'est une **rupture totale d'identité** : on dirait une autre app.
-
-**Fix :** repeindre aux tokens :
-```tsx
-background: 'var(--ink)',       // au lieu de '#0f172a'
-color: 'var(--paper)',          // au lieu de '#f1f5f9'
-// Card scanner :
-background: 'var(--paper-3)',   // ou var(--ink-2) selon contraste
-border: '1px solid var(--rule)',
-// Bouton démarrer :
-background: 'var(--terra)',     // au lieu de '#3b82f6'
-```
-
-**Effort :** 1 h · **Impact :** identité unifiée sur l'écran terrain le plus utilisé.
-
----
-
-## 🟠 Hautes (P1) — incohérences structurelles
-
-### V4 — Tailwind présent mais quasi inutilisé
-- [tailwind.config.ts](../frontend/tailwind.config.ts) configure `darkMode: ['attribute', 'data-theme']` + tokens custom
-- [index.css:3](../frontend/src/index.css#L3) importe `@tailwind components; @tailwind utilities;` — **`@tailwind base` absent** → reset CSS partiel
-- 0 utilisation de `dark:bg-…` dans le code (tout passe par CSS vars)
-- Sur 28 fichiers TSX de pages, classes Tailwind quasi-jamais utilisées
-
-→ **Décision à prendre** : retirer Tailwind (le système maison se suffit), OU l'adopter à fond. État actuel = poids pour rien.
-
-**Effort :** 2 h (option suppression) · **Impact :** -50 kb bundle, config claire.
-
----
-
-### V5 — Volume excessif d'inline styles
-
-| Page | Occurrences de `style={{}}` |
-|---|---|
-| `Eleves/index.tsx` | 124 |
-| `Parametres/index.tsx` | 101 |
-| `Dashboard.tsx` | 44 |
+| Page | Occurrences `style={{` | Δ vs audit précédent |
+|---|---|---|
+| [Eleves/index.tsx](../frontend/src/pages/Eleves/index.tsx) | **125** | +1 |
+| [Parametres/index.tsx](../frontend/src/pages/Parametres/index.tsx) | **110** | +9 |
+| [Documents/index.tsx](../frontend/src/pages/Documents/index.tsx) | **94** | nouveau |
+| [Dashboard.tsx](../frontend/src/pages/Dashboard.tsx) | 44 | = |
+| [Classes/index.tsx](../frontend/src/pages/Classes/index.tsx) | 40 | nouveau mesure |
 
 **Conséquences :**
-- Valeurs magiques disséminées (padding `14px 16px` répété sans token)
-- Impossible de thématiser (un changement de spacing impose grep+replace)
+- Valeurs magiques disséminées (`padding: '14px 16px'`, `gap: 8`, `marginTop: 6`)
+- Impossible de thématiser (un changement de spacing impose un grep+replace)
 - Recalcul de style à chaque render
 - Lecture JSX difficile
 
-**Fix :** extraction progressive vers classes maison + utilisation des tokens.
+**Fix :** extraction progressive vers classes maison + utilisation des tokens (voir V5/V6 ci-dessous).
+
+**Effort :** 1 j par page · **Impact :** maintenabilité long terme.
 
 ---
 
-### V6 — Couleurs hardcodées hors tokens
+### V2 — Pas d'échelle d'espacement (`--space-*`)
+Toujours pas de variables centralisées. Espaces hardcodés partout : `gap: 8`, `padding: '14px 16px'`, `marginTop: 6`, `padding: '8px 14px'`.
 
-- [Eleves/index.tsx:188](../frontend/src/pages/Eleves/index.tsx#L188) — `background: '#fff'` → **reste blanc en dark mode**
-- [Parametres/index.tsx:103](../frontend/src/pages/Parametres/index.tsx#L103) — toggle switch knob `#fff` fixe
-- [Eleves/index.tsx:1135-1136](../frontend/src/pages/Eleves/index.tsx#L1135) — overlay photo `rgba(0,0,0,0.4)` brut
-
-**Fix :** remplacer par `var(--card)`, `var(--paper)`, `var(--ink)` selon contexte.
-
----
-
-### V7 — Émojis utilisés comme icônes
-
-**8+ occurrences :** `📷` photo (Eleves, Professeurs, Finances, Scanner), `📚` livres (Classes, Matieres), `⚠️` warning (Notes), `🌙 / ☀️` thème (Header).
-
-**Problèmes :**
-- Rendu **OS-dependent** (couleur, style différent macOS vs Windows vs Android)
-- Pas colorable (impossible de teinter en `--terra`)
-- Inconsistant avec 100+ icônes SVG monogrammes du reste
-
-**Fix :** remplacer par SVG (Lucide, Heroicons, ou maison).
-
----
-
-### V8 — RTL incomplet dans les inline styles
-
-13 occurrences de propriétés physiques (`left:`, `right:`, `paddingLeft`, `marginLeft`) dans `pages/` :
-
-- [Eleves/index.tsx:1585](../frontend/src/pages/Eleves/index.tsx#L1585) — `paddingLeft: 16` (liste erreurs CSV) → en RTL liste alignée du mauvais côté
-- [Parametres/index.tsx:103](../frontend/src/pages/Parametres/index.tsx#L103) — toggle switch `left: checked ? 22 : 3` → **knob va dans le mauvais sens** en RTL
-- [Finances/index.tsx:124, 797](../frontend/src/pages/Finances/index.tsx#L124) — `marginLeft` au lieu de `marginInlineStart`
-- [Documents/index.tsx:321, 322, 325](../frontend/src/pages/Documents/index.tsx#L321) — idem
-
-**Fix :** `paddingLeft` → `paddingInlineStart`, `left:` → `insetInlineStart:`, etc.
-
----
-
-### V9 — Inline `<style>` brut dans le JSX
-
-[Eleves/index.tsx:171](../frontend/src/pages/Eleves/index.tsx#L171) :
-```html
-<style>body{font-family:sans-serif;text-align:center;padding:40px}…</style>
+**Fix :** introduire dans `:root` :
+```css
+:root {
+  --space-1: 4px;   --space-2: 8px;
+  --space-3: 12px;  --space-4: 16px;
+  --space-5: 24px;  --space-6: 32px;
+  --space-7: 48px;  --space-8: 64px;
+}
 ```
 
-Style sans portée injecté dans le DOM. Probablement pour un export print/PDF, mais devrait être un fichier dédié ou template HTML séparé.
+Et migrer progressivement les inline styles vers ces variables.
+
+**Effort :** 1 h pour les définitions + 1 j de migration sur 5 pages · **Impact :** cohérence long terme.
+
+---
+
+### V3 — Pas d'échelle typographique (`--text-*`)
+Tailles dispersées sans hiérarchie : `11, 10.5, 11.5, 12, 12.5, 13, 13.5, 14, 15, 16, 17, 18, 22, 24, 28, 32, 36, 48`. **18+ tailles distinctes**.
+
+**Fix :**
+```css
+:root {
+  --text-xs:    11px;
+  --text-sm:    13px;
+  --text-base:  15px;
+  --text-md:    17px;
+  --text-lg:    22px;
+  --text-xl:    28px;
+  --text-2xl:   32px;
+  --text-3xl:   48px;
+}
+```
+
+**Effort :** 1 h définition + migration progressive · **Impact :** hiérarchie claire.
+
+---
+
+### V4 — Calendrier hors palette daara
+[EmploiDuTemps/index.tsx](../frontend/src/pages/EmploiDuTemps/index.tsx) — usage de couleurs Tailwind blue/green pour distinguer filières (`#BFDBFE`, `#BBF7D0`, `#EFF6FF`, `#F0FDF4`, `#15803D`, `#1D4ED8`). Aucun rapport avec la palette daara (terra/sahel/indigo).
+
+**Fix :** repeindre aux tokens :
+- Filière FR → `var(--info-soft)` / `var(--info-text)` (indigo)
+- Filière AR → `var(--sahel-soft)` / `var(--sahel-ink)` (or)
+- Activités → `var(--terra-soft)` / `var(--terra-ink)`
+
+**Effort :** 1 h · **Impact :** identité unifiée sur le calendrier.
+
+---
+
+### V5 — `#fff` et autres couleurs hardcodées
+- 46 occurrences `'#fff'` ou `"#fff"` dans `pages/` — souvent backgrounds qui restent blancs en dark mode
+- Couleur de marque ailleurs : `#3F7A4D`, `#A8331F`, `#B85433` utilisées en dur au lieu de `var(--success)`, `var(--danger)`, `var(--terra)`
+
+**Fix :** find-and-replace progressif vers tokens. Garder uniquement les couleurs purement décoratives (icônes SVG inline).
+
+**Effort :** 1 h ciblé sur les `#fff` · **Impact :** dark mode propre.
+
+---
+
+### V6 — Accessibilité ARIA encore minime (P1)
+- Seulement **13 occurrences** `aria-label` dans tout le frontend
+- **0 occurrence** `role="tab"` / `aria-selected` pour les onglets
+- **0 occurrence** `role="dialog"` explicite sur Modal (mais Modal gère bien Escape + scroll-lock)
+- Topbar : theme toggle, language toggle, profile, search — encore juste `title=` natif
+- NotificationBell, command palette trigger : pas d'aria
+
+**Impact :** lecteurs d'écran → navigation impossible sur ⅔ des contrôles.
+
+**Fix :** audit complet + ajout `aria-label` sur tous les boutons icône + `role="tablist"`/`role="tab"`/`aria-selected` sur les onglets.
+
+**Effort :** 0.5 j · **Impact :** accessibilité lecteurs d'écran.
 
 ---
 
 ## 🟡 Moyennes (P2) — maturité du design system
 
-### V10 — Pas d'échelle d'espacement (spacing scale)
+### V7 — Tailwind décision toujours pas prise
+- [tailwind.config.ts](../frontend/tailwind.config.ts) configure tokens custom
+- [index.css:3-4](../frontend/src/index.css#L3) importe `@tailwind components; @tailwind utilities;` — **`@tailwind base` toujours absent**
+- 0 utilisation observable de `dark:bg-…` dans le code (tout passe par CSS vars)
+- Classes Tailwind quasi-jamais utilisées dans les pages
 
-Espaces hardcodés : `gap: 8`, `padding: '14px 16px'`, `marginTop: 6`, `12px 20px`, `padding: '8px 14px'`. Aucun token.
+État actuel = **poids pour rien** dans le bundle.
 
-**Fix :** introduire dans `:root` :
-```css
---space-1: 4px;
---space-2: 8px;
---space-3: 12px;
---space-4: 16px;
---space-5: 24px;
---space-6: 32px;
---space-7: 48px;
---space-8: 64px;
-```
+**Décision à arbitrer :**
+- **Option A** : retirer Tailwind, le système maison se suffit (-50 kb bundle, config claire)
+- **Option B** : adopter à fond, migrer les inline styles vers utilities
+
+**Effort A :** 2 h · **Effort B :** 5-7 j · **Impact :** cohérence stack.
 
 ---
 
-### V11 — Pas d'échelle typographique
+### V8 — Sahel (or) et Indigo encore quasi-inutilisés
+[index.css:28-33](../frontend/src/index.css#L28) — palette riche définie mais :
+- `--sahel` : 1 occurrence index.css, ~0 utilisation effective dans composants
+- `--indigo` : 9 occurrences mais surtout en équivalent `--info-*`
 
-Tailles dispersées : `11, 10.5, 11.5, 12, 12.5, 13, 13.5, 14, 15, 16, 17, 18, 22, 24, 28, 32, 36, 48`. **18 tailles distinctes**, sans hiérarchie modulaire.
-
-**Fix :**
-```css
---text-xs:    11px;
---text-sm:    13px;
---text-base:  15px;
---text-md:    17px;
---text-lg:    22px;
---text-xl:    28px;
---text-2xl:   32px;
---text-3xl:   48px;
-```
-
----
-
-### V12 — Accent unique `terra` sur-utilisé, `sahel`/`indigo` abandonnés
-
-- `--terra` couvre : bouton primaire, lien actif, focus ring, hover, progress bar, badge accent → identité forte mais saturée
-- `--sahel` (or, "mention/honneur") et `--indigo` (cachet officiel) **définis mais quasi-inutilisés**
-
-**Opportunités :**
-- `sahel` pour les bulletins "Très bien" / "Mention"
+**Opportunités manquées :**
+- `sahel` pour les bulletins "Très bien" / "Mention" / "Félicitations"
 - `indigo` pour certificats officiels / cachets / signatures
 - Hiérarchie sémantique enrichie
 
----
-
-### V13 — Contraste WCAG sur la palette claire
-
-À vérifier en outil (ex: [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/)) :
-
-| Token | Sur | Ratio estimé | Verdict |
-|---|---|---|---|
-| `--ink-3 #7A6F5C` | `--paper #FAF6EE` | ~4.0:1 | ⚠️ Sous AA texte normal (4.5 requis) |
-| `--ink-4 #A89B82` | `--paper` | ~2.9:1 | ❌ Échoue AA même grand texte |
-| `--ink-3 #948A78` | `--paper #1B1812` (dark) | ~5.6:1 | ✅ OK |
-
-`--ink-3` est utilisé partout (`info-label`, `sub`, `sb-tag`, `stat-label`, `crumbs`).
-
-**Fix :** remonter `--ink-3` d'un cran → `#6A604F` passe AA.
+**Effort :** 0.5 j · **Impact :** différenciation sémantique riche.
 
 ---
 
-### V14 — `aria-*` rares
-
-- 7 `aria-label` dans tout le frontend pour ~24 boutons icône-seule
-- Topbar : theme toggle, language toggle, profile, search → **aucun aria-label** (juste `title=` HTML natif)
-- NotificationBell, command palette trigger : pas d'aria
-- Tabs `.tab` n'utilisent ni `role="tab"` ni `aria-selected`
-
-**Impact :** lecteurs d'écran → navigation pratiquement impossible sur ⅔ des contrôles.
-
-**Fix :** audit complet + ajout `aria-label` sur tous les boutons icône.
-
----
-
-### V15 — Aucun `prefers-reduced-motion`
-
-Animations `fadeIn`, `slideUp`, `spin`, `pulse`, transitions partout, mais aucun :
-
-```css
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-```
-
-Risque vertige pour utilisateurs vestibulaires.
-
----
-
-### V16 — Tooltips natifs `title=` partout
-
-8+ occurrences dans Topbar / Sidebar / Login / Landing.
+### V9 — Pas de composant Tooltip
+[Header.tsx](../frontend/src/components/layout/Header.tsx), Sidebar, Login, Landing : 8+ occurrences `title=` natif.
 
 **Problèmes du `title` natif :**
 - Délai 1 s
 - Non stylé
-- Non touch (mobile invisible)
+- Invisible sur touch (mobile)
 - Non RTL
-- Peut être tronqué
+- Tronqué arbitrairement par OS
 
-**Fix :** Tooltip composant (Floating UI, Radix Tooltip).
+**Fix :** composant `Tooltip` maison (Floating UI / Radix Tooltip).
+
+**Effort :** 0.5 j · **Impact :** UX professionnelle desktop + mobile.
 
 ---
 
-### V17 — Petites tailles de texte fréquentes
+### V10 — Pas de manifest PWA / apple-touch-icon
+[index.html](../frontend/index.html) — favicon SVG seul. Pas de :
+- `manifest.json` dans `public/`
+- `<link rel="apple-touch-icon">`
+- `<link rel="manifest">`
+- Theme color meta
 
-Éléments fonctionnels à 11-12px : badges, info-labels, breadcrumbs, sb-tag. WCAG recommande **16px minimum** pour le corps. Pour un produit utilisé par du personnel administratif non-expert, c'est petit.
+**Impact :** ajout à l'écran d'accueil iOS/Android non géré, pas installable comme PWA.
+
+**Fix :** créer `frontend/public/manifest.json` + icônes 180×180, 192×192, 512×512.
+
+**Effort :** 1 h · **Impact :** mobile / installation.
+
+---
+
+### V11 — Petites tailles de texte fréquentes
+Éléments fonctionnels à 11–12 px : badges, info-labels, breadcrumbs, sb-tag. WCAG recommande **16 px minimum** pour le corps. Pour un produit utilisé par du personnel administratif non-expert, c'est petit — surtout en arabe Naskh où la lisibilité dépend plus de la taille.
+
+**Fix :** audit ciblé, viser 13 px+ pour fonctionnel, 15 px pour corps.
+
+**Effort :** 0.5 j · **Impact :** lisibilité.
+
+---
+
+### V12 — Émojis comme indicateurs (V7 ancien)
+20 occurrences globales : `✓`, `✗`, `⚠`, etc. (Scanner, LandingPage feedback). Moins qu'avant (l'audit précédent comptait 8+ icônes émojis 📷📚⚠️🌙☀️) — la migration est partielle.
+
+**Problèmes restants :**
+- Rendu OS-dependent
+- Non colorable (impossible de teinter en `--terra`)
+- Inconsistant avec 100+ icônes SVG monogrammes du reste
+
+**Fix :** remplacer par SVG (Lucide, Heroicons, ou maison).
+
+**Effort :** 1 h · **Impact :** cohérence visuelle.
 
 ---
 
@@ -359,16 +229,16 @@ Risque vertige pour utilisateurs vestibulaires.
 
 | # | Constat | Référence |
 |---|---|---|
-| V18 | `kbd` affiche `⌘K` mais pas `Ctrl+K` selon plateforme | [Header.tsx:113](../frontend/src/components/layout/Header.tsx#L113) |
-| V19 | Salutation Dashboard utilise `nom_fr.split(' ')[0]` → "Bonjour, FALL." si nom_fr en majuscules | [Dashboard.tsx:109](../frontend/src/pages/Dashboard.tsx#L109) |
-| V20 | Aucune **illustration** pour les états vides (`.empty`) | [index.css:702-707](../frontend/src/index.css#L702) |
-| V21 | Pas d'apple-touch-icon, ni manifest PWA | [index.html:5](../frontend/index.html#L5) |
-| V22 | `Modal` reçoit `style={{ maxWidth: sizeMap[size] }}` au lieu d'une classe modifier | [Modal.tsx:37](../frontend/src/components/ui/Modal.tsx#L37) |
-| V23 | `LogoMark` ratio `size * 64/56` → manque variante 16×16 favicon | [LogoMark.tsx:20](../frontend/src/components/ui/LogoMark.tsx#L20) |
-| V24 | `--paper #FAF6EE` peut paraître jaunâtre sur écrans non-calibrés | [index.css:8](../frontend/src/index.css#L8) |
-| V25 | Pas de Storybook / page de démos | — |
-| V26 | Toggle thème affiche émoji `🌙 Sombre` / `☀️ Clair` mélangé avec texte | [Header.tsx:195](../frontend/src/components/layout/Header.tsx#L195) |
-| V27 | Sidebar mobile (≤1024px à 72px), logo `sb-mark` 30×30 → planchette illisible | [Sidebar.tsx:125](../frontend/src/components/layout/Sidebar.tsx#L125) |
+| V13 | `kbd` affiche `⌘K` mais pas `Ctrl+K` selon plateforme | [Header.tsx:113](../frontend/src/components/layout/Header.tsx#L113) |
+| V14 | Salutation Dashboard utilise `nom_fr.split(' ')[0]` → "Bonjour, FALL." si nom_fr en majuscules | [Dashboard.tsx](../frontend/src/pages/Dashboard.tsx) |
+| V15 | Aucune **illustration** pour les états vides (`.empty`) | [index.css](../frontend/src/index.css) |
+| V16 | `Modal` reçoit `style={{ maxWidth: sizeMap[size] }}` au lieu d'une classe modifier | [Modal.tsx](../frontend/src/components/ui/Modal.tsx) |
+| V17 | `LogoMark` ratio `size * 64/56` → manque variante 16×16 favicon | [LogoMark.tsx](../frontend/src/components/ui/LogoMark.tsx) |
+| V18 | `--paper #FAF6EE` peut paraître jaunâtre sur écrans non-calibrés | [index.css:8](../frontend/src/index.css#L8) |
+| V19 | Pas de Storybook / page de démos du design system | — |
+| V20 | Sidebar mobile (≤1024 px à 72 px), logo `sb-mark` 30×30 → planchette illisible | [Sidebar.tsx](../frontend/src/components/layout/Sidebar.tsx) |
+| V21 | Quelques `paddingLeft / left:` inline subsistent (RTL imparfait dans Documents/index.tsx) | [Documents/index.tsx](../frontend/src/pages/Documents/index.tsx) |
+| V22 | Pas d'animation skeleton sur Cards/grilles (juste Table) | [Table.tsx:27](../frontend/src/components/ui/Table.tsx#L27) |
 
 ---
 
@@ -376,35 +246,31 @@ Risque vertige pour utilisateurs vestibulaires.
 
 | Priorité | Action | Effort | Impact |
 |---|---|---|---|
-| 🔴 P0 | **V1** : aliaser les 4 tokens fantômes | 15 min | Corrige ~16 bugs visuels |
-| 🔴 P0 | **V2** : ajouter `@keyframes pulse` + `spin` global | 2 min | Skeletons animés |
-| 🔴 P0 | **V3** : repeindre `Pointage/Scanner.tsx` aux tokens daara | 1 h | Identité unifiée |
-| 🟠 P1 | **V6** : remplacer `#fff` hardcodés par `var(--card)` | 30 min | Dark mode propre |
-| 🟠 P1 | **V8** : inline styles → propriétés logiques pour RTL | 1 h | Toggle/listes propres en arabe |
-| 🟠 P1 | **V14** : `aria-label` sur boutons icône Topbar | 15 min | Accessibilité lecteurs d'écran |
-| 🟠 P1 | **V13** : remonter `--ink-3` à `#6A604F` | 5 min | Conformité WCAG AA |
-| 🟠 P1 | **V15** : `@media (prefers-reduced-motion)` | 10 min | Accessibilité moteur |
-| 🟡 P2 | **V10** + **V11** : introduire `--space-*` et `--text-*` | 1 j | Cohérence long terme |
-| 🟡 P2 | **V12** : utiliser `sahel` (mention) et `indigo` (officiel) | 0.5 j | Hiérarchie sémantique |
-| 🟡 P2 | **V7** : remplacer émojis par SVG | 1 h | Cohérence visuelle |
-| 🟡 P2 | **V16** : Tooltip composant (Floating UI / Radix) | 0.5 j | UX professionnelle |
-| 🟡 P2 | **V17** : audit tailles texte, viser 13px+ pour fonctionnel | 0.5 j | Lisibilité |
-| 🟢 P3 | **V4** : décider Tailwind in/out | 2 h | Cohérence stack |
-| 🟢 P3 | **V5** : extraire inline styles d'Eleves vers classes | 1 j | Maintenabilité |
-| 🟢 P3 | **V20** : illustration daara pour `.empty` | 0.5 j | Identité enrichie |
-| 🟢 P3 | **V21** : apple-touch-icon + manifest PWA | 1 h | Mobile / installation |
-| 🟢 P3 | **V25** : Storybook pour le design system | 1 j | Doc + tests visuels |
+| 🟠 P1 | **V6** : `aria-label` Topbar + `role="tab"`/`aria-selected` Tabs | 0.5 j | Accessibilité lecteurs d'écran |
+| 🟠 P1 | **V5** : remplacer les 46 `#fff` hardcodés par `var(--card)` | 1 h | Dark mode propre |
+| 🟠 P1 | **V4** : repeindre EmploiDuTemps aux tokens | 1 h | Identité unifiée |
+| 🟠 P1 | **V2** : introduire `--space-*` (définitions seules) | 1 h | Préparer migration |
+| 🟠 P1 | **V3** : introduire `--text-*` (définitions seules) | 1 h | Préparer migration |
+| 🟡 P2 | **V7** : décider Tailwind in/out | 2 h | Cohérence stack |
+| 🟡 P2 | **V8** : sahel pour mentions, indigo pour cachets | 0.5 j | Hiérarchie sémantique |
+| 🟡 P2 | **V9** : composant Tooltip (Floating UI / Radix) | 0.5 j | UX professionnelle |
+| 🟡 P2 | **V11** : audit tailles texte, viser 13 px+ | 0.5 j | Lisibilité |
+| 🟡 P2 | **V12** : émojis → SVG | 1 h | Cohérence visuelle |
+| 🟡 P2 | **V10** : manifest PWA + apple-touch-icon | 1 h | Mobile / installation |
+| 🟢 P3 | **V1** : extraire inline styles d'Eleves vers classes | 1 j | Maintenabilité |
+| 🟢 P3 | **V15** : illustration daara pour `.empty` | 0.5 j | Identité enrichie |
+| 🟢 P3 | **V19** : Storybook pour le design system | 1 j | Doc + tests visuels |
 
 ---
 
 ## 📊 Verdict design
 
-**Identité graphique de qualité rare** pour un SaaS éducatif. La palette terracotta/papier, les 4 polices typées par rôle, le logo *lawh* racontent une histoire et différencient nettement DaaraGest. La structure CSS (tokens + dark mode + RTL natif) prouve un vrai travail de fond.
+**Identité graphique de qualité rare** confirmée. Tous les **P0 critiques** du précédent audit sont corrigés : les tokens fantômes (`--surface-2`, `--border`, `--radius`, `--text-muted`) sont aliasés proprement, `@keyframes pulse`/`spin` sont globaux, le Scanner QR (`Pointage/Scanner.tsx`) a été repeint aux tokens daara, `--ink-3` respecte WCAG AA, et `prefers-reduced-motion` est respecté.
 
-Mais l'exécution souffre de **bugs visuels silencieux** (4 tokens non définis = ~16 endroits dégradés), d'un **mélange Tailwind/inline styles/CSS maison** non assumé, et de **lacunes d'accessibilité** facilement corrigeables.
+**Le rendu visuel à HEAD est cohérent et professionnel.** Les Sprints "design polish + a11y" ont fait leur œuvre.
 
-Les correctifs **P0 prennent ~1 h 20** cumulées et hissent immédiatement le rendu à un niveau professionnel **sans rien sacrifier** de l'identité.
+Restent deux dettes structurelles distinctes :
+- **Inflation des inline styles** : Eleves +1, Parametres +9, Documents nouveau 94 occurrences. Sans **échelles `--space-*` / `--text-*`** centralisées, chaque ajout de feature ajoute des valeurs magiques disséminées
+- **Accessibilité partielle** : `aria-label` à 13 occurrences seulement, tabs sans `role`, Topbar sans labels
 
-Le scanner QR isolé (V3) est l'écart le plus visible : c'est le seul écran que verra le personnel terrain au quotidien, et il ne ressemble pas à DaaraGest.
-
-Une fois P0 + P1 traités (~3 h cumulées), la qualité visuelle atteint **9/10** — le produit aurait un design solide, accessible, et culturellement unique.
+Les correctifs **P1 (~6 h cumulées)** hissent l'expérience à un niveau **9.5/10** sans effort déraisonnable. La décision Tailwind (V7) reste à arbitrer côté produit avant l'industrialisation d'une bibliothèque de composants.

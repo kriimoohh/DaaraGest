@@ -2,126 +2,185 @@
 
 > Périmètre : modèle métier scolaire, couverture fonctionnelle, workflows pédagogiques, adaptation au contexte franco-arabe sénégalais.
 
-**Note globale : 8/10**
+**Note globale : 8.5/10** (↑ de 8/10) — P1 et P2 du précédent audit corrigés, nouveaux modules majeurs (évaluations, demandes d'absence personnel, fonctions, rapports académiques) qui élargissent la couverture fonctionnelle. La dette qualitative (compétences, livret comportement) reste.
 
 ---
 
-## ✅ Points forts
+## ✅ Acquis depuis l'audit précédent (2026-05-19)
 
-### Couverture fonctionnelle exhaustive
-27 modules backend, 19 pages frontend couvrent le cycle scolaire complet : inscription → notes → bulletin → finances → archivage pluriannuel via [progression.service.ts](../backend/src/modules/progression/progression.service.ts).
+| Ancien constat | État | Référence |
+|---|---|---|
+| P1 — Note plafonnée à 20 dans Zod | ✅ **Corrigé** | [notes.schema.ts:11](../backend/src/modules/notes/notes.schema.ts#L11) — `valeur: z.number().min(0)` sans `.max()`, plafond délégué à la matière |
+| P2 — Bulletins annuels hardcodés sur 3 trimestres | ✅ **Corrigé** | [bulletins.service.ts:137-140](../backend/src/modules/bulletins/bulletins.service.ts#L137) — `nbPeriodes = config?.nb_periodes ?? 3`, array dynamique |
+| P6 — Charges horaires professeurs | 🟡 **Partiel** | Rapport "présences professeurs" ([rapports.service.ts](../backend/src/modules/rapports/rapports.service.ts)) mais pas de consolidation `Creneau` → heures hebdo |
 
-### Double filière FR / AR native
-Un élève peut être inscrit simultanément dans une classe FR **et** une classe AR ([schema.prisma:265-266](../backend/prisma/schema.prisma#L265)) :
-- `Inscription.classe_fr_id` + `Inscription.classe_ar_id`
-- Bulletin `COMBINE` fusionne les moyennes FR + AR
-- Système rare et adapté aux daara modernes sénégalais
+## 🆕 Nouveaux acquis fonctionnels
 
-### Bilinguisme RTL complet
-- 410 clés i18n par langue
-- Basculement RTL instantané ([Login.tsx:22-28](../frontend/src/pages/Login.tsx#L22))
-- Polices arabes dédiées (Noto Naskh)
+### Refactor Personnel (anciennement Professeur)
+[schema.prisma:114-142](../backend/prisma/schema.prisma#L114) — table `Personnel` unifiée (prof, surveillant, infirmier, etc.) avec :
+- Fonction configurable par établissement (table `Fonction` lignes 99-112)
+- Contrat (`contrat_type`, `date_debut_contrat`, `date_fin_contrat`, `est_stagiaire`)
+- Civilité (M/Mme/Mlle) → utilisée pour les accords en genre des documents
 
-### 4 types de bulletins + génération annuelle
-[bulletins.service.ts:69-178](../backend/src/modules/bulletins/bulletins.service.ts#L69) :
-- FR / AR / COMBINE / ANNUEL (`periode=0`)
-- Génération PDF classe entière en un appel
-- Classement automatique par rang
+### Module Évaluations formatives
+[schema.prisma:666-706](../backend/prisma/schema.prisma#L666) — `Evaluation` + `NoteEvaluation` :
+- Types `DS / INTERRO / DM / EXAMEN`
+- `note_max` flexible (1-100), `periode` dynamique
+- Coefficient propre à l'évaluation
+- Schema validation Zod : `note_max: z.number().min(1).max(100)` ([evaluations.schema.ts](../backend/src/modules/evaluations/evaluations.schema.ts))
 
-### Coefficients par classe (override matière)
-[bulletins.service.ts:25-29](../backend/src/modules/bulletins/bulletins.service.ts#L25) :
-- `ClasseMatiere.coeff_override` permet à un même cours d'avoir un coefficient différent en CE2 et en CM2
-- Bonne pratique pédagogique reconnue
+### Module Demandes d'Absence Personnel
+[schema.prisma:925-946](../backend/prisma/schema.prisma#L925) + [module dédié](../backend/src/modules/demandes-absence-personnel) — workflow congés/maladies/permissions :
+- Statuts `EN_ATTENTE → APPROUVE / REFUSE`
+- Justificatif joint, motif typé
+- Notifications direction + tracking complet
 
-### Workflow début d'année documenté
-README liste un workflow linéaire en 9 étapes (Paramètres → Années → Matières → Classes → Élèves → Professeurs → Emploi du temps → Calendrier → Notes/Bulletins).
+### Module Rapports académiques (9 rapports)
+[rapports.service.ts](../backend/src/modules/rapports/rapports.service.ts) avec aperçus HTML universels :
+1. Présences élèves (CSV/PDF) — par classe/mois
+2. Présences professeurs (CSV/PDF) — par mois
+3. Résultats classe (CSV/PDF)
+4. Bilan financier (CSV/PDF)
+5. **Grille IEF par niveau** (PDF) — pédagogique sénégalais officiel
+6. **Grille performance** par domaine (PDF)
+7. Performance domaine (PDF)
+8. Relevé notes (PDF)
+9. **Propositions de fin d'année** (PDF multilingue avec décision + moyenne T1/T2/T3) — ligne 1276+
 
-### Évaluations formatives distinctes des notes trimestrielles
-[schema.prisma:564](../backend/prisma/schema.prisma#L564) — modèle `Evaluation` séparé permet le **contrôle continu** (DS / INTERRO / DM / EXAMEN) avec coefficients propres.
+### Domaines pédagogiques structurés
+[schema.prisma:281-311](../backend/prisma/schema.prisma#L281) — `Matiere.domaine` (`LANGUE_COMMUNICATION | MATHEMATIQUES | ESVS | EPSA | AUTRE`) + `type_note` (`SIMPLE | RESSOURCE | COMPETENCE`). Permet la production des grilles IEF qui regroupent les matières par domaine.
 
-### Progression pluriannuelle
-Décision `admis | redoublant | transferé | exclu` validable par direction ([schema.prisma:606-624](../backend/prisma/schema.prisma#L606)). Historique académique élève consultable.
+### Groupes de grilles par niveau
+[schema.prisma:321](../backend/prisma/schema.prisma#L321) — `Niveau.groupe_grille` (`CI_CP`, `CE1_CE2`, `CM1_CM2`) avec seuils de performance configurés (7/10 et 8/10 pour CI_CP ; 5/10 et 7/10 pour les autres) — alignement IEF officiel.
 
-### Activités parascolaires
-Modèles dédiés : `Activite` + `InscriptionActivite` + `SeanceActivite` + `PresenceActivite` + `EvaluationActivite`. Très complet.
+### Tables Fonction par établissement
+[fonctions.service.ts](../backend/src/modules/fonctions/fonctions.service.ts) — chaque établissement peut définir ses fonctions (Directeur, Surveillant, Infirmier…) avec libellés FR/AR et flag supprimable. Évite la rigidité d'un enum côté code.
 
-### Alertes automatiques
-[absences.service.ts](../backend/src/modules/absences/absences.service.ts) + notifications :
-- Élève au-dessus du `seuil_absences_alerte` → notif admin/directeur
-- Professeur absent → notif direction
+### Progression semi-automatisée
+[progression.service.ts:93](../backend/src/modules/progression/progression.service.ts#L93) — `decision_auto` calculée à partir de la moyenne annuelle vs `seuil_passage`. Validable manuellement par direction.
 
 ---
 
-## ⚠️ Limites pédagogiques
+## ✅ Points forts inchangés
 
-### P1 — Note plafonnée à 20 dans Zod
-[notes.schema.ts:8](../backend/src/modules/notes/notes.schema.ts#L8) :
+- **Couverture fonctionnelle exhaustive** — 33 modules backend, 23 pages frontend, cycle scolaire complet
+- **Double filière FR / AR native** — `Inscription.classe_fr_id` + `classe_ar_id` ([schema.prisma:429-430](../backend/prisma/schema.prisma#L429))
+- **Bilinguisme RTL complet** — **418 clés i18n** par langue (FR + AR), basculement RTL instantané
+- **4 types de bulletins** — FR / AR / COMBINE / ANNUEL (`periode=0`)
+- **Coefficients par classe (override matière)** — `ClasseMatiere.coeff_override` ([schema.prisma:358](../backend/prisma/schema.prisma#L358))
+- **Activités parascolaires complètes** — 5 modèles (`Activite`, `InscriptionActivite`, `SeanceActivite`, `PresenceActivite`, `EvaluationActivite`)
+- **Alertes automatiques** — élève au-dessus du `seuil_absences_alerte` → notif direction
+- **Génération PDF classe entière** — un appel produit toute la classe
+
+---
+
+## ⚠️ Limites pédagogiques restantes
+
+### P1 — Appréciations bulletins toujours en français figé (non-i18nisé)
+[bulletins.service.ts:7-13](../backend/src/modules/bulletins/bulletins.service.ts#L7) :
 ```ts
-valeur: z.number().min(0).max(20),
+function appreciation(m: number): string {
+  if (m >= 16) return 'Très bien — Félicitations du conseil';
+  if (m >= 14) return 'Bien';
+  if (m >= 12) return 'Assez bien';
+  if (m >= 10) return 'Passable';
+  return 'Insuffisant — Doit faire des efforts';
+}
 ```
-Alors que `Matiere.note_max` est configurable (jusqu'à 999.99 via `Decimal(5,2)`). Une matière configurée sur /100 ou /40 ne pourra pas être saisie.
+Un bulletin AR ou COMBINE affiche `Très bien` en arabe → incohérent.
 
-**Fix** : retirer `.max(20)` de Zod, laisser la validation faire son travail dans `bulkUpsertNotes` qui vérifie contre `matiere.note_max` ([notes.service.ts:60-65](../backend/src/modules/notes/notes.service.ts#L60)).
+**Fix** : i18nextNode côté serveur, ou table `Appreciation` paramétrable par établissement (seuils + libellés FR/AR).
 
-### P2 — Bulletins annuels hardcodés sur 3 trimestres
-[bulletins.service.ts:141](../backend/src/modules/bulletins/bulletins.service.ts#L141) :
-```ts
-periode: { in: [1, 2, 3] }
-```
-Pas de support des semestres (2 périodes) ou cycles bimestriels (6 périodes). `ConfigNotes.nb_periodes` existe pourtant pour configurer.
+**Effort :** 1 j · **Impact :** cohérence bilingue + souplesse pédagogique.
 
-**Fix** : `periode: { in: Array.from({length: config.nb_periodes}, (_, i) => i + 1) }`.
+---
 
-### P3 — `appreciation()` non internationalisée
-[bulletins.service.ts:5-11](../backend/src/modules/bulletins/bulletins.service.ts#L5) — chaînes en français figé : "Très bien — Félicitations du conseil", "Insuffisant — Doit faire des efforts".
+### P2 — Calendrier scolaire ne bloque toujours pas la saisie hors-période
+[calendrier.service.ts](../backend/src/modules/calendrier/calendrier.service.ts) — CRUD pur. Aucun middleware ne vérifie qu'une absence/note/créneau ne tombe pas dans un `EvenementCalendrier` de type `vacances` ou `fermeture`.
 
-**Fix** : tabler sur `i18next` côté serveur, ou table `Appreciation` paramétrable par établissement (les écoles ne disent pas toutes "Insuffisant").
+**Fix** : middleware backend qui rejette `date ∈ [date_debut, date_fin]` d'un événement bloquant. Bonus côté frontend : griser les dates dans les pickers.
 
-### P4 — Aucune gestion de compétences / objectifs pédagogiques
-Uniquement des notes chiffrées. Non adapté à :
+**Effort :** 0.5 j · **Impact :** évite les erreurs de saisie pendant les congés.
+
+---
+
+### P3 — Évaluation par compétences toujours absente
+- `Matiere.type_note` accepte `RESSOURCE | COMPETENCE | SIMPLE` ([schema.prisma:296](../backend/prisma/schema.prisma#L296)) mais aucune table `Competence` ni `EvaluationCompetence` n'existe
+- Les grilles IEF utilisent des seuils de performance par domaine, ce qui s'approche, mais ne remplace pas un référentiel de compétences nommées
+
+Non adapté à :
 - L'évaluation par compétences (socle commun français)
-- L'approche par objectifs (programmes daara modernes)
-- Les écoles maternelles/primaires qui s'éloignent du chiffré
+- L'approche par objectifs (programmes daara modernes structurés en savoir-faire)
 
-**Effort** : refonte importante — nouveau modèle `Competence` lié à `Matiere`, table `EvaluationCompetence`.
+**Effort** : refonte importante — nouveau modèle `Competence` lié à `Matiere`, table `EvaluationCompetence(eleve_id, competence_id, niveau_atteint)`.
 
-### P5 — Pas de lien programme officiel ↔ matières
-Aucun référentiel national sénégalais ni programme daara n'est attaché aux matières. Une matière est juste un libellé + coefficient.
+---
 
-**Fix léger** : ajouter `Matiere.programme_url` (lien vers PDF officiel) ou `Matiere.objectifs_json` (liste structurée).
+### P4 — Pas de lien programme officiel ↔ matières
+Toujours aucun référentiel attaché à `Matiere`. `domaine` structure pédagogiquement mais ne renvoie pas vers un PDF officiel ou des objectifs nommés.
 
-### P6 — Charge horaire / service hebdomadaire des professeurs non consolidé
-`Creneau` existe ([schema.prisma:454-473](../backend/prisma/schema.prisma#L454)) mais aucun rapport ne calcule "heures de cours par prof par semaine". Or c'est une donnée RH critique (suivi de service, calcul du salaire à l'heure).
+**Fix léger** : ajouter `Matiere.programme_url` (lien vers PDF officiel) et/ou `Matiere.objectifs_json` validé par Zod.
 
-**Fix** : ajouter une route `/api/v1/rapports/charges-professeurs` qui groupe `Creneau` par `professeur_id` et somme `heure_fin - heure_debut`.
+**Effort :** 2 h · **Impact :** prépare P3 (évaluation par compétences).
 
-### P7 — Calendrier scolaire ne bloque pas la saisie hors-période
-- `EvenementCalendrier.type = 'vacances'` existe ([schema.prisma:475-491](../backend/prisma/schema.prisma#L475))
-- Mais **rien ne vérifie** qu'une absence/note/créneau ne tombe pas en vacances
-- Vérification client uniquement (et encore, partielle)
+---
 
-**Fix** : middleware côté backend qui rejette `date ∈ [date_debut, date_fin]` d'un événement `vacances`.
-
-### P8 — Pas de suivi qualitatif (livret de comportement)
-Seules `Bulletin.observation_fr / _ar / _prof` ([schema.prisma:417-419](../backend/prisma/schema.prisma#L417)) capturent du qualitatif. Manquent :
+### P5 — Pas de suivi qualitatif (livret de comportement)
+Seules `Bulletin.observation_fr / _ar / _prof` capturent du qualitatif. Manquent toujours :
 - Fiche pédagogique d'observation par classe/élève
 - Suivi du comportement quotidien (politesse, participation, soin du matériel)
 - Conseil de classe / vie scolaire
 
-### P9 — Redoublement : pas de report automatique des inscriptions
-`ProgressionEleve.decision = 'redoublant'` est stocké mais l'élève doit être manuellement réinscrit l'année suivante dans la même classe.
+**Effort :** 2 j · **Impact :** couvre la vie scolaire.
 
-**Fix** : workflow guidé "Préparer la rentrée" qui auto-inscrit selon la décision (`admis` → niveau suivant, `redoublant` → même niveau, `transfere/exclu` → archivage).
+---
 
-### P10 — Pas de gestion de branches/options en collège-lycée
-Le modèle assume une classe → un cursus unique. Pas de gestion :
+### P6 — Redoublement : pas de report automatique des inscriptions
+La décision est calculée auto ([progression.service.ts:93](../backend/src/modules/progression/progression.service.ts#L93)) mais l'élève doit toujours être manuellement réinscrit l'année suivante. Aucun écran "Préparer la rentrée".
+
+**Fix** : workflow guidé qui auto-inscrit selon la décision :
+- `admis` → niveau suivant + ancienne classe ou classe à choisir
+- `redoublant` → même niveau
+- `transfere / exclu` → archivage propre
+
+**Effort :** 1 j · **Impact :** gain de temps massif en fin d'année.
+
+---
+
+### P7 — Pas de gestion de branches/options en collège-lycée
+Toujours pas de table `OptionEleve`. Une classe = un cursus unique. Pas de gestion :
 - Option latin / arabe renforcé / sport
 - Filière S / L / ES au lycée
 - Choix d'une langue vivante 2
 
-`LISTE_MATIERES` est figée par établissement, pas adaptable à l'élève.
+**Effort :** 3 j · **Impact :** cible collège-lycée.
 
-**Effort** : table `OptionEleve(eleve_id, matiere_id, annee_scolaire_id)` qui complète `Inscription`.
+---
+
+### P8 — Charges horaires personnel non consolidées
+`Creneau` ([schema.prisma:545-565](../backend/prisma/schema.prisma#L545)) existe (refactoré pour `personnel_id`) mais aucun rapport ne calcule "heures de cours par personnel par semaine". Or c'est une donnée RH critique avec les nouveaux contrats (`contrat_type`, `est_stagiaire`).
+
+**Fix** : ajouter une route `/api/v1/rapports/charges-personnel` qui groupe `Creneau` par `personnel_id` et somme `heure_fin - heure_debut` par semaine.
+
+**Effort :** 2 h · **Impact :** complète le module RH (paie horaire des vacataires).
+
+---
+
+### P9 — Pas d'export bulletin individuel multilingue côté parent
+Le portail parent ([portail-parent.routes.ts](../backend/src/modules/portail-parent/portail-parent.routes.ts)) expose les notes mais pas un téléchargement direct du bulletin PDF dans la langue du parent. C'est dommage vu que le moteur de PDF gère déjà FR/AR/COMBINE.
+
+**Fix :** route `/portail/acces/:token/bulletin/:bulletin_id/pdf` qui sert le PDF directement.
+
+**Effort :** 1 h · **Impact :** ferme la boucle parent.
+
+---
+
+### P10 — Demandes d'absence personnel : pas de calcul des soldes
+[demandes-absence.service.ts](../backend/src/modules/demandes-absence-personnel/demandes-absence.service.ts) gère les demandes mais ne tient pas un compteur "jours de congés restants" par personnel. Or c'est une donnée RH attendue.
+
+**Fix :** ajouter `Personnel.solde_conges_jours` + décrément à l'approbation d'une demande de type CONGE.
+
+**Effort :** 4 h · **Impact :** module RH complet.
 
 ---
 
@@ -129,23 +188,25 @@ Le modèle assume une classe → un cursus unique. Pas de gestion :
 
 | Priorité | Action | Effort | Impact |
 |---|---|---|---|
-| 🟠 P1 | **P1** : retirer `max(20)` Zod et déléguer à la matière | 5 min | Débloque les écoles à notation non standard |
-| 🟠 P1 | **P2** : nb_periodes dynamique pour bulletin annuel | 30 min | Support semestres / 6 périodes |
-| 🟠 P1 | **P6** : rapport charges horaires par professeur | 2 h | Donnée RH manquante critique |
-| 🟡 P2 | **P7** : blocage saisie hors-période vacances | 0.5 j | Évite erreurs de saisie |
-| 🟡 P2 | **P3** : `Appreciation` paramétrable par établissement | 1 j | Souplesse pédagogique |
-| 🟡 P2 | **P9** : workflow "Préparer la rentrée" auto-inscription | 1 j | Gain de temps massif en fin d'année |
-| 🟢 P3 | **P5** : champ `objectifs_json` sur Matiere | 2 h | Préparer P4 |
-| 🟢 P3 | **P8** : fiche comportement quotidien | 2 j | Couverture vie scolaire |
-| 🟢 P3 | **P10** : options/branches élève | 3 j | Cible collège-lycée |
-| 🔵 P4 | **P4** : évaluation par compétences (refonte) | 1-2 sem | Marché élargi (maternelle / primaire moderne) |
+| 🟠 P1 | **P1** : i18n des appréciations bulletin (ou table paramétrable) | 1 j | Cohérence FR/AR |
+| 🟠 P1 | **P8** : rapport charges hebdo par personnel | 2 h | Donnée RH manquante |
+| 🟠 P1 | **P9** : téléchargement bulletin PDF via portail parent | 1 h | UX parent |
+| 🟠 P1 | **P2** : blocage saisie hors-période vacances | 0.5 j | Évite erreurs de saisie |
+| 🟡 P2 | **P6** : workflow "Préparer la rentrée" | 1 j | Gain de temps fin d'année |
+| 🟡 P2 | **P10** : compteur solde de congés personnel | 4 h | Module RH complet |
+| 🟡 P2 | **P4** : champ `objectifs_json` sur Matiere | 2 h | Prépare P3 |
+| 🟢 P3 | **P5** : fiche comportement quotidien | 2 j | Couverture vie scolaire |
+| 🟢 P3 | **P7** : options/branches élève | 3 j | Cible collège-lycée |
+| 🔵 P4 | **P3** : évaluation par compétences (refonte) | 1-2 sem | Marché élargi (maternelle / primaire moderne) |
 
 ---
 
 ## 📊 Verdict pédagogique
 
-**Couverture remarquable** pour le marché école franco-arabe sénégalais. Le modèle métier est mûr, la double filière FR/AR est un vrai atout différenciant rarement bien fait. Les modules `Progression`, `Activites`, `Bibliotheque` témoignent d'une vision complète.
+Le produit a **mûri visiblement** depuis l'audit précédent : les deux blocages techniques (Zod note plafonnée à 20, bulletins annuels hardcodés sur 3 trimestres) sont corrigés, et trois modules majeurs (**Évaluations formatives**, **Demandes d'Absence Personnel**, **Rapports académiques** dont les grilles IEF officielles) renforcent l'ancrage pédagogique sénégalais.
 
-Les manques principaux sont l'**évaluation par compétences** (refonte structurelle) et le **suivi qualitatif** (livret de comportement). Les corrections P1 demandent quelques heures et débloquent immédiatement plus d'établissements.
+Le refactor `Professeur → Personnel` était attendu : il unifie tout le corps enseignant et administratif sous un même modèle, avec **fonctions configurables par établissement** (table `Fonction`). C'est un vrai pas pour la flexibilité multi-établissement.
 
-Une fois P1+P2 traités, le produit couvrira **>90% des besoins** d'une école franco-arabe primaire-secondaire au Sénégal.
+Les manques principaux restent l'**évaluation par compétences** (refonte structurelle) et le **suivi qualitatif** (livret de comportement). Le calendrier scolaire qui ne bloque pas la saisie hors-période reste une dette à coût modéré.
+
+Une fois P1+P2+P8+P9 traités (~2 j), le produit couvrira **>95% des besoins** d'une école franco-arabe primaire-secondaire au Sénégal.
