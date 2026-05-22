@@ -14,7 +14,7 @@ type TypeDocument =
   | 'FICHE_TRANSFERT' | 'EMPLOI_DU_TEMPS_ELEVE' | 'RELEVE_NOTES'
   | 'CERTIFICAT_BONNE_CONDUITE' | 'FICHE_RENSEIGNEMENTS' | 'ATTESTATION_RESULTATS'
   | 'LISTE_CLASSE' | 'ATTESTATION_TRAVAIL' | 'ORDRE_MISSION' | 'FICHE_PAIE' | 'PLANNING_COURS'
-  | 'CERTIFICAT_TRAVAIL_PERMANENT' | 'CERTIFICAT_TRAVAIL_STAGIAIRE' | 'ATTESTATION_SERVICE'
+  | 'CERTIFICAT_TRAVAIL_PERMANENT' | 'CERTIFICAT_TRAVAIL_STAGIAIRE'
   | 'AUTORISATION_ABSENCE_ELEVE' | 'BILLET_ENTREE'
   | 'CARTE_ELEVE' | 'CARTE_PROFESSEUR';
 
@@ -52,7 +52,6 @@ const LABELS: Record<TypeDocument, string> = {
   PLANNING_COURS:               'Planning de cours',
   CERTIFICAT_TRAVAIL_PERMANENT: 'Certificat de travail (permanent)',
   CERTIFICAT_TRAVAIL_STAGIAIRE: 'Certificat de travail (stagiaire)',
-  ATTESTATION_SERVICE:          'Attestation de travail',
   AUTORISATION_ABSENCE_ELEVE:   "Autorisation d'absence (élève)",
   BILLET_ENTREE:                "Billet d'entrée",
   CARTE_ELEVE:                  "Carte scolaire élève (CR80)",
@@ -76,7 +75,6 @@ const DEST_TYPE: Record<TypeDocument, DestType> = {
   PLANNING_COURS:               'professeur',
   CERTIFICAT_TRAVAIL_PERMANENT: 'professeur',
   CERTIFICAT_TRAVAIL_STAGIAIRE: 'professeur',
-  ATTESTATION_SERVICE:          'professeur',
   AUTORISATION_ABSENCE_ELEVE:   'eleve',
   BILLET_ENTREE:                'eleve',
   CARTE_ELEVE:                  'eleve',
@@ -97,7 +95,7 @@ const GROUPS: { label: string; icon: string; types: TypeDocument[] }[] = [
   {
     label: 'Documents professeurs',
     icon: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
-    types: ['ATTESTATION_TRAVAIL','CERTIFICAT_TRAVAIL_PERMANENT','CERTIFICAT_TRAVAIL_STAGIAIRE','ATTESTATION_SERVICE','ORDRE_MISSION','FICHE_PAIE','PLANNING_COURS'],
+    types: ['ATTESTATION_TRAVAIL','CERTIFICAT_TRAVAIL_PERMANENT','CERTIFICAT_TRAVAIL_STAGIAIRE','ORDRE_MISSION','FICHE_PAIE','PLANNING_COURS'],
   },
   {
     label: "Cartes d'identité (CR80)",
@@ -112,18 +110,9 @@ const EXTRA_PARAMS: Record<TypeDocument, { key: string; label: string; type: 'te
   ORDRE_MISSION:          [{ key: 'DESTINATION', label: 'Destination', type: 'text' }, { key: 'DATE_DEBUT_MISSION', label: 'Date de début', type: 'date' }, { key: 'DATE_FIN_MISSION', label: 'Date de fin', type: 'date' }, { key: 'OBJET_MISSION', label: 'Objet de la mission', type: 'textarea' }],
   FICHE_PAIE:             [{ key: 'MOIS_ANNEE', label: 'Mois / Année (ex: Mai 2026)', type: 'text' }, { key: 'SALAIRE_BRUT', label: 'Salaire brut (FCFA)', type: 'number' }, { key: 'RETENUES', label: 'Retenues (FCFA)', type: 'number' }, { key: 'NET_A_PAYER', label: 'Net à payer (FCFA)', type: 'number' }],
   ATTESTATION_RESULTATS:  [{ key: 'MOYENNE_ANNUELLE', label: 'Moyenne annuelle /20', type: 'number' }],
-  CERTIFICAT_TRAVAIL_PERMANENT: [
-    { key: 'POSTE_OCCUPE',      label: 'Poste occupé',             type: 'text' },
-    { key: 'DATE_FIN_CONTRAT',  label: 'Date de fin de contrat',   type: 'date' },
-  ],
-  CERTIFICAT_TRAVAIL_STAGIAIRE: [
-    { key: 'POSTE_OCCUPE',        label: 'Poste occupé / Qualité', type: 'text' },
-    { key: 'PERIODE_STAGE_DEBUT', label: 'Début du stage',         type: 'date' },
-    { key: 'PERIODE_STAGE_FIN',   label: 'Fin du stage',           type: 'date' },
-  ],
-  ATTESTATION_SERVICE: [
-    { key: 'POSTE_OCCUPE', label: 'Poste occupé / Qualité', type: 'text' },
-  ],
+  // POSTE_OCCUPE / DATE_FIN_CONTRAT / PERIODE_STAGE_* : pré-remplis depuis la fiche professeur.
+  CERTIFICAT_TRAVAIL_PERMANENT: [],
+  CERTIFICAT_TRAVAIL_STAGIAIRE: [],
   AUTORISATION_ABSENCE_ELEVE: [
     { key: 'DATE_DEBUT_ABSENCE',  label: "Date de début d'absence", type: 'date' },
     { key: 'DATE_FIN_ABSENCE',    label: "Date de fin d'absence",   type: 'date' },
@@ -152,8 +141,13 @@ const VAR_GROUPS: { label: string; vars: { key: string; desc: string }[] }[] = [
       { key: 'ANNEE_SCOLAIRE',      desc: 'Année scolaire active' },
       { key: 'DATE_AUJOURD_HUI',    desc: "Date du jour" },
       { key: 'REF_DOCUMENT',        desc: 'Référence auto-générée' },
-      { key: 'NOM_DIRECTEUR',       desc: 'Nom du/de la directeur(trice)' },
-      { key: 'LOGO',                desc: 'Logo (balise img)' },
+      { key: 'NOM_DIRECTEUR',         desc: 'Nom du/de la directeur(trice)' },
+      { key: 'NOM_COMPLET_DIRECTEUR', desc: 'Civilité + nom (ex: M. ALI BA)' },
+      { key: 'CIVILITE_DIRECTEUR',    desc: 'M. ou Mme' },
+      { key: 'TITRE_DIRECTEUR',       desc: 'Directeur ou Directrice (accordé)' },
+      { key: 'DIRECTEUR_QUALITE',     desc: 'Le Directeur / La Directrice (accordé)' },
+      { key: 'SOUSSIGNE',             desc: 'soussigné / soussignée (accordé)' },
+      { key: 'LOGO',                  desc: 'Logo (balise img)' },
       { key: 'SIGNATURE',           desc: 'Signature directeur (img)' },
       { key: 'CACHET',              desc: 'Cachet établissement (img)' },
     ],
@@ -494,7 +488,7 @@ export function DocumentsPage() {
     api.get<AnneeScolaire[]>('/api/v1/annees-scolaires')
       .then(d => { setAnnees(d); const a = d.find(x => x.active); if (a) setExtraParams(p => ({ ...p, annee_scolaire_id: a.id })); })
       .catch(() => {});
-    api.get<{ data: Professeur[] }>('/api/v1/professeurs?limit=200')
+    api.get<{ data: Professeur[] }>('/api/v1/personnel?limit=200')
       .then(d => setProfesseurs(d.data ?? []))
       .catch(() => {});
   }, []);

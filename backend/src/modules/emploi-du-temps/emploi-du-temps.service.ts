@@ -16,18 +16,18 @@ export async function listerCreneaux(
   etablissement_id: string,
   annee_scolaire_id: string,
   classe_id?: string,
-  professeur_id?: string,
+  personnel_id?: string,
 ) {
   const where: Record<string, unknown> = { etablissement_id, annee_scolaire_id };
   if (classe_id) where.classe_id = classe_id;
-  if (professeur_id) where.professeur_id = professeur_id;
+  if (personnel_id) where.personnel_id = personnel_id;
 
   return prisma.creneau.findMany({
     where,
     include: {
       classe: { select: { id: true, nom_fr: true, filiere: true } },
       matiere: { select: { id: true, nom_fr: true, nom_ar: true } },
-      professeur: { select: { id: true, utilisateur: { select: { nom_fr: true, prenom_fr: true } } } },
+      personnel: { select: { id: true, utilisateur: { select: { nom_fr: true, prenom_fr: true } } } },
     },
     orderBy: [{ jour: 'asc' }, { heure_debut: 'asc' }],
   });
@@ -37,13 +37,13 @@ export async function creerCreneau(etablissement_id: string, data: CreneauInput)
   const [classe, matiere, professeur, annee, config] = await Promise.all([
     prisma.classe.findFirst({ where: { id: data.classe_id, etablissement_id } }),
     prisma.matiere.findFirst({ where: { id: data.matiere_id, etablissement_id } }),
-    prisma.professeur.findFirst({ where: { id: data.professeur_id, utilisateur: { etablissement_id } } }),
+    prisma.personnel.findFirst({ where: { id: data.personnel_id, utilisateur: { etablissement_id } } }),
     prisma.anneeScolaire.findFirst({ where: { id: data.annee_scolaire_id, etablissement_id } }),
     prisma.configNotes.findUnique({ where: { etablissement_id } }),
   ]);
   if (!classe) throw new Error('Classe introuvable');
   if (!matiere) throw new Error('Matière introuvable');
-  if (!professeur) throw new Error('Professeur introuvable');
+  if (!professeur) throw new Error('Personnel introuvable');
   if (!annee) throw new Error('Année scolaire introuvable');
 
   const joursActifs = (config?.jours_cours as string[]) ?? ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
@@ -57,7 +57,7 @@ export async function creerCreneau(etablissement_id: string, data: CreneauInput)
 
   // Check professor conflicts on same day
   const creneauxProf = await prisma.creneau.findMany({
-    where: { professeur_id: data.professeur_id, annee_scolaire_id: data.annee_scolaire_id, jour: data.jour },
+    where: { personnel_id: data.personnel_id, annee_scolaire_id: data.annee_scolaire_id, jour: data.jour },
   });
   for (const c of creneauxProf) {
     if (conflitHoraire(data.heure_debut, data.heure_fin, c.heure_debut, c.heure_fin)) {
@@ -80,7 +80,7 @@ export async function creerCreneau(etablissement_id: string, data: CreneauInput)
     include: {
       classe: { select: { id: true, nom_fr: true, filiere: true } },
       matiere: { select: { id: true, nom_fr: true, nom_ar: true } },
-      professeur: { select: { id: true, utilisateur: { select: { nom_fr: true, prenom_fr: true } } } },
+      personnel: { select: { id: true, utilisateur: { select: { nom_fr: true, prenom_fr: true } } } },
     },
   });
 }
@@ -97,7 +97,7 @@ export async function modifierCreneau(id: string, etablissement_id: string, data
 
   // Check conflicts excluding self
   const creneauxProf = await prisma.creneau.findMany({
-    where: { professeur_id: updated.professeur_id, annee_scolaire_id: updated.annee_scolaire_id, jour: updated.jour, NOT: { id } },
+    where: { personnel_id: updated.personnel_id, annee_scolaire_id: updated.annee_scolaire_id, jour: updated.jour, NOT: { id } },
   });
   for (const c of creneauxProf) {
     if (conflitHoraire(updated.heure_debut, updated.heure_fin, c.heure_debut, c.heure_fin)) {
@@ -120,7 +120,7 @@ export async function modifierCreneau(id: string, etablissement_id: string, data
     include: {
       classe: { select: { id: true, nom_fr: true, filiere: true } },
       matiere: { select: { id: true, nom_fr: true, nom_ar: true } },
-      professeur: { select: { id: true, utilisateur: { select: { nom_fr: true, prenom_fr: true } } } },
+      personnel: { select: { id: true, utilisateur: { select: { nom_fr: true, prenom_fr: true } } } },
     },
   });
 }

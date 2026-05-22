@@ -99,19 +99,16 @@ async function main() {
   console.log(`\n🏫  DaaraGest — Seed ${isProd ? 'PRODUCTION' : 'développement'}\n`);
 
   // ── 1. Établissement ────────────────────────────────────────────────────────
+  // update: {} → on ne ré-écrase pas les modifications faites via Paramètres
+  // si la seed est relancée sur une DB existante.
   const etab = await prisma.etablissement.upsert({
     where: { id: ID.etab },
-    update: {
-      nom_fr: 'École Privée Sociale Franco Arabe Cheikh Abdoul Ahad Mbacké',
-      adresse: 'Guédiawaye, Dakar, Sénégal',
-      telephone: '+221 33 820 12 34',
-      devise: 'FCFA',
-    },
+    update: {},
     create: {
       id: ID.etab,
-      nom_fr: 'École Privée Sociale Franco Arabe Cheikh Abdoul Ahad Mbacké',
-      adresse: 'Guédiawaye, Dakar, Sénégal',
-      telephone: '+221 33 820 12 34',
+      nom_fr: 'F.I.C.A.A.M. — École Franco-Arabe Cheikh Abdoul Ahad Mbacké',
+      adresse: 'Cité AKF Guédiawaye',
+      telephone: '33 877 76 30',
       devise: 'FCFA',
     },
   });

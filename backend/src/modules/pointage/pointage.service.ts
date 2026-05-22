@@ -15,7 +15,7 @@ function calcHeures(arrivee?: string, depart?: string): number | undefined {
 export async function listerPresences(
   etablissement_id: string,
   date?: string,
-  professeur_id?: string,
+  personnel_id?: string,
   statut?: string,
   mois?: number,
   annee?: number,
@@ -25,10 +25,10 @@ export async function listerPresences(
   const skip = (page - 1) * limit;
 
   const where: Record<string, unknown> = {
-    professeur: { utilisateur: { etablissement_id } },
+    personnel: { utilisateur: { etablissement_id } },
   };
   if (date) where.date = new Date(date);
-  if (professeur_id) where.professeur_id = professeur_id;
+  if (personnel_id) where.personnel_id = personnel_id;
   if (statut) where.statut = statut;
   if (mois && annee) {
     const debut = new Date(annee, mois - 1, 1);
@@ -37,11 +37,11 @@ export async function listerPresences(
   }
 
   const [total, items] = await Promise.all([
-    prisma.presenceProfesseur.count({ where }),
-    prisma.presenceProfesseur.findMany({
+    prisma.presencePersonnel.count({ where }),
+    prisma.presencePersonnel.findMany({
       where, skip, take: limit,
       include: {
-        professeur: {
+        personnel: {
           include: {
             utilisateur: { select: { nom_fr: true } },
           },
@@ -55,7 +55,7 @@ export async function listerPresences(
 }
 
 export async function getPresencesDuJour(etablissement_id: string, date: string) {
-  const professeurs = await prisma.professeur.findMany({
+  const professeurs = await prisma.personnel.findMany({
     where: { utilisateur: { etablissement_id, actif: true } },
     include: {
       utilisateur: { select: { id: true, nom_fr: true } },
@@ -65,17 +65,17 @@ export async function getPresencesDuJour(etablissement_id: string, date: string)
   });
 
   return professeurs.map(p => ({
-    professeur_id: p.id,
+    personnel_id: p.id,
     nom_fr: p.utilisateur.nom_fr,
     presence: p.presences[0] ?? null,
   }));
 }
 
 export async function upsertPresence(etablissement_id: string, data: PresenceInput) {
-  const prof = await prisma.professeur.findFirst({
-    where: { id: data.professeur_id, utilisateur: { etablissement_id } },
+  const prof = await prisma.personnel.findFirst({
+    where: { id: data.personnel_id, utilisateur: { etablissement_id } },
   });
-  if (!prof) throw new Error('Professeur introuvable');
+  if (!prof) throw new Error('Personnel introuvable');
 
   const date = new Date(data.date);
   const heuresAuto = calcHeures(data.heure_arrivee, data.heure_depart);
@@ -88,16 +88,16 @@ export async function upsertPresence(etablissement_id: string, data: PresenceInp
     heures_reelles: heures_reelles ?? null,
     motif: data.motif ?? null,
   };
-  const result = await prisma.presenceProfesseur.upsert({
-    where: { professeur_id_date: { professeur_id: data.professeur_id, date } },
-    create: { professeur_id: data.professeur_id, date, ...payload },
+  const result = await prisma.presencePersonnel.upsert({
+    where: { personnel_id_date: { personnel_id: data.personnel_id, date } },
+    create: { personnel_id: data.personnel_id, date, ...payload },
     update: payload,
-    include: { professeur: { include: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } } } },
+    include: { personnel: { include: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } } } },
   });
 
   if (data.statut === 'absent') {
-    const prof = await prisma.professeur.findFirst({
-      where: { id: data.professeur_id },
+    const prof = await prisma.personnel.findFirst({
+      where: { id: data.personnel_id },
       include: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } },
     });
     if (prof) {
@@ -108,7 +108,7 @@ export async function upsertPresence(etablissement_id: string, data: PresenceInp
         `Absence professeur — ${prof.utilisateur.prenom_fr} ${prof.utilisateur.nom_fr}`,
         `Le professeur ${prof.utilisateur.prenom_fr} ${prof.utilisateur.nom_fr} est absent le ${data.date}.`,
         'professeur',
-        data.professeur_id,
+        data.personnel_id,
       );
     }
   }
@@ -120,8 +120,8 @@ export async function bulkUpsertPresences(etablissement_id: string, data: BulkPr
   const date = new Date(data.date);
 
   // Charger tous les professeurs valides en une seule requête (élimine le N+1)
-  const profIds = data.presences.map(p => p.professeur_id);
-  const profsValides = await prisma.professeur.findMany({
+  const profIds = data.presences.map(p => p.personnel_id);
+  const profsValides = await prisma.personnel.findMany({
     where: { id: { in: profIds }, utilisateur: { etablissement_id } },
     select: { id: true },
   });
@@ -129,7 +129,7 @@ export async function bulkUpsertPresences(etablissement_id: string, data: BulkPr
 
   const results = [];
   for (const p of data.presences) {
-    if (!profIdSet.has(p.professeur_id)) continue;
+    if (!profIdSet.has(p.personnel_id)) continue;
     const heuresAuto = calcHeures(p.heure_arrivee, p.heure_depart);
     const bulk_payload = {
       statut: p.statut,
@@ -139,9 +139,9 @@ export async function bulkUpsertPresences(etablissement_id: string, data: BulkPr
       heures_reelles: heuresAuto ?? p.heures_reelles ?? null,
       motif: p.motif ?? null,
     };
-    const r = await prisma.presenceProfesseur.upsert({
-      where: { professeur_id_date: { professeur_id: p.professeur_id, date } },
-      create: { professeur_id: p.professeur_id, date, ...bulk_payload },
+    const r = await prisma.presencePersonnel.upsert({
+      where: { personnel_id_date: { personnel_id: p.personnel_id, date } },
+      create: { personnel_id: p.personnel_id, date, ...bulk_payload },
       update: bulk_payload,
     });
     results.push(r);
@@ -150,17 +150,17 @@ export async function bulkUpsertPresences(etablissement_id: string, data: BulkPr
 }
 
 export async function getQRCode(etablissement_id: string, professeurId: string) {
-  const prof = await prisma.professeur.findFirst({
+  const prof = await prisma.personnel.findFirst({
     where: { OR: [{ id: professeurId }, { utilisateur_id: professeurId }], utilisateur: { etablissement_id } },
     include: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } },
   });
-  if (!prof) throw new Error('Professeur introuvable');
+  if (!prof) throw new Error('Personnel introuvable');
 
   // Génère le token si absent
   let token = prof.qr_token;
   if (!token) {
     token = randomUUID();
-    await prisma.professeur.update({ where: { id: prof.id }, data: { qr_token: token } });
+    await prisma.personnel.update({ where: { id: prof.id }, data: { qr_token: token } });
   }
 
   const dataUrl = await QRCode.toDataURL(token, { width: 300, margin: 2 });
@@ -172,19 +172,19 @@ export async function getQRCode(etablissement_id: string, professeurId: string) 
 }
 
 export async function regenererQR(etablissement_id: string, professeurId: string) {
-  const prof = await prisma.professeur.findFirst({
+  const prof = await prisma.personnel.findFirst({
     where: { OR: [{ id: professeurId }, { utilisateur_id: professeurId }], utilisateur: { etablissement_id } },
   });
-  if (!prof) throw new Error('Professeur introuvable');
+  if (!prof) throw new Error('Personnel introuvable');
 
   const token = randomUUID();
-  await prisma.professeur.update({ where: { id: prof.id }, data: { qr_token: token } });
+  await prisma.personnel.update({ where: { id: prof.id }, data: { qr_token: token } });
   const dataUrl = await QRCode.toDataURL(token, { width: 300, margin: 2 });
   return { token, dataUrl };
 }
 
 export async function scanQR(token: string) {
-  const prof = await prisma.professeur.findFirst({
+  const prof = await prisma.personnel.findFirst({
     where: { qr_token: token },
     include: {
       utilisateur: { select: { nom_fr: true, prenom_fr: true, etablissement_id: true } },
@@ -196,17 +196,17 @@ export async function scanQR(token: string) {
   const dateJour = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const heure = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-  const existant = await prisma.presenceProfesseur.findUnique({
-    where: { professeur_id_date: { professeur_id: prof.id, date: dateJour } },
+  const existant = await prisma.presencePersonnel.findUnique({
+    where: { personnel_id_date: { personnel_id: prof.id, date: dateJour } },
   });
 
   let action: 'arrivee' | 'depart' | 'deja_complet';
   let presence;
 
   if (!existant) {
-    presence = await prisma.presenceProfesseur.create({
+    presence = await prisma.presencePersonnel.create({
       data: {
-        professeur_id: prof.id,
+        personnel_id: prof.id,
         date: dateJour,
         statut: 'present',
         heure_arrivee: heure,
@@ -216,7 +216,7 @@ export async function scanQR(token: string) {
     action = 'arrivee';
   } else if (existant.heure_arrivee && !existant.heure_depart) {
     const heuresAuto = calcHeures(existant.heure_arrivee, heure);
-    presence = await prisma.presenceProfesseur.update({
+    presence = await prisma.presencePersonnel.update({
       where: { id: existant.id },
       data: {
         heure_depart: heure,
@@ -234,7 +234,7 @@ export async function scanQR(token: string) {
     action,
     heure,
     nom: `${prof.utilisateur.prenom_fr ?? ''} ${prof.utilisateur.nom_fr}`.trim(),
-    professeur_id: prof.id,
+    personnel_id: prof.id,
     presence,
   };
 }
@@ -243,14 +243,14 @@ export async function getScansDuJour(etablissement_id: string) {
   const today = new Date();
   const dateJour = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-  return prisma.presenceProfesseur.findMany({
+  return prisma.presencePersonnel.findMany({
     where: {
       date: dateJour,
       source: 'qr',
-      professeur: { utilisateur: { etablissement_id } },
+      personnel: { utilisateur: { etablissement_id } },
     },
     include: {
-      professeur: { include: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } } },
+      personnel: { include: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } } },
     },
     orderBy: { created_at: 'desc' },
     take: 20,
@@ -261,7 +261,7 @@ export async function getStatsMois(etablissement_id: string, mois: number, annee
   const debut = new Date(annee, mois - 1, 1);
   const fin = new Date(annee, mois, 0, 23, 59, 59);
 
-  const professeurs = await prisma.professeur.findMany({
+  const professeurs = await prisma.personnel.findMany({
     where: { utilisateur: { etablissement_id, actif: true } },
     include: {
       utilisateur: { select: { nom_fr: true } },
@@ -277,7 +277,7 @@ export async function getStatsMois(etablissement_id: string, mois: number, annee
     const retards = p.presences.filter(x => x.statut === 'retard').length;
     const conges = p.presences.filter(x => x.statut === 'conge').length;
     return {
-      professeur_id: p.id,
+      personnel_id: p.id,
       nom_fr: p.utilisateur.nom_fr,
       total_jours: total,
       presents,

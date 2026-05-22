@@ -17,7 +17,6 @@ export const TYPE_DOCUMENT_LABELS: Record<TypeDocument, string> = {
   PLANNING_COURS:               'Planning de cours',
   CERTIFICAT_TRAVAIL_PERMANENT: 'Certificat de travail (permanent)',
   CERTIFICAT_TRAVAIL_STAGIAIRE: 'Certificat de travail (stagiaire)',
-  ATTESTATION_SERVICE:          'Attestation de travail',
   AUTORISATION_ABSENCE_ELEVE:   "Autorisation d'absence (élève)",
   BILLET_ENTREE:                "Billet d'entrée",
   CARTE_ELEVE:                  "Carte d'identité scolaire (élève)",
@@ -67,8 +66,8 @@ const SHARED_HEADER = `
 const SHARED_FOOTER = `
   <div class="footer">
     <div class="signature-block">
-      <p>Le/La Directeur(trice)</p>
-      <p style="font-size:13px;font-weight:bold;margin:4px 0 2px;min-width:200px;border-bottom:1px solid #333;">{{NOM_DIRECTEUR}}</p>
+      <p>{{DIRECTEUR_QUALITE}}</p>
+      <p style="font-size:13px;font-weight:bold;margin:4px 0 2px;min-width:200px;border-bottom:1px solid #333;">{{CIVILITE_DIRECTEUR}} {{NOM_DIRECTEUR}}</p>
       {{SIGNATURE}}
       <p style="margin-top:4px;font-size:11px">Signature et cachet</p>
     </div>
@@ -106,7 +105,7 @@ const CERTIFICAT_SCOLARITE = wrapPage('Certificat de scolarité', `
   <div class="doc-title">Certificat de scolarité</div>
   <div class="ref-line">Réf. : {{REF_DOCUMENT}}</div>
   <div class="body-text">
-    <p>Je soussigné(e), Directeur(trice) de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong>,
+    <p>Je {{SOUSSIGNE}}, {{TITRE_DIRECTEUR}} de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong>,
     certifie que l'élève :</p>
     <table class="info-table">
       <tr><td>Nom et prénom</td><td><strong>{{NOM_PRENOM_ELEVE}}</strong></td></tr>
@@ -125,7 +124,7 @@ const ATTESTATION_INSCRIPTION = wrapPage("Attestation d'inscription", `
   <div class="doc-title">Attestation d'inscription</div>
   <div class="ref-line">Réf. : {{REF_DOCUMENT}}</div>
   <div class="body-text">
-    <p>Je soussigné(e), Directeur(trice) de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong>,
+    <p>Je {{SOUSSIGNE}}, {{TITRE_DIRECTEUR}} de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong>,
     atteste par la présente que l'élève :</p>
     <table class="info-table">
       <tr><td>Nom et prénom</td><td><strong>{{NOM_PRENOM_ELEVE}}</strong></td></tr>
@@ -212,7 +211,7 @@ const CERTIFICAT_BONNE_CONDUITE = wrapPage('Certificat de bonne conduite', `
   <div class="doc-title">Certificat de bonne conduite</div>
   <div class="ref-line">Réf. : {{REF_DOCUMENT}}</div>
   <div class="body-text">
-    <p>Je soussigné(e), Directeur(trice) de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong>,
+    <p>Je {{SOUSSIGNE}}, {{TITRE_DIRECTEUR}} de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong>,
     certifie que l'élève :</p>
     <table class="info-table">
       <tr><td>Nom et prénom</td><td><strong>{{NOM_PRENOM_ELEVE}}</strong></td></tr>
@@ -251,7 +250,7 @@ const ATTESTATION_RESULTATS = wrapPage('Attestation de résultats', `
   <div class="doc-title">Attestation de résultats</div>
   <div class="ref-line">Réf. : {{REF_DOCUMENT}}</div>
   <div class="body-text">
-    <p>Je soussigné(e), Directeur(trice) de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong>,
+    <p>Je {{SOUSSIGNE}}, {{TITRE_DIRECTEUR}} de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong>,
     atteste que l'élève :</p>
     <table class="info-table">
       <tr><td>Nom et prénom</td><td><strong>{{NOM_PRENOM_ELEVE}}</strong></td></tr>
@@ -274,16 +273,16 @@ const ATTESTATION_TRAVAIL = wrapPage('Attestation de travail', `
   <div class="doc-title">Attestation de travail</div>
   <div class="ref-line">Réf. : {{REF_DOCUMENT}}</div>
   <div class="body-text">
-    <p>Je soussigné(e), Directeur(trice) de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong>,
+    <p>Je {{SOUSSIGNE}}, <strong>{{NOM_COMPLET_DIRECTEUR}}</strong>, {{TITRE_DIRECTEUR}} de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong>,
     atteste que :</p>
     <table class="info-table">
       <tr><td>Nom et prénom</td><td><strong>{{NOM_PRENOM_PROF}}</strong></td></tr>
       <tr><td>Spécialité</td><td>{{SPECIALITE}}</td></tr>
       <tr><td>Type de contrat</td><td>{{TYPE_CONTRAT}}</td></tr>
       <tr><td>Date de prise de service</td><td>{{DATE_EMBAUCHE}}</td></tr>
-      <tr><td>Poste occupé</td><td>Professeur</td></tr>
+      <tr><td>Poste occupé</td><td>{{POSTE_OCCUPE}}</td></tr>
     </table>
-    <p>est employé(e) en qualité de <strong>Professeur</strong> au sein de notre établissement depuis le
+    <p>est employé(e) en qualité de <strong>{{POSTE_OCCUPE}}</strong> au sein de notre établissement depuis le
     <strong>{{DATE_EMBAUCHE}}</strong>.</p>
     <p>Cette attestation est délivrée à l'intéressé(e) sur sa demande pour servir et valoir ce que de droit.</p>
   </div>`);
@@ -292,11 +291,11 @@ const ORDRE_MISSION = wrapPage('Ordre de mission', `
   <div class="doc-title">Ordre de mission</div>
   <div class="ref-line">Réf. : {{REF_DOCUMENT}}</div>
   <div class="body-text">
-    <p>Le Directeur de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong> autorise par la présente
+    <p>{{DIRECTEUR_QUALITE}} de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong> autorise par la présente
     le déplacement professionnel de :</p>
     <table class="info-table">
       <tr><td>Nom et prénom</td><td><strong>{{NOM_PRENOM_PROF}}</strong></td></tr>
-      <tr><td>Fonction</td><td>Professeur</td></tr>
+      <tr><td>Fonction</td><td>Personnel</td></tr>
       <tr><td>Spécialité</td><td>{{SPECIALITE}}</td></tr>
       <tr><td>Destination</td><td><strong>{{DESTINATION}}</strong></td></tr>
       <tr><td>Objet de la mission</td><td>{{OBJET_MISSION}}</td></tr>
@@ -338,7 +337,7 @@ const PLANNING_COURS = wrapPage('Planning de cours', `
   <div class="doc-title">Planning de cours</div>
   <div class="doc-subtitle">Année scolaire {{ANNEE_SCOLAIRE}}</div>
   <table class="info-table" style="margin-bottom:16px">
-    <tr><td>Professeur</td><td><strong>{{NOM_PRENOM_PROF}}</strong></td></tr>
+    <tr><td>Personnel</td><td><strong>{{NOM_PRENOM_PROF}}</strong></td></tr>
     <tr><td>Spécialité</td><td>{{SPECIALITE}}</td></tr>
   </table>
   {{TABLEAU_PLANNING}}`);
@@ -349,7 +348,7 @@ const CERTIFICAT_TRAVAIL_PERMANENT_TPL = wrapPage('Certificat de travail', `
   <div class="doc-title">Certificat de travail</div>
   <div class="ref-line">Réf. : {{REF_DOCUMENT}}</div>
   <div class="body-text">
-    <p>Je soussigné(e), <strong>{{NOM_DIRECTEUR}}</strong>, Directeur(trice) de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong>,
+    <p>Je {{SOUSSIGNE}}, <strong>{{NOM_COMPLET_DIRECTEUR}}</strong>, {{TITRE_DIRECTEUR}} de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong>,
     certifie par la présente que :</p>
     <table class="info-table">
       <tr><td>Nom et prénom</td><td><strong>{{NOM_PRENOM_PROF}}</strong></td></tr>
@@ -367,7 +366,7 @@ const CERTIFICAT_TRAVAIL_STAGIAIRE_TPL = wrapPage('Certificat de travail (stagia
   <div class="doc-title">Certificat de travail</div>
   <div class="ref-line">Réf. : {{REF_DOCUMENT}}</div>
   <div class="body-text">
-    <p>Je soussigné(e), <strong>{{NOM_DIRECTEUR}}</strong>, Directeur(trice) de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong>,
+    <p>Je {{SOUSSIGNE}}, <strong>{{NOM_COMPLET_DIRECTEUR}}</strong>, {{TITRE_DIRECTEUR}} de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong>,
     certifie par la présente que :</p>
     <table class="info-table">
       <tr><td>Nom et prénom</td><td><strong>{{NOM_PRENOM_PROF}}</strong></td></tr>
@@ -379,23 +378,6 @@ const CERTIFICAT_TRAVAIL_STAGIAIRE_TPL = wrapPage('Certificat de travail (stagia
       <li>Du <strong>{{PERIODE_STAGE_DEBUT}}</strong> au <strong>{{PERIODE_STAGE_FIN}}</strong> en qualité de <strong>{{POSTE_OCCUPE}}</strong>.</li>
     </ul>
     <p>Il nous quitte libre de tout engagement. Ce certificat est délivré à l'intéressé(e) pour servir et valoir ce que de droit.</p>
-  </div>`);
-
-const ATTESTATION_SERVICE_TPL = wrapPage('Attestation de travail', `
-  <div class="doc-title">Attestation de travail</div>
-  <div class="ref-line">Réf. : {{REF_DOCUMENT}}</div>
-  <div class="body-text">
-    <p>Je soussigné(e), <strong>{{NOM_DIRECTEUR}}</strong>, Directeur(trice) de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong>,
-    atteste que :</p>
-    <table class="info-table">
-      <tr><td>Nom et prénom</td><td><strong>{{NOM_PRENOM_PROF}}</strong></td></tr>
-      <tr><td>Spécialité / Poste</td><td>{{SPECIALITE}}</td></tr>
-      <tr><td>En service depuis le</td><td>{{DATE_EMBAUCHE}}</td></tr>
-      <tr><td>En qualité de</td><td>{{POSTE_OCCUPE}}</td></tr>
-    </table>
-    <p>est en service dans notre établissement depuis le <strong>{{DATE_EMBAUCHE}}</strong>
-    en qualité de <strong>{{POSTE_OCCUPE}}</strong>.</p>
-    <p>En foi de quoi, cette présente attestation lui est délivrée pour servir et valoir ce que de droit.</p>
   </div>`);
 
 const AUTORISATION_ABSENCE_ELEVE_TPL = wrapPage("Autorisation d'absence", `
@@ -413,8 +395,8 @@ const AUTORISATION_ABSENCE_ELEVE_TPL = wrapPage("Autorisation d'absence", `
   </div>
   <div style="margin-top:40px;display:flex;justify-content:space-between;">
     <div style="text-align:center;">
-      <p style="font-size:12px;">Le/La Directeur(trice)</p>
-      <p style="font-size:13px;font-weight:bold;min-width:180px;border-bottom:1px solid #333;margin:4px 0 2px;">{{NOM_DIRECTEUR}}</p>
+      <p style="font-size:12px;">{{DIRECTEUR_QUALITE}}</p>
+      <p style="font-size:13px;font-weight:bold;min-width:180px;border-bottom:1px solid #333;margin:4px 0 2px;">{{NOM_COMPLET_DIRECTEUR}}</p>
       {{SIGNATURE}}
     </div>
     <div style="text-align:center;font-size:11px;color:#555;align-self:flex-end;">
@@ -439,8 +421,8 @@ const BILLET_ENTREE_TPL = wrapPage("Billet d'entrée", `
     </p>
     <div style="margin-top:20px;display:flex;justify-content:space-between;align-items:flex-end;">
       <div style="text-align:center;">
-        <p style="font-size:11px;">Le/La Directeur(trice)</p>
-        <p style="font-size:12px;font-weight:bold;min-width:140px;border-bottom:1px solid #333;margin:4px 0 2px;">{{NOM_DIRECTEUR}}</p>
+        <p style="font-size:11px;">{{DIRECTEUR_QUALITE}}</p>
+        <p style="font-size:12px;font-weight:bold;min-width:140px;border-bottom:1px solid #333;margin:4px 0 2px;">{{NOM_COMPLET_DIRECTEUR}}</p>
         {{SIGNATURE}}
       </div>
     </div>
@@ -612,7 +594,7 @@ const CARTE_PROFESSEUR_HTML = `<!DOCTYPE html>
       <div class="photo-wrap">{{PHOTO_PROF}}</div>
       <div class="info">
         <div class="prof-name">{{NOM_PRENOM_PROF}}</div>
-        <div><span class="role-badge">Professeur</span></div>
+        <div><span class="role-badge">Personnel</span></div>
         <div class="prof-sub">{{SPECIALITE}}</div>
         <div class="prof-sub">{{TYPE_CONTRAT}}</div>
       </div>
@@ -655,7 +637,6 @@ const TEMPLATES: Record<TypeDocument, string> = {
   PLANNING_COURS:               PLANNING_COURS,
   CERTIFICAT_TRAVAIL_PERMANENT: CERTIFICAT_TRAVAIL_PERMANENT_TPL,
   CERTIFICAT_TRAVAIL_STAGIAIRE: CERTIFICAT_TRAVAIL_STAGIAIRE_TPL,
-  ATTESTATION_SERVICE:          ATTESTATION_SERVICE_TPL,
   AUTORISATION_ABSENCE_ELEVE:   AUTORISATION_ABSENCE_ELEVE_TPL,
   BILLET_ENTREE:                BILLET_ENTREE_TPL,
   CARTE_ELEVE:                  CARTE_ELEVE_HTML,

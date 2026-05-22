@@ -8,39 +8,45 @@ datasource db {
 }
 
 model Etablissement {
-  id          String   @id @default(uuid())
-  nom_fr      String
-  adresse     String?
-  telephone   String?
-  logo_url      String?
-  signature_url String?
-  cachet_url    String?
-  nom_directeur String?
-  devise        String   @default("FCFA")
-  actif       Boolean  @default(true)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  id                 String   @id @default(uuid())
+  nom_fr             String
+  adresse            String?
+  telephone          String?
+  logo_url           String?
+  signature_url      String?
+  cachet_url         String?
+  // Champs deprecated : conservés pour rétro-compat tant que tous les établissements
+  // n'ont pas un directeur Personnel associé. À supprimer dans une migration ultérieure.
+  nom_directeur      String?
+  civilite_directeur String?
+  directeur_id       String? // FK vers Personnel (fonction=DIRECTEUR). Si défini, override nom_directeur/civilite_directeur pour les documents.
+  devise             String   @default("FCFA")
+  actif              Boolean  @default(true)
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
 
-  utilisateurs            Utilisateur[]
-  annees_scolaires        AnneeScolaire[]
-  classes                 Classe[]
-  eleves                  Eleve[]
-  matieres                Matiere[]
-  domaines                Domaine[]
-  niveaux                 Niveau[]
-  config_notes            ConfigNotes?
-  absences_eleves         AbsenceEleve[]
-  creneaux                Creneau[]
-  evenements_calendrier   EvenementCalendrier[]
-  notifications           Notification[]
-  conversations           Conversation[]
-  portail_tokens          PortailParentToken[]
-  evaluations             Evaluation[]
-  progressions_eleves     ProgressionEleve[]
-  activites               Activite[]
-  document_templates      DocumentTemplate[]
-  documents_generes       DocumentGenere[]
-  demandes_absence_prof   DemandeAbsenceProfesseur[]
+  directeur             Personnel?                @relation("EtablissementDirecteur", fields: [directeur_id], references: [id])
+  utilisateurs          Utilisateur[]
+  annees_scolaires      AnneeScolaire[]
+  classes               Classe[]
+  eleves                Eleve[]
+  matieres              Matiere[]
+  domaines              Domaine[]
+  niveaux               Niveau[]
+  config_notes          ConfigNotes?
+  absences_eleves       AbsenceEleve[]
+  creneaux              Creneau[]
+  evenements_calendrier EvenementCalendrier[]
+  notifications         Notification[]
+  conversations         Conversation[]
+  portail_tokens        PortailParentToken[]
+  evaluations           Evaluation[]
+  progressions_eleves   ProgressionEleve[]
+  activites             Activite[]
+  document_templates    DocumentTemplate[]
+  documents_generes     DocumentGenere[]
+  demandes_absence      DemandeAbsencePersonnel[]
+  fonctions             Fonction[]
 }
 
 model Role {
@@ -59,6 +65,7 @@ model Utilisateur {
   nom_fr               String
   nom_ar               String
   prenom_fr            String?
+  sexe                 String? // 'M' ou 'F' — utilisé pour l'accord en genre des documents
   identifiant          String    @unique
   email                String?
   mot_de_passe         String
@@ -70,104 +77,128 @@ model Utilisateur {
   created_at           DateTime  @default(now())
   updated_at           DateTime  @updatedAt
 
-  etablissement       Etablissement         @relation(fields: [etablissement_id], references: [id])
-  role                Role                  @relation(fields: [role_id], references: [id])
-  professeur          Professeur?
-  evenements_crees    EvenementCalendrier[]
-  notifications_recues Notification[]
+  etablissement             Etablissement             @relation(fields: [etablissement_id], references: [id])
+  role                      Role                      @relation(fields: [role_id], references: [id])
+  personnel                 Personnel?
+  evenements_crees          EvenementCalendrier[]
+  notifications_recues      Notification[]
   conversations_participees ConversationParticipant[]
-  messages_envoyes    MessageConversation[]
-  activites_responsable Activite[]          @relation("ActiviteResponsable")
-  documents_generes     DocumentGenere[]    @relation("DocumentsGeneres")
-  demandes_traitees     DemandeAbsenceProfesseur[] @relation("DemandesTraitees")
-  refresh_tokens        RefreshToken[]
+  messages_envoyes          MessageConversation[]
+  activites_responsable     Activite[]                @relation("ActiviteResponsable")
+  documents_generes         DocumentGenere[]          @relation("DocumentsGeneres")
+  demandes_traitees         DemandeAbsencePersonnel[] @relation("DemandesTraitees")
+  refresh_tokens            RefreshToken[]
 
   @@index([etablissement_id])
   @@index([etablissement_id, actif])
 }
 
-model Professeur {
-  id             String    @id @default(uuid())
-  utilisateur_id String    @unique
-  specialite_fr  String?
-  specialite_ar  String?
-  telephone      String?
-  date_embauche  DateTime?
-  type_contrat   String    @default("permanent")
-  salaire_base   Decimal?  @db.Decimal(10, 2)
-  photo_url      String?
-  qr_token       String?   @unique
-  created_at     DateTime  @default(now())
+// Catalogue des fonctions disponibles par établissement. Le code reste un
+// simple identifiant (ex: ENSEIGNANT) ; le libellé est ce qu'affiche l'UI.
+// Les fonctions par défaut sont marquées non supprimables (supprimable=false).
+model Fonction {
+  id               String   @id @default(uuid())
+  etablissement_id String
+  code             String // identifiant technique, stocké dans Personnel.fonction
+  libelle_fr       String
+  libelle_ar       String?
+  ordre            Int      @default(0)
+  supprimable      Boolean  @default(true)
+  created_at       DateTime @default(now())
 
-  utilisateur      Utilisateur          @relation(fields: [utilisateur_id], references: [id])
-  cartes_nfc       ProfesseurCarte[]
-  pointages        Pointage[]
-  heures_travail   HeureTravail[]
-  presences        PresenceProfesseur[]
-  paiements        PaiementProfesseur[]
-  matieres_classes ProfMatiereClasse[]
-  creneaux         Creneau[]
-  demandes_absence DemandeAbsenceProfesseur[]
+  etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
+
+  @@unique([etablissement_id, code])
+}
+
+model Personnel {
+  id               String    @id @default(uuid())
+  utilisateur_id   String    @unique
+  fonction         String    @default("ENSEIGNANT") // code Fonction (configurable par établissement, cf. table Fonction)
+  specialite_fr    String?
+  specialite_ar    String?
+  telephone        String?
+  date_embauche    DateTime?
+  type_contrat     String    @default("permanent")
+  salaire_base     Decimal?  @db.Decimal(10, 2)
+  photo_url        String?
+  qr_token         String?   @unique
+  poste_fr         String?
+  date_fin_contrat DateTime?
+  date_debut_stage DateTime?
+  date_fin_stage   DateTime?
+  created_at       DateTime  @default(now())
+
+  utilisateur           Utilisateur               @relation(fields: [utilisateur_id], references: [id])
+  cartes_nfc            PersonnelCarte[]
+  pointages             Pointage[]
+  heures_travail        HeureTravail[]
+  presences             PresencePersonnel[]
+  paiements             PaiementPersonnel[]
+  matieres_classes      PersonnelMatiereClasse[]
+  creneaux              Creneau[]
+  demandes_absence      DemandeAbsencePersonnel[]
+  etablissements_dirige Etablissement[]           @relation("EtablissementDirecteur")
 }
 
 // TODO(NFC): Ces trois modèles sont réservés au futur module de pointage automatique
-// par badge NFC (ProfesseurCarte → lecture → Pointage → calcul HeureTravail).
+// par badge NFC (PersonnelCarte → lecture → Pointage → calcul HeureTravail).
 // Aucune API ne les expose actuellement. Voir roadmap.
 
-model ProfesseurCarte {
-  id            String   @id @default(uuid())
-  professeur_id String
-  uid_nfc       String   @unique
-  active        Boolean  @default(true)
-  created_at    DateTime @default(now())
+model PersonnelCarte {
+  id           String   @id @default(uuid())
+  personnel_id String
+  uid_nfc      String   @unique
+  active       Boolean  @default(true)
+  created_at   DateTime @default(now())
 
-  professeur Professeur @relation(fields: [professeur_id], references: [id])
+  personnel Personnel @relation(fields: [personnel_id], references: [id])
 }
 
 model Pointage {
-  id            String   @id @default(uuid())
-  professeur_id String
-  type          String
-  horodatage    DateTime @default(now())
-  uid_carte     String
-  valide        Boolean  @default(true)
+  id           String   @id @default(uuid())
+  personnel_id String
+  type         String
+  horodatage   DateTime @default(now())
+  uid_carte    String
+  valide       Boolean  @default(true)
 
-  professeur Professeur @relation(fields: [professeur_id], references: [id])
+  personnel Personnel @relation(fields: [personnel_id], references: [id])
 }
 
 model HeureTravail {
   id            String    @id @default(uuid())
-  professeur_id String
+  personnel_id  String
   date_jour     DateTime  @db.Date
   heure_arrivee DateTime?
   heure_depart  DateTime?
   duree_minutes Int?
   created_at    DateTime  @default(now())
 
-  professeur Professeur @relation(fields: [professeur_id], references: [id])
+  personnel Personnel @relation(fields: [personnel_id], references: [id])
 }
 
-model PresenceProfesseur {
-  id              String   @id @default(uuid())
-  professeur_id   String
-  date            DateTime @db.Date
-  statut          String   // 'present' | 'absent' | 'retard' | 'conge'
-  heure_arrivee   String?  // format HH:MM
-  heure_depart    String?  // format HH:MM
-  heures_prevues  Decimal? @db.Decimal(4, 2)
-  heures_reelles  Decimal? @db.Decimal(4, 2)  // calculé auto si arrivee+depart fournis
-  motif           String?
-  source          String   @default("manuel")  // 'manuel' | 'qr'
-  created_at      DateTime @default(now())
+model PresencePersonnel {
+  id             String   @id @default(uuid())
+  personnel_id   String
+  date           DateTime @db.Date
+  statut         String // 'present' | 'absent' | 'retard' | 'conge'
+  heure_arrivee  String? // format HH:MM
+  heure_depart   String? // format HH:MM
+  heures_prevues Decimal? @db.Decimal(4, 2)
+  heures_reelles Decimal? @db.Decimal(4, 2) // calculé auto si arrivee+depart fournis
+  motif          String?
+  source         String   @default("manuel") // 'manuel' | 'qr'
+  created_at     DateTime @default(now())
 
-  professeur Professeur @relation(fields: [professeur_id], references: [id])
+  personnel Personnel @relation(fields: [personnel_id], references: [id])
 
-  @@unique([professeur_id, date])
+  @@unique([personnel_id, date])
 }
 
-model PaiementProfesseur {
+model PaiementPersonnel {
   id                String   @id @default(uuid())
-  professeur_id     String
+  personnel_id      String
   mois              Int
   annee             Int
   heures_theoriques Decimal? @db.Decimal(6, 2)
@@ -178,7 +209,7 @@ model PaiementProfesseur {
   statut            String   @default("en_attente")
   created_at        DateTime @default(now())
 
-  professeur Professeur @relation(fields: [professeur_id], references: [id])
+  personnel Personnel @relation(fields: [personnel_id], references: [id])
 }
 
 model AnneeScolaire {
@@ -190,29 +221,29 @@ model AnneeScolaire {
   active           Boolean  @default(false)
   created_at       DateTime @default(now())
 
-  etablissement   Etablissement       @relation(fields: [etablissement_id], references: [id])
-  classes         Classe[]
-  inscriptions    Inscription[]
-  prof_matieres   ProfMatiereClasse[]
-  bulletins       Bulletin[]
-  notes           Note[]
-  absences_eleves AbsenceEleve[]
-  creneaux        Creneau[]
-  evaluations             Evaluation[]
-  progressions_eleves     ProgressionEleve[]
-  inscriptions_activites  InscriptionActivite[]
+  etablissement          Etablissement            @relation(fields: [etablissement_id], references: [id])
+  classes                Classe[]
+  inscriptions           Inscription[]
+  prof_matieres          PersonnelMatiereClasse[]
+  bulletins              Bulletin[]
+  notes                  Note[]
+  absences_eleves        AbsenceEleve[]
+  creneaux               Creneau[]
+  evaluations            Evaluation[]
+  progressions_eleves    ProgressionEleve[]
+  inscriptions_activites InscriptionActivite[]
 
   @@index([etablissement_id])
   @@index([etablissement_id, active])
 }
 
 model ConfigNotes {
-  id               String   @id @default(uuid())
-  etablissement_id String   @unique
-  note_max         Decimal  @default(20) @db.Decimal(5, 2)
-  note_min         Decimal  @default(0) @db.Decimal(5, 2)
-  nb_periodes      Int      @default(3)
-  noms_periodes    Json     @default("{\"fr\":[\"1er Trimestre\",\"2ème Trimestre\",\"3ème Trimestre\"],\"ar\":[\"الفصل الأول\",\"الفصل الثاني\",\"الفصل الثالث\"]}")
+  id                      String   @id @default(uuid())
+  etablissement_id        String   @unique
+  note_max                Decimal  @default(20) @db.Decimal(5, 2)
+  note_min                Decimal  @default(0) @db.Decimal(5, 2)
+  nb_periodes             Int      @default(3)
+  noms_periodes           Json     @default("{\"fr\":[\"1er Trimestre\",\"2ème Trimestre\",\"3ème Trimestre\"],\"ar\":[\"الفصل الأول\",\"الفصل الثاني\",\"الفصل الثالث\"]}")
   arrondi                 Int      @default(2)
   chiffres_arabes         Boolean  @default(false)
   montant_mensualite      Decimal  @default(7500) @db.Decimal(10, 2)
@@ -232,13 +263,13 @@ model ConfigNotes {
 // Un domaine appartient à un établissement (multi-tenant).
 // code : 'LANGUE_COMMUNICATION' | 'MATHEMATIQUES' | 'ESVS' | 'EPSA' | 'AUTRE'
 model Domaine {
-  id               String   @id @default(uuid())
+  id               String  @id @default(uuid())
   etablissement_id String
   nom_fr           String
-  nom_ar           String   @default("")
-  code             String   // 'LANGUE_COMMUNICATION' | 'MATHEMATIQUES' | 'ESVS' | 'EPSA' | 'AUTRE'
-  ordre            Int      @default(0)
-  actif            Boolean  @default(true)
+  nom_ar           String  @default("")
+  code             String // 'LANGUE_COMMUNICATION' | 'MATHEMATIQUES' | 'ESVS' | 'EPSA' | 'AUTRE'
+  ordre            Int     @default(0)
+  actif            Boolean @default(true)
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
   matieres      Matiere[]
@@ -253,9 +284,9 @@ model Matiere {
   nom_fr           String
   nom_ar           String
   filiere          String
-  coeff_defaut     Decimal @default(1)  @db.Decimal(4, 2)
+  coeff_defaut     Decimal @default(1) @db.Decimal(4, 2)
   note_max         Decimal @default(20) @db.Decimal(5, 2)
-  note_min         Decimal @default(0)  @db.Decimal(5, 2)
+  note_min         Decimal @default(0) @db.Decimal(5, 2)
   ordre_bulletin   Int     @default(0)
   active           Boolean @default(true)
   // Rattachement au domaine pédagogique (optionnel pour compatibilité ascendante)
@@ -266,9 +297,9 @@ model Matiere {
   // Abréviation utilisée dans les entêtes du relevé de notes (ex: "Lect", "A.P")
   code_court       String?
 
-  etablissement   Etablissement       @relation(fields: [etablissement_id], references: [id])
-  domaine         Domaine?            @relation(fields: [domaine_id], references: [id])
-  prof_matieres   ProfMatiereClasse[]
+  etablissement   Etablissement            @relation(fields: [etablissement_id], references: [id])
+  domaine         Domaine?                 @relation(fields: [domaine_id], references: [id])
+  prof_matieres   PersonnelMatiereClasse[]
   notes           Note[]
   classe_matieres ClasseMatiere[]
   creneaux        Creneau[]
@@ -280,14 +311,14 @@ model Matiere {
 }
 
 model Niveau {
-  id               String  @id @default(uuid())
+  id               String @id @default(uuid())
   etablissement_id String
   libelle          String
-  ordre            Int     @default(0)
+  ordre            Int    @default(0)
   // Détermine le type de grille d'évaluation IEF applicable à ce niveau
   // CI_CP → seuils 7/10 & 8/10, pas de Ressources/Compétence
   // CE1_CE2 | CM1_CM2 → seuils 5/10 & 7/10, avec Ressources/Compétence
-  groupe_grille    String  @default("AUTRE") // 'CI_CP' | 'CE1_CE2' | 'CM1_CM2' | 'AUTRE'
+  groupe_grille    String @default("AUTRE") // 'CI_CP' | 'CE1_CE2' | 'CM1_CM2' | 'AUTRE'
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
   classes       Classe[]
@@ -296,21 +327,21 @@ model Niveau {
 }
 
 model Classe {
-  id               String  @id @default(uuid())
-  etablissement_id String
+  id                String  @id @default(uuid())
+  etablissement_id  String
   annee_scolaire_id String
-  nom_fr           String
-  filiere          String
-  niveau_id        String?
-  capacite         Int     @default(30)
-  active           Boolean @default(true)
+  nom_fr            String
+  filiere           String
+  niveau_id         String?
+  capacite          Int     @default(30)
+  active            Boolean @default(true)
 
-  etablissement  Etablissement       @relation(fields: [etablissement_id], references: [id])
-  annee_scolaire AnneeScolaire       @relation(fields: [annee_scolaire_id], references: [id])
-  niveau         Niveau?             @relation(fields: [niveau_id], references: [id])
-  inscriptions_fr Inscription[]      @relation("ClasseFR")
-  inscriptions_ar Inscription[]      @relation("ClasseAR")
-  prof_matieres   ProfMatiereClasse[]
+  etablissement   Etablissement            @relation(fields: [etablissement_id], references: [id])
+  annee_scolaire  AnneeScolaire            @relation(fields: [annee_scolaire_id], references: [id])
+  niveau          Niveau?                  @relation(fields: [niveau_id], references: [id])
+  inscriptions_fr Inscription[]            @relation("ClasseFR")
+  inscriptions_ar Inscription[]            @relation("ClasseAR")
+  prof_matieres   PersonnelMatiereClasse[]
   absences        AbsenceEleve[]
   classe_matieres ClasseMatiere[]
   creneaux        Creneau[]
@@ -333,14 +364,14 @@ model ClasseMatiere {
   @@unique([classe_id, matiere_id])
 }
 
-model ProfMatiereClasse {
-  id                String  @id @default(uuid())
-  professeur_id     String
+model PersonnelMatiereClasse {
+  id                String @id @default(uuid())
+  personnel_id      String
   classe_id         String
   matiere_id        String
   annee_scolaire_id String
 
-  professeur     Professeur    @relation(fields: [professeur_id], references: [id])
+  personnel      Personnel     @relation(fields: [personnel_id], references: [id])
   classe         Classe        @relation(fields: [classe_id], references: [id])
   matiere        Matiere       @relation(fields: [matiere_id], references: [id])
   annee_scolaire AnneeScolaire @relation(fields: [annee_scolaire_id], references: [id])
@@ -360,14 +391,14 @@ model Eleve {
   actif            Boolean  @default(true)
   created_at       DateTime @default(now())
 
-  etablissement Etablissement   @relation(fields: [etablissement_id], references: [id])
-  parents       Parent[]
-  inscriptions  Inscription[]
-  paiements     PaiementEleve[]
-  bulletins     Bulletin[]
-  notes         Note[]
-  absences      AbsenceEleve[]
-  portail_tokens PortailParentToken[]
+  etablissement          Etablissement         @relation(fields: [etablissement_id], references: [id])
+  parents                Parent[]
+  inscriptions           Inscription[]
+  paiements              PaiementEleve[]
+  bulletins              Bulletin[]
+  notes                  Note[]
+  absences               AbsenceEleve[]
+  portail_tokens         PortailParentToken[]
   notes_evaluations      NoteEvaluation[]
   progressions           ProgressionEleve[]
   inscriptions_activites InscriptionActivite[]
@@ -402,10 +433,10 @@ model Inscription {
   statut            String   @default("actif")
   created_at        DateTime @default(now())
 
-  eleve          Eleve         @relation(fields: [eleve_id], references: [id])
-  classe_fr      Classe?       @relation("ClasseFR", fields: [classe_fr_id], references: [id])
-  classe_ar      Classe?       @relation("ClasseAR", fields: [classe_ar_id], references: [id])
-  annee_scolaire AnneeScolaire @relation(fields: [annee_scolaire_id], references: [id])
+  eleve          Eleve           @relation(fields: [eleve_id], references: [id])
+  classe_fr      Classe?         @relation("ClasseFR", fields: [classe_fr_id], references: [id])
+  classe_ar      Classe?         @relation("ClasseAR", fields: [classe_ar_id], references: [id])
+  annee_scolaire AnneeScolaire   @relation(fields: [annee_scolaire_id], references: [id])
   paiements      PaiementEleve[]
 }
 
@@ -450,8 +481,8 @@ model AuditLog {
   id               String   @id @default(uuid())
   etablissement_id String
   utilisateur_id   String
-  action           String   // 'CREATE' | 'UPDATE' | 'DELETE'
-  entite           String   // 'PaiementEleve', 'Eleve', 'Utilisateur', 'Note', ...
+  action           String // 'CREATE' | 'UPDATE' | 'DELETE'
+  entite           String // 'PaiementEleve', 'Eleve', 'Utilisateur', 'Note', ...
   entite_id        String
   details          Json?
   created_at       DateTime @default(now())
@@ -485,19 +516,19 @@ model Bulletin {
 }
 
 model AbsenceEleve {
-  id                String        @id @default(uuid())
+  id                String   @id @default(uuid())
   eleve_id          String
   classe_id         String
   annee_scolaire_id String
   etablissement_id  String
-  date              DateTime      @db.Date
-  statut            String        // present | absent | retard | dispense
-  justifiee         Boolean       @default(false)
+  date              DateTime @db.Date
+  statut            String // present | absent | retard | dispense
+  justifiee         Boolean  @default(false)
   motif             String?
   heure_arrivee     String?
   cree_par          String?
-  created_at        DateTime      @default(now())
-  updated_at        DateTime      @updatedAt
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
 
   eleve          Eleve         @relation(fields: [eleve_id], references: [id])
   classe         Classe        @relation(fields: [classe_id], references: [id])
@@ -515,10 +546,10 @@ model Creneau {
   annee_scolaire_id String
   classe_id         String
   matiere_id        String
-  professeur_id     String
-  jour              String   // 'lundi' | 'mardi' | 'mercredi' | 'jeudi' | 'vendredi'
-  heure_debut       String   // "08:00"
-  heure_fin         String   // "10:00"
+  personnel_id      String
+  jour              String // 'lundi' | 'mardi' | 'mercredi' | 'jeudi' | 'vendredi'
+  heure_debut       String // "08:00"
+  heure_fin         String // "10:00"
   salle             String?
   created_at        DateTime @default(now())
   updated_at        DateTime @updatedAt
@@ -527,10 +558,10 @@ model Creneau {
   annee_scolaire AnneeScolaire @relation(fields: [annee_scolaire_id], references: [id])
   classe         Classe        @relation(fields: [classe_id], references: [id])
   matiere        Matiere       @relation(fields: [matiere_id], references: [id])
-  professeur     Professeur    @relation(fields: [professeur_id], references: [id])
+  personnel      Personnel     @relation(fields: [personnel_id], references: [id])
 
   @@index([etablissement_id])
-  @@index([professeur_id, annee_scolaire_id])
+  @@index([personnel_id, annee_scolaire_id])
   @@index([classe_id, annee_scolaire_id])
 }
 
@@ -542,7 +573,7 @@ model EvenementCalendrier {
   description      String?
   date_debut       DateTime @db.Date
   date_fin         DateTime @db.Date
-  type             String   // 'vacances' | 'examen' | 'evenement' | 'fermeture' | 'reunion'
+  type             String // 'vacances' | 'examen' | 'evenement' | 'fermeture' | 'reunion'
   couleur          String   @default("#3B82F6")
   createur_id      String
   created_at       DateTime @default(now())
@@ -559,7 +590,7 @@ model Notification {
   id               String   @id @default(uuid())
   etablissement_id String
   destinataire_id  String
-  type             String   // 'absence_eleve' | 'paiement_retard' | 'note_insuffisante' | 'absence_professeur'
+  type             String // 'absence_eleve' | 'paiement_retard' | 'note_insuffisante' | 'absence_professeur'
   titre            String
   message          String
   lu               Boolean  @default(false)
@@ -579,11 +610,11 @@ model Conversation {
   etablissement_id String
   sujet            String
   type             String   @default("individuel") // 'individuel' | 'broadcast'
-  cibles_roles     Json?    // e.g. ["professeur"] for broadcast
+  cibles_roles     Json? // e.g. ["professeur"] for broadcast
   created_at       DateTime @default(now())
   updated_at       DateTime @updatedAt
 
-  etablissement Etablissement            @relation(fields: [etablissement_id], references: [id])
+  etablissement Etablissement             @relation(fields: [etablissement_id], references: [id])
   participants  ConversationParticipant[]
   messages      MessageConversation[]
 
@@ -640,9 +671,9 @@ model Evaluation {
   annee_scolaire_id String
   periode           Int
   titre             String
-  type              String   // 'DS' | 'INTERRO' | 'DM' | 'EXAMEN'
+  type              String // 'DS' | 'INTERRO' | 'DM' | 'EXAMEN'
   date              DateTime @db.Date
-  coefficient       Decimal  @default(1)  @db.Decimal(4, 2)
+  coefficient       Decimal  @default(1) @db.Decimal(4, 2)
   note_max          Decimal  @default(20) @db.Decimal(5, 2)
   created_by        String
   created_at        DateTime @default(now())
@@ -681,7 +712,7 @@ model ProgressionEleve {
   etablissement_id  String
   eleve_id          String
   annee_scolaire_id String
-  decision          String    // 'admis' | 'redoublant' | 'transfere' | 'exclu'
+  decision          String // 'admis' | 'redoublant' | 'transfere' | 'exclu'
   decision_auto     String?
   note_directeur    String?
   validee           Boolean   @default(false)
@@ -728,9 +759,9 @@ model InscriptionActivite {
   annee_scolaire_id String
   date_inscription  DateTime @default(now())
 
-  activite       Activite            @relation(fields: [activite_id], references: [id], onDelete: Cascade)
-  eleve          Eleve               @relation(fields: [eleve_id], references: [id])
-  annee_scolaire AnneeScolaire       @relation(fields: [annee_scolaire_id], references: [id])
+  activite       Activite             @relation(fields: [activite_id], references: [id], onDelete: Cascade)
+  eleve          Eleve                @relation(fields: [eleve_id], references: [id])
+  annee_scolaire AnneeScolaire        @relation(fields: [annee_scolaire_id], references: [id])
   evaluations    EvaluationActivite[]
 
   @@unique([activite_id, eleve_id, annee_scolaire_id])
@@ -744,7 +775,7 @@ model SeanceActivite {
   notes       String?
   created_at  DateTime @default(now())
 
-  activite  Activite          @relation(fields: [activite_id], references: [id], onDelete: Cascade)
+  activite  Activite           @relation(fields: [activite_id], references: [id], onDelete: Cascade)
   presences PresenceActivite[]
 }
 
@@ -752,7 +783,7 @@ model PresenceActivite {
   id         String   @id @default(uuid())
   seance_id  String
   eleve_id   String
-  statut     String   // 'present' | 'absent' | 'retard'
+  statut     String // 'present' | 'absent' | 'retard'
   created_at DateTime @default(now())
 
   seance SeanceActivite @relation(fields: [seance_id], references: [id], onDelete: Cascade)
@@ -891,10 +922,10 @@ model DocumentGenere {
   @@index([etablissement_id, genere_le])
 }
 
-model DemandeAbsenceProfesseur {
+model DemandeAbsencePersonnel {
   id               String    @id @default(uuid())
   etablissement_id String
-  professeur_id    String
+  personnel_id     String
   date_debut       DateTime
   date_fin         DateTime
   motif            String
@@ -907,9 +938,9 @@ model DemandeAbsenceProfesseur {
   updated_at       DateTime  @updatedAt
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
-  professeur    Professeur    @relation(fields: [professeur_id], references: [id])
+  personnel     Personnel     @relation(fields: [personnel_id], references: [id])
   traiteur      Utilisateur?  @relation("DemandesTraitees", fields: [traite_par], references: [id])
 
   @@index([etablissement_id, statut])
-  @@index([professeur_id])
+  @@index([personnel_id])
 }

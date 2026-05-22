@@ -28,7 +28,7 @@ export const updatePaiementEleveSchema = z.object({
 });
 
 export const paiementProfesseurSchema = z.object({
-  professeur_id: z.string().min(1),
+  personnel_id: z.string().min(1),
   mois: z.number().int().min(1).max(12),
   annee: z.number().int(),
   montant_brut: z.number().positive(),

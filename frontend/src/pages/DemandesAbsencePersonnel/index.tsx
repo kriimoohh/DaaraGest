@@ -49,7 +49,7 @@ function fmtDate(s: string) {
   return new Date(s).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-export function DemandesAbsenceProfPage() {
+export function DemandesAbsencePersonnelPage() {
   const { user } = useAuthStore();
   const role = user?.role ?? '';
   const isDirection = ['admin', 'directeur', 'gestionnaire'].includes(role);
@@ -76,7 +76,7 @@ export function DemandesAbsenceProfPage() {
 
   const refresh = () => {
     setLoading(true);
-    api.get<Demande[]>('/api/v1/demandes-absence-prof')
+    api.get<Demande[]>('/api/v1/demandes-absence-personnel')
       .then(d => { setDemandes(d); setError(false); })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -84,7 +84,7 @@ export function DemandesAbsenceProfPage() {
 
   useEffect(() => {
     refresh();
-    api.get<{ data: Professeur[] }>('/api/v1/professeurs?limit=200')
+    api.get<{ data: Professeur[] }>('/api/v1/personnel?limit=200')
       .then(d => setProfesseurs(d.data ?? []))
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -98,7 +98,7 @@ export function DemandesAbsenceProfPage() {
     }
     setSaving(true);
     try {
-      await api.post('/api/v1/demandes-absence-prof', form);
+      await api.post('/api/v1/demandes-absence-personnel', form);
       toast.success('Demande enregistrée');
       setShowModal(false);
       setForm({ professeur_id: '', date_debut: '', date_fin: '', type_absence: 'CONGE_ANNUEL', motif: '' });
@@ -112,7 +112,7 @@ export function DemandesAbsenceProfPage() {
     if (!showTraiterModal) return;
     setSaving(true);
     try {
-      await api.patch(`/api/v1/demandes-absence-prof/${showTraiterModal.id}/traiter`, {
+      await api.patch(`/api/v1/demandes-absence-personnel/${showTraiterModal.id}/traiter`, {
         statut: showTraiterModal.action,
         commentaire,
       });
@@ -128,7 +128,7 @@ export function DemandesAbsenceProfPage() {
   async function handleDelete(id: string) {
     if (!confirm('Supprimer cette demande ?')) return;
     try {
-      await api.delete(`/api/v1/demandes-absence-prof/${id}`);
+      await api.delete(`/api/v1/demandes-absence-personnel/${id}`);
       refresh();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Erreur');
