@@ -94,6 +94,8 @@
     "specialite": "Spécialité",
     "type_contrat": "Type de contrat",
     "permanent": "Permanent",
+    "CDI":       "CDI",
+    "CDD":       "CDD",
     "vacataire": "Vacataire",
     "stagiaire": "Stagiaire",
     "salaire": "Salaire de base",

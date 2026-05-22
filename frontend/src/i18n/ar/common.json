@@ -94,6 +94,8 @@
     "specialite": "التخصص",
     "type_contrat": "نوع العقد",
     "permanent": "دائم",
+    "CDI":       "CDI",
+    "CDD":       "CDD",
     "vacataire": "متعاقد",
     "stagiaire": "متربص",
     "salaire": "الراتب الأساسي",

@@ -135,6 +135,7 @@ interface PersonnelRow {
   nom_ar: string;
   identifiant: string;
   actif: boolean;
+  sexe?: 'M' | 'F' | null;
   photo_url?: string;
   personnel?: {
     photo_url?: string;
@@ -142,7 +143,7 @@ interface PersonnelRow {
     specialite_fr?: string;
     specialite_ar?: string;
     telephone?: string;
-    type_contrat?: 'permanent' | 'vacataire' | 'stagiaire';
+    type_contrat?: 'permanent' | 'vacataire' | 'stagiaire' | 'CDD' | 'CDI';
     date_embauche?: string;
     salaire_base?: number;
     poste_fr?: string | null;
@@ -152,7 +153,7 @@ interface PersonnelRow {
   };
 }
 
-type TypeContrat = 'permanent' | 'vacataire' | 'stagiaire';
+type TypeContrat = 'permanent' | 'vacataire' | 'stagiaire' | 'CDD' | 'CDI';
 
 function profSpecialite(p: PersonnelRow): string {
   return p.personnel?.specialite_fr ?? '';
@@ -189,15 +190,27 @@ const FONCTION_LABELS: Record<Fonction, string> = {
   AUTRE:           'Autre',
 };
 
+type Sexe = 'M' | 'F' | '';
+type TypeContratValue = '' | 'permanent' | 'vacataire' | 'stagiaire' | 'CDD' | 'CDI';
+
+const TYPE_CONTRAT_LABELS: Record<Exclude<TypeContratValue, ''>, string> = {
+  permanent: 'Permanent',
+  CDI:       'CDI',
+  CDD:       'CDD',
+  vacataire: 'Vacataire',
+  stagiaire: 'Stagiaire',
+};
+
 interface PersonnelFormData {
   nom_fr: string;
   nom_ar: string;
   identifiant: string;
   mot_de_passe: string;
   fonction: Fonction;
+  sexe: Sexe;
   specialite_fr: string;
   telephone: string;
-  type_contrat: string;
+  type_contrat: TypeContratValue;
   photo_url?: string | null;
   poste_fr: string;
   date_embauche: string;
@@ -212,6 +225,7 @@ const EMPTY_FORM: PersonnelFormData = {
   nom_fr: '', nom_ar: '',
   identifiant: '', mot_de_passe: '',
   fonction: 'ENSEIGNANT',
+  sexe: '',
   specialite_fr: '', telephone: '', type_contrat: '',
   poste_fr: '', date_embauche: '', date_fin_contrat: '', date_debut_stage: '', date_fin_stage: '',
 };
@@ -226,6 +240,13 @@ function validate(form: PersonnelFormData, isEdit: boolean): FormErrors {
   if (!form.identifiant.trim()) errors.identifiant = "L'identifiant est requis";
   if (!isEdit && !form.mot_de_passe.trim()) errors.mot_de_passe = 'Le mot de passe est requis';
   if (!form.type_contrat) errors.type_contrat = 'Le type de contrat est requis';
+  if (form.type_contrat === 'CDD' && !form.date_fin_contrat) {
+    errors.date_fin_contrat = "La date de fin de contrat est requise pour un CDD";
+  }
+  if (form.type_contrat === 'stagiaire') {
+    if (!form.date_debut_stage) errors.date_debut_stage = 'Date de début de stage requise';
+    if (!form.date_fin_stage)   errors.date_fin_stage   = 'Date de fin de stage requise';
+  }
   return errors;
 }
 
@@ -289,6 +310,7 @@ export function PersonnelPage() {
       nom_ar: prof.nom_ar,
       identifiant: prof.identifiant, mot_de_passe: '',
       fonction: (prof.personnel?.fonction as Fonction) ?? 'ENSEIGNANT',
+      sexe: (prof.sexe ?? '') as Sexe,
       specialite_fr: profSpecialite(prof),
       telephone: profTelephone(prof),
       type_contrat: profContrat(prof) ?? 'permanent',
@@ -326,12 +348,13 @@ export function PersonnelPage() {
         nom_ar: form.nom_ar,
         identifiant: form.identifiant,
         fonction: form.fonction,
+        sexe: form.sexe || null,
         specialite_fr: form.fonction === 'ENSEIGNANT' ? form.specialite_fr : undefined,
         telephone: form.telephone, type_contrat: form.type_contrat,
         ...(form.photo_url !== undefined ? { photo_url: form.photo_url } : {}),
         poste_fr:         form.poste_fr || undefined,
         date_embauche:    form.date_embauche || undefined,
-        date_fin_contrat: form.date_fin_contrat ? form.date_fin_contrat : null,
+        date_fin_contrat: !isStagiaire && form.date_fin_contrat ? form.date_fin_contrat : null,
         date_debut_stage: isStagiaire && form.date_debut_stage ? form.date_debut_stage : null,
         date_fin_stage:   isStagiaire && form.date_fin_stage   ? form.date_fin_stage   : null,
       };
@@ -662,12 +685,24 @@ export function PersonnelPage() {
                 <Input label={t('auth.password')} type="password" value={form.mot_de_passe} onChange={(e) => setField('mot_de_passe', e.target.value)} error={formErrors.mot_de_passe} />
               )}
             </div>
-            <Select
-              label="Fonction"
-              value={form.fonction}
-              onChange={(e) => setField('fonction', e.target.value as Fonction)}
-              options={FONCTION_VALUES.map(f => ({ value: f, label: FONCTION_LABELS[f] }))}
-            />
+            <div className="grid-2">
+              <Select
+                label="Fonction"
+                value={form.fonction}
+                onChange={(e) => setField('fonction', e.target.value as Fonction)}
+                options={FONCTION_VALUES.map(f => ({ value: f, label: FONCTION_LABELS[f] }))}
+              />
+              <Select
+                label="Sexe"
+                value={form.sexe}
+                onChange={(e) => setField('sexe', e.target.value as Sexe)}
+                options={[
+                  { value: 'M', label: 'Masculin' },
+                  { value: 'F', label: 'Féminin' },
+                ]}
+                placeholder="— Non précisé —"
+              />
+            </div>
             <div className="grid-2">
               {form.fonction === 'ENSEIGNANT' && (
                 <Input label={t('professeur.specialite')} value={form.specialite_fr} onChange={(e) => setField('specialite_fr', e.target.value)} />
@@ -677,12 +712,14 @@ export function PersonnelPage() {
             <Select
               label={t('professeur.type_contrat')}
               value={form.type_contrat}
-              onChange={(e) => setField('type_contrat', e.target.value)}
+              onChange={(e) => setField('type_contrat', e.target.value as TypeContratValue)}
               error={formErrors.type_contrat}
               options={[
-                { value: 'permanent', label: t('professeur.permanent') },
-                { value: 'vacataire', label: t('professeur.vacataire') },
-                { value: 'stagiaire', label: t('professeur.stagiaire') },
+                { value: 'permanent', label: TYPE_CONTRAT_LABELS.permanent },
+                { value: 'CDI',       label: TYPE_CONTRAT_LABELS.CDI },
+                { value: 'CDD',       label: TYPE_CONTRAT_LABELS.CDD },
+                { value: 'vacataire', label: TYPE_CONTRAT_LABELS.vacataire },
+                { value: 'stagiaire', label: TYPE_CONTRAT_LABELS.stagiaire },
               ]}
               placeholder={t('common.selectionner')}
             />
@@ -699,12 +736,14 @@ export function PersonnelPage() {
                 value={form.date_embauche}
                 onChange={(e) => setField('date_embauche', e.target.value)}
               />
-              <Input
-                label={t('professeur.date_fin_contrat')}
-                type="date"
-                value={form.date_fin_contrat}
-                onChange={(e) => setField('date_fin_contrat', e.target.value)}
-              />
+              {form.type_contrat !== 'stagiaire' && (
+                <Input
+                  label={form.type_contrat === 'CDD' ? `${t('professeur.date_fin_contrat')} *` : t('professeur.date_fin_contrat')}
+                  type="date"
+                  value={form.date_fin_contrat}
+                  onChange={(e) => setField('date_fin_contrat', e.target.value)}
+                />
+              )}
             </div>
             {form.type_contrat === 'stagiaire' && (
               <div className="grid-2">
