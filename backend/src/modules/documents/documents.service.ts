@@ -1,13 +1,12 @@
 import crypto from 'crypto';
 import QRCode from 'qrcode';
 import prisma from '../../config/database';
+import { env } from '../../config/env';
 import { TypeDocument, GenererDocumentInput, GenererCartesLotInput, UpsertTemplateInput, TYPE_DOCUMENT_VALUES, CARD_TYPES } from './documents.schema';
 import { getDefaultTemplate, TYPE_DOCUMENT_LABELS, getCardTemplate } from './templates/defaults';
 
 function getQrSecret(): string {
-  const secret = process.env.QR_SECRET;
-  if (!secret) throw new Error('QR_SECRET non configuré');
-  return secret;
+  return env.QR_SECRET;
 }
 
 function signQrPayload(payload: object): string {

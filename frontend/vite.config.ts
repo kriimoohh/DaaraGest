@@ -12,4 +12,20 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Libs lourdes utilisées sur 1-2 écrans → chunks dédiés
+          'recharts': ['recharts'],
+          'qrcode': ['html5-qrcode'],
+          'papaparse': ['papaparse'],
+          // Vendor stable
+          'react': ['react', 'react-dom', 'react-router-dom'],
+          'i18n': ['i18next', 'react-i18next'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 800,
+  },
 });

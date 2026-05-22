@@ -1406,3 +1406,120 @@ export async function apercuPropositionsFin(
   const html = await capturePreviewHtml(() => rapportPropositionsFin(etablissement_id, params));
   return { html };
 }
+
+// ─── Rapport charges horaires personnel ─────────────────────────────────────
+// Agrège Creneau par personnel pour calculer les heures hebdomadaires.
+// Donnée RH critique pour le suivi de service / paie horaire des vacataires.
+
+function dureeHeures(heureDebut: string, heureFin: string): number {
+  // Format "HH:MM" → fraction d'heure (ex. "08:00" → "10:30" = 2.5)
+  const [hd, md] = heureDebut.split(':').map(Number);
+  const [hf, mf] = heureFin.split(':').map(Number);
+  if ([hd, md, hf, mf].some(n => Number.isNaN(n))) return 0;
+  return Math.max(0, (hf * 60 + mf - hd * 60 - md) / 60);
+}
+
+export async function rapportChargesPersonnel(
+  etablissement_id: string,
+  params: { annee_scolaire_id: string; format: string },
+) {
+  const { annee_scolaire_id, format } = params;
+
+  const creneaux = await prisma.creneau.findMany({
+    where: { etablissement_id, annee_scolaire_id },
+    include: {
+      personnel: { include: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } } },
+      matiere: { select: { nom_fr: true } },
+      classe:  { select: { nom_fr: true } },
+    },
+  });
+
+  type Agg = {
+    personnel_id: string;
+    nom: string;
+    prenom: string;
+    heuresHebdo: number;
+    nbCreneaux: number;
+    matieres: Set<string>;
+    classes: Set<string>;
+  };
+  const agg = new Map<string, Agg>();
+
+  for (const c of creneaux) {
+    const h = dureeHeures(c.heure_debut, c.heure_fin);
+    const key = c.personnel_id;
+    if (!agg.has(key)) {
+      agg.set(key, {
+        personnel_id: key,
+        nom: c.personnel.utilisateur.nom_fr,
+        prenom: c.personnel.utilisateur.prenom_fr ?? '',
+        heuresHebdo: 0,
+        nbCreneaux: 0,
+        matieres: new Set(),
+        classes: new Set(),
+      });
+    }
+    const a = agg.get(key)!;
+    a.heuresHebdo += h;
+    a.nbCreneaux += 1;
+    a.matieres.add(c.matiere.nom_fr);
+    a.classes.add(c.classe.nom_fr);
+  }
+
+  const lignes = Array.from(agg.values()).sort((x, y) => y.heuresHebdo - x.heuresHebdo);
+
+  if (format === 'csv') {
+    const rows = [
+      csvRow(['Nom', 'Prénom', 'Heures hebdo', 'Nb créneaux', 'Matières', 'Classes']),
+      ...lignes.map(l => csvRow([
+        l.nom, l.prenom,
+        l.heuresHebdo.toFixed(2),
+        l.nbCreneaux,
+        Array.from(l.matieres).join(' / '),
+        Array.from(l.classes).join(' / '),
+      ])),
+    ];
+    return { buffer: Buffer.from(rows.join('\n'), 'utf-8'), mime: 'text/csv', filename: 'charges-personnel.csv' };
+  }
+
+  const totalHeures = lignes.reduce((s, l) => s + l.heuresHebdo, 0);
+
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<style>
+  body{font-family:sans-serif;font-size:12px;color:#111;margin:24px;}
+  h1{font-size:18px;margin-bottom:4px;}
+  .sub{color:#666;font-size:11px;margin-bottom:20px;}
+  table{width:100%;border-collapse:collapse;}
+  th{background:#f3f3f3;text-align:left;padding:6px 8px;font-size:11px;border-bottom:2px solid #ddd;}
+  td{padding:5px 8px;border-bottom:1px solid #eee;font-size:11px;vertical-align:top;}
+  .num{text-align:right;font-variant-numeric:tabular-nums;}
+  .total{font-weight:600;background:#fafafa;}
+</style></head><body>
+<h1>Charges horaires hebdomadaires du personnel enseignant</h1>
+<div class="sub">Généré le ${new Date().toLocaleDateString('fr-FR')} — ${lignes.length} personne(s) — Total ${totalHeures.toFixed(1)} h hebdo</div>
+<table>
+<thead><tr><th>Personnel</th><th class="num">H. hebdo</th><th class="num">Créneaux</th><th>Matières</th><th>Classes</th></tr></thead>
+<tbody>
+${lignes.map(l => `<tr>
+  <td>${esc(l.nom)} ${esc(l.prenom)}</td>
+  <td class="num">${l.heuresHebdo.toFixed(2)} h</td>
+  <td class="num">${l.nbCreneaux}</td>
+  <td>${Array.from(l.matieres).map(esc).join(', ')}</td>
+  <td>${Array.from(l.classes).map(esc).join(', ')}</td>
+</tr>`).join('')}
+<tr class="total"><td>Total</td><td class="num">${totalHeures.toFixed(2)} h</td><td class="num">${creneaux.length}</td><td colspan="2"></td></tr>
+</tbody></table></body></html>`;
+
+  const buffer = await renderPdfHtml(html, { format: 'A4', printBackground: true, margin: { top: '12mm', bottom: '12mm', left: '10mm', right: '10mm' } });
+  return { buffer, mime: 'application/pdf', filename: 'charges-personnel.pdf' };
+}
+
+export async function apercuChargesPersonnel(
+  etablissement_id: string,
+  params: { annee_scolaire_id: string },
+) {
+  const html = await capturePreviewHtml(() =>
+    rapportChargesPersonnel(etablissement_id, { ...params, format: 'pdf' }),
+  );
+  return { html };
+}

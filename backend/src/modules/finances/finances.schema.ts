@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 export const paiementEleveSchema = z.object({
-  eleve_id: z.string().min(1),
-  inscription_id: z.string().min(1).optional(),
+  eleve_id: z.string().uuid(),
+  inscription_id: z.string().uuid().optional(),
   type: z.string().min(1),
   montant: z.number().positive(),
   mois: z.number().int().min(1).max(12).optional(),
@@ -12,7 +12,7 @@ export const paiementEleveSchema = z.object({
 
 export const bulkPaiementEleveSchema = z.object({
   eleve_ids: z.array(z.string().min(1)).min(1),
-  inscription_id: z.string().min(1).optional(),
+  inscription_id: z.string().uuid().optional(),
   type: z.string().min(1),
   montant: z.number().positive(),
   mois: z.number().int().min(1).max(12).optional(),
@@ -28,7 +28,7 @@ export const updatePaiementEleveSchema = z.object({
 });
 
 export const paiementProfesseurSchema = z.object({
-  personnel_id: z.string().min(1),
+  personnel_id: z.string().uuid(),
   mois: z.number().int().min(1).max(12),
   annee: z.number().int(),
   montant_brut: z.number().positive(),

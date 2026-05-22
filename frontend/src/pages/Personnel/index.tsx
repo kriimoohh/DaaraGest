@@ -98,7 +98,7 @@ function QRCodeModal({ professeurId, nom, onClose, api }: {
         ) : qrData ? (
           <>
             <div style={{
-              background: '#fff', borderRadius: 12, padding: 16,
+              background: 'var(--card)', borderRadius: 12, padding: 16,
               border: '1px solid var(--rule)', display: 'inline-block',
             }}>
               <img src={qrData.dataUrl} alt="QR Code" style={{ width: 240, height: 240, display: 'block' }} />

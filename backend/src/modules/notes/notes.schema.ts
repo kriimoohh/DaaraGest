@@ -1,10 +1,10 @@
 import { z } from 'zod';
 
 export const noteItemSchema = z.object({
-  eleve_id: z.string().min(1),
-  matiere_id: z.string().min(1),
+  eleve_id: z.string().uuid(),
+  matiere_id: z.string().uuid(),
   periode: z.number().int().min(1),
-  annee_scolaire_id: z.string().min(1),
+  annee_scolaire_id: z.string().uuid(),
   // Validation du plafond déléguée à bulkUpsertNotes (vérifie contre
   // matiere.note_max). Une matière peut être /20, /100, /40 selon les
   // établissements — le plafond fixe ici bloquait inutilement.
@@ -14,7 +14,7 @@ export const noteItemSchema = z.object({
 
 export const bulkNotesSchema = z.object({
   notes: z.array(noteItemSchema).min(1),
-  classe_id: z.string().min(1).optional(),
+  classe_id: z.string().uuid().optional(),
 });
 
 export type NoteItem = z.infer<typeof noteItemSchema>;

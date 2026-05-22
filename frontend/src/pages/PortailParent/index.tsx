@@ -283,7 +283,7 @@ function AbsencesTab({ absences }: { absences: PortailData['absences'] }) {
           {absences.map(a => (
             <div key={a.id} style={{
               display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
-              borderRadius: 10, border: '1px solid #e5e7eb', background: '#fff',
+              borderRadius: 10, border: '1px solid #e5e7eb', background: 'var(--card)',
               flexWrap: 'wrap',
             }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: '#111827', minWidth: 100, whiteSpace: 'nowrap' }}>
@@ -501,7 +501,7 @@ export function PortailParentPage() {
     <div style={{ minHeight: '100vh', background: '#f3f4f6', padding: '24px 16px' }}>
       <div style={{ maxWidth: 800, margin: '0 auto' }}>
         {/* Header card */}
-        <div style={{ background: '#fff', borderRadius: 16, padding: 24, marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+        <div style={{ background: 'var(--card)', borderRadius: 16, padding: 24, marginBottom: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
             {data.etablissement.logo_url ? (
               <img src={data.etablissement.logo_url} alt="" style={{ width: 56, height: 56, borderRadius: 12, objectFit: 'contain' }} />
@@ -540,7 +540,7 @@ export function PortailParentPage() {
         </div>
 
         {/* Tabs + content */}
-        <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--card)', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', overflow: 'hidden' }}>
           {/* Tab bar */}
           <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', overflowX: 'auto' }}>
             {TABS.map(t => (

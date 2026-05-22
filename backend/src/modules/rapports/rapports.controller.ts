@@ -10,6 +10,7 @@ import {
   rapportPerformanceDomaine,
   rapportReleveNotes,
   rapportPropositionsFin,
+  rapportChargesPersonnel,
   apercuPresencesEleves,
   apercuPresencesProfesseurs,
   apercuResultatsClasse,
@@ -19,6 +20,7 @@ import {
   apercuPerformanceDomaine,
   apercuReleveNotes,
   apercuPropositionsFin,
+  apercuChargesPersonnel,
 } from './rapports.service';
 import {
   rapportPresencesElevesSchema,
@@ -30,6 +32,7 @@ import {
   rapportPerformanceDomaineSchema,
   rapportReleveNotesSchema,
   rapportPropositionsFinSchema,
+  rapportChargesPersonnelSchema,
   apercuPresencesElevesSchema,
   apercuPresencesProfesseursSchema,
   apercuResultatsClasseSchema,
@@ -39,6 +42,7 @@ import {
   apercuPerformanceDomaineSchema,
   apercuReleveNotesSchema,
   apercuPropositionsFinSchema,
+  apercuChargesPersonnelSchema,
 } from './rapports.schema';
 
 type ApercuFn<P> = (etabId: string, params: P) => Promise<{ html: string }>;
@@ -165,6 +169,17 @@ export async function propositionsFinHandler(request: FastifyRequest, reply: Fas
   }
 }
 
+export async function chargesPersonnelHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const parsed = rapportChargesPersonnelSchema.safeParse(request.query);
+  if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  try {
+    return sendFile(reply, await rapportChargesPersonnel(etablissement_id, parsed.data));
+  } catch (err) {
+    return reply.status(500).send({ error: (err as Error).message });
+  }
+}
+
 // ─── Aperçus HTML ─────────────────────────────────────────────────────────────
 
 export const apercuPresencesElevesHandler      = buildApercuHandler(apercuPresencesElevesSchema, apercuPresencesEleves);
@@ -176,3 +191,4 @@ export const apercuGrillePerformanceHandler    = buildApercuHandler(apercuGrille
 export const apercuPerformanceDomaineHandler   = buildApercuHandler(apercuPerformanceDomaineSchema, apercuPerformanceDomaine);
 export const apercuReleveNotesHandler          = buildApercuHandler(apercuReleveNotesSchema, apercuReleveNotes);
 export const apercuPropositionsFinHandler      = buildApercuHandler(apercuPropositionsFinSchema, apercuPropositionsFin);
+export const apercuChargesPersonnelHandler     = buildApercuHandler(apercuChargesPersonnelSchema, apercuChargesPersonnel);

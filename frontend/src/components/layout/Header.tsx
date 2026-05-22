@@ -164,13 +164,27 @@ export function Topbar({ onMenuClick }: TopbarProps) {
               </button>
             </div>
             <div className="modal-body">
-              <div className="tabs" style={{ marginBottom: 16 }}>
-                <button className={`tab${profilTab === 'info' ? ' active' : ''}`} onClick={() => setProfilTab('info')}>Informations</button>
-                <button className={`tab${profilTab === 'password' ? ' active' : ''}`} onClick={() => setProfilTab('password')}>Mot de passe</button>
+              <div className="tabs" style={{ marginBottom: 16 }} role="tablist" aria-label="Sections du profil">
+                <button
+                  className={`tab${profilTab === 'info' ? ' active' : ''}`}
+                  onClick={() => setProfilTab('info')}
+                  role="tab"
+                  aria-selected={profilTab === 'info'}
+                  aria-controls="profil-info-panel"
+                  id="profil-info-tab"
+                >Informations</button>
+                <button
+                  className={`tab${profilTab === 'password' ? ' active' : ''}`}
+                  onClick={() => setProfilTab('password')}
+                  role="tab"
+                  aria-selected={profilTab === 'password'}
+                  aria-controls="profil-password-panel"
+                  id="profil-password-tab"
+                >Mot de passe</button>
               </div>
 
               {profilTab === 'info' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }} role="tabpanel" id="profil-info-panel" aria-labelledby="profil-info-tab">
                   {/* Avatar + identité */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 16px', background: 'var(--paper-2)', border: '1px solid var(--rule)', borderRadius: 'var(--r-lg)' }}>
                     <div className="avatar avatar-xl" style={{ background: 'var(--terra-soft)', color: 'var(--terra-ink)', flexShrink: 0 }}>{initials || '?'}</div>
@@ -216,7 +230,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
               )}
 
               {profilTab === 'password' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }} role="tabpanel" id="profil-password-panel" aria-labelledby="profil-password-tab">
                   <Input label="Mot de passe actuel" type="password" value={ancienMdp} onChange={e => setAncienMdp(e.target.value)} />
                   <Input label="Nouveau mot de passe" type="password" value={nouveauMdp} onChange={e => setNouveauMdp(e.target.value)} placeholder="Minimum 8 caractères" />
                   <Input label="Confirmer le nouveau mot de passe" type="password" value={confirmMdp} onChange={e => setConfirmMdp(e.target.value)} />
