@@ -295,7 +295,7 @@ const ORDRE_MISSION = wrapPage('Ordre de mission', `
     le déplacement professionnel de :</p>
     <table class="info-table">
       <tr><td>Nom et prénom</td><td><strong>{{NOM_PRENOM_PROF}}</strong></td></tr>
-      <tr><td>Fonction</td><td>Professeur</td></tr>
+      <tr><td>Fonction</td><td>Personnel</td></tr>
       <tr><td>Spécialité</td><td>{{SPECIALITE}}</td></tr>
       <tr><td>Destination</td><td><strong>{{DESTINATION}}</strong></td></tr>
       <tr><td>Objet de la mission</td><td>{{OBJET_MISSION}}</td></tr>
@@ -337,7 +337,7 @@ const PLANNING_COURS = wrapPage('Planning de cours', `
   <div class="doc-title">Planning de cours</div>
   <div class="doc-subtitle">Année scolaire {{ANNEE_SCOLAIRE}}</div>
   <table class="info-table" style="margin-bottom:16px">
-    <tr><td>Professeur</td><td><strong>{{NOM_PRENOM_PROF}}</strong></td></tr>
+    <tr><td>Personnel</td><td><strong>{{NOM_PRENOM_PROF}}</strong></td></tr>
     <tr><td>Spécialité</td><td>{{SPECIALITE}}</td></tr>
   </table>
   {{TABLEAU_PLANNING}}`);
@@ -594,7 +594,7 @@ const CARTE_PROFESSEUR_HTML = `<!DOCTYPE html>
       <div class="photo-wrap">{{PHOTO_PROF}}</div>
       <div class="info">
         <div class="prof-name">{{NOM_PRENOM_PROF}}</div>
-        <div><span class="role-badge">Professeur</span></div>
+        <div><span class="role-badge">Personnel</span></div>
         <div class="prof-sub">{{SPECIALITE}}</div>
         <div class="prof-sub">{{TYPE_CONTRAT}}</div>
       </div>

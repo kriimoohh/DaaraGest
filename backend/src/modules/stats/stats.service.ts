@@ -54,18 +54,18 @@ async function getTauxPresenceProfesseurs(etablissement_id: string) {
   const maintenant   = new Date();
 
   const [semaine, mois] = await Promise.all([
-    prisma.presenceProfesseur.groupBy({
+    prisma.presencePersonnel.groupBy({
       by: ['statut'],
       where: {
-        professeur: { utilisateur: { etablissement_id } },
+        personnel: { utilisateur: { etablissement_id } },
         date: { gte: debutSemaine, lte: maintenant },
       },
       _count: { id: true },
     }),
-    prisma.presenceProfesseur.groupBy({
+    prisma.presencePersonnel.groupBy({
       by: ['statut'],
       where: {
-        professeur: { utilisateur: { etablissement_id } },
+        personnel: { utilisateur: { etablissement_id } },
         date: { gte: debutMois, lte: maintenant },
       },
       _count: { id: true },

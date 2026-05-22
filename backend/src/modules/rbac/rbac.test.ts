@@ -275,7 +275,7 @@ describe('RBAC — Agent de scolarité', () => {
   });
 });
 
-describe('RBAC — Professeur', () => {
+describe('RBAC — Personnel', () => {
   const role = ROLES.PROFESSEUR;
 
   it('N\'a PAS accès aux endpoints ADMIN_ONLY', () => {

@@ -15,9 +15,9 @@ import {
 
 export async function listerHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
-  const { date, professeur_id, statut, mois, annee, page } = request.query as Record<string, string | undefined>;
+  const { date, personnel_id, statut, mois, annee, page } = request.query as Record<string, string | undefined>;
   const data = await listerPresences(
-    etablissement_id, date, professeur_id, statut,
+    etablissement_id, date, personnel_id, statut,
     mois ? parseInt(mois) : undefined,
     annee ? parseInt(annee) : undefined,
     page ? parseInt(page) : 1,

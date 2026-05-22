@@ -3,7 +3,7 @@ import { z } from 'zod';
 const heureRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export const presenceSchema = z.object({
-  professeur_id: z.string().min(1),
+  personnel_id: z.string().min(1),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format date invalide (YYYY-MM-DD)'),
   statut: z.enum(['present', 'absent', 'retard', 'conge']),
   heure_arrivee: z.string().regex(heureRegex, 'Format HH:MM attendu').optional(),

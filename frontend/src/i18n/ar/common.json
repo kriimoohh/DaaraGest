@@ -15,7 +15,7 @@
     "accueil": "الرئيسية",
     "dashboard": "لوحة التحكم",
     "eleves": "التلاميذ",
-    "professeurs": "الأساتذة",
+    "personnel":   "الموظفون",
     "classes": "الأقسام",
     "notes": "الدرجات",
     "evaluations": "التقييمات",
@@ -35,7 +35,7 @@
     "documents":    "الوثائق",
     "rapports":     "التقارير",
     "bibliotheque": "المكتبة",
-    "demandes_absence_prof": "الإجازات والتصاريح"
+    "demandes_absence_personnel": "الإجازات والتصاريح"
   },
   "theme": {
     "light": "الوضع الفاتح",

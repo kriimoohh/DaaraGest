@@ -74,7 +74,7 @@ export function Dashboard() {
   useEffect(() => {
     Promise.allSettled([
       api.get<{ total: number }>('/api/v1/eleves?limit=1'),
-      api.get<{ total: number }>('/api/v1/professeurs?limit=1'),
+      api.get<{ total: number }>('/api/v1/personnel?limit=1'),
       api.get<unknown[]>('/api/v1/classes'),
       api.get<StatsMois>('/api/v1/finances/stats'),
       api.get<{ nom_fr: string }>('/api/v1/parametres'),

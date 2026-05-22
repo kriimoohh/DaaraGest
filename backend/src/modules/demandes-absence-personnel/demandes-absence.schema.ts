@@ -14,7 +14,7 @@ export const STATUT_DEMANDE_VALUES = ['EN_ATTENTE', 'APPROUVE', 'REFUSE'] as con
 export type StatutDemande = typeof STATUT_DEMANDE_VALUES[number];
 
 export const creerDemandeSchema = z.object({
-  professeur_id: z.string().min(1),
+  personnel_id: z.string().min(1),
   date_debut:    z.string().min(1),
   date_fin:      z.string().min(1),
   motif:         z.string().min(1).max(1000),

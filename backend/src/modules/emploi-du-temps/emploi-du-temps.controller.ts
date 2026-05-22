@@ -5,9 +5,9 @@ import { listerCreneaux, creerCreneau, modifierCreneau, supprimerCreneau } from 
 
 export async function listerHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
-  const { annee_scolaire_id, classe_id, professeur_id } = request.query as Record<string, string>;
+  const { annee_scolaire_id, classe_id, personnel_id } = request.query as Record<string, string>;
   if (!annee_scolaire_id) return reply.status(400).send({ error: 'annee_scolaire_id est requis' });
-  return reply.send(await listerCreneaux(etablissement_id, annee_scolaire_id, classe_id, professeur_id));
+  return reply.send(await listerCreneaux(etablissement_id, annee_scolaire_id, classe_id, personnel_id));
 }
 
 export async function creerHandler(request: FastifyRequest, reply: FastifyReply) {

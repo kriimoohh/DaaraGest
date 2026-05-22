@@ -182,7 +182,7 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
   });
 
   useEffect(() => {
-    api.get<{ data: ProfesseurSimple[] }>('/api/v1/professeurs?limit=200')
+    api.get<{ data: ProfesseurSimple[] }>('/api/v1/personnel?limit=200')
       .then((r) => setProfs(r.data ?? [])).catch(() => {});
   }, []);
 

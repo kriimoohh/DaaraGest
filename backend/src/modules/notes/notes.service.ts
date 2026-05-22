@@ -44,7 +44,7 @@ export async function bulkUpsertNotes(
   const matiereIds = [...new Set(notes.map(n => n.matiere_id))];
 
   // Policy : un professeur ne peut modifier que les notes des classes/matières
-  // où il a une affectation ProfMatiereClasse.
+  // où il a une affectation PersonnelMatiereClasse.
   if (role && acteurId && classe_id) {
     await assertProfPeutModifierNotes(role, acteurId, classe_id, matiereIds);
   }

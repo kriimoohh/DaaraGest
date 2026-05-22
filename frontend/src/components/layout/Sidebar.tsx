@@ -18,7 +18,7 @@ const NAV_SECTIONS = [
     items: [
       { key: 'dashboard',   path: '/dashboard',       roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité', 'professeur', 'pointeur'] },
       { key: 'eleves',      path: '/eleves',           roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'] },
-      { key: 'professeurs', path: '/professeurs',      roles: ['admin', 'directeur', 'gestionnaire'] },
+      { key: 'personnel',   path: '/personnel',        roles: ['admin', 'directeur', 'gestionnaire'] },
       { key: 'classes',     path: '/classes',          roles: ['admin', 'directeur', 'gestionnaire', 'professeur'] },
     ],
   },
@@ -52,7 +52,7 @@ const NAV_SECTIONS = [
       { key: 'rapports',     path: '/rapports',     roles: ['admin', 'directeur', 'gestionnaire'] },
       { key: 'bibliotheque', path: '/bibliotheque', roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'] },
       { key: 'absences',     path: '/absences',     roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité', 'professeur', 'pointeur'] },
-      { key: 'demandes_absence_prof', path: '/demandes-absence-prof', roles: ['admin', 'directeur', 'gestionnaire'] },
+      { key: 'demandes_absence_personnel', path: '/demandes-absence-personnel', roles: ['admin', 'directeur', 'gestionnaire'] },
       { key: 'pointage',     path: '/pointage',     roles: ['admin', 'directeur', 'gestionnaire', 'pointeur'] },
       { key: 'finances',     path: '/finances',     roles: ['admin', 'gestionnaire', 'agent de scolarité'] },
       { key: 'utilisateurs', path: '/utilisateurs', roles: ['admin'] },
@@ -65,7 +65,7 @@ const NAV_ICONS: Record<string, string> = {
   accueil:          'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z',
   dashboard:        'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z',
   eleves:           'M12 3C9.79 3 8 4.79 8 7s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 10c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
-  professeurs:      'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
+  personnel:        'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
   classes:          'M12 3L1 9l4 2.18V15c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-3.82L21 9 12 3zm6 12H6v-2.5l6-3.27 6 3.27V15zm0-7.28L12 10.72 6 7.72 12 4.72l6 3z',
   annees_scolaires: 'M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z',
   matieres:         'M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z',
@@ -74,7 +74,7 @@ const NAV_ICONS: Record<string, string> = {
   progression:      'M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6h-6z',
   bulletins:        'M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z',
   absences:         'M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z',
-  demandes_absence_prof: 'M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z',
+  demandes_absence_personnel: 'M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z',
   pointage:         'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
   finances:         'M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z',
   emploi_du_temps:  'M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM9 10h2v2H9zm4 0h2v2h-2zm-4 4h2v2H9zm4 0h2v2h-2zm4-4h2v2h-2z',
@@ -108,12 +108,12 @@ export function Sidebar() {
   useEffect(() => {
     Promise.allSettled([
       api.get<{ total: number }>('/api/v1/eleves?limit=1'),
-      api.get<{ total: number }>('/api/v1/professeurs?limit=1'),
+      api.get<{ total: number }>('/api/v1/personnel?limit=1'),
       api.get<unknown[]>('/api/v1/classes'),
     ]).then(([eleves, profs, classes]) => {
       setCounts({
         eleves: eleves.status === 'fulfilled' ? (eleves.value as { total: number }).total : 0,
-        professeurs: profs.status === 'fulfilled' ? (profs.value as { total: number }).total : 0,
+        personnel: profs.status === 'fulfilled' ? (profs.value as { total: number }).total : 0,
         classes: classes.status === 'fulfilled' ? (classes.value as unknown[]).length : 0,
       });
     });

@@ -19,7 +19,7 @@ function isAdminLike(role: string): boolean {
 }
 
 async function getProfesseurId(utilisateur_id: string): Promise<string> {
-  const prof = await prisma.professeur.findUnique({
+  const prof = await prisma.personnel.findUnique({
     where: { utilisateur_id },
     select: { id: true },
   });
@@ -41,9 +41,9 @@ export async function assertProfPeutModifierNotes(
   if (!isProfesseur(role)) throw new ForbiddenError();
   if (matiere_ids.length === 0) return;
 
-  const professeur_id = await getProfesseurId(utilisateur_id);
-  const assignees = await prisma.profMatiereClasse.findMany({
-    where: { professeur_id, classe_id, matiere_id: { in: matiere_ids } },
+  const personnel_id = await getProfesseurId(utilisateur_id);
+  const assignees = await prisma.personnelMatiereClasse.findMany({
+    where: { personnel_id, classe_id, matiere_id: { in: matiere_ids } },
     select: { matiere_id: true },
   });
   const assigneesSet = new Set(assignees.map(a => a.matiere_id));
@@ -65,9 +65,9 @@ export async function assertProfPeutAccederClasse(
   if (isAdminLike(role)) return;
   if (!isProfesseur(role)) throw new ForbiddenError();
 
-  const professeur_id = await getProfesseurId(utilisateur_id);
-  const lien = await prisma.profMatiereClasse.findFirst({
-    where: { professeur_id, classe_id },
+  const personnel_id = await getProfesseurId(utilisateur_id);
+  const lien = await prisma.personnelMatiereClasse.findFirst({
+    where: { personnel_id, classe_id },
     select: { id: true },
   });
   if (!lien) {

@@ -5,7 +5,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Layout } from './components/layout/Layout';
 import { ProtectedRoute } from './components/ui/ProtectedRoute';
 import { ElevesPage } from './pages/Eleves';
-import { ProfesseursPage } from './pages/Professeurs';
+import { PersonnelPage } from './pages/Personnel';
 import { ClassesPage } from './pages/Classes';
 import { NotesPage } from './pages/Notes';
 import { EvaluationsPage } from './pages/Evaluations';
@@ -27,7 +27,7 @@ import { DocumentsPage } from './pages/Documents';
 import { PortailParentPage } from './pages/PortailParent';
 import { RapportsPage } from './pages/Rapports';
 import { BibliothequeePage } from './pages/Bibliotheque';
-import { DemandesAbsenceProfPage } from './pages/DemandesAbsenceProf';
+import { DemandesAbsencePersonnelPage } from './pages/DemandesAbsencePersonnel';
 import './i18n';
 
 // Mêmes listes que la Sidebar — source de vérité unique côté frontend
@@ -55,8 +55,8 @@ export default function App() {
           <Route path="/eleves" element={
             <ProtectedRoute roles={ROLES.gestion}><ElevesPage /></ProtectedRoute>
           } />
-          <Route path="/professeurs" element={
-            <ProtectedRoute roles={['admin', 'directeur', 'gestionnaire']}><ProfesseursPage /></ProtectedRoute>
+          <Route path="/personnel" element={
+            <ProtectedRoute roles={['admin', 'directeur', 'gestionnaire']}><PersonnelPage /></ProtectedRoute>
           } />
           <Route path="/classes" element={
             <ProtectedRoute roles={['admin', 'directeur', 'gestionnaire', 'professeur']}><ClassesPage /></ProtectedRoute>
@@ -109,8 +109,8 @@ export default function App() {
           <Route path="/bibliotheque" element={
             <ProtectedRoute roles={ROLES.gestion}><BibliothequeePage /></ProtectedRoute>
           } />
-          <Route path="/demandes-absence-prof" element={
-            <ProtectedRoute roles={ROLES.gestion}><DemandesAbsenceProfPage /></ProtectedRoute>
+          <Route path="/demandes-absence-personnel" element={
+            <ProtectedRoute roles={ROLES.gestion}><DemandesAbsencePersonnelPage /></ProtectedRoute>
           } />
           <Route path="/utilisateurs" element={
             <ProtectedRoute roles={ROLES.adminOnly}><UtilisateursPage /></ProtectedRoute>

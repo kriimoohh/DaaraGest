@@ -7,7 +7,7 @@ import { listerDemandes, creerDemande, traiterDemande, supprimerDemande } from '
 
 const gestion = requireRole(...ROLE_GROUPS.GESTION);
 
-export async function demandesAbsenceProfRoutes(fastify: FastifyInstance) {
+export async function demandesAbsencePersonnelRoutes(fastify: FastifyInstance) {
   fastify.get('/', { preHandler: [authMiddleware, gestion] }, async (req, _reply) => {
     const user = req.user as { etablissement_id: string };
     const { statut } = req.query as { statut?: string };

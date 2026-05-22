@@ -151,20 +151,20 @@ export async function listerPaiementsProfesseurs(
   const skip = (page - 1) * limit;
 
   const where: Record<string, unknown> = {
-    professeur: { utilisateur: { etablissement_id } },
+    personnel: { utilisateur: { etablissement_id } },
   };
 
   if (mois) where.mois = mois;
   if (annee) where.annee = annee;
 
   const [total, items] = await Promise.all([
-    prisma.paiementProfesseur.count({ where }),
-    prisma.paiementProfesseur.findMany({
+    prisma.paiementPersonnel.count({ where }),
+    prisma.paiementPersonnel.findMany({
       where,
       skip,
       take: limit,
       include: {
-        professeur: {
+        personnel: {
           include: {
             utilisateur: { select: { nom_fr: true, nom_ar: true } },
           },
@@ -178,14 +178,14 @@ export async function listerPaiementsProfesseurs(
 }
 
 export async function creerPaiementProfesseur(etablissement_id: string, data: PaiementProfesseurInput, acteurId: string) {
-  const professeur = await prisma.professeur.findFirst({
-    where: { id: data.professeur_id, utilisateur: { etablissement_id } },
+  const professeur = await prisma.personnel.findFirst({
+    where: { id: data.personnel_id, utilisateur: { etablissement_id } },
   });
-  if (!professeur) throw new Error('Professeur introuvable');
+  if (!professeur) throw new Error('Personnel introuvable');
 
-  const paiement = await prisma.paiementProfesseur.create({
+  const paiement = await prisma.paiementPersonnel.create({
     data: {
-      professeur_id: data.professeur_id,
+      personnel_id: data.personnel_id,
       mois: data.mois,
       annee: data.annee,
       montant_brut: data.montant_brut,
@@ -195,8 +195,8 @@ export async function creerPaiementProfesseur(etablissement_id: string, data: Pa
       heures_reelles: data.heures_reelles,
     },
   });
-  await logAction(etablissement_id, acteurId, 'CREATE', 'PaiementProfesseur', paiement.id, {
-    professeur_id: data.professeur_id, mois: data.mois, annee: data.annee, net: String(data.net_a_payer),
+  await logAction(etablissement_id, acteurId, 'CREATE', 'PaiementPersonnel', paiement.id, {
+    personnel_id: data.personnel_id, mois: data.mois, annee: data.annee, net: String(data.net_a_payer),
   });
   return paiement;
 }
@@ -255,9 +255,9 @@ export async function getStatsFinances(etablissement_id: string) {
         annee: anneeCourante,
       },
     }),
-    prisma.paiementProfesseur.aggregate({
+    prisma.paiementPersonnel.aggregate({
       where: {
-        professeur: { utilisateur: { etablissement_id } },
+        personnel: { utilisateur: { etablissement_id } },
         mois: moisCourant,
         annee: anneeCourante,
       },

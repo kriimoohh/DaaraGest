@@ -1,15 +1,20 @@
 import bcrypt from 'bcryptjs';
 import prisma from '../../config/database';
-import { ProfesseurInput } from './professeurs.schema';
+import { PersonnelInput } from './personnel.schema';
 
-export async function listerProfesseurs(etablissement_id: string, page = 1, search?: string) {
+export async function listerPersonnel(etablissement_id: string, page = 1, search?: string, fonction?: string) {
   const limit = 20;
   const skip = (page - 1) * limit;
+
+  const personnelFilter: Record<string, unknown> = { isNot: null };
+  if (fonction) {
+    personnelFilter.is = { fonction };
+  }
 
   const where: Record<string, unknown> = {
     etablissement_id,
     actif: true,
-    professeur: { isNot: null },
+    personnel: personnelFilter,
   };
 
   if (search) {
@@ -26,7 +31,7 @@ export async function listerProfesseurs(etablissement_id: string, page = 1, sear
       where,
       skip,
       take: limit,
-      include: { professeur: true, role: true },
+      include: { personnel: true, role: true },
       orderBy: [{ nom_fr: 'asc' }],
     }),
   ]);
@@ -34,8 +39,8 @@ export async function listerProfesseurs(etablissement_id: string, page = 1, sear
   return { total, page, limit, data: items };
 }
 
-export async function getProfesseur(id: string, etablissement_id: string) {
-  const professeur = await prisma.professeur.findFirst({
+export async function getPersonnel(id: string, etablissement_id: string) {
+  const professeur = await prisma.personnel.findFirst({
     where: {
       id,
       utilisateur: { etablissement_id },
@@ -45,11 +50,11 @@ export async function getProfesseur(id: string, etablissement_id: string) {
       matieres_classes: { include: { matiere: true, classe: true } },
     },
   });
-  if (!professeur) throw new Error('Professeur introuvable');
+  if (!professeur) throw new Error('Personnel introuvable');
   return professeur;
 }
 
-export async function creerProfesseur(etablissement_id: string, data: ProfesseurInput) {
+export async function creerPersonnel(etablissement_id: string, data: PersonnelInput) {
   const roleProf = await prisma.role.findFirst({ where: { libelle_fr: 'professeur' } });
   if (!roleProf) throw new Error('Rôle professeur introuvable');
 
@@ -66,9 +71,10 @@ export async function creerProfesseur(etablissement_id: string, data: Professeur
     },
   });
 
-  const professeur = await prisma.professeur.create({
+  const professeur = await prisma.personnel.create({
     data: {
       utilisateur_id: utilisateur.id,
+      fonction: data.fonction ?? 'ENSEIGNANT',
       specialite_fr: data.specialite_fr,
       specialite_ar: data.specialite_ar,
       telephone: data.telephone,
@@ -87,13 +93,13 @@ export async function creerProfesseur(etablissement_id: string, data: Professeur
   return professeur;
 }
 
-export async function modifierProfesseur(id: string, etablissement_id: string, data: Partial<ProfesseurInput>) {
-  // id peut être utilisateur_id ou professeur_id — on cherche les deux
-  const professeur = await prisma.professeur.findFirst({
+export async function modifierPersonnel(id: string, etablissement_id: string, data: Partial<PersonnelInput>) {
+  // id peut être utilisateur_id ou personnel_id — on cherche les deux
+  const professeur = await prisma.personnel.findFirst({
     where: { OR: [{ id }, { utilisateur_id: id }], utilisateur: { etablissement_id } },
     include: { utilisateur: true },
   });
-  if (!professeur) throw new Error('Professeur introuvable');
+  if (!professeur) throw new Error('Personnel introuvable');
 
   const updateTasks: Promise<unknown>[] = [];
 
@@ -114,9 +120,10 @@ export async function modifierProfesseur(id: string, etablissement_id: string, d
     v === undefined ? undefined : v === null ? null : new Date(v);
 
   updateTasks.push(
-    prisma.professeur.update({
+    prisma.personnel.update({
       where: { id: professeur.id },
       data: {
+        fonction: data.fonction,
         specialite_fr: data.specialite_fr,
         specialite_ar: data.specialite_ar,
         telephone: data.telephone,
@@ -137,12 +144,12 @@ export async function modifierProfesseur(id: string, etablissement_id: string, d
   return results[results.length - 1];
 }
 
-export async function supprimerProfesseur(id: string, etablissement_id: string) {
-  const professeur = await prisma.professeur.findFirst({
+export async function supprimerPersonnel(id: string, etablissement_id: string) {
+  const professeur = await prisma.personnel.findFirst({
     where: { OR: [{ id }, { utilisateur_id: id }], utilisateur: { etablissement_id } },
     include: { utilisateur: true },
   });
-  if (!professeur) throw new Error('Professeur introuvable');
+  if (!professeur) throw new Error('Personnel introuvable');
 
   return prisma.utilisateur.update({
     where: { id: professeur.utilisateur_id },
