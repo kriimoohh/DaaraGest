@@ -26,3 +26,21 @@ export const rapportBilanFinancierSchema = z.object({
   annee:  z.coerce.number().int().min(2020).optional(),
   format: z.enum(['csv', 'pdf']).default('pdf'),
 });
+
+// ─── Nouveaux schémas (grilles pédagogiques) ─────────────────────────────────
+
+const baseClasseSchema = z.object({
+  classe_id:         z.string().min(1),
+  annee_scolaire_id: z.string().min(1),
+  periode:           z.coerce.number().int().min(1).max(3).optional(),
+});
+
+export const rapportGrilleIefSchema         = baseClasseSchema;
+export const rapportGrillePerformanceSchema = baseClasseSchema;
+export const rapportPerformanceDomaineSchema = baseClasseSchema;
+export const rapportReleveNotesSchema        = baseClasseSchema;
+
+export const rapportPropositionsFinSchema = z.object({
+  classe_id:         z.string().min(1),
+  annee_scolaire_id: z.string().min(1),
+});
