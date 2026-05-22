@@ -223,6 +223,11 @@ export async function getBulletin(id: string, etablissement_id: string) {
 
   const filieres: ('FR' | 'AR')[] = bulletin.filiere === 'COMBINE' ? ['FR', 'AR'] : [bulletin.filiere as 'FR' | 'AR'];
 
+  // Nb de périodes configurable (2=semestres, 3=trimestres, 6=bimestres). On
+  // ne dépend plus de [1,2,3] hardcodé pour les bulletins annuels.
+  const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
+  const nbPeriodes = config?.nb_periodes ?? 3;
+
   // Chercher la classe de l'élève pour l'année scolaire du bulletin
   const inscription = bulletin.eleve.inscriptions.find(
     i => i.annee_scolaire_id === bulletin.annee_scolaire_id
@@ -236,7 +241,9 @@ export async function getBulletin(id: string, etablissement_id: string) {
     const matieres = classeId
       ? await getMatieresDeclasse(classeId, f)
       : await getMatieres(etablissement_id, f);
-    const periodes = bulletin.periode === 0 ? [1, 2, 3] : [bulletin.periode];
+    const periodes = bulletin.periode === 0
+      ? Array.from({ length: nbPeriodes }, (_, i) => i + 1)
+      : [bulletin.periode];
     notesByFiliere[f] = await prisma.note.findMany({
       where: { eleve_id: bulletin.eleve_id, annee_scolaire_id: bulletin.annee_scolaire_id, periode: { in: periodes }, matiere_id: { in: matieres.map(m => m.id) } },
       include: { matiere: true },
@@ -315,6 +322,10 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
   const etab = await prisma.etablissement.findUnique({ where: { id: etablissement_id } });
   if (!etab) throw new Error('Établissement introuvable');
 
+  // Nb de périodes dynamique (cf. genererBulletinsAnnuels + getBulletin)
+  const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
+  const nbPeriodes = config?.nb_periodes ?? 3;
+
   const { generateBulletinHtml, generateBulletinAnnuelHtml } = await import('./bulletin.template');
 
   const base = {
@@ -341,7 +352,7 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
       map.get(n.matiere.nom_fr)!.vals[n.periode] = n.valeur !== null ? Number(n.valeur) : null;
     }
     return Array.from(map.values()).map(m => {
-      const vals = [1, 2, 3].map(p => m.vals[p] ?? null);
+      const vals = Array.from({ length: nbPeriodes }, (_, i) => m.vals[i + 1] ?? null);
       const nums = vals.filter(v => v !== null) as number[];
       return { ...m, valeurs: vals, moyenne_annuelle: nums.length > 0 ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length * 100) / 100 : null };
     });

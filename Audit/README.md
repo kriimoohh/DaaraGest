@@ -1,4 +1,4 @@
-# Audit DaaraGest — Mai 2026 (révision + Sprint 5)
+# Audit DaaraGest — Mai 2026 (révision + Sprints 5 & 6)
 
 Audit complet du projet sur 4 axes, **réalisé le 2026-05-22** (révision du précédent audit du 2026-05-19) — suivi du **Sprint 5** qui applique l'ensemble des P1 cross-audit identifiés.
 
@@ -79,6 +79,35 @@ Tous les **P1 cross-audit** identifiés ont été corrigés en un seul sprint :
 - **Ingé E5** — Tests frontend : setup Vitest + RTL + 5-10 tests = 1 j hors scope P1
 - **Ingé E6** — TanStack Query : 2 j de migration progressive
 - **Ingé E14** — Remplacer `$executeRawUnsafe` séquences : migration Prisma + service à coordonner
+
+## Sprint 6 — Cohérence (2026-05-22)
+
+Après analyse de cohérence du codebase, **toutes** les incohérences structurelles trouvées ont été corrigées :
+
+| # | Thème | Action | Référence |
+|---|---|---|---|
+| 1 | 🔄 Refactor Personnel Phase 2 | `paiementProfesseur*` → `paiementPersonnel*` (schema, service, controller, routes) avec routes alias `/paiements-professeurs` pour rétro-compat | [finances.routes.ts](../backend/src/modules/finances/finances.routes.ts) |
+| 2 | 🔄 Refactor Personnel Phase 2 | `pointage` param `professeurId` → `personnelId` avec routes alias `/qr/legacy/:professeurId` | [pointage.routes.ts](../backend/src/modules/pointage/pointage.routes.ts) |
+| 3 | 🔄 Refactor Personnel Phase 2 | `rapportPresencesProfesseurs` → `rapportPresencesPersonnel` (handler, schema, route, libellés affichés) | [rapports.service.ts](../backend/src/modules/rapports/rapports.service.ts) |
+| 4 | 🔄 Refactor Personnel Phase 2 | `presence_professeurs` → `presence_personnel` dans la réponse Dashboard (+ alias compat) | [stats.service.ts](../backend/src/modules/stats/stats.service.ts) |
+| 5 | 🔄 Refactor Personnel Phase 2 | Frontend Dashboard/Personnel/Finances/Rapports mis à jour sur les nouveaux noms | divers |
+| 6 | 🔄 Refactor Personnel Phase 2 | Tests RBAC + métier nettoyés (routes mortes `/professeurs` retirées) | [rbac.test.ts](../backend/src/modules/rbac/rbac.test.ts) |
+| 7 | 🎯 Bulletins périodes dynamiques | `[1, 2, 3]` hardcodé dans `getBulletin` et `toAnnuelRows` → `nbPeriodes` depuis ConfigNotes | [bulletins.service.ts](../backend/src/modules/bulletins/bulletins.service.ts) |
+| 8 | 🧹 Code dupliqué | `getQrSecret()` factorisé dans `utils/qrSecret.ts` | [utils/qrSecret.ts](../backend/src/utils/qrSecret.ts) |
+| 9 | 🧹 Code dupliqué | `escapeHtml()` factorisé dans `utils/escapeHtml.ts` | [utils/escapeHtml.ts](../backend/src/utils/escapeHtml.ts) |
+| 10 | 🧭 Nav unifiée | `frontend/src/config/routes.ts` (source unique) + CommandPalette et Header.tsx consomment | [config/routes.ts](../frontend/src/config/routes.ts) |
+| 11 | 🧭 Nav unifiée | Header.tsx `PAGE_TITLES` figé en français → titre via i18n (`nav.<key>`) | [Header.tsx](../frontend/src/components/layout/Header.tsx) |
+| 12 | 🎨 Couleurs hors palette | 5 `#3B82F6` (NotificationBell, Calendrier, PortailParent, Finances) → tokens daara (`var(--info)`, `var(--indigo)`, `var(--terra)`) | divers |
+| 13 | 📚 Schema bilingues | Politique `nom_ar` documentée dans le header de `schema.prisma` (cible : nullable, legacy obligatoire conservé) | [schema.prisma](../backend/prisma/schema.prisma) |
+| 14 | 📚 Migrations corrompues | Dette documentée dans `prisma/migrations/README.md` (ne pas renommer en place, recette pour env vierge) | [prisma/migrations/README.md](../backend/prisma/migrations/README.md) |
+
+**Résultats Sprint 6 :**
+- ✅ 461 tests backend toujours verts (1.5s)
+- ✅ Type-check backend + frontend OK
+- ✅ Build frontend OK
+- ✅ Toute la nav est cohérente (Sidebar + CommandPalette + Header)
+- ✅ Aucune route morte `/professeurs` côté frontend
+- ✅ Backward-compat des anciennes URLs API via routes alias (transition douce)
 
 ## Évolutions notables vs audit précédent
 

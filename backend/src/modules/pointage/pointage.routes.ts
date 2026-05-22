@@ -18,8 +18,11 @@ export async function pointageRoutes(fastify: FastifyInstance) {
   fastify.get('/stats', { preHandler: [authMiddleware, acces] }, statsHandler);
 
   // QR Code — génération et régénération (admin/gestion)
-  fastify.get('/qr/:professeurId',         { preHandler: [authMiddleware, accesDirect] }, getQRCodeHandler);
-  fastify.post('/qr/:professeurId/regenerer', { preHandler: [authMiddleware, accesDirect] }, regenererQRHandler);
+  fastify.get('/qr/:personnelId',             { preHandler: [authMiddleware, accesDirect] }, getQRCodeHandler);
+  fastify.post('/qr/:personnelId/regenerer',  { preHandler: [authMiddleware, accesDirect] }, regenererQRHandler);
+  // Alias rétro-compat (ancien paramètre :professeurId) — à retirer après migration des clients.
+  fastify.get('/qr/legacy/:professeurId',            { preHandler: [authMiddleware, accesDirect] }, getQRCodeHandler);
+  fastify.post('/qr/legacy/:professeurId/regenerer', { preHandler: [authMiddleware, accesDirect] }, regenererQRHandler);
 
   // Scan — endpoint public (token UUID = entropie suffisante)
   fastify.post('/scan', scanQRHandler);

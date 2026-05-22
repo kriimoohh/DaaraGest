@@ -518,11 +518,11 @@ export function PortailParentPage() {
             </div>
           </div>
 
-          <div style={{ padding: '14px 16px', background: '#eff6ff', borderRadius: 12, border: '1px solid #bfdbfe' }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#1e40af' }}>
+          <div style={{ padding: '14px 16px', background: 'var(--indigo-soft)', borderRadius: 12, border: '1px solid var(--info-border)' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--indigo-ink)' }}>
               {data.eleve.prenom_fr} <span style={{ textTransform: 'uppercase' }}>{data.eleve.nom_fr}</span>
             </div>
-            <div style={{ fontSize: 13, color: '#3b82f6', fontFamily: 'monospace', marginTop: 2 }}>
+            <div style={{ fontSize: 13, color: 'var(--info)', fontFamily: 'monospace', marginTop: 2 }}>
               {data.eleve.matricule}
             </div>
             {data.inscription && (

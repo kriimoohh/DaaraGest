@@ -10,22 +10,7 @@ import { NotificationBell } from '../ui/NotificationBell';
 import { CommandPalette } from '../CommandPalette';
 import { api } from '../../lib/api';
 import { toast } from '../../store/toastStore';
-
-const PAGE_TITLES: Record<string, string> = {
-  '/dashboard':        'Tableau de bord',
-  '/eleves':           'Élèves',
-  '/professeurs':      'Professeurs',
-  '/classes':          'Classes',
-  '/annees-scolaires': 'Années scolaires',
-  '/matieres':         'Matières',
-  '/notes':            'Notes',
-  '/bulletins':        'Bulletins',
-  '/absences':         'Absences',
-  '/pointage':         'Pointage',
-  '/finances':         'Finances',
-  '/utilisateurs':     'Utilisateurs',
-  '/parametres':       'Paramètres',
-};
+import { findRoute } from '../../config/routes';
 
 interface TopbarProps {
   onMenuClick: () => void;
@@ -40,7 +25,9 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
   const role = user?.role ?? '';
   const initials = (user?.nom_fr ?? '').slice(0, 2).toUpperCase();
-  const currentTitle = PAGE_TITLES[location.pathname] ?? 'DaaraGest';
+  // Titre dérivé de config/routes — i18n via la clé nav.<key>
+  const matchedRoute = findRoute(location.pathname);
+  const currentTitle = matchedRoute ? t(`nav.${matchedRoute.key}`, matchedRoute.key) : 'DaaraGest';
 
   const [cmdOpen, setCmdOpen] = useState(false);
   const [profilOpen, setProfilOpen] = useState(false);

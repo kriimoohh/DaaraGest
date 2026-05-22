@@ -27,7 +27,7 @@ export const updatePaiementEleveSchema = z.object({
   statut: z.enum(['paye', 'impaye']).optional(),
 });
 
-export const paiementProfesseurSchema = z.object({
+export const paiementPersonnelSchema = z.object({
   personnel_id: z.string().uuid(),
   mois: z.number().int().min(1).max(12),
   annee: z.number().int(),
@@ -41,4 +41,4 @@ export const paiementProfesseurSchema = z.object({
 export type PaiementEleveInput = z.infer<typeof paiementEleveSchema>;
 export type BulkPaiementEleveInput = z.infer<typeof bulkPaiementEleveSchema>;
 export type UpdatePaiementEleveInput = z.infer<typeof updatePaiementEleveSchema>;
-export type PaiementProfesseurInput = z.infer<typeof paiementProfesseurSchema>;
+export type PaiementPersonnelInput = z.infer<typeof paiementPersonnelSchema>;

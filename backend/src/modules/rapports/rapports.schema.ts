@@ -8,7 +8,7 @@ export const rapportPresencesElevesSchema = z.object({
   format:           z.enum(['csv', 'pdf']).default('pdf'),
 });
 
-export const rapportPresencesProfesseursSchema = z.object({
+export const rapportPresencesPersonnelSchema = z.object({
   mois:   z.coerce.number().int().min(1).max(12).optional(),
   annee:  z.coerce.number().int().min(2020).optional(),
   format: z.enum(['csv', 'pdf']).default('pdf'),
@@ -55,7 +55,7 @@ export const apercuChargesPersonnelSchema = rapportChargesPersonnelSchema.omit({
 // ─── Aperçus (mêmes filtres, sans format) ────────────────────────────────────
 
 export const apercuPresencesElevesSchema       = rapportPresencesElevesSchema.omit({ format: true });
-export const apercuPresencesProfesseursSchema  = rapportPresencesProfesseursSchema.omit({ format: true });
+export const apercuPresencesPersonnelSchema  = rapportPresencesPersonnelSchema.omit({ format: true });
 export const apercuResultatsClasseSchema       = rapportResultatsClasseSchema.omit({ format: true });
 export const apercuBilanFinancierSchema        = rapportBilanFinancierSchema.omit({ format: true });
 export const apercuGrilleIefSchema             = rapportGrilleIefSchema;

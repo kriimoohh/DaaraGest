@@ -2,12 +2,8 @@ import prisma from '../../config/database';
 import crypto from 'crypto';
 import QRCode from 'qrcode';
 import { logAction } from '../../utils/audit';
-import { env } from '../../config/env';
+import { getQrSecret } from '../../utils/qrSecret';
 import { EleveInput, InscriptionInput } from './eleves.schema';
-
-function getQrSecret(): string {
-  return env.QR_SECRET;
-}
 
 const VALID_SORT_FIELDS = ['nom_fr', 'prenom_fr', 'matricule', 'sexe', 'date_naissance'];
 

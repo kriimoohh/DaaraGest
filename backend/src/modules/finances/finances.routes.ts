@@ -5,7 +5,7 @@ import { ROLE_GROUPS } from '../../config/roles';
 import {
   listerPaiementsElevesHandler, creerPaiementEleveHandler,
   bulkCreerPaiementEleveHandler, modifierPaiementEleveHandler, supprimerPaiementEleveHandler,
-  listerPaiementsProfesseursHandler, creerPaiementProfesseurHandler,
+  listerPaiementsPersonnelHandler, creerPaiementPersonnelHandler,
   statsHandler, reliquatsHandler, statsMensuelsHandler, exportExcelHandler,
 } from './finances.controller';
 
@@ -19,8 +19,14 @@ export async function financesRoutes(fastify: FastifyInstance) {
   fastify.post('/paiements-eleves/bulk',  { preHandler: [authMiddleware, scolarite] }, bulkCreerPaiementEleveHandler);
   fastify.put('/paiements-eleves/:id',    { preHandler: [authMiddleware, adminOnly] },  modifierPaiementEleveHandler);
   fastify.delete('/paiements-eleves/:id', { preHandler: [authMiddleware, adminOnly] },  supprimerPaiementEleveHandler);
-  fastify.get('/paiements-professeurs',   { preHandler: [authMiddleware, gestion] },    listerPaiementsProfesseursHandler);
-  fastify.post('/paiements-professeurs',  { preHandler: [authMiddleware, gestion] },    creerPaiementProfesseurHandler);
+
+  // Paiements personnel (anciennement /paiements-professeurs).
+  fastify.get('/paiements-personnel',     { preHandler: [authMiddleware, gestion] },    listerPaiementsPersonnelHandler);
+  fastify.post('/paiements-personnel',    { preHandler: [authMiddleware, gestion] },    creerPaiementPersonnelHandler);
+  // Alias rétro-compat — à supprimer après migration de tous les clients.
+  fastify.get('/paiements-professeurs',   { preHandler: [authMiddleware, gestion] },    listerPaiementsPersonnelHandler);
+  fastify.post('/paiements-professeurs',  { preHandler: [authMiddleware, gestion] },    creerPaiementPersonnelHandler);
+
   fastify.get('/export-excel',            { preHandler: [authMiddleware, scolarite] },  exportExcelHandler);
   fastify.get('/stats',                   { preHandler: [authMiddleware, scolarite] },  statsHandler);
   fastify.get('/reliquats',               { preHandler: [authMiddleware, scolarite] },  reliquatsHandler);

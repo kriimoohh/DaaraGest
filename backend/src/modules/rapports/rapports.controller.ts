@@ -2,7 +2,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
 import {
   rapportPresencesEleves,
-  rapportPresencesProfesseurs,
+  rapportPresencesPersonnel,
   rapportResultatsClasse,
   rapportBilanFinancier,
   rapportGrilleIef,
@@ -12,7 +12,7 @@ import {
   rapportPropositionsFin,
   rapportChargesPersonnel,
   apercuPresencesEleves,
-  apercuPresencesProfesseurs,
+  apercuPresencesPersonnel,
   apercuResultatsClasse,
   apercuBilanFinancier,
   apercuGrilleIef,
@@ -24,7 +24,7 @@ import {
 } from './rapports.service';
 import {
   rapportPresencesElevesSchema,
-  rapportPresencesProfesseursSchema,
+  rapportPresencesPersonnelSchema,
   rapportResultatsClasseSchema,
   rapportBilanFinancierSchema,
   rapportGrilleIefSchema,
@@ -34,7 +34,7 @@ import {
   rapportPropositionsFinSchema,
   rapportChargesPersonnelSchema,
   apercuPresencesElevesSchema,
-  apercuPresencesProfesseursSchema,
+  apercuPresencesPersonnelSchema,
   apercuResultatsClasseSchema,
   apercuBilanFinancierSchema,
   apercuGrilleIefSchema,
@@ -79,12 +79,12 @@ export async function presencesElevesHandler(request: FastifyRequest, reply: Fas
   }
 }
 
-export async function presencesProfesseursHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function presencesPersonnelHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
-  const parsed = rapportPresencesProfesseursSchema.safeParse(request.query);
+  const parsed = rapportPresencesPersonnelSchema.safeParse(request.query);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
   try {
-    return sendFile(reply, await rapportPresencesProfesseurs(etablissement_id, parsed.data));
+    return sendFile(reply, await rapportPresencesPersonnel(etablissement_id, parsed.data));
   } catch (err) {
     return reply.status(500).send({ error: (err as Error).message });
   }
@@ -183,7 +183,7 @@ export async function chargesPersonnelHandler(request: FastifyRequest, reply: Fa
 // ─── Aperçus HTML ─────────────────────────────────────────────────────────────
 
 export const apercuPresencesElevesHandler      = buildApercuHandler(apercuPresencesElevesSchema, apercuPresencesEleves);
-export const apercuPresencesProfesseursHandler = buildApercuHandler(apercuPresencesProfesseursSchema, apercuPresencesProfesseurs);
+export const apercuPresencesPersonnelHandler = buildApercuHandler(apercuPresencesPersonnelSchema, apercuPresencesPersonnel);
 export const apercuResultatsClasseHandler      = buildApercuHandler(apercuResultatsClasseSchema, apercuResultatsClasse);
 export const apercuBilanFinancierHandler       = buildApercuHandler(apercuBilanFinancierSchema, apercuBilanFinancier);
 export const apercuGrilleIefHandler            = buildApercuHandler(apercuGrilleIefSchema, apercuGrilleIef);

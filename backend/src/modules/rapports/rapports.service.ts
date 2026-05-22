@@ -115,9 +115,9 @@ ${absences.map(a => `<tr>
   return { buffer, mime: 'application/pdf', filename: 'presences-eleves.pdf' };
 }
 
-// ─── Rapport présences professeurs ──────────────────────────────────────────
+// ─── Rapport présences personnel ────────────────────────────────────────────
 
-export async function rapportPresencesProfesseurs(
+export async function rapportPresencesPersonnel(
   etablissement_id: string,
   params: { mois?: number; annee?: number; format: string },
 ) {
@@ -153,10 +153,10 @@ export async function rapportPresencesProfesseurs(
         p.motif ?? '',
       ])),
     ];
-    return { buffer: Buffer.from(lines.join('\n'), 'utf-8'), mime: 'text/csv', filename: 'presences-professeurs.csv' };
+    return { buffer: Buffer.from(lines.join('\n'), 'utf-8'), mime: 'text/csv', filename: 'presences-personnel.csv' };
   }
 
-  const titre = `Rapport de présences professeurs${mois && annee ? ` — ${MOIS_LABELS[mois-1]} ${annee}` : ''}`;
+  const titre = `Rapport de présences personnel${mois && annee ? ` — ${MOIS_LABELS[mois-1]} ${annee}` : ''}`;
   const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
 <style>
   body{font-family:sans-serif;font-size:12px;color:#111;margin:24px;}
@@ -184,7 +184,7 @@ ${presences.map(p => `<tr>
 </tbody></table></body></html>`;
 
   const buffer = await renderPdfHtml(html, { format: 'A4', printBackground: true, margin: { top: '12mm', bottom: '12mm', left: '10mm', right: '10mm' } });
-  return { buffer, mime: 'application/pdf', filename: 'presences-professeurs.pdf' };
+  return { buffer, mime: 'application/pdf', filename: 'presences-personnel.pdf' };
 }
 
 // ─── Rapport résultats classe ────────────────────────────────────────────────
@@ -313,7 +313,7 @@ export async function rapportBilanFinancier(
       [],
       ['TYPE','MONTANT','DEVISE'],
       ['Total encaissé (élèves)', totalEncaisse, devise],
-      ['Total versé (professeurs)', totalVersé, devise],
+      ['Total versé (personnel)', totalVersé, devise],
       ['Solde', solde, devise],
       [],
       ['DÉTAIL PAIEMENTS ÉLÈVES'],
@@ -349,7 +349,7 @@ export async function rapportBilanFinancier(
 <div class="sub">Généré le ${new Date().toLocaleDateString('fr-FR')}</div>
 <div class="kpis">
   <div class="kpi"><div class="kpi-label">Encaissé</div><div class="kpi-val green">${totalEncaisse.toLocaleString('fr-FR')} ${devise}</div></div>
-  <div class="kpi"><div class="kpi-label">Versé profs</div><div class="kpi-val red">${totalVersé.toLocaleString('fr-FR')} ${devise}</div></div>
+  <div class="kpi"><div class="kpi-label">Versé personnel</div><div class="kpi-val red">${totalVersé.toLocaleString('fr-FR')} ${devise}</div></div>
   <div class="kpi"><div class="kpi-label">Solde</div><div class="kpi-val ${solde >= 0 ? 'green' : 'red'}">${solde.toLocaleString('fr-FR')} ${devise}</div></div>
 </div>
 <h2>Paiements élèves (${paiementsEleves.length})</h2>
@@ -364,7 +364,7 @@ ${paiementsEleves.map(p => `<tr>
   <td style="text-align:right;font-family:monospace">${Number(p.montant).toLocaleString('fr-FR')}</td>
 </tr>`).join('')}
 </tbody></table>
-<h2>Versements professeurs (${paiementsProfs.length})</h2>
+<h2>Versements personnel (${paiementsProfs.length})</h2>
 <table>
 <thead><tr><th>Personnel</th><th style="text-align:right">Brut</th><th style="text-align:right">Retenues</th><th style="text-align:right">Net</th></tr></thead>
 <tbody>
@@ -1337,12 +1337,12 @@ export async function apercuPresencesEleves(
   return { html };
 }
 
-export async function apercuPresencesProfesseurs(
+export async function apercuPresencesPersonnel(
   etablissement_id: string,
   params: { mois?: number; annee?: number },
 ) {
   const html = await capturePreviewHtml(() =>
-    rapportPresencesProfesseurs(etablissement_id, { ...params, format: 'pdf' }),
+    rapportPresencesPersonnel(etablissement_id, { ...params, format: 'pdf' }),
   );
   return { html };
 }

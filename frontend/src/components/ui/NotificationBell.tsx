@@ -74,10 +74,11 @@ function TypeIcon({ type }: { type: string }) {
 }
 
 const TYPE_ICON_COLORS: Record<string, string> = {
-  absence_eleve: '#EF4444',
-  paiement_retard: '#F59E0B',
-  note_insuffisante: '#8B5CF6',
-  absence_professeur: '#3B82F6',
+  absence_eleve:        'var(--danger)',
+  paiement_retard:      'var(--warning)',
+  note_insuffisante:    'var(--terra)',
+  absence_personnel:    'var(--info)',
+  absence_professeur:   'var(--info)', // alias historique (cf. notifications.service.ts)
 };
 
 // ── NotificationBell ──────────────────────────────────────────────────────────

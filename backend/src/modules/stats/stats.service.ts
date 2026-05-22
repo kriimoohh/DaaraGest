@@ -285,7 +285,7 @@ async function getAlertes(etablissement_id: string, annee_scolaire_id?: string) 
 }
 
 export async function getTableauDeBord(etablissement_id: string, annee_scolaire_id?: string) {
-  const [presenceEleves, presenceProfesseurs, moyennesClasses, topBottom, finances, alertes] = await Promise.all([
+  const [presenceEleves, presencePersonnel, moyennesClasses, topBottom, finances, alertes] = await Promise.all([
     getTauxPresenceEleves(etablissement_id),
     getTauxPresenceProfesseurs(etablissement_id),
     getMoyennesClasses(etablissement_id, annee_scolaire_id),
@@ -296,7 +296,10 @@ export async function getTableauDeBord(etablissement_id: string, annee_scolaire_
 
   return {
     presence_eleves:      presenceEleves,
-    presence_professeurs: presenceProfesseurs,
+    presence_personnel:   presencePersonnel,
+    // Alias rétro-compat — frontend Dashboard lit encore presence_professeurs.
+    // À supprimer après mise à jour des consommateurs.
+    presence_professeurs: presencePersonnel,
     moyennes_classes:     moyennesClasses,
     top5_eleves:          topBottom.top5,
     bottom5_eleves:       topBottom.bottom5,

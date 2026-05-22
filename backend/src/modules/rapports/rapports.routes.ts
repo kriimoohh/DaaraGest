@@ -4,7 +4,7 @@ import { requireRole } from '../../middlewares/role.middleware';
 import { ROLE_GROUPS } from '../../config/roles';
 import {
   presencesElevesHandler,
-  presencesProfesseursHandler,
+  presencesPersonnelHandler,
   resultatsClasseHandler,
   bilanFinancierHandler,
   grilleIefHandler,
@@ -14,7 +14,7 @@ import {
   propositionsFinHandler,
   chargesPersonnelHandler,
   apercuPresencesElevesHandler,
-  apercuPresencesProfesseursHandler,
+  apercuPresencesPersonnelHandler,
   apercuResultatsClasseHandler,
   apercuBilanFinancierHandler,
   apercuGrilleIefHandler,
@@ -31,7 +31,9 @@ export async function rapportsRoutes(fastify: FastifyInstance) {
 
   // Rapports existants
   fastify.get('/presences-eleves',       { preHandler: [authMiddleware, gestion] },   presencesElevesHandler);
-  fastify.get('/presences-professeurs',  { preHandler: [authMiddleware, gestion] },   presencesProfesseursHandler);
+  fastify.get('/presences-personnel',    { preHandler: [authMiddleware, gestion] },   presencesPersonnelHandler);
+  // Alias rétro-compat
+  fastify.get('/presences-professeurs',  { preHandler: [authMiddleware, gestion] },   presencesPersonnelHandler);
   fastify.get('/resultats-classe',       { preHandler: [authMiddleware, gestion] },   resultatsClasseHandler);
   fastify.get('/bilan-financier',        { preHandler: [authMiddleware, direction] }, bilanFinancierHandler);
 
@@ -51,7 +53,9 @@ export async function rapportsRoutes(fastify: FastifyInstance) {
 
   // Aperçus HTML (mêmes filtres + même garde de rôle que la version PDF/CSV)
   fastify.get('/apercu/presences-eleves',      { preHandler: [authMiddleware, gestion] },   apercuPresencesElevesHandler);
-  fastify.get('/apercu/presences-professeurs', { preHandler: [authMiddleware, gestion] },   apercuPresencesProfesseursHandler);
+  fastify.get('/apercu/presences-personnel',   { preHandler: [authMiddleware, gestion] },   apercuPresencesPersonnelHandler);
+  // Alias rétro-compat
+  fastify.get('/apercu/presences-professeurs', { preHandler: [authMiddleware, gestion] },   apercuPresencesPersonnelHandler);
   fastify.get('/apercu/resultats-classe',      { preHandler: [authMiddleware, gestion] },   apercuResultatsClasseHandler);
   fastify.get('/apercu/bilan-financier',       { preHandler: [authMiddleware, direction] }, apercuBilanFinancierHandler);
   fastify.get('/apercu/grille-ief',            { preHandler: [authMiddleware, gestion] },   apercuGrilleIefHandler);
