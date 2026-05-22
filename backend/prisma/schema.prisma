@@ -63,6 +63,7 @@ model Utilisateur {
   nom_fr               String
   nom_ar               String
   prenom_fr            String?
+  sexe                 String?   // 'M' ou 'F' — utilisé pour l'accord en genre des documents
   identifiant          String    @unique
   email                String?
   mot_de_passe         String
