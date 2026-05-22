@@ -178,7 +178,11 @@ input, select, textarea { font-family: inherit; font-size: inherit; color: inher
   grid-template-columns: var(--sidebar-w) 1fr;
   min-height: 100vh;
 }
-html[dir="rtl"] .app { grid-template-columns: 1fr var(--sidebar-w); direction: rtl; }
+/* En RTL, on garde le même grid-template-columns : c'est `direction: rtl`
+   qui inverse visuellement l'ordre des tracks. Inverser le template *et*
+   appliquer rtl mettait la sidebar dans la track `1fr` → .main coincée en
+   280px et le contenu débordait hors viewport. */
+html[dir="rtl"] .app { direction: rtl; }
 
 .main {
   display: flex;
