@@ -6,7 +6,7 @@ interface ScanResult {
   action: 'arrivee' | 'depart' | 'deja_complet';
   heure: string;
   nom: string;
-  professeur_id: string;
+  personnel_id: string;
 }
 
 interface ScanHistorique {
@@ -20,7 +20,7 @@ interface ScanDuJour {
   id: string;
   heure_arrivee: string | null;
   heure_depart: string | null;
-  professeur: { utilisateur: { nom_fr: string; prenom_fr: string | null } };
+  personnel: { utilisateur: { nom_fr: string; prenom_fr: string | null } };
 }
 
 const ACTION_LABELS = {
@@ -108,7 +108,7 @@ export function ScannerPage() {
       if (result.action !== 'deja_complet') {
         setHistorique(prev => [
           {
-            id: `${result.professeur_id}-${Date.now()}`,
+            id: `${result.personnel_id}-${Date.now()}`,
             nom: result.nom,
             heure: result.heure,
             action: result.action as 'arrivee' | 'depart',
@@ -345,7 +345,7 @@ export function ScannerPage() {
                 border: '1px solid var(--rule)',
               }}>
                 <span style={{ fontSize: 13, color: 'var(--ink)' }}>
-                  {s.professeur.utilisateur.prenom_fr} {s.professeur.utilisateur.nom_fr}
+                  {s.personnel.utilisateur.prenom_fr} {s.personnel.utilisateur.nom_fr}
                 </span>
                 <div style={{ display: 'flex', gap: 10, fontSize: 12, fontFamily: 'var(--font-mono)' }}>
                   {s.heure_arrivee && (

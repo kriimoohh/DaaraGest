@@ -528,16 +528,16 @@ export function PersonnelPage() {
   return (
     <>
       <PageHeader
-          eyebrow="Personnel enseignant"
-          title="Professeurs"
-          subtitle="Gestion du corps enseignant"
+          eyebrow="Ressources humaines"
+          title="Personnel"
+          subtitle="Gestion du personnel de l'établissement"
           action={
             <div style={{ display: 'flex', gap: 8 }}>
               <Button variant="secondary" onClick={() => { setCarteLotErreurs([]); setCarteLotModal(true); }}>
                 🪪 Cartes en lot
               </Button>
               <Button onClick={openAdd} icon={<span>+</span>}>
-                Ajouter un professeur
+                Ajouter un membre
               </Button>
             </div>
           }
