@@ -99,15 +99,15 @@ export async function rapportPresencesProfesseurs(
 ) {
   const { mois, annee, format } = params;
 
-  const where: Record<string, unknown> = { professeur: { utilisateur: { etablissement_id } } };
+  const where: Record<string, unknown> = { personnel: { utilisateur: { etablissement_id } } };
   if (mois && annee) {
     where.date = { gte: new Date(annee, mois - 1, 1), lte: new Date(annee, mois, 0) };
   }
 
-  const presences = await prisma.presenceProfesseur.findMany({
+  const presences = await prisma.presencePersonnel.findMany({
     where,
     include: {
-      professeur: {
+      personnel: {
         include: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } },
       },
     },
@@ -119,8 +119,8 @@ export async function rapportPresencesProfesseurs(
       csvRow(['Date','Nom','Prénom','Statut','Arrivée','Départ','Heures prévues','Heures réelles','Motif']),
       ...presences.map(p => csvRow([
         new Date(p.date).toLocaleDateString('fr-FR'),
-        p.professeur.utilisateur.nom_fr,
-        p.professeur.utilisateur.prenom_fr ?? '',
+        p.personnel.utilisateur.nom_fr,
+        p.personnel.utilisateur.prenom_fr ?? '',
         p.statut,
         p.heure_arrivee ?? '',
         p.heure_depart ?? '',
@@ -147,11 +147,11 @@ export async function rapportPresencesProfesseurs(
 <h1>${esc(titre)}</h1>
 <div class="sub">Généré le ${new Date().toLocaleDateString('fr-FR')} — ${presences.length} enregistrement(s)</div>
 <table>
-<thead><tr><th>Date</th><th>Professeur</th><th>Statut</th><th>Arrivée</th><th>Départ</th><th>H. réelles</th></tr></thead>
+<thead><tr><th>Date</th><th>Personnel</th><th>Statut</th><th>Arrivée</th><th>Départ</th><th>H. réelles</th></tr></thead>
 <tbody>
 ${presences.map(p => `<tr>
   <td>${new Date(p.date).toLocaleDateString('fr-FR')}</td>
-  <td>${esc(p.professeur.utilisateur.nom_fr)} ${esc(p.professeur.utilisateur.prenom_fr ?? '')}</td>
+  <td>${esc(p.personnel.utilisateur.nom_fr)} ${esc(p.personnel.utilisateur.prenom_fr ?? '')}</td>
   <td class="${p.statut}">${esc(p.statut)}</td>
   <td>${esc(p.heure_arrivee ?? '—')}</td>
   <td>${esc(p.heure_depart ?? '—')}</td>
@@ -271,9 +271,9 @@ export async function rapportBilanFinancier(
       include: { eleve: { select: { nom_fr: true, prenom_fr: true, matricule: true } } },
       orderBy: { created_at: 'desc' },
     }),
-    prisma.paiementProfesseur.findMany({
-      where: { professeur: { utilisateur: { etablissement_id } }, mois, annee },
-      include: { professeur: { include: { utilisateur: { select: { nom_fr: true } } } } },
+    prisma.paiementPersonnel.findMany({
+      where: { personnel: { utilisateur: { etablissement_id } }, mois, annee },
+      include: { personnel: { include: { utilisateur: { select: { nom_fr: true } } } } },
     }),
     prisma.configNotes.findUnique({ where: { etablissement_id } }),
   ]);
@@ -342,10 +342,10 @@ ${paiementsEleves.map(p => `<tr>
 </tbody></table>
 <h2>Versements professeurs (${paiementsProfs.length})</h2>
 <table>
-<thead><tr><th>Professeur</th><th style="text-align:right">Brut</th><th style="text-align:right">Retenues</th><th style="text-align:right">Net</th></tr></thead>
+<thead><tr><th>Personnel</th><th style="text-align:right">Brut</th><th style="text-align:right">Retenues</th><th style="text-align:right">Net</th></tr></thead>
 <tbody>
 ${paiementsProfs.map(p => `<tr>
-  <td>${esc(p.professeur.utilisateur.nom_fr)}</td>
+  <td>${esc(p.personnel.utilisateur.nom_fr)}</td>
   <td style="text-align:right;font-family:monospace">${Number(p.montant_brut).toLocaleString('fr-FR')}</td>
   <td style="text-align:right;font-family:monospace">${Number(p.retenues).toLocaleString('fr-FR')}</td>
   <td style="text-align:right;font-family:monospace;font-weight:600">${Number(p.net_a_payer).toLocaleString('fr-FR')}</td>

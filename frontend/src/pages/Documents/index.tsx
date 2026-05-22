@@ -488,7 +488,7 @@ export function DocumentsPage() {
     api.get<AnneeScolaire[]>('/api/v1/annees-scolaires')
       .then(d => { setAnnees(d); const a = d.find(x => x.active); if (a) setExtraParams(p => ({ ...p, annee_scolaire_id: a.id })); })
       .catch(() => {});
-    api.get<{ data: Professeur[] }>('/api/v1/professeurs?limit=200')
+    api.get<{ data: Professeur[] }>('/api/v1/personnel?limit=200')
       .then(d => setProfesseurs(d.data ?? []))
       .catch(() => {});
   }, []);

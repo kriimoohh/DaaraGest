@@ -12,7 +12,7 @@ import { anneeScolaireRoutes } from './modules/annees-scolaires/annees-scolaires
 import { matiereRoutes } from './modules/matieres/matieres.routes';
 import { classeRoutes } from './modules/classes/classes.routes';
 import { eleveRoutes } from './modules/eleves/eleves.routes';
-import { professeurRoutes } from './modules/professeurs/professeurs.routes';
+import { personnelRoutes } from './modules/personnel/personnel.routes';
 import { noteRoutes } from './modules/notes/notes.routes';
 import { bulletinRoutes } from './modules/bulletins/bulletins.routes';
 import { financesRoutes } from './modules/finances/finances.routes';
@@ -30,7 +30,7 @@ import { evaluationsRoutes } from './modules/evaluations/evaluations.routes';
 import { activitesRoutes } from './modules/activites/activites.routes';
 import { progressionRoutes } from './modules/progression/progression.routes';
 import { documentsRoutes } from './modules/documents/documents.routes';
-import { demandesAbsenceProfRoutes } from './modules/demandes-absence-prof/demandes-absence.routes';
+import { demandesAbsencePersonnelRoutes } from './modules/demandes-absence-personnel/demandes-absence.routes';
 import { statsRoutes } from './modules/stats/stats.routes';
 import { rapportsRoutes } from './modules/rapports/rapports.routes';
 import { bibliothequeRoutes } from './modules/bibliotheque/bibliotheque.routes';
@@ -117,7 +117,7 @@ async function build() {
       await api.register(matiereRoutes, { prefix: '/matieres' });
       await api.register(classeRoutes, { prefix: '/classes' });
       await api.register(eleveRoutes, { prefix: '/eleves' });
-      await api.register(professeurRoutes, { prefix: '/professeurs' });
+      await api.register(personnelRoutes, { prefix: '/personnel' });
       await api.register(noteRoutes, { prefix: '/notes' });
       await api.register(bulletinRoutes, { prefix: '/bulletins' });
       await api.register(financesRoutes, { prefix: '/finances' });
@@ -135,7 +135,7 @@ async function build() {
       await api.register(activitesRoutes,   { prefix: '/activites' });
       await api.register(progressionRoutes, { prefix: '/progression' });
       await api.register(documentsRoutes,   { prefix: '/documents' });
-      await api.register(demandesAbsenceProfRoutes, { prefix: '/demandes-absence-prof' });
+      await api.register(demandesAbsencePersonnelRoutes, { prefix: '/demandes-absence-personnel' });
       await api.register(statsRoutes,       { prefix: '/stats' });
       await api.register(rapportsRoutes,    { prefix: '/rapports' });
       await api.register(bibliothequeRoutes,{ prefix: '/bibliotheque' });

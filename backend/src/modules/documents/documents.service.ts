@@ -30,12 +30,12 @@ async function ensureEleveQrToken(eleveId: string): Promise<string> {
 }
 
 async function ensureProfQrToken(profId: string): Promise<string> {
-  const prof = await prisma.professeur.findFirstOrThrow({
+  const prof = await prisma.personnel.findFirstOrThrow({
     where: { OR: [{ id: profId }, { utilisateur_id: profId }] },
   });
   if (prof.qr_token) return prof.qr_token;
   const token = crypto.randomUUID();
-  await prisma.professeur.update({ where: { id: prof.id }, data: { qr_token: token } });
+  await prisma.personnel.update({ where: { id: prof.id }, data: { qr_token: token } });
   return token;
 }
 
@@ -52,7 +52,16 @@ function fmtDate(d: Date | string | null | undefined): string {
 async function buildCommonVars(etablissement_id: string): Promise<Record<string, string>> {
   const etab = await prisma.etablissement.findUniqueOrThrow({
     where: { id: etablissement_id },
+    include: { directeur: { include: { utilisateur: true } } },
   });
+
+  // Prefer la fiche Personnel du directeur (relation), fallback sur les champs
+  // deprecated nom_directeur / civilite_directeur pour rétro-compat tant
+  // qu'aucun Personnel DIRECTEUR n'est défini.
+  const dirNomFromRel = etab.directeur
+    ? `${etab.directeur.utilisateur.nom_fr}${etab.directeur.utilisateur.prenom_fr ? ' ' + etab.directeur.utilisateur.prenom_fr : ''}`.trim()
+    : null;
+  const nomDirecteur = dirNomFromRel ?? etab.nom_directeur ?? '';
 
   const escapeAttr = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const logoHtml = etab.logo_url
@@ -81,7 +90,7 @@ async function buildCommonVars(etablissement_id: string): Promise<Record<string,
   const TITRE_DIRECTEUR     = hasCivilite ? (isFemme ? 'Directrice'  : 'Directeur')   : 'Directeur(trice)';
   const DIRECTEUR_QUALITE   = hasCivilite ? (isFemme ? 'La Directrice' : 'Le Directeur') : 'Le/La Directeur(trice)';
   const SOUSSIGNE           = hasCivilite ? (isFemme ? 'soussignée'  : 'soussigné')   : 'soussigné(e)';
-  const NOM_COMPLET_DIRECTEUR = [CIVILITE_DIRECTEUR, etab.nom_directeur].filter(Boolean).join(' ');
+  const NOM_COMPLET_DIRECTEUR = [CIVILITE_DIRECTEUR, nomDirecteur].filter(Boolean).join(' ');
 
   return {
     NOM_ETABLISSEMENT: etab.nom_fr,
@@ -93,7 +102,7 @@ async function buildCommonVars(etablissement_id: string): Promise<Record<string,
     CACHET: cachetHtml,
     DATE_AUJOURD_HUI: fmtDate(today),
     REF_DOCUMENT: refDoc,
-    NOM_DIRECTEUR: etab.nom_directeur ?? '',
+    NOM_DIRECTEUR: nomDirecteur,
     CIVILITE_DIRECTEUR,
     NOM_COMPLET_DIRECTEUR,
     TITRE_DIRECTEUR,
@@ -176,7 +185,7 @@ async function buildEleveVars(eleve_id: string, etablissement_id: string): Promi
 // ─── Build prof vars ──────────────────────────────────────────────────────────
 
 async function buildProfVars(prof_id: string, _etablissement_id: string): Promise<Record<string, string>> {
-  const prof = await prisma.professeur.findFirstOrThrow({
+  const prof = await prisma.personnel.findFirstOrThrow({
     where: { OR: [{ id: prof_id }, { utilisateur_id: prof_id }] },
     include: { utilisateur: true },
   });
@@ -244,7 +253,7 @@ function buildNotesTable(notes: Array<{ periode: number; matiere: { nom_fr: stri
 async function buildEmploiDuTemps(classe_id: string): Promise<string> {
   const creneaux = await prisma.creneau.findMany({
     where: { classe_id },
-    include: { matiere: true, professeur: { include: { utilisateur: true } } },
+    include: { matiere: true, personnel: { include: { utilisateur: true } } },
     orderBy: [{ jour: 'asc' }, { heure_debut: 'asc' }],
   });
 
@@ -293,7 +302,7 @@ async function buildEmploiDuTemps(classe_id: string): Promise<string> {
 
 async function buildPlanningCours(prof_id: string): Promise<string> {
   const creneaux = await prisma.creneau.findMany({
-    where: { professeur_id: prof_id },
+    where: { personnel_id: prof_id },
     include: { matiere: true, classe: true },
     orderBy: [{ jour: 'asc' }, { heure_debut: 'asc' }],
   });
@@ -517,7 +526,7 @@ async function genererCarteProfesseur(
   etablissement_id: string,
   previewMode = false,
 ): Promise<{ html: string }> {
-  const prof = await prisma.professeur.findFirstOrThrow({
+  const prof = await prisma.personnel.findFirstOrThrow({
     where: { OR: [{ id: profId }, { utilisateur_id: profId }], utilisateur: { etablissement_id } },
     include: { utilisateur: true },
   });
@@ -620,8 +629,8 @@ async function buildA4DocumentHtml(
     }
 
     if (type === 'FICHE_PAIE') {
-      const paiement = await prisma.paiementProfesseur.findFirst({
-        where: { professeur_id: destinataire_id },
+      const paiement = await prisma.paiementPersonnel.findFirst({
+        where: { personnel_id: destinataire_id },
         orderBy: [{ annee: 'desc' }, { mois: 'desc' }],
       });
       if (paiement) {
@@ -718,7 +727,7 @@ export async function apercuDocumentHtml(
     return { html, is_card: true, has_photo: !!eleve.photo_url };
   }
   if (type === 'CARTE_PROFESSEUR') {
-    const prof = await prisma.professeur.findFirst({
+    const prof = await prisma.personnel.findFirst({
       where: { OR: [{ id: destinataire_id }, { utilisateur_id: destinataire_id }], utilisateur: { etablissement_id } },
       select: { photo_url: true },
     });

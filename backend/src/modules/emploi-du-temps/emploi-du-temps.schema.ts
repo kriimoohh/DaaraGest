@@ -8,7 +8,7 @@ export const creneauSchema = z.object({
   annee_scolaire_id: z.string().min(1),
   classe_id: z.string().min(1),
   matiere_id: z.string().min(1),
-  professeur_id: z.string().min(1),
+  personnel_id: z.string().min(1),
   // Validation contre les jours actifs de l'établissement se fait dans le service
   jour: z.enum(TOUS_LES_JOURS),
   heure_debut: z.string().regex(heureRegex, 'Format HH:MM attendu'),

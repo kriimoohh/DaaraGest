@@ -2,13 +2,13 @@ import prisma from '../../config/database';
 import { CreerDemandeInput, TraiterDemandeInput } from './demandes-absence.schema';
 
 export async function listerDemandes(etablissement_id: string, statut?: string) {
-  return prisma.demandeAbsenceProfesseur.findMany({
+  return prisma.demandeAbsencePersonnel.findMany({
     where: {
       etablissement_id,
       ...(statut ? { statut } : {}),
     },
     include: {
-      professeur: { include: { utilisateur: true } },
+      personnel: { include: { utilisateur: true } },
       traiteur: true,
     },
     orderBy: { created_at: 'desc' },
@@ -16,17 +16,17 @@ export async function listerDemandes(etablissement_id: string, statut?: string) 
 }
 
 export async function creerDemande(etablissement_id: string, data: CreerDemandeInput) {
-  return prisma.demandeAbsenceProfesseur.create({
+  return prisma.demandeAbsencePersonnel.create({
     data: {
       etablissement_id,
-      professeur_id: data.professeur_id,
+      personnel_id: data.personnel_id,
       date_debut:    new Date(data.date_debut),
       date_fin:      new Date(data.date_fin),
       motif:         data.motif,
       type_absence:  data.type_absence,
     },
     include: {
-      professeur: { include: { utilisateur: true } },
+      personnel: { include: { utilisateur: true } },
     },
   });
 }
@@ -37,14 +37,14 @@ export async function traiterDemande(
   traite_par: string,
   data: TraiterDemandeInput,
 ) {
-  const demande = await prisma.demandeAbsenceProfesseur.findUniqueOrThrow({ where: { id } });
+  const demande = await prisma.demandeAbsencePersonnel.findUniqueOrThrow({ where: { id } });
   if (demande.etablissement_id !== etablissement_id) {
     throw Object.assign(new Error('Ressource introuvable'), { statusCode: 404 });
   }
   if (demande.statut !== 'EN_ATTENTE') {
     throw Object.assign(new Error('Cette demande a déjà été traitée'), { statusCode: 400 });
   }
-  return prisma.demandeAbsenceProfesseur.update({
+  return prisma.demandeAbsencePersonnel.update({
     where: { id },
     data: {
       statut:      data.statut,
@@ -53,19 +53,19 @@ export async function traiterDemande(
       traite_le:   new Date(),
     },
     include: {
-      professeur: { include: { utilisateur: true } },
+      personnel: { include: { utilisateur: true } },
       traiteur: true,
     },
   });
 }
 
 export async function supprimerDemande(id: string, etablissement_id: string) {
-  const demande = await prisma.demandeAbsenceProfesseur.findUniqueOrThrow({ where: { id } });
+  const demande = await prisma.demandeAbsencePersonnel.findUniqueOrThrow({ where: { id } });
   if (demande.etablissement_id !== etablissement_id) {
     throw Object.assign(new Error('Ressource introuvable'), { statusCode: 404 });
   }
   if (demande.statut !== 'EN_ATTENTE') {
     throw Object.assign(new Error('Seules les demandes en attente peuvent être supprimées'), { statusCode: 400 });
   }
-  return prisma.demandeAbsenceProfesseur.delete({ where: { id } });
+  return prisma.demandeAbsencePersonnel.delete({ where: { id } });
 }

@@ -31,7 +31,7 @@ const paiementEleveSchema = z.object({
 });
 
 const paiementProfesseurSchema = z.object({
-  professeur_id: z.string().min(1),
+  personnel_id: z.string().min(1),
   mois: z.number().int().min(1).max(12),
   annee: z.number().int(),
   montant_brut: z.number().positive(),
@@ -71,7 +71,7 @@ const creneauSchema = z.object({
   annee_scolaire_id: z.string().min(1),
   classe_id: z.string().min(1),
   matiere_id: z.string().min(1),
-  professeur_id: z.string().min(1),
+  personnel_id: z.string().min(1),
   jour: z.enum(['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']),
   heure_debut: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
   heure_fin: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
@@ -240,9 +240,9 @@ describe('Validation — Paiement Élève', () => {
   });
 });
 
-describe('Validation — Paiement Professeur', () => {
+describe('Validation — Paiement Personnel', () => {
   const profPaiValide = {
-    professeur_id: 'uuid-prof',
+    personnel_id: 'uuid-prof',
     mois: 9,
     annee: 2024,
     montant_brut: 250000,
@@ -432,7 +432,7 @@ describe('Validation — Créneau emploi du temps', () => {
     annee_scolaire_id: 'uuid-annee',
     classe_id: 'uuid-classe',
     matiere_id: 'uuid-matiere',
-    professeur_id: 'uuid-prof',
+    personnel_id: 'uuid-prof',
     jour: 'lundi' as const,
     heure_debut: '08:00',
     heure_fin: '10:00',

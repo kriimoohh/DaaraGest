@@ -15,7 +15,7 @@
     "accueil": "Accueil",
     "dashboard": "Tableau de bord",
     "eleves": "Élèves",
-    "professeurs": "Professeurs",
+    "personnel":   "Personnel",
     "classes": "Classes",
     "notes": "Notes",
     "evaluations": "Évaluations",
@@ -35,7 +35,7 @@
     "documents":    "Documents",
     "rapports":     "Rapports",
     "bibliotheque": "Bibliothèque",
-    "demandes_absence_prof": "Congés & Permissions"
+    "demandes_absence_personnel": "Congés & Permissions"
   },
   "theme": {
     "light": "Mode clair",

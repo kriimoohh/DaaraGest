@@ -1,20 +1,20 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
-import { professeurSchema } from './professeurs.schema';
+import { personnelSchema } from './personnel.schema';
 import {
-  listerProfesseurs,
-  getProfesseur,
-  creerProfesseur,
-  modifierProfesseur,
-  supprimerProfesseur,
-} from './professeurs.service';
+  listerPersonnel,
+  getPersonnel,
+  creerPersonnel,
+  modifierPersonnel,
+  supprimerPersonnel,
+} from './personnel.service';
 
 export async function listerHandler(
   request: FastifyRequest, reply: FastifyReply
 ) {
   const { etablissement_id } = request.user as JwtPayload;
-  const { page, search } = request.query as Record<string, string | undefined>;
-  const data = await listerProfesseurs(etablissement_id, page ? parseInt(page) : 1, search);
+  const { page, search, fonction } = request.query as Record<string, string | undefined>;
+  const data = await listerPersonnel(etablissement_id, page ? parseInt(page) : 1, search, fonction);
   return reply.send(data);
 }
 
@@ -24,7 +24,7 @@ export async function getHandler(
   const { etablissement_id } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
   try {
-    const data = await getProfesseur(id, etablissement_id);
+    const data = await getPersonnel(id, etablissement_id);
     return reply.send(data);
   } catch (err) {
     return reply.status(404).send({ error: (err as Error).message });
@@ -33,12 +33,12 @@ export async function getHandler(
 
 export async function creerHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
-  const parsed = professeurSchema.safeParse(request.body);
+  const parsed = personnelSchema.safeParse(request.body);
   if (!parsed.success) {
     return reply.status(400).send({ error: parsed.error.errors[0].message });
   }
   try {
-    const data = await creerProfesseur(etablissement_id, parsed.data);
+    const data = await creerPersonnel(etablissement_id, parsed.data);
     return reply.status(201).send(data);
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
@@ -50,12 +50,12 @@ export async function modifierHandler(
 ) {
   const { etablissement_id } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
-  const parsed = professeurSchema.partial().safeParse(request.body);
+  const parsed = personnelSchema.partial().safeParse(request.body);
   if (!parsed.success) {
     return reply.status(400).send({ error: parsed.error.errors[0].message });
   }
   try {
-    const data = await modifierProfesseur(id, etablissement_id, parsed.data);
+    const data = await modifierPersonnel(id, etablissement_id, parsed.data);
     return reply.send(data);
   } catch (err) {
     return reply.status(404).send({ error: (err as Error).message });
@@ -68,7 +68,7 @@ export async function supprimerHandler(
   const { etablissement_id } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
   try {
-    await supprimerProfesseur(id, etablissement_id);
+    await supprimerPersonnel(id, etablissement_id);
     return reply.status(204).send();
   } catch (err) {
     return reply.status(404).send({ error: (err as Error).message });

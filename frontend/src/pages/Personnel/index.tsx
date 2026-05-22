@@ -126,9 +126,9 @@ function QRCodeModal({ professeurId, nom, onClose, api }: {
   );
 }
 
-// Structure renvoyée par GET /api/v1/professeurs : un Utilisateur avec
-// les champs métier du professeur imbriqués sous `professeur`.
-interface Professeur {
+// Structure renvoyée par GET /api/v1/personnel : un Utilisateur avec
+// les champs métier du personnel imbriqués sous `personnel`.
+interface PersonnelRow {
   id: string;
   nom_fr: string;
   prenom_fr?: string;
@@ -136,8 +136,9 @@ interface Professeur {
   identifiant: string;
   actif: boolean;
   photo_url?: string;
-  professeur?: {
+  personnel?: {
     photo_url?: string;
+    fonction?: string;
     specialite_fr?: string;
     specialite_ar?: string;
     telephone?: string;
@@ -153,14 +154,14 @@ interface Professeur {
 
 type TypeContrat = 'permanent' | 'vacataire' | 'stagiaire';
 
-function profSpecialite(p: Professeur): string {
-  return p.professeur?.specialite_fr ?? '';
+function profSpecialite(p: PersonnelRow): string {
+  return p.personnel?.specialite_fr ?? '';
 }
-function profTelephone(p: Professeur): string {
-  return p.professeur?.telephone ?? '';
+function profTelephone(p: PersonnelRow): string {
+  return p.personnel?.telephone ?? '';
 }
-function profContrat(p: Professeur): TypeContrat | undefined {
-  return p.professeur?.type_contrat;
+function profContrat(p: PersonnelRow): TypeContrat | undefined {
+  return p.personnel?.type_contrat;
 }
 
 // Coupe l'éventuelle partie heure d'un ISO datetime → 'YYYY-MM-DD'
@@ -169,17 +170,31 @@ function toDateInput(s: string | null | undefined): string {
   return s.length >= 10 ? s.substring(0, 10) : '';
 }
 
-interface ProfesseursResponse {
-  data: Professeur[];
+interface PersonnelResponse {
+  data: PersonnelRow[];
   total: number;
   page: number;
 }
 
-interface ProfesseurFormData {
+const FONCTION_VALUES = ['ENSEIGNANT', 'DIRECTEUR', 'SURVEILLANT', 'AGENT_SCOLARITE', 'COMPTABLE', 'INTENDANT', 'AUTRE'] as const;
+type Fonction = typeof FONCTION_VALUES[number];
+
+const FONCTION_LABELS: Record<Fonction, string> = {
+  ENSEIGNANT:      'Enseignant',
+  DIRECTEUR:       'Directeur / Directrice',
+  SURVEILLANT:     'Surveillant',
+  AGENT_SCOLARITE: 'Agent de scolarité',
+  COMPTABLE:       'Comptable',
+  INTENDANT:       'Intendant',
+  AUTRE:           'Autre',
+};
+
+interface PersonnelFormData {
   nom_fr: string;
   nom_ar: string;
   identifiant: string;
   mot_de_passe: string;
+  fonction: Fonction;
   specialite_fr: string;
   telephone: string;
   type_contrat: string;
@@ -191,11 +206,13 @@ interface ProfesseurFormData {
   date_fin_stage: string;
 }
 
-type FormErrors = Partial<Record<keyof ProfesseurFormData, string>>;
+type FormErrors = Partial<Record<keyof PersonnelFormData, string>>;
 
-const EMPTY_FORM: ProfesseurFormData = {
+const EMPTY_FORM: PersonnelFormData = {
   nom_fr: '', nom_ar: '',
-  identifiant: '', mot_de_passe: '', specialite_fr: '', telephone: '', type_contrat: '',
+  identifiant: '', mot_de_passe: '',
+  fonction: 'ENSEIGNANT',
+  specialite_fr: '', telephone: '', type_contrat: '',
   poste_fr: '', date_embauche: '', date_fin_contrat: '', date_debut_stage: '', date_fin_stage: '',
 };
 
@@ -203,7 +220,7 @@ const EMPTY_FORM: ProfesseurFormData = {
 
 const LIMIT = 20;
 
-function validate(form: ProfesseurFormData, isEdit: boolean): FormErrors {
+function validate(form: PersonnelFormData, isEdit: boolean): FormErrors {
   const errors: FormErrors = {};
   if (!form.nom_fr.trim()) errors.nom_fr = 'Le nom est requis';
   if (!form.identifiant.trim()) errors.identifiant = "L'identifiant est requis";
@@ -212,12 +229,12 @@ function validate(form: ProfesseurFormData, isEdit: boolean): FormErrors {
   return errors;
 }
 
-export function ProfesseursPage() {
+export function PersonnelPage() {
   const { t } = useTranslation();
   const api = useApi();
   const isAdmin = useAuthStore(s => s.user?.role === 'admin');
 
-  const [profs, setProfs] = useState<Professeur[]>([]);
+  const [profs, setProfs] = useState<PersonnelRow[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -226,14 +243,14 @@ export function ProfesseursPage() {
   const [view, setView] = useState<'grid' | 'table'>('grid');
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<Professeur | null>(null);
-  const [form, setForm] = useState<ProfesseurFormData>(EMPTY_FORM);
+  const [editTarget, setEditTarget] = useState<PersonnelRow | null>(null);
+  const [form, setForm] = useState<PersonnelFormData>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState<Professeur | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<PersonnelRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [photoLoading, setPhotoLoading] = useState(false);
-  const [qrTarget, setQrTarget] = useState<Professeur | null>(null);
+  const [qrTarget, setQrTarget] = useState<PersonnelRow | null>(null);
   const [carteUniqueLoading, setCarteUniqueLoading] = useState<string | null>(null);
   const [carteLotModal, setCarteLotModal] = useState(false);
   const [carteLotGenerating, setCarteLotGenerating] = useState(false);
@@ -245,7 +262,7 @@ export function ProfesseursPage() {
     try {
       const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
       if (search) params.set('search', search);
-      const res = await api.get<ProfesseursResponse>(`/api/v1/professeurs?${params}`);
+      const res = await api.get<PersonnelResponse>(`/api/v1/personnel?${params}`);
       setProfs(res.data);
       setTotal(res.total);
     } catch (err) {
@@ -265,21 +282,22 @@ export function ProfesseursPage() {
     setModalOpen(true);
   }
 
-  function openEdit(prof: Professeur) {
+  function openEdit(prof: PersonnelRow) {
     setEditTarget(prof);
     setForm({
       nom_fr: prof.nom_fr,
       nom_ar: prof.nom_ar,
       identifiant: prof.identifiant, mot_de_passe: '',
+      fonction: (prof.personnel?.fonction as Fonction) ?? 'ENSEIGNANT',
       specialite_fr: profSpecialite(prof),
       telephone: profTelephone(prof),
       type_contrat: profContrat(prof) ?? 'permanent',
-      photo_url: prof.professeur?.photo_url ?? prof.photo_url,
-      poste_fr:         prof.professeur?.poste_fr ?? '',
-      date_embauche:    toDateInput(prof.professeur?.date_embauche),
-      date_fin_contrat: toDateInput(prof.professeur?.date_fin_contrat),
-      date_debut_stage: toDateInput(prof.professeur?.date_debut_stage),
-      date_fin_stage:   toDateInput(prof.professeur?.date_fin_stage),
+      photo_url: prof.personnel?.photo_url ?? prof.photo_url,
+      poste_fr:         prof.personnel?.poste_fr ?? '',
+      date_embauche:    toDateInput(prof.personnel?.date_embauche),
+      date_fin_contrat: toDateInput(prof.personnel?.date_fin_contrat),
+      date_debut_stage: toDateInput(prof.personnel?.date_debut_stage),
+      date_fin_stage:   toDateInput(prof.personnel?.date_fin_stage),
     });
     setFormErrors({});
     setModalOpen(true);
@@ -292,7 +310,7 @@ export function ProfesseursPage() {
     setPhotoLoading(false);
   }
 
-  function setField<K extends keyof ProfesseurFormData>(key: K, value: ProfesseurFormData[K]) {
+  function setField<K extends keyof PersonnelFormData>(key: K, value: PersonnelFormData[K]) {
     setForm((f) => ({ ...f, [key]: value }));
     setFormErrors((e) => ({ ...e, [key]: undefined }));
   }
@@ -306,7 +324,9 @@ export function ProfesseursPage() {
       const payload: Record<string, unknown> = {
         nom_fr: form.nom_fr,
         nom_ar: form.nom_ar,
-        identifiant: form.identifiant, specialite_fr: form.specialite_fr,
+        identifiant: form.identifiant,
+        fonction: form.fonction,
+        specialite_fr: form.fonction === 'ENSEIGNANT' ? form.specialite_fr : undefined,
         telephone: form.telephone, type_contrat: form.type_contrat,
         ...(form.photo_url !== undefined ? { photo_url: form.photo_url } : {}),
         poste_fr:         form.poste_fr || undefined,
@@ -317,9 +337,9 @@ export function ProfesseursPage() {
       };
       if (!editTarget && form.mot_de_passe) payload.mot_de_passe = form.mot_de_passe;
       if (editTarget) {
-        await api.put(`/api/v1/professeurs/${editTarget.id}`, payload);
+        await api.put(`/api/v1/personnel/${editTarget.id}`, payload);
       } else {
-        await api.post('/api/v1/professeurs', payload);
+        await api.post('/api/v1/personnel', payload);
       }
       toast.success(editTarget ? 'Professeur modifié' : 'Professeur créé');
       setModalOpen(false);
@@ -337,7 +357,7 @@ export function ProfesseursPage() {
     if (!confirmDelete) return;
     setDeleting(true);
     try {
-      await api.delete(`/api/v1/professeurs/${confirmDelete.id}`);
+      await api.delete(`/api/v1/personnel/${confirmDelete.id}`);
       toast.success('Professeur désactivé');
       setConfirmDelete(null);
       fetchProfs();
@@ -353,7 +373,7 @@ export function ProfesseursPage() {
       key: 'nom_fr',
       header: 'Nom',
       render: (row) => {
-        const p = row as unknown as Professeur;
+        const p = row as unknown as PersonnelRow;
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
@@ -362,8 +382,8 @@ export function ProfesseursPage() {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 14, fontWeight: 600, color: 'var(--primary)',
             }}>
-              {(p.professeur?.photo_url ?? p.photo_url)
-                ? <img src={p.professeur?.photo_url ?? p.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              {(p.personnel?.photo_url ?? p.photo_url)
+                ? <img src={p.personnel?.photo_url ?? p.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 : (p.nom_fr?.[0] ?? '?').toUpperCase()
               }
             </div>
@@ -377,7 +397,7 @@ export function ProfesseursPage() {
       key: 'specialite_fr',
       header: 'Spécialité',
       render: (row) => {
-        const p = row as unknown as Professeur;
+        const p = row as unknown as PersonnelRow;
         return profSpecialite(p) || <span className="muted">—</span>;
       },
     },
@@ -385,7 +405,7 @@ export function ProfesseursPage() {
       key: 'type_contrat',
       header: 'Contrat',
       render: (row) => {
-        const p = row as unknown as Professeur;
+        const p = row as unknown as PersonnelRow;
         const contrat = profContrat(p);
         if (!contrat) return <span className="muted">—</span>;
         return <Badge label={contrat === 'permanent' ? t('professeur.permanent') : t('professeur.vacataire')} variant={contrat === 'permanent' ? 'info' : 'warning'} />;
@@ -396,8 +416,8 @@ export function ProfesseursPage() {
       header: 'Actions',
       width: '120px',
       render: (row) => {
-        const p = row as unknown as Professeur;
-        const hasPhoto = !!(p.professeur?.photo_url ?? p.photo_url);
+        const p = row as unknown as PersonnelRow;
+        const hasPhoto = !!(p.personnel?.photo_url ?? p.photo_url);
         return (
           <div className="row">
             <Button size="sm" variant="secondary" onClick={() => openEdit(p)}>{t('actions.modifier')}</Button>
@@ -451,7 +471,7 @@ export function ProfesseursPage() {
     setCarteLotGenerating(true);
     setCarteLotErreurs([]);
     try {
-      const allProfs = await api.get<{ data: Professeur[] }>('/api/v1/professeurs?limit=500');
+      const allProfs = await api.get<{ data: PersonnelRow[] }>('/api/v1/personnel?limit=500');
       const ids = (allProfs.data ?? []).map(p => p.id);
       if (!ids.length) { toast.error('Aucun professeur trouvé'); return; }
       const res = await fetch(`${API_BASE}/api/v1/documents/generer-lot`, {
@@ -509,7 +529,7 @@ export function ProfesseursPage() {
         {!loading && view === 'grid' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
             {profs.map(p => {
-              const photo = p.professeur?.photo_url ?? p.photo_url;
+              const photo = p.personnel?.photo_url ?? p.photo_url;
               const initiales = `${p.prenom_fr?.[0] ?? ''}${p.nom_fr?.[0] ?? ''}`.toUpperCase();
               const contrat = profContrat(p);
               const contratLabel = contrat === 'permanent' ? 'Permanent' : contrat === 'vacataire' ? 'Vacataire' : '—';
@@ -642,8 +662,16 @@ export function ProfesseursPage() {
                 <Input label={t('auth.password')} type="password" value={form.mot_de_passe} onChange={(e) => setField('mot_de_passe', e.target.value)} error={formErrors.mot_de_passe} />
               )}
             </div>
+            <Select
+              label="Fonction"
+              value={form.fonction}
+              onChange={(e) => setField('fonction', e.target.value as Fonction)}
+              options={FONCTION_VALUES.map(f => ({ value: f, label: FONCTION_LABELS[f] }))}
+            />
             <div className="grid-2">
-              <Input label={t('professeur.specialite')} value={form.specialite_fr} onChange={(e) => setField('specialite_fr', e.target.value)} />
+              {form.fonction === 'ENSEIGNANT' && (
+                <Input label={t('professeur.specialite')} value={form.specialite_fr} onChange={(e) => setField('specialite_fr', e.target.value)} />
+              )}
               <Input label={t('common.telephone')} type="tel" value={form.telephone} onChange={(e) => setField('telephone', e.target.value)} />
             </div>
             <Select
