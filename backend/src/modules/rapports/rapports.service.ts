@@ -356,3 +356,945 @@ ${paiementsProfs.map(p => `<tr>
   const buffer = await renderPdfHtml(html, { format: 'A4', printBackground: true, margin: { top: '12mm', bottom: '12mm', left: '10mm', right: '10mm' } });
   return { buffer, mime: 'application/pdf', filename: `bilan-financier-${mois}-${annee}.pdf` };
 }
+
+// ─── Helpers partagés (grilles pédagogiques) ─────────────────────────────────
+
+/** Normalise une note brute vers /10 selon le barème de la matière */
+function n10(valeur: number, noteMax: number): number {
+  return noteMax > 0 ? (valeur / noteMax) * 10 : 0;
+}
+
+/** Valeur la plus fréquente d'une liste (arrondie à 2 décimales) */
+function modeOf(vals: number[]): number | null {
+  if (!vals.length) return null;
+  const freq = new Map<string, number>();
+  for (const v of vals) {
+    const k = v.toFixed(2);
+    freq.set(k, (freq.get(k) ?? 0) + 1);
+  }
+  let best = 0; let res = vals[0];
+  for (const [k, f] of freq) { if (f > best) { best = f; res = parseFloat(k); } }
+  return res;
+}
+
+/** Écart-type d'une liste de valeurs */
+function stdDev(vals: number[]): number {
+  if (vals.length < 2) return 0;
+  const m = vals.reduce((a, b) => a + b, 0) / vals.length;
+  return Math.sqrt(vals.reduce((s, v) => s + (v - m) ** 2, 0) / vals.length);
+}
+
+/** Renvoie le professeur principal de la classe (heuristique : 1er trouvé) */
+async function getTitulaire(classe_id: string, annee_scolaire_id: string): Promise<string> {
+  const r = await prisma.profMatiereClasse.findFirst({
+    where: { classe_id, annee_scolaire_id },
+    include: { professeur: { include: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } } } },
+  });
+  if (!r) return '...';
+  const u = r.professeur.utilisateur;
+  return [u.prenom_fr, u.nom_fr].filter(Boolean).join(' ');
+}
+
+/** Inscriptions actives de la classe, ordonnées par nom élève */
+async function fetchInscriptions(classe_id: string, annee_scolaire_id: string) {
+  return prisma.inscription.findMany({
+    where: {
+      annee_scolaire_id,
+      statut: 'actif',
+      OR: [{ classe_fr_id: classe_id }, { classe_ar_id: classe_id }],
+    },
+    include: {
+      eleve: { select: { id: true, sexe: true, nom_fr: true, prenom_fr: true, date_naissance: true } },
+    },
+    orderBy: { eleve: { nom_fr: 'asc' } },
+  });
+}
+
+const DOM_LABELS: Record<string, string> = {
+  LANGUE_COMMUNICATION: 'Langue et Communication',
+  MATHEMATIQUES:        'Mathématiques',
+  ESVS:                 'Éd. Science et Vie Sociale',
+  EPSA:                 'Éd. Physique Sportive et Artistique',
+};
+
+// ─── Rapport Grille IEF (inspection officielle, portrait A4) ─────────────────
+
+export async function rapportGrilleIef(
+  etablissement_id: string,
+  params: { classe_id: string; annee_scolaire_id: string; periode?: number },
+) {
+  const { classe_id, annee_scolaire_id, periode } = params;
+
+  const [classeRaw, etab, config] = await Promise.all([
+    prisma.classe.findFirst({
+      where: { id: classe_id, etablissement_id },
+      include: { niveau: true, annee_scolaire: { select: { libelle: true } } },
+    }),
+    prisma.etablissement.findUnique({ where: { id: etablissement_id } }),
+    prisma.configNotes.findUnique({ where: { etablissement_id } }),
+  ]);
+  if (!classeRaw) throw new Error('Classe introuvable');
+
+  const [inscriptions, domaines, titulaireNom] = await Promise.all([
+    fetchInscriptions(classe_id, annee_scolaire_id),
+    prisma.domaine.findMany({
+      where: { etablissement_id, actif: true, code: { in: ['LANGUE_COMMUNICATION', 'MATHEMATIQUES', 'ESVS', 'EPSA'] } },
+      orderBy: { ordre: 'asc' },
+    }),
+    getTitulaire(classe_id, annee_scolaire_id),
+  ]);
+
+  const eleveIds = inscriptions.map(i => i.eleve_id);
+  const seuilMoyenne = Number(config?.seuil_note_insuffisante ?? 10);
+
+  const noteWhere: Record<string, unknown> = { eleve_id: { in: eleveIds }, annee_scolaire_id };
+  if (periode && periode > 0) noteWhere.periode = periode;
+
+  const [notes, absentRecords] = await Promise.all([
+    prisma.note.findMany({ where: noteWhere, include: { matiere: { include: { domaine: true } } } }),
+    prisma.absenceEleve.findMany({
+      where: { classe_id, annee_scolaire_id, statut: 'absent', eleve_id: { in: eleveIds } },
+      select: { eleve_id: true },
+      distinct: ['eleve_id'],
+    }),
+  ]);
+
+  const absentSet = new Set(absentRecords.map(a => a.eleve_id));
+
+  // Moyennes générales par élève (brutes, sur barème matière)
+  const moyGen = new Map<string, number>();
+  const domMoy = new Map<string, Map<string, number>>();
+  const notesByEleve = notes.reduce((acc, n) => {
+    if (!acc.has(n.eleve_id)) acc.set(n.eleve_id, []);
+    acc.get(n.eleve_id)!.push(Number(n.valeur));
+    return acc;
+  }, new Map<string, number[]>());
+  for (const [id, vals] of notesByEleve) moyGen.set(id, vals.reduce((s, v) => s + v, 0) / vals.length);
+
+  // Moyennes par domaine (brutes)
+  const dnb = new Map<string, Map<string, number[]>>();
+  for (const note of notes) {
+    const dCode = note.matiere.domaine?.code;
+    if (!dCode) continue;
+    if (!dnb.has(note.eleve_id)) dnb.set(note.eleve_id, new Map());
+    const dm = dnb.get(note.eleve_id)!;
+    if (!dm.has(dCode)) dm.set(dCode, []);
+    dm.get(dCode)!.push(Number(note.valeur));
+  }
+  for (const [eid, dm] of dnb) {
+    domMoy.set(eid, new Map());
+    for (const [dc, vals] of dm) {
+      domMoy.get(eid)!.set(dc, vals.reduce((s, v) => s + v, 0) / vals.length);
+    }
+  }
+
+  type Inscrip = (typeof inscriptions)[number];
+
+  function sectionI(subset: Inscrip[]) {
+    const evalues = subset.filter(i => notesByEleve.has(i.eleve_id));
+    const ontMoy  = evalues.filter(i => (moyGen.get(i.eleve_id) ?? 0) >= seuilMoyenne);
+    const absents = subset.filter(i => absentSet.has(i.eleve_id));
+    const pct     = evalues.length ? Math.round((ontMoy.length / evalues.length) * 1000) / 10 : 0;
+    return { eff: subset.length, abs: absents.length, eval: evalues.length, moy: ontMoy.length, pct };
+  }
+
+  function domReussite(subset: Inscrip[], code: string) {
+    const evalues = subset.filter(i => domMoy.get(i.eleve_id)?.has(code));
+    const ok      = evalues.filter(i => (domMoy.get(i.eleve_id)?.get(code) ?? 0) >= seuilMoyenne);
+    const taux    = evalues.length ? Math.round((ok.length / evalues.length) * 1000) / 10 : 0;
+    return { nbre: ok.length, taux };
+  }
+
+  const garcons = inscriptions.filter(i => i.eleve.sexe === 'M');
+  const filles  = inscriptions.filter(i => i.eleve.sexe === 'F');
+  const [sG, sF, sT] = [garcons, filles, inscriptions].map(sectionI);
+
+  const domCodes = ['LANGUE_COMMUNICATION', 'MATHEMATIQUES', 'ESVS', 'EPSA'];
+  const periodeLabel = periode && periode > 0 ? `${periode}ème Trimestre` : 'Annuel';
+
+  function domRow(label: string, fn: (s: Inscrip[], c: string) => { nbre: number; taux: number }, key: 'nbre' | 'taux', suffix = '') {
+    return `<tr><td class="lbl">${esc(label)}</td>${domCodes.map(dc => {
+      const g = fn(garcons, dc);
+      const f = fn(filles, dc);
+      const t = fn(inscriptions, dc);
+      const v = (x: { nbre: number; taux: number }) => x[key] + suffix;
+      return `<td>${v(g)}</td><td>${v(f)}</td><td>${v(t)}</td>`;
+    }).join('')}</tr>`;
+  }
+
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;font-size:9.5px;color:#000;padding:12mm 10mm;}
+.etab{font-weight:bold;font-size:11px;margin-bottom:2px;}
+.titre{text-align:center;font-size:13px;font-weight:bold;text-decoration:underline;margin:6px 0;}
+.sub{text-align:center;font-size:10px;margin-bottom:8px;}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:8px;font-size:9.5px;}
+.info-grid span{display:block;}
+h3{font-size:10px;font-weight:bold;text-decoration:underline;margin:10px 0 4px;}
+table{width:100%;border-collapse:collapse;margin-bottom:6px;}
+th,td{border:1px solid #000;padding:3px 4px;text-align:center;font-size:9px;}
+.lbl{text-align:left;background:#f0f0f0;font-weight:500;}
+.th-h{background:#ddd;font-weight:bold;}
+.obs{border:1px solid #000;min-height:14mm;padding:4px;margin:4px 0;}
+.prop-title{font-size:9px;font-weight:bold;text-decoration:underline;margin:6px 0 2px;}
+.prop-line{border-bottom:1px dotted #999;min-height:5mm;margin:2px 0;}
+.sigs{display:flex;justify-content:space-around;margin-top:12mm;}
+.sig{text-align:center;font-weight:bold;font-size:10px;}
+</style></head><body>
+<div class="etab">${esc(etab?.nom_fr ?? '')}</div>
+<div class="titre">GRILLE D'ÉVALUATION — ${esc(periodeLabel)}</div>
+<div class="sub">Année scolaire : ${esc(classeRaw.annee_scolaire.libelle)} &nbsp;|&nbsp; Classe : ${esc(classeRaw.nom_fr)} &nbsp;|&nbsp; Niveau : ${esc(classeRaw.niveau?.libelle ?? '...')}</div>
+<div class="info-grid">
+  <span><strong>Titulaire de la classe :</strong> ${esc(titulaireNom)}</span>
+  <span><strong>Seuil de réussite :</strong> ${seuilMoyenne} pts</span>
+</div>
+
+<h3>I. RÉSULTATS GLOBAUX PAR NIVEAU</h3>
+<table>
+  <thead><tr><th class="lbl"></th><th class="th-h">GARÇONS</th><th class="th-h">FILLES</th><th class="th-h">TOTAL</th></tr></thead>
+  <tbody>
+    <tr><td class="lbl">EFFECTIF</td><td>${sG.eff}</td><td>${sF.eff}</td><td>${sT.eff}</td></tr>
+    <tr><td class="lbl">ABSENTS</td><td>${sG.abs}</td><td>${sF.abs}</td><td>${sT.abs}</td></tr>
+    <tr><td class="lbl">ÉVALUÉ(S)</td><td>${sG.eval}</td><td>${sF.eval}</td><td>${sT.eval}</td></tr>
+    <tr><td class="lbl">ONT LA MOYENNE</td><td>${sG.moy}</td><td>${sF.moy}</td><td>${sT.moy}</td></tr>
+    <tr><td class="lbl">% RÉUSSITE</td><td>${sG.pct}%</td><td>${sF.pct}%</td><td>${sT.pct}%</td></tr>
+  </tbody>
+</table>
+<div class="prop-title">OBSERVATIONS GÉNÉRALES</div>
+<div class="obs"></div>
+
+<h3>II. RÉCAPITULATION RÉUSSITE PAR DOMAINE</h3>
+<table>
+  <thead>
+    <tr>
+      <th class="lbl" rowspan="2"></th>
+      ${domCodes.map(dc => `<th colspan="3" class="th-h">${esc(DOM_LABELS[dc] ?? dc)}</th>`).join('')}
+    </tr>
+    <tr>${domCodes.map(() => '<th>G</th><th>F</th><th>T</th>').join('')}</tr>
+  </thead>
+  <tbody>
+    ${domRow('Nbre réussite', domReussite, 'nbre')}
+    ${domRow('Taux réussite (%)', domReussite, 'taux', '%')}
+  </tbody>
+</table>
+
+<h3>IV. PROPOSITIONS D'AMÉLIORATION</h3>
+${domCodes.map(dc => `<div class="prop-title">${esc(DOM_LABELS[dc] ?? dc)} :</div><div class="prop-line"></div><div class="prop-line"></div>`).join('')}
+
+<div class="sigs">
+  <div class="sig">LE TESTEUR</div>
+  <div class="sig">LE DIRECTEUR</div>
+</div>
+</body></html>`;
+
+  const buffer = await renderPdfHtml(html, { format: 'A4', printBackground: true, margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' } });
+  return { buffer, mime: 'application/pdf', filename: `grille-ief-${classeRaw.nom_fr}-T${periode ?? 'annuel'}.pdf` };
+}
+
+// ─── Rapport Grille Performance (CI-CP / CE1-CE2 / CM1-CM2, portrait A4) ─────
+
+export async function rapportGrillePerformance(
+  etablissement_id: string,
+  params: { classe_id: string; annee_scolaire_id: string; periode?: number },
+) {
+  const { classe_id, annee_scolaire_id, periode } = params;
+
+  const [classeRaw, etab] = await Promise.all([
+    prisma.classe.findFirst({
+      where: { id: classe_id, etablissement_id },
+      include: { niveau: true, annee_scolaire: { select: { libelle: true } } },
+    }),
+    prisma.etablissement.findUnique({ where: { id: etablissement_id } }),
+  ]);
+  if (!classeRaw) throw new Error('Classe introuvable');
+
+  const groupeGrille = classeRaw.niveau?.groupe_grille ?? 'AUTRE';
+  // Seuils différents selon le groupe de niveau
+  const isCI_CP   = groupeGrille === 'CI_CP';
+  const seuilBas  = isCI_CP ? 7  : 5;   // < seuilBas = en-dessous
+  const seuilHaut = isCI_CP ? 8  : 7;   // >= seuilHaut = maîtrise
+  // Bandes : [< seuilBas], [seuilBas .. seuilHaut[, [>= seuilHaut]
+  const bandeLabels = isCI_CP
+    ? [`< ${seuilBas}/10`, `${seuilBas} et ${seuilHaut}/10`, `Seuil de maîtrise (≥ ${seuilHaut}/10)`]
+    : [`< ${seuilBas}/10`, `${seuilBas} et ${seuilHaut}/10`, `Seuil de maîtrise (≥ ${seuilHaut}/10)`];
+  // Domaines (seulement 3 : pas d'EPSA dans ces grilles)
+  const domCodes3 = ['LANGUE_COMMUNICATION', 'MATHEMATIQUES', 'ESVS'];
+
+  const [inscriptions, domaines, titulaireNom] = await Promise.all([
+    fetchInscriptions(classe_id, annee_scolaire_id),
+    prisma.domaine.findMany({
+      where: { etablissement_id, actif: true, code: { in: domCodes3 } },
+      orderBy: { ordre: 'asc' },
+    }),
+    getTitulaire(classe_id, annee_scolaire_id),
+  ]);
+
+  const eleveIds = inscriptions.map(i => i.eleve_id);
+  const noteWhere: Record<string, unknown> = { eleve_id: { in: eleveIds }, annee_scolaire_id };
+  if (periode && periode > 0) noteWhere.periode = periode;
+
+  const notes = await prisma.note.findMany({
+    where: noteWhere,
+    include: { matiere: { include: { domaine: true } } },
+  });
+
+  // Moyenne par domaine par élève (normalisée sur /10)
+  // Pour CE1-CE2 / CM1-CM2 : on sépare aussi Ressources et Compétence
+  interface DomScore { all: number | null; res: number | null; comp: number | null }
+  const domScores = new Map<string, Map<string, DomScore>>();
+
+  const accByEleve = new Map<string, Map<string, { all: number[]; res: number[]; comp: number[] }>>();
+  for (const note of notes) {
+    const dCode   = note.matiere.domaine?.code;
+    const typeNote = note.matiere.type_note;
+    const noteMax  = Number(note.matiere.note_max);
+    const valNorm  = n10(Number(note.valeur), noteMax);
+    if (!dCode || !domCodes3.includes(dCode)) continue;
+
+    if (!accByEleve.has(note.eleve_id)) accByEleve.set(note.eleve_id, new Map());
+    const em = accByEleve.get(note.eleve_id)!;
+    if (!em.has(dCode)) em.set(dCode, { all: [], res: [], comp: [] });
+    const bucket = em.get(dCode)!;
+    bucket.all.push(valNorm);
+    if (typeNote === 'RESSOURCE')  bucket.res.push(valNorm);
+    if (typeNote === 'COMPETENCE') bucket.comp.push(valNorm);
+  }
+
+  const avg = (arr: number[]) => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null;
+  for (const [eid, em] of accByEleve) {
+    domScores.set(eid, new Map());
+    for (const [dc, b] of em) {
+      domScores.get(eid)!.set(dc, { all: avg(b.all), res: avg(b.res), comp: avg(b.comp) });
+    }
+  }
+
+  type Inscrip = (typeof inscriptions)[number];
+
+  // Compte les élèves dans une bande de seuil pour un domaine / un type de score
+  function countBande(subset: Inscrip[], dc: string, type: 'all' | 'res' | 'comp', low: number, high: number | null): number {
+    return subset.filter(i => {
+      const s = domScores.get(i.eleve_id)?.get(dc)?.[type];
+      if (s === null || s === undefined) return false;
+      return s >= low && (high === null || s < high);
+    }).length;
+  }
+
+  const garcons = inscriptions.filter(i => i.eleve.sexe === 'M');
+  const filles  = inscriptions.filter(i => i.eleve.sexe === 'F');
+
+  const effectifG = garcons.length;
+  const effectifF = filles.length;
+  const effectifT = inscriptions.length;
+
+  // Élèves présents = inscrits ayant au moins 1 note
+  const presentIds = new Set(notes.map(n => n.eleve_id));
+  const presentsG  = garcons.filter(i => presentIds.has(i.eleve_id)).length;
+  const presentsF  = filles.filter(i => presentIds.has(i.eleve_id)).length;
+  const presentsT  = presentsG + presentsF;
+
+  const periodeLabel = periode && periode > 0 ? `${periode}ème Trimestre` : 'Annuel';
+  const titreGrille  = isCI_CP ? 'CI-CP' : groupeGrille === 'CE1_CE2' ? 'CE1-CE2' : groupeGrille === 'CM1_CM2' ? 'CM1-CM2' : classeRaw.nom_fr;
+
+  // Bandes de seuil : basse / milieu / haute
+  const bandes = [
+    { label: bandeLabels[0], low: 0,           high: seuilBas },
+    { label: bandeLabels[1], low: seuilBas,     high: seuilHaut },
+    { label: bandeLabels[2], low: seuilHaut,    high: null },
+  ] as const;
+
+  // Génère les lignes du tableau (Nombre ou %)
+  function genRows(useRatio: boolean) {
+    return bandes.map(({ label, low, high }) => {
+      const cols = domCodes3.map(dc => {
+        if (isCI_CP) {
+          // Pas de split Ressources / Compétence
+          const denom = (subset: Inscrip[]) => subset.filter(i => domScores.get(i.eleve_id)?.get(dc)?.all !== null).length;
+          const g = countBande(garcons, dc, 'all', low, high);
+          const f = countBande(filles,  dc, 'all', low, high);
+          const t = g + f;
+          if (useRatio) {
+            const dg = denom(garcons); const df = denom(filles); const dt = dg + df;
+            return `<td>${dg ? (g / dg * 100).toFixed(1) + '%' : '-'}</td><td>${df ? (f / df * 100).toFixed(1) + '%' : '-'}</td><td>${dt ? (t / dt * 100).toFixed(1) + '%' : '-'}</td>`;
+          }
+          return `<td>${g}</td><td>${f}</td><td>${t}</td>`;
+        } else {
+          // Avec split Ressources / Compétence
+          function cell(type: 'res' | 'comp') {
+            const denom = (sub: Inscrip[]) => sub.filter(i => domScores.get(i.eleve_id)?.get(dc)?.[type] !== null).length;
+            const g = countBande(garcons, dc, type, low, high);
+            const f = countBande(filles,  dc, type, low, high);
+            const t = g + f;
+            if (useRatio) {
+              const dg = denom(garcons); const df = denom(filles); const dt = dg + df;
+              return `<td>${dg ? (g / dg * 100).toFixed(1) + '%' : '-'}</td><td>${df ? (f / df * 100).toFixed(1) + '%' : '-'}</td><td>${dt ? (t / dt * 100).toFixed(1) + '%' : '-'}</td>`;
+            }
+            return `<td>${g}</td><td>${f}</td><td>${t}</td>`;
+          }
+          return cell('res') + cell('comp');
+        }
+      }).join('');
+      return `<tr><td class="lbl">${esc(label)}</td>${cols}</tr>`;
+    }).join('');
+  }
+
+  // En-tête du tableau : colonnes domaine + G/F/T (+ Ressources/Compétence pour CE1-CM2)
+  const thDomaines = domCodes3.map(dc => {
+    const nbCols = isCI_CP ? 3 : 6;
+    return `<th colspan="${nbCols}" class="th-h">${esc(DOM_LABELS[dc] ?? dc)}</th>`;
+  }).join('');
+  const thSubCols = domCodes3.map(dc => {
+    if (isCI_CP) return '<th>G</th><th>F</th><th>T</th>';
+    return '<th colspan="3">Ressources</th><th colspan="3">Compétence</th>';
+  }).join('');
+  const thGFT = domCodes3.map(() => {
+    if (isCI_CP) return '';
+    return '<th>G</th><th>F</th><th>T</th><th>G</th><th>F</th><th>T</th>';
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;font-size:9px;color:#000;padding:10mm 8mm;}
+.etab{font-weight:bold;font-size:11px;margin-bottom:2px;}
+.titre{text-align:center;font-size:12px;font-weight:bold;text-decoration:underline;margin:6px 0 4px;}
+.info{font-size:9px;margin:2px 0;}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin:6px 0;}
+table{width:100%;border-collapse:collapse;margin-bottom:8px;}
+th,td{border:1px solid #000;padding:2.5px 3px;text-align:center;font-size:8.5px;}
+.lbl{text-align:left;background:#f0f0f0;font-size:8.5px;font-weight:500;}
+.th-h{background:#ddd;font-weight:bold;}
+h3{font-size:9.5px;font-weight:bold;text-decoration:underline;margin:8px 0 3px;}
+.analyse-domain{font-weight:bold;font-size:9px;margin:5px 0 2px;text-decoration:underline;}
+.analyse-line{border-bottom:1px dotted #999;min-height:5mm;margin:1px 0;}
+.sigs{display:flex;justify-content:center;margin-top:10mm;}
+.sig{text-align:center;font-weight:bold;font-size:10px;}
+</style></head><body>
+<div class="etab">${esc(etab?.nom_fr ?? '')}</div>
+<div class="titre">GRILLE D'ÉVALUATION — CLASSE ${esc(titreGrille)}</div>
+<div class="info-grid">
+  <div>
+    <div class="info"><strong>Classe :</strong> ${esc(classeRaw.nom_fr)} &nbsp; <strong>Niveau :</strong> ${esc(classeRaw.niveau?.libelle ?? '...')}</div>
+    <div class="info"><strong>Titulaire :</strong> ${esc(titulaireNom)}</div>
+    <div class="info"><strong>Année scolaire :</strong> ${esc(classeRaw.annee_scolaire.libelle)} &nbsp; <strong>Période :</strong> ${esc(periodeLabel)}</div>
+  </div>
+  <div>
+    <div class="info"><strong>EFFECTIF :</strong> G : ${effectifG} &nbsp; F : ${effectifF} &nbsp; T : ${effectifT}</div>
+    <div class="info"><strong>PRÉSENTS :</strong> G : ${presentsG} &nbsp; F : ${presentsF} &nbsp; T : ${presentsT}</div>
+  </div>
+</div>
+
+<h3>I. Nombre d'élèves selon le seuil de performance</h3>
+<table>
+  <thead>
+    <tr><th class="lbl" rowspan="${isCI_CP ? 2 : 3}">SEUIL DE<br>PERFORMANCE</th>${thDomaines}</tr>
+    ${isCI_CP
+      ? `<tr>${thSubCols}</tr>`
+      : `<tr>${domCodes3.map(() => '<th colspan="3">Ressources</th><th colspan="3">Compétence</th>').join('')}</tr>
+         <tr>${domCodes3.map(() => '<th>G</th><th>F</th><th>T</th><th>G</th><th>F</th><th>T</th>').join('')}</tr>`
+    }
+  </thead>
+  <tbody>${genRows(false)}</tbody>
+</table>
+
+<h3>II. Pourcentage des élèves selon le seuil de performance</h3>
+<table>
+  <thead>
+    <tr><th class="lbl" rowspan="${isCI_CP ? 2 : 3}">SEUIL DE<br>PERFORMANCE</th>${thDomaines}</tr>
+    ${isCI_CP
+      ? `<tr>${thSubCols}</tr>`
+      : `<tr>${domCodes3.map(() => '<th colspan="3">Ressources</th><th colspan="3">Compétence</th>').join('')}</tr>
+         <tr>${domCodes3.map(() => '<th>G</th><th>F</th><th>T</th><th>G</th><th>F</th><th>T</th>').join('')}</tr>`
+    }
+  </thead>
+  <tbody>${genRows(true)}</tbody>
+</table>
+
+<h3>Analyse des résultats</h3>
+${domCodes3.map(dc => `<div class="analyse-domain">${esc(DOM_LABELS[dc] ?? dc)} :</div><div class="analyse-line"></div><div class="analyse-line"></div>`).join('')}
+
+<div class="sigs"><div class="sig">Le (La) Maître(sse)</div></div>
+</body></html>`;
+
+  const buffer = await renderPdfHtml(html, { format: 'A4', printBackground: true, margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' } });
+  return { buffer, mime: 'application/pdf', filename: `grille-perf-${titreGrille}-T${periode ?? 'annuel'}.pdf` };
+}
+
+// ─── Rapport Performance par Domaine (paysage A4) ────────────────────────────
+
+export async function rapportPerformanceDomaine(
+  etablissement_id: string,
+  params: { classe_id: string; annee_scolaire_id: string; periode?: number },
+) {
+  const { classe_id, annee_scolaire_id, periode } = params;
+
+  const [classeRaw, etab] = await Promise.all([
+    prisma.classe.findFirst({
+      where: { id: classe_id, etablissement_id },
+      include: { annee_scolaire: { select: { libelle: true } } },
+    }),
+    prisma.etablissement.findUnique({ where: { id: etablissement_id } }),
+  ]);
+  if (!classeRaw) throw new Error('Classe introuvable');
+
+  const [inscriptions, domaines, titulaireNom] = await Promise.all([
+    fetchInscriptions(classe_id, annee_scolaire_id),
+    prisma.domaine.findMany({
+      where: { etablissement_id, actif: true },
+      orderBy: { ordre: 'asc' },
+    }),
+    getTitulaire(classe_id, annee_scolaire_id),
+  ]);
+
+  const eleveIds = inscriptions.map(i => i.eleve_id);
+  const noteWhere: Record<string, unknown> = { eleve_id: { in: eleveIds }, annee_scolaire_id };
+  if (periode && periode > 0) noteWhere.periode = periode;
+
+  const notes = await prisma.note.findMany({
+    where: noteWhere,
+    include: { matiere: { include: { domaine: true } } },
+  });
+
+  // Score par domaine par élève (normalisé /10)
+  const domCodes = domaines.map(d => d.code);
+  const acc = new Map<string, Map<string, number[]>>();
+  for (const note of notes) {
+    const dc = note.matiere.domaine?.code;
+    if (!dc || !domCodes.includes(dc)) continue;
+    const nm = n10(Number(note.valeur), Number(note.matiere.note_max));
+    if (!acc.has(note.eleve_id)) acc.set(note.eleve_id, new Map());
+    const dm = acc.get(note.eleve_id)!;
+    if (!dm.has(dc)) dm.set(dc, []);
+    dm.get(dc)!.push(nm);
+  }
+
+  // Construire les lignes élèves
+  const rows = inscriptions.map(i => {
+    const dm = acc.get(i.eleve_id);
+    const domAvgs = domCodes.map(dc => {
+      const vals = dm?.get(dc);
+      return vals?.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
+    });
+    const nonNull = domAvgs.filter((v): v is number => v !== null);
+    const total   = nonNull.reduce((s, v) => s + v, 0);
+    const moy     = nonNull.length ? total / nonNull.length : null;
+    return { eleve: i.eleve, domAvgs, total: nonNull.length ? total : null, moy };
+  }).sort((a, b) => (b.moy ?? -1) - (a.moy ?? -1));
+
+  // Rang
+  const rowsRanked = rows.map((r, idx) => ({ ...r, rang: r.moy !== null ? idx + 1 : '—' }));
+
+  // Stats par domaine (sur les valeurs normalisées)
+  const domStats = domCodes.map(dc => {
+    const vals = rows.map(r => r.domAvgs[domCodes.indexOf(dc)]).filter((v): v is number => v !== null);
+    if (!vals.length) return { min: null, max: null, freq: null, moy: null };
+    const moy = vals.reduce((s, v) => s + v, 0) / vals.length;
+    return {
+      min:  Math.min(...vals),
+      max:  Math.max(...vals),
+      freq: modeOf(vals),
+      moy,
+    };
+  });
+
+  const allMoys     = rows.map(r => r.moy).filter((v): v is number => v !== null);
+  const moyClasse   = allMoys.length ? allMoys.reduce((s, v) => s + v, 0) / allMoys.length : 0;
+  const nbAvecMoy   = allMoys.filter(v => v >= moyClasse).length;
+  const ecartTypeV  = stdDev(allMoys);
+  const periodeLabel = periode && periode > 0 ? `${periode}ème Trimestre` : 'Annuel';
+
+  const fmt  = (v: number | null) => v === null ? '—' : v.toFixed(2);
+
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;font-size:9px;color:#000;padding:8mm 10mm;}
+.header-line{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px;}
+.etab{font-size:10px;font-weight:bold;}
+.annee{font-size:9px;}
+.titre{text-align:center;font-size:12px;font-weight:bold;text-decoration:underline;margin:6px 0 2px;}
+.sous-titre{text-align:center;font-size:9px;margin-bottom:6px;}
+.meta{display:grid;grid-template-columns:1fr 1fr;font-size:9px;margin-bottom:6px;}
+table{width:100%;border-collapse:collapse;}
+th,td{border:1px solid #000;padding:2.5px 3px;text-align:center;font-size:8.5px;}
+th{background:#d0d0d0;font-weight:bold;}
+.lbl{text-align:left;}
+.ok{color:#1a7a1a;font-weight:bold;}
+.nok{color:#b30000;}
+.stat-row td{background:#ececec;font-size:8px;font-style:italic;}
+.footer{font-size:9px;margin-top:6px;}
+.sigs{display:flex;justify-content:space-around;margin-top:10mm;font-weight:bold;font-size:10px;}
+</style></head><body>
+<div class="header-line">
+  <div class="etab">${esc(etab?.nom_fr ?? '')}</div>
+  <div class="annee">Année scolaire : ${esc(classeRaw.annee_scolaire.libelle)}</div>
+</div>
+<div class="titre">PERFORMANCE PAR DOMAINE D'ÉTUDE — ${esc(periodeLabel)}</div>
+<div class="sous-titre">${esc(etab?.nom_fr ?? '')}</div>
+<div class="meta">
+  <span><strong>Classe :</strong> ${esc(classeRaw.nom_fr)}</span>
+  <span><strong>Tenu par :</strong> ${esc(titulaireNom)}</span>
+</div>
+<table>
+  <thead>
+    <tr>
+      <th>N°</th>
+      <th>PRÉNOM(S) &amp; NOM</th>
+      ${domaines.map(d => `<th>${esc(d.nom_fr)}</th>`).join('')}
+      <th>TOTAL</th>
+      <th>MOYENNE</th>
+      <th>RANG</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${rowsRanked.map((r, i) => {
+      const m = r.moy;
+      const cls = m === null ? '' : m >= moyClasse ? 'ok' : 'nok';
+      return `<tr>
+        <td>${i + 1}</td>
+        <td class="lbl">${esc(r.eleve.prenom_fr)} ${esc(r.eleve.nom_fr)}</td>
+        ${r.domAvgs.map(v => `<td>${fmt(v)}</td>`).join('')}
+        <td>${fmt(r.total)}</td>
+        <td class="${cls}">${fmt(m)}</td>
+        <td>${r.rang}</td>
+      </tr>`;
+    }).join('')}
+    <tr class="stat-row">
+      <td colspan="2" class="lbl">Note la plus faible</td>
+      ${domStats.map(s => `<td>${fmt(s.min)}</td>`).join('')}<td colspan="3"></td>
+    </tr>
+    <tr class="stat-row">
+      <td colspan="2" class="lbl">Note la plus forte</td>
+      ${domStats.map(s => `<td>${fmt(s.max)}</td>`).join('')}<td colspan="3"></td>
+    </tr>
+    <tr class="stat-row">
+      <td colspan="2" class="lbl">Note la plus fréquente</td>
+      ${domStats.map(s => `<td>${fmt(s.freq)}</td>`).join('')}<td colspan="3"></td>
+    </tr>
+    <tr class="stat-row">
+      <td colspan="2" class="lbl">Note moyenne</td>
+      ${domStats.map(s => `<td>${fmt(s.moy)}</td>`).join('')}<td colspan="3"></td>
+    </tr>
+  </tbody>
+</table>
+<div class="footer">
+  * ${nbAvecMoy} élève(s) ont réalisé la moyenne de la classe (${moyClasse.toFixed(2)}) &nbsp;|&nbsp;
+  Écart type de la classe : ${ecartTypeV.toFixed(2)}
+</div>
+<div class="sigs">
+  <div>LA MAÎTRESSE / LE MAÎTRE</div>
+  <div>LE DIRECTEUR</div>
+</div>
+</body></html>`;
+
+  const buffer = await renderPdfHtml(html, {
+    format: 'A4',
+    landscape: true,
+    printBackground: true,
+    margin: { top: '8mm', bottom: '8mm', left: '8mm', right: '8mm' },
+  });
+  return { buffer, mime: 'application/pdf', filename: `perf-domaine-${classeRaw.nom_fr}-T${periode ?? 'annuel'}.pdf` };
+}
+
+// ─── Rapport Relevé de Notes (paysage A4) ────────────────────────────────────
+
+export async function rapportReleveNotes(
+  etablissement_id: string,
+  params: { classe_id: string; annee_scolaire_id: string; periode?: number },
+) {
+  const { classe_id, annee_scolaire_id, periode } = params;
+
+  const [classeRaw, etab] = await Promise.all([
+    prisma.classe.findFirst({
+      where: { id: classe_id, etablissement_id },
+      include: { annee_scolaire: { select: { libelle: true } } },
+    }),
+    prisma.etablissement.findUnique({ where: { id: etablissement_id } }),
+  ]);
+  if (!classeRaw) throw new Error('Classe introuvable');
+
+  const [inscriptions, classeMatieres, titulaireNom] = await Promise.all([
+    fetchInscriptions(classe_id, annee_scolaire_id),
+    prisma.classeMatiere.findMany({
+      where: { classe_id },
+      include: { matiere: { select: { id: true, nom_fr: true, code_court: true, note_max: true, ordre_bulletin: true } } },
+      orderBy: { matiere: { ordre_bulletin: 'asc' } },
+    }),
+    getTitulaire(classe_id, annee_scolaire_id),
+  ]);
+
+  const matieres = classeMatieres.map(cm => cm.matiere);
+  const eleveIds = inscriptions.map(i => i.eleve_id);
+  const noteWhere: Record<string, unknown> = {
+    eleve_id: { in: eleveIds },
+    annee_scolaire_id,
+    matiere_id: { in: matieres.map(m => m.id) },
+  };
+  if (periode && periode > 0) noteWhere.periode = periode;
+
+  const notes = await prisma.note.findMany({ where: noteWhere });
+
+  // Index notes : eleveId → matiereId → valeur
+  const noteIdx = new Map<string, Map<string, number>>();
+  for (const note of notes) {
+    if (!noteIdx.has(note.eleve_id)) noteIdx.set(note.eleve_id, new Map());
+    noteIdx.get(note.eleve_id)!.set(note.matiere_id, Number(note.valeur));
+  }
+
+  // Calcul rang par moyenne générale
+  const rows = inscriptions.map(i => {
+    const nm = noteIdx.get(i.eleve_id);
+    const vals = matieres.map(m => nm?.get(m.id) ?? null);
+    const nonNull = vals.filter((v): v is number => v !== null);
+    const total   = nonNull.reduce((s, v) => s + v, 0);
+    const moy     = nonNull.length ? total / nonNull.length : null;
+    return { eleve: i.eleve, vals, total: nonNull.length ? total : null, moy };
+  }).sort((a, b) => (b.moy ?? -1) - (a.moy ?? -1));
+
+  const rowsRanked = rows.map((r, idx) => ({ ...r, rang: r.moy !== null ? idx + 1 : '—' }));
+
+  // Statistiques par matière
+  const matStats = matieres.map((m, mi) => {
+    const vals = rows.map(r => r.vals[mi]).filter((v): v is number => v !== null);
+    if (!vals.length) return { eff: 0, comp: 0, ontMoy: 0, max: null, min: null, moy: null, txR: 0, txE: 0 };
+    const moy        = vals.reduce((s, v) => s + v, 0) / vals.length;
+    const demi       = Number(m.note_max) / 2;
+    const ontMoy     = vals.filter(v => v >= demi).length;
+    return {
+      eff:   rows.length,
+      comp:  vals.length,
+      ontMoy,
+      max:   Math.max(...vals),
+      min:   Math.min(...vals),
+      moy,
+      txR:   vals.length ? Math.round((ontMoy / vals.length) * 1000) / 10 : 0,
+      txE:   vals.length ? Math.round(((vals.length - ontMoy) / vals.length) * 1000) / 10 : 0,
+    };
+  });
+
+  const periodeLabel = periode && periode > 0 ? `${periode}ème Trimestre` : 'Annuel';
+  const fmtVal = (v: number | null) => v === null ? '' : v.toFixed(2);
+
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;font-size:8px;color:#000;padding:7mm 8mm;}
+.header{display:flex;justify-content:space-between;margin-bottom:4px;}
+.titre{text-align:center;font-size:11px;font-weight:bold;text-decoration:underline;margin:4px 0;}
+.meta{display:flex;gap:20px;font-size:8.5px;margin-bottom:6px;justify-content:center;}
+table{width:100%;border-collapse:collapse;}
+th,td{border:1px solid #333;padding:2px 2px;text-align:center;font-size:7.5px;}
+th{background:#ccc;font-weight:bold;}
+.lbl{text-align:left;font-size:7.5px;}
+.stat-row{background:#ececec;font-style:italic;font-size:7px;}
+.sigs{display:flex;justify-content:space-around;margin-top:8mm;font-weight:bold;font-size:9.5px;}
+</style></head><body>
+<div class="header">
+  <div style="font-weight:bold;font-size:10px">${esc(etab?.nom_fr ?? '')}</div>
+  <div style="font-size:8.5px">Année scolaire : ${esc(classeRaw.annee_scolaire.libelle)}</div>
+</div>
+<div class="titre">RELEVÉ DE NOTES — ${esc(periodeLabel)}</div>
+<div class="meta">
+  <span><strong>Classe :</strong> ${esc(classeRaw.nom_fr)}</span>
+  <span><strong>Tenu par :</strong> ${esc(titulaireNom)}</span>
+  <span><strong>École :</strong> ${esc(etab?.nom_fr ?? '')}</span>
+</div>
+<table>
+  <thead>
+    <tr>
+      <th>N°</th>
+      <th class="lbl">Prénom &amp; Nom</th>
+      ${matieres.map(m => `<th>${esc(m.code_court ?? m.nom_fr.substring(0, 5))}</th>`).join('')}
+      <th>Total</th>
+      <th>Moy</th>
+      <th>Rang</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${rowsRanked.map((r, i) => `<tr>
+      <td>${i + 1}</td>
+      <td class="lbl">${esc(r.eleve.prenom_fr)} ${esc(r.eleve.nom_fr)}</td>
+      ${r.vals.map(v => `<td>${fmtVal(v)}</td>`).join('')}
+      <td>${fmtVal(r.total)}</td>
+      <td>${fmtVal(r.moy)}</td>
+      <td>${r.rang}</td>
+    </tr>`).join('')}
+    <tr class="stat-row"><td colspan="2" class="lbl">Effectif</td>${matStats.map(s => `<td>${s.eff}</td>`).join('')}<td colspan="3"></td></tr>
+    <tr class="stat-row"><td colspan="2" class="lbl">Ont composé</td>${matStats.map(s => `<td>${s.comp}</td>`).join('')}<td colspan="3"></td></tr>
+    <tr class="stat-row"><td colspan="2" class="lbl">Ont la moyenne</td>${matStats.map(s => `<td>${s.ontMoy}</td>`).join('')}<td colspan="3"></td></tr>
+    <tr class="stat-row"><td colspan="2" class="lbl">Plus forte moy.</td>${matStats.map(s => `<td>${fmtVal(s.max)}</td>`).join('')}<td colspan="3"></td></tr>
+    <tr class="stat-row"><td colspan="2" class="lbl">Plus faible moy.</td>${matStats.map(s => `<td>${fmtVal(s.min)}</td>`).join('')}<td colspan="3"></td></tr>
+    <tr class="stat-row"><td colspan="2" class="lbl">Moyenne classe</td>${matStats.map(s => `<td>${fmtVal(s.moy)}</td>`).join('')}<td colspan="3"></td></tr>
+    <tr class="stat-row"><td colspan="2" class="lbl">Taux réussite (%)</td>${matStats.map(s => `<td>${s.txR}%</td>`).join('')}<td colspan="3"></td></tr>
+    <tr class="stat-row"><td colspan="2" class="lbl">Taux échec (%)</td>${matStats.map(s => `<td>${s.txE}%</td>`).join('')}<td colspan="3"></td></tr>
+  </tbody>
+</table>
+<div class="sigs">
+  <div>LA MAÎTRESSE / LE MAÎTRE</div>
+  <div>LE DIRECTEUR</div>
+</div>
+</body></html>`;
+
+  const buffer = await renderPdfHtml(html, {
+    format: 'A4',
+    landscape: true,
+    printBackground: true,
+    margin: { top: '7mm', bottom: '7mm', left: '7mm', right: '7mm' },
+  });
+  return { buffer, mime: 'application/pdf', filename: `releve-notes-${classeRaw.nom_fr}-T${periode ?? 'annuel'}.pdf` };
+}
+
+// ─── Rapport Propositions de Fin d'Année / Conseil de Classe (paysage A4) ────
+
+export async function rapportPropositionsFin(
+  etablissement_id: string,
+  params: { classe_id: string; annee_scolaire_id: string },
+) {
+  const { classe_id, annee_scolaire_id } = params;
+
+  const [classeRaw, etab] = await Promise.all([
+    prisma.classe.findFirst({
+      where: { id: classe_id, etablissement_id },
+      include: { annee_scolaire: { select: { libelle: true } } },
+    }),
+    prisma.etablissement.findUnique({ where: { id: etablissement_id } }),
+  ]);
+  if (!classeRaw) throw new Error('Classe introuvable');
+
+  const [inscriptions, titulaireNom] = await Promise.all([
+    fetchInscriptions(classe_id, annee_scolaire_id),
+    getTitulaire(classe_id, annee_scolaire_id),
+  ]);
+
+  const eleveIds = inscriptions.map(i => i.eleve_id);
+
+  // Bulletins pour T1, T2, T3 (et annuel = période 4 si existe)
+  const bulletins = await prisma.bulletin.findMany({
+    where: { eleve_id: { in: eleveIds }, annee_scolaire_id, filiere: classeRaw.filiere },
+    select: { eleve_id: true, periode: true, moyenne: true },
+  });
+
+  // Progressions (décision déjà saisie)
+  const progressions = await prisma.progressionEleve.findMany({
+    where: { eleve_id: { in: eleveIds }, annee_scolaire_id },
+    select: { eleve_id: true, decision: true },
+  });
+
+  // Index bulletins : eleveId → periode → moyenne
+  const bulIdx = new Map<string, Map<number, number>>();
+  for (const b of bulletins) {
+    if (!bulIdx.has(b.eleve_id)) bulIdx.set(b.eleve_id, new Map());
+    bulIdx.get(b.eleve_id)!.set(b.periode, Number(b.moyenne ?? 0));
+  }
+  // Index progressions : eleveId → decision
+  const progIdx = new Map(progressions.map(p => [p.eleve_id, p.decision]));
+
+  // Si pas de bulletins générés, on calcule depuis les notes
+  const notesParEleve = await prisma.note.findMany({
+    where: { eleve_id: { in: eleveIds }, annee_scolaire_id },
+    select: { eleve_id: true, periode: true, valeur: true },
+  });
+  const notesPeriodeIdx = new Map<string, Map<number, number[]>>();
+  for (const n of notesParEleve) {
+    if (!notesPeriodeIdx.has(n.eleve_id)) notesPeriodeIdx.set(n.eleve_id, new Map());
+    const pm = notesPeriodeIdx.get(n.eleve_id)!;
+    if (!pm.has(n.periode)) pm.set(n.periode, []);
+    pm.get(n.periode)!.push(Number(n.valeur));
+  }
+
+  const getMoy = (eleveId: string, periode: number): number | null => {
+    // Priorité : bulletin généré
+    const fromBul = bulIdx.get(eleveId)?.get(periode);
+    if (fromBul !== undefined && fromBul > 0) return fromBul;
+    // Sinon : calcul depuis notes
+    const vals = notesPeriodeIdx.get(eleveId)?.get(periode);
+    if (!vals || !vals.length) return null;
+    return vals.reduce((s, v) => s + v, 0) / vals.length;
+  };
+
+  const DECISION_LABELS: Record<string, string> = {
+    admis:       'Admis(e)',
+    redoublant:  'Redoublant(e)',
+    transfere:   'Transféré(e)',
+    exclu:       'Exclu(e)',
+  };
+
+  const rows = inscriptions.map(i => {
+    const t1  = getMoy(i.eleve_id, 1);
+    const t2  = getMoy(i.eleve_id, 2);
+    const t3  = getMoy(i.eleve_id, 3);
+    const nonNull = [t1, t2, t3].filter((v): v is number => v !== null);
+    const ann = nonNull.length ? nonNull.reduce((s, v) => s + v, 0) / nonNull.length : null;
+    const dec = progIdx.get(i.eleve_id);
+    return { eleve: i.eleve, t1, t2, t3, ann, decision: dec ? (DECISION_LABELS[dec] ?? dec) : '' };
+  });
+
+  const fmt = (v: number | null) => v === null ? '—' : v.toFixed(2);
+  const dn  = (v: Date) => new Date(v).toLocaleDateString('fr-FR');
+
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;font-size:9px;color:#000;padding:8mm 10mm;}
+.header{display:flex;justify-content:space-between;margin-bottom:4px;}
+.titre{text-align:center;font-size:12px;font-weight:bold;text-decoration:underline;margin:6px 0 4px;}
+.meta{display:grid;grid-template-columns:1fr 1fr;font-size:9px;margin-bottom:6px;}
+table{width:100%;border-collapse:collapse;}
+th,td{border:1px solid #000;padding:3px 3px;text-align:center;font-size:8.5px;}
+th{background:#d0d0d0;font-weight:bold;}
+.lbl{text-align:left;}
+.sigs{display:flex;justify-content:space-around;margin-top:12mm;font-weight:bold;font-size:10px;}
+</style></head><body>
+<div class="header">
+  <div style="font-weight:bold;font-size:11px">${esc(etab?.nom_fr ?? '')}</div>
+  <div style="font-size:9px">Année scolaire : ${esc(classeRaw.annee_scolaire.libelle)}</div>
+</div>
+<div class="titre">PROPOSITIONS DE FIN D'ANNÉE</div>
+<div class="meta">
+  <span><strong>Classe :</strong> ${esc(classeRaw.nom_fr)}</span>
+  <span><strong>Tenu par :</strong> ${esc(titulaireNom)}</span>
+</div>
+<table>
+  <thead>
+    <tr>
+      <th>N°</th>
+      <th class="lbl">PRÉNOM(S)</th>
+      <th class="lbl">NOM</th>
+      <th>DATE NAISS.</th>
+      <th>MOY. T1</th>
+      <th>MOY. T2</th>
+      <th>MOY. T3</th>
+      <th>SITUATION<br>ANNUELLE</th>
+      <th>CLASSE(S)<br>REDOUBLÉE(S)</th>
+      <th>DÉCISION DU C.M.</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${rows.map((r, i) => `<tr>
+      <td>${i + 1}</td>
+      <td class="lbl">${esc(r.eleve.prenom_fr)}</td>
+      <td class="lbl">${esc(r.eleve.nom_fr)}</td>
+      <td>${dn(r.eleve.date_naissance)}</td>
+      <td>${fmt(r.t1)}</td>
+      <td>${fmt(r.t2)}</td>
+      <td>${fmt(r.t3)}</td>
+      <td><strong>${fmt(r.ann)}</strong></td>
+      <td></td>
+      <td>${esc(r.decision)}</td>
+    </tr>`).join('')}
+  </tbody>
+</table>
+<div class="sigs">
+  <div>LA MAÎTRESSE / LE MAÎTRE</div>
+  <div>LE DIRECTEUR</div>
+</div>
+</body></html>`;
+
+  const buffer = await renderPdfHtml(html, {
+    format: 'A4',
+    landscape: true,
+    printBackground: true,
+    margin: { top: '8mm', bottom: '8mm', left: '8mm', right: '8mm' },
+  });
+  return { buffer, mime: 'application/pdf', filename: `propositions-fin-${classeRaw.nom_fr}.pdf` };
+}
