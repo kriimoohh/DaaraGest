@@ -14,7 +14,7 @@ type TypeDocument =
   | 'FICHE_TRANSFERT' | 'EMPLOI_DU_TEMPS_ELEVE' | 'RELEVE_NOTES'
   | 'CERTIFICAT_BONNE_CONDUITE' | 'FICHE_RENSEIGNEMENTS' | 'ATTESTATION_RESULTATS'
   | 'LISTE_CLASSE' | 'ATTESTATION_TRAVAIL' | 'ORDRE_MISSION' | 'FICHE_PAIE' | 'PLANNING_COURS'
-  | 'CERTIFICAT_TRAVAIL_PERMANENT' | 'CERTIFICAT_TRAVAIL_STAGIAIRE' | 'ATTESTATION_SERVICE'
+  | 'CERTIFICAT_TRAVAIL_PERMANENT' | 'CERTIFICAT_TRAVAIL_STAGIAIRE'
   | 'AUTORISATION_ABSENCE_ELEVE' | 'BILLET_ENTREE'
   | 'CARTE_ELEVE' | 'CARTE_PROFESSEUR';
 
@@ -52,7 +52,6 @@ const LABELS: Record<TypeDocument, string> = {
   PLANNING_COURS:               'Planning de cours',
   CERTIFICAT_TRAVAIL_PERMANENT: 'Certificat de travail (permanent)',
   CERTIFICAT_TRAVAIL_STAGIAIRE: 'Certificat de travail (stagiaire)',
-  ATTESTATION_SERVICE:          'Attestation de travail',
   AUTORISATION_ABSENCE_ELEVE:   "Autorisation d'absence (élève)",
   BILLET_ENTREE:                "Billet d'entrée",
   CARTE_ELEVE:                  "Carte scolaire élève (CR80)",
@@ -76,7 +75,6 @@ const DEST_TYPE: Record<TypeDocument, DestType> = {
   PLANNING_COURS:               'professeur',
   CERTIFICAT_TRAVAIL_PERMANENT: 'professeur',
   CERTIFICAT_TRAVAIL_STAGIAIRE: 'professeur',
-  ATTESTATION_SERVICE:          'professeur',
   AUTORISATION_ABSENCE_ELEVE:   'eleve',
   BILLET_ENTREE:                'eleve',
   CARTE_ELEVE:                  'eleve',
@@ -97,7 +95,7 @@ const GROUPS: { label: string; icon: string; types: TypeDocument[] }[] = [
   {
     label: 'Documents professeurs',
     icon: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
-    types: ['ATTESTATION_TRAVAIL','CERTIFICAT_TRAVAIL_PERMANENT','CERTIFICAT_TRAVAIL_STAGIAIRE','ATTESTATION_SERVICE','ORDRE_MISSION','FICHE_PAIE','PLANNING_COURS'],
+    types: ['ATTESTATION_TRAVAIL','CERTIFICAT_TRAVAIL_PERMANENT','CERTIFICAT_TRAVAIL_STAGIAIRE','ORDRE_MISSION','FICHE_PAIE','PLANNING_COURS'],
   },
   {
     label: "Cartes d'identité (CR80)",
@@ -115,7 +113,6 @@ const EXTRA_PARAMS: Record<TypeDocument, { key: string; label: string; type: 'te
   // POSTE_OCCUPE / DATE_FIN_CONTRAT / PERIODE_STAGE_* : pré-remplis depuis la fiche professeur.
   CERTIFICAT_TRAVAIL_PERMANENT: [],
   CERTIFICAT_TRAVAIL_STAGIAIRE: [],
-  ATTESTATION_SERVICE:          [],
   AUTORISATION_ABSENCE_ELEVE: [
     { key: 'DATE_DEBUT_ABSENCE',  label: "Date de début d'absence", type: 'date' },
     { key: 'DATE_FIN_ABSENCE',    label: "Date de fin d'absence",   type: 'date' },

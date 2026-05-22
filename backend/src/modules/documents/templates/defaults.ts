@@ -17,7 +17,6 @@ export const TYPE_DOCUMENT_LABELS: Record<TypeDocument, string> = {
   PLANNING_COURS:               'Planning de cours',
   CERTIFICAT_TRAVAIL_PERMANENT: 'Certificat de travail (permanent)',
   CERTIFICAT_TRAVAIL_STAGIAIRE: 'Certificat de travail (stagiaire)',
-  ATTESTATION_SERVICE:          'Attestation de travail',
   AUTORISATION_ABSENCE_ELEVE:   "Autorisation d'absence (élève)",
   BILLET_ENTREE:                "Billet d'entrée",
   CARTE_ELEVE:                  "Carte d'identité scolaire (élève)",
@@ -274,16 +273,16 @@ const ATTESTATION_TRAVAIL = wrapPage('Attestation de travail', `
   <div class="doc-title">Attestation de travail</div>
   <div class="ref-line">Réf. : {{REF_DOCUMENT}}</div>
   <div class="body-text">
-    <p>Je soussigné(e), Directeur(trice) de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong>,
+    <p>Je soussigné(e), <strong>{{NOM_DIRECTEUR}}</strong>, Directeur(trice) de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong>,
     atteste que :</p>
     <table class="info-table">
       <tr><td>Nom et prénom</td><td><strong>{{NOM_PRENOM_PROF}}</strong></td></tr>
       <tr><td>Spécialité</td><td>{{SPECIALITE}}</td></tr>
       <tr><td>Type de contrat</td><td>{{TYPE_CONTRAT}}</td></tr>
       <tr><td>Date de prise de service</td><td>{{DATE_EMBAUCHE}}</td></tr>
-      <tr><td>Poste occupé</td><td>Professeur</td></tr>
+      <tr><td>Poste occupé</td><td>{{POSTE_OCCUPE}}</td></tr>
     </table>
-    <p>est employé(e) en qualité de <strong>Professeur</strong> au sein de notre établissement depuis le
+    <p>est employé(e) en qualité de <strong>{{POSTE_OCCUPE}}</strong> au sein de notre établissement depuis le
     <strong>{{DATE_EMBAUCHE}}</strong>.</p>
     <p>Cette attestation est délivrée à l'intéressé(e) sur sa demande pour servir et valoir ce que de droit.</p>
   </div>`);
@@ -379,23 +378,6 @@ const CERTIFICAT_TRAVAIL_STAGIAIRE_TPL = wrapPage('Certificat de travail (stagia
       <li>Du <strong>{{PERIODE_STAGE_DEBUT}}</strong> au <strong>{{PERIODE_STAGE_FIN}}</strong> en qualité de <strong>{{POSTE_OCCUPE}}</strong>.</li>
     </ul>
     <p>Il nous quitte libre de tout engagement. Ce certificat est délivré à l'intéressé(e) pour servir et valoir ce que de droit.</p>
-  </div>`);
-
-const ATTESTATION_SERVICE_TPL = wrapPage('Attestation de travail', `
-  <div class="doc-title">Attestation de travail</div>
-  <div class="ref-line">Réf. : {{REF_DOCUMENT}}</div>
-  <div class="body-text">
-    <p>Je soussigné(e), <strong>{{NOM_DIRECTEUR}}</strong>, Directeur(trice) de l'établissement <strong>{{NOM_ETABLISSEMENT}}</strong>,
-    atteste que :</p>
-    <table class="info-table">
-      <tr><td>Nom et prénom</td><td><strong>{{NOM_PRENOM_PROF}}</strong></td></tr>
-      <tr><td>Spécialité / Poste</td><td>{{SPECIALITE}}</td></tr>
-      <tr><td>En service depuis le</td><td>{{DATE_EMBAUCHE}}</td></tr>
-      <tr><td>En qualité de</td><td>{{POSTE_OCCUPE}}</td></tr>
-    </table>
-    <p>est en service dans notre établissement depuis le <strong>{{DATE_EMBAUCHE}}</strong>
-    en qualité de <strong>{{POSTE_OCCUPE}}</strong>.</p>
-    <p>En foi de quoi, cette présente attestation lui est délivrée pour servir et valoir ce que de droit.</p>
   </div>`);
 
 const AUTORISATION_ABSENCE_ELEVE_TPL = wrapPage("Autorisation d'absence", `
@@ -655,7 +637,6 @@ const TEMPLATES: Record<TypeDocument, string> = {
   PLANNING_COURS:               PLANNING_COURS,
   CERTIFICAT_TRAVAIL_PERMANENT: CERTIFICAT_TRAVAIL_PERMANENT_TPL,
   CERTIFICAT_TRAVAIL_STAGIAIRE: CERTIFICAT_TRAVAIL_STAGIAIRE_TPL,
-  ATTESTATION_SERVICE:          ATTESTATION_SERVICE_TPL,
   AUTORISATION_ABSENCE_ELEVE:   AUTORISATION_ABSENCE_ELEVE_TPL,
   BILLET_ENTREE:                BILLET_ENTREE_TPL,
   CARTE_ELEVE:                  CARTE_ELEVE_HTML,
