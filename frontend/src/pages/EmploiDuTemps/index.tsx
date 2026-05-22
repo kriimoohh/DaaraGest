@@ -28,7 +28,7 @@ interface Creneau {
   salle: string | null;
   classe: { id: string; nom_fr: string; filiere: string };
   matiere: { id: string; nom_fr: string; nom_ar: string };
-  personnel: { id: string; utilisateur: { nom_fr: string; prenom_fr: string } };
+  personnel: { id: string; utilisateur: { nom_fr: string; prenom_fr: string } } | null;
 }
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -64,7 +64,9 @@ function CreneauCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const colors = getCreneauColor(creneau.classe.filiere);
-  const profName = `${creneau.personnel.utilisateur.prenom_fr} ${creneau.personnel.utilisateur.nom_fr}`;
+  const profName = creneau.personnel
+    ? `${creneau.personnel.utilisateur.prenom_fr} ${creneau.personnel.utilisateur.nom_fr}`
+    : '—';
 
   return (
     <div
