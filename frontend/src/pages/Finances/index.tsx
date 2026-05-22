@@ -34,16 +34,16 @@ interface Reliquat {
   parent_telephone?: string;
 }
 
-interface ProfesseurSimple {
+interface PersonnelSimple {
   id: string; nom_fr: string;
-  professeur: { id: string; salaire_base: string | null } | null;
+  personnel: { id: string; salaire_base: string | null } | null;
 }
 
 interface PaiementProf {
   id: string; mois: number; annee: number; montant_brut: number;
   retenues: number; net_a_payer: number; statut: string; created_at: string;
   motif_retenue?: string | null;
-  professeur: { utilisateur: { nom_fr: string; }; };
+  personnel: { utilisateur: { nom_fr: string; }; };
 }
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
@@ -168,7 +168,7 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
   const { t } = useTranslation();
   const now = new Date();
   const [paiements, setPaiements] = useState<PaiementProf[]>([]);
-  const [profs, setProfs] = useState<ProfesseurSimple[]>([]);
+  const [profs, setProfs] = useState<PersonnelSimple[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [moisF, setMoisF] = useState(String(now.getMonth() + 1));
@@ -177,12 +177,12 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
   const [modal, setModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    professeur_id: '', mois: String(now.getMonth() + 1), annee: String(now.getFullYear()),
+    personnel_id: '', mois: String(now.getMonth() + 1), annee: String(now.getFullYear()),
     montant_brut: '', retenues: '0', net_a_payer: '', motif_retenue: '',
   });
 
   useEffect(() => {
-    api.get<{ data: ProfesseurSimple[] }>('/api/v1/personnel?limit=200')
+    api.get<{ data: PersonnelSimple[] }>('/api/v1/personnel?limit=200')
       .then((r) => setProfs(r.data ?? [])).catch(() => {});
   }, []);
 
@@ -199,11 +199,11 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
   useEffect(() => { charger(); }, [page, moisF, anneeF]);
 
   const handleSave = async () => {
-    if (!form.professeur_id || !form.montant_brut) { toast.error('Professeur et montant requis'); return; }
+    if (!form.personnel_id || !form.montant_brut) { toast.error('Professeur et montant requis'); return; }
     setSaving(true);
     try {
       await api.post('/api/v1/finances/paiements-professeurs', {
-        professeur_id: form.professeur_id,
+        personnel_id: form.personnel_id,
         mois: parseInt(form.mois), annee: parseInt(form.annee),
         montant_brut: parseFloat(form.montant_brut),
         retenues: parseFloat(form.retenues) || 0,
@@ -244,7 +244,7 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
             <tbody>
               {paiements.map(p => (
                 <tr key={p.id}>
-                  <td style={{ fontWeight: 500, color: 'var(--ink)' }}>{p.professeur.utilisateur.nom_fr}</td>
+                  <td style={{ fontWeight: 500, color: 'var(--ink)' }}>{p.personnel.utilisateur.nom_fr}</td>
                   <td style={{ color: 'var(--ink-3)' }}>{MOIS[p.mois-1]} {p.annee}</td>
                   <td style={{ color: 'var(--ink-2)' }}>{formatMontant(Number(p.montant_brut))}</td>
                   <td>
@@ -274,17 +274,17 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
 
       <Modal isOpen={modal} onClose={() => setModal(false)} title={t('finance.nouveau_paiement_prof')} size="md">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <Select label={t('professeur.titre')} value={form.professeur_id}
+          <Select label={t('professeur.titre')} value={form.personnel_id}
             onChange={(e) => {
               const profId = e.target.value;
-              const prof = profs.find(p => p.professeur?.id === profId);
-              const salaire = prof?.professeur?.salaire_base ?? '';
+              const prof = profs.find(p => p.personnel?.id === profId);
+              const salaire = prof?.personnel?.salaire_base ?? '';
               const brut = salaire ? String(parseFloat(salaire)) : '';
               const retenues = brut ? String(Math.round(parseFloat(brut) * 0.05)) : '0';
               const net = brut && retenues ? String(parseFloat(brut) - parseFloat(retenues)) : brut;
-              setForm(f => ({ ...f, professeur_id: profId, montant_brut: brut, retenues, net_a_payer: net }));
+              setForm(f => ({ ...f, personnel_id: profId, montant_brut: brut, retenues, net_a_payer: net }));
             }}
-            options={[{ value: '', label: t('common.selectionner') }, ...profs.filter(p => p.professeur).map(p => ({ value: p.professeur!.id, label: p.nom_fr }))]} />
+            options={[{ value: '', label: t('common.selectionner') }, ...profs.filter(p => p.personnel).map(p => ({ value: p.personnel!.id, label: p.nom_fr }))]} />
           <div className="grid-2">
             <Select label={t('common.mois')} value={form.mois} onChange={(e) => setForm(f => ({ ...f, mois: e.target.value }))}
               options={MOIS.map((m, i) => ({ value: String(i + 1), label: m }))} />

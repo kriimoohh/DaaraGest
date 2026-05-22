@@ -13,7 +13,7 @@ import { toast } from '../../store/toastStore';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ProfJour {
-  professeur_id: string;
+  personnel_id: string;
   nom_fr: string;
   presence: PresenceRecord | null;
 }
@@ -29,11 +29,11 @@ interface PresenceHistorique {
   heure_arrivee: string | null; heure_depart: string | null;
   heures_prevues: number | null; heures_reelles: number | null; motif: string | null;
   source?: string;
-  professeur: { utilisateur: { nom_fr: string } };
+  personnel: { utilisateur: { nom_fr: string } };
 }
 
 interface StatProf {
-  professeur_id: string; nom_fr: string;
+  personnel_id: string; nom_fr: string;
   total_jours: number; presents: number; absents: number;
   retards: number; conges: number; taux_presence: number | null;
 }
@@ -76,7 +76,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
       // Pré-remplir avec les présences existantes
       const init: typeof saisie = {};
       for (const p of data) {
-        init[p.professeur_id] = {
+        init[p.personnel_id] = {
           statut: p.presence?.statut ?? '',
           heure_arrivee: p.presence?.heure_arrivee ?? '',
           heure_depart:  p.presence?.heure_depart  ?? '',
@@ -117,11 +117,11 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
 
   const handleSave = async () => {
     const presences = profs
-      .filter(p => saisie[p.professeur_id]?.statut)
+      .filter(p => saisie[p.personnel_id]?.statut)
       .map(p => {
-        const s = saisie[p.professeur_id];
+        const s = saisie[p.personnel_id];
         return {
-          professeur_id: p.professeur_id,
+          personnel_id: p.personnel_id,
           statut: s.statut as 'present' | 'absent' | 'retard' | 'conge',
           heure_arrivee: s.heure_arrivee || undefined,
           heure_depart:  s.heure_depart  || undefined,
@@ -141,11 +141,11 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
     } finally { setSaving(false); }
   };
 
-  const nbSaisis = profs.filter(p => saisie[p.professeur_id]?.statut).length;
-  const nbPresents = profs.filter(p => saisie[p.professeur_id]?.statut === 'present').length;
-  const nbAbsents = profs.filter(p => saisie[p.professeur_id]?.statut === 'absent').length;
-  const nbRetards = profs.filter(p => saisie[p.professeur_id]?.statut === 'retard').length;
-  const nbConges = profs.filter(p => saisie[p.professeur_id]?.statut === 'conge').length;
+  const nbSaisis = profs.filter(p => saisie[p.personnel_id]?.statut).length;
+  const nbPresents = profs.filter(p => saisie[p.personnel_id]?.statut === 'present').length;
+  const nbAbsents = profs.filter(p => saisie[p.personnel_id]?.statut === 'absent').length;
+  const nbRetards = profs.filter(p => saisie[p.personnel_id]?.statut === 'retard').length;
+  const nbConges = profs.filter(p => saisie[p.personnel_id]?.statut === 'conge').length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -200,20 +200,20 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
               </thead>
               <tbody>
                 {profs.map(p => {
-                  const s = saisie[p.professeur_id] ?? { statut: '', heures_reelles: '', motif: '' };
+                  const s = saisie[p.personnel_id] ?? { statut: '', heures_reelles: '', motif: '' };
                   const needMotif = s.statut === 'absent' || s.statut === 'retard';
                   const rowBg = s.statut === 'absent' ? 'oklch(0.96 0.03 25/0.4)'
                     : s.statut === 'present' ? 'oklch(0.96 0.03 145/0.4)'
                     : s.statut === 'retard' ? 'oklch(0.96 0.05 80/0.4)' : undefined;
                   return (
-                    <tr key={p.professeur_id} style={rowBg ? { background: rowBg } : undefined}>
+                    <tr key={p.personnel_id} style={rowBg ? { background: rowBg } : undefined}>
                       <td>{p.nom_fr}</td>
                       <td>
                         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                           {STATUTS.map(st => (
                             <button
                               key={st.value}
-                              onClick={() => setStatut(p.professeur_id, s.statut === st.value ? '' : st.value)}
+                              onClick={() => setStatut(p.personnel_id, s.statut === st.value ? '' : st.value)}
                               style={{
                                 padding: '3px 10px', borderRadius: 99, fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer',
                                 background: s.statut === st.value ? `var(--${st.badge === 'success' ? 'success' : st.badge === 'warning' ? 'warning' : st.badge === 'error' ? 'danger' : 'info'})` : 'var(--paper-3)',
@@ -227,13 +227,13 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
                       </td>
                       <td style={{ width: 112 }}>
                         <input type="time" value={s.heure_arrivee}
-                          onChange={e => setField(p.professeur_id, 'heure_arrivee', e.target.value)}
+                          onChange={e => setField(p.personnel_id, 'heure_arrivee', e.target.value)}
                           disabled={s.statut === 'absent' || s.statut === 'conge'}
                           className="input" style={{ width: 96, padding: '4px 8px' }} />
                       </td>
                       <td style={{ width: 112 }}>
                         <input type="time" value={s.heure_depart}
-                          onChange={e => setField(p.professeur_id, 'heure_depart', e.target.value)}
+                          onChange={e => setField(p.personnel_id, 'heure_depart', e.target.value)}
                           disabled={s.statut === 'absent' || s.statut === 'conge'}
                           className="input" style={{ width: 96, padding: '4px 8px' }} />
                       </td>
@@ -243,7 +243,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
                         ) : (
                           <input type="number" min="0" max="24" step="0.5"
                             value={s.heures_reelles}
-                            onChange={e => setField(p.professeur_id, 'heures_reelles', e.target.value)}
+                            onChange={e => setField(p.personnel_id, 'heures_reelles', e.target.value)}
                             placeholder="—"
                             disabled={s.statut === 'absent' || s.statut === 'conge'}
                             className="input" style={{ width: 64, padding: '4px 8px' }} />
@@ -252,7 +252,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
                       <td>
                         {needMotif && (
                           <input type="text" value={s.motif}
-                            onChange={e => setField(p.professeur_id, 'motif', e.target.value)}
+                            onChange={e => setField(p.personnel_id, 'motif', e.target.value)}
                             placeholder="Raison…"
                             className="input" style={{ width: '100%', padding: '4px 8px' }} />
                         )}
@@ -335,7 +335,7 @@ function Historique({ api }: { api: ReturnType<typeof useApi> }) {
                     <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>
                       {new Date(r.date).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' })}
                     </td>
-                    <td>{r.professeur.utilisateur.nom_fr}</td>
+                    <td>{r.personnel.utilisateur.nom_fr}</td>
                     <td><Badge label={statutLabel(r.statut)} variant={statutBadge(r.statut)} /></td>
                     <td>
                       {r.source === 'qr'
@@ -425,7 +425,7 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
               </thead>
               <tbody>
                 {stats.map(s => (
-                  <tr key={s.professeur_id}>
+                  <tr key={s.personnel_id}>
                     <td>{s.nom_fr}</td>
                     <td>{s.total_jours}</td>
                     <td style={{ color: 'var(--success)', fontWeight: 600 }}>{s.presents}</td>

@@ -13,7 +13,7 @@ import { useAuthStore } from '../../store/authStore';
 interface AnneeScolaire { id: string; libelle: string; active: boolean }
 interface Classe { id: string; nom_fr: string; filiere: string }
 interface Matiere { id: string; nom_fr: string; nom_ar: string; filiere: string }
-interface Professeur { id: string; utilisateur: { nom_fr: string; prenom_fr: string } }
+interface Personnel { id: string; utilisateur: { nom_fr: string; prenom_fr: string } }
 interface Creneau {
   id: string;
   jour: string;
@@ -22,7 +22,7 @@ interface Creneau {
   salle: string | null;
   classe: { id: string; nom_fr: string; filiere: string };
   matiere: { id: string; nom_fr: string; nom_ar: string };
-  professeur: { id: string; utilisateur: { nom_fr: string; prenom_fr: string } };
+  personnel: { id: string; utilisateur: { nom_fr: string; prenom_fr: string } };
 }
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ function CreneauCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const colors = getCreneauColor(creneau.classe.filiere);
-  const profName = `${creneau.professeur.utilisateur.prenom_fr} ${creneau.professeur.utilisateur.nom_fr}`;
+  const profName = `${creneau.personnel.utilisateur.prenom_fr} ${creneau.personnel.utilisateur.nom_fr}`;
 
   return (
     <div
@@ -117,7 +117,7 @@ export function EmploiDuTempsPage() {
   const [annees, setAnnees] = useState<AnneeScolaire[]>([]);
   const [classes, setClasses] = useState<Classe[]>([]);
   const [matieres, setMatieres] = useState<Matiere[]>([]);
-  const [professeurs, setProfesseurs] = useState<Professeur[]>([]);
+  const [professeurs, setProfesseurs] = useState<Personnel[]>([]);
   const [creneaux, setCreneaux] = useState<Creneau[]>([]);
   const [joursActifs, setJoursActifs] = useState<string[]>(['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi']);
   const [anneeId, setAnneeId] = useState('');
@@ -133,7 +133,7 @@ export function EmploiDuTempsPage() {
     heure_fin: '',
     classe_id: '',
     matiere_id: '',
-    professeur_id: '',
+    personnel_id: '',
     salle: '',
   });
 
@@ -165,7 +165,7 @@ export function EmploiDuTempsPage() {
   useEffect(() => {
     if (!canEdit) return;
     api.get<Matiere[]>('/api/v1/matieres?limit=200').then(r => setMatieres(r ?? [])).catch(() => {});
-    api.get<{ data: Professeur[] }>('/api/v1/personnel?limit=200').then(r => setProfesseurs(r?.data ?? [])).catch(() => {});
+    api.get<{ data: Personnel[] }>('/api/v1/personnel?limit=200').then(r => setProfesseurs(r?.data ?? [])).catch(() => {});
   }, [canEdit]);
 
   // Load emploi du temps
@@ -200,7 +200,7 @@ export function EmploiDuTempsPage() {
 
   // Add créneau
   const handleAdd = async () => {
-    if (!form.jour || !form.heure_debut || !form.heure_fin || !form.classe_id || !form.matiere_id || !form.professeur_id) {
+    if (!form.jour || !form.heure_debut || !form.heure_fin || !form.classe_id || !form.matiere_id || !form.personnel_id) {
       toast.error('Tous les champs obligatoires doivent être remplis');
       return;
     }
@@ -212,14 +212,14 @@ export function EmploiDuTempsPage() {
         heure_fin: form.heure_fin,
         classe_id: form.classe_id,
         matiere_id: form.matiere_id,
-        professeur_id: form.professeur_id,
+        personnel_id: form.personnel_id,
         salle: form.salle || undefined,
         annee_scolaire_id: anneeId,
       };
       await api.post('/api/v1/emploi-du-temps', payload);
       toast.success('Créneau ajouté');
       setModalOpen(false);
-      setForm({ jour: '', heure_debut: '', heure_fin: '', classe_id: classeId, matiere_id: '', professeur_id: '', salle: '' });
+      setForm({ jour: '', heure_debut: '', heure_fin: '', classe_id: classeId, matiere_id: '', personnel_id: '', salle: '' });
       chargerEmploi();
     } catch (err) {
       toast.error((err as Error).message || 'Erreur');
@@ -229,7 +229,7 @@ export function EmploiDuTempsPage() {
   };
 
   const openModal = () => {
-    setForm({ jour: '', heure_debut: '', heure_fin: '', classe_id: classeId, matiere_id: '', professeur_id: '', salle: '' });
+    setForm({ jour: '', heure_debut: '', heure_fin: '', classe_id: classeId, matiere_id: '', personnel_id: '', salle: '' });
     setModalOpen(true);
   };
 
@@ -413,8 +413,8 @@ export function EmploiDuTempsPage() {
           />
           <Select
             label="Professeur"
-            value={form.professeur_id}
-            onChange={e => setForm(f => ({ ...f, professeur_id: e.target.value }))}
+            value={form.personnel_id}
+            onChange={e => setForm(f => ({ ...f, personnel_id: e.target.value }))}
             options={professeurs.map(p => ({
               value: p.id,
               label: `${p.utilisateur.prenom_fr} ${p.utilisateur.nom_fr}`,
