@@ -24,7 +24,13 @@ interface Demande {
   traiteur: { nom_fr: string; prenom_fr: string | null } | null;
 }
 
-interface Personnel { id: string; utilisateur: { nom_fr: string; prenom_fr: string | null } }
+// GET /api/v1/personnel renvoie des Utilisateur avec leur fiche Personnel imbriquée.
+interface PersonnelRow {
+  id: string;
+  nom_fr: string;
+  prenom_fr: string | null;
+  personnel: { id: string } | null;
+}
 
 const TYPE_LABELS: Record<TypeAbsence, string> = {
   CONGE_ANNUEL: 'Congé annuel',
@@ -58,7 +64,7 @@ export function DemandesAbsencePersonnelPage() {
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [personnel, setPersonnel] = useState<Personnel[]>([]);
+  const [personnel, setPersonnel] = useState<PersonnelRow[]>([]);
 
   const [filtreStatut, setFiltreStatut] = useState<string>('');
   const [showModal, setShowModal] = useState(false);
@@ -84,7 +90,7 @@ export function DemandesAbsencePersonnelPage() {
 
   useEffect(() => {
     refresh();
-    api.get<{ data: Personnel[] }>('/api/v1/personnel?limit=200')
+    api.get<{ data: PersonnelRow[] }>('/api/v1/personnel?limit=200')
       .then(d => setPersonnel(d.data ?? []))
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -246,9 +252,9 @@ export function DemandesAbsencePersonnelPage() {
                 style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #ddd', borderRadius: 6, fontSize: 13 }}
               >
                 <option value="">— Sélectionner —</option>
-                {personnel.map((p: Personnel) => (
-                  <option key={p.id} value={p.id}>
-                    {p.utilisateur.nom_fr} {p.utilisateur.prenom_fr ?? ''}
+                {personnel.filter(p => p.personnel).map(p => (
+                  <option key={p.personnel!.id} value={p.personnel!.id}>
+                    {p.nom_fr} {p.prenom_fr ?? ''}
                   </option>
                 ))}
               </select>
