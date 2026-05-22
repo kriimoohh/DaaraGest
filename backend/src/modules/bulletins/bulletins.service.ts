@@ -4,12 +4,36 @@ import { renderPdfHtml } from '../../utils/browserPool';
 import { assertProfPeutAccederClasse } from '../../utils/teachingPolicy';
 import { logAction } from '../../utils/audit';
 
-function appreciation(m: number): string {
-  if (m >= 16) return 'Très bien — Félicitations du conseil';
-  if (m >= 14) return 'Bien';
-  if (m >= 12) return 'Assez bien';
-  if (m >= 10) return 'Passable';
-  return 'Insuffisant — Doit faire des efforts';
+type Filiere = 'FR' | 'AR' | 'COMBINE';
+
+const APPRECIATIONS: Record<'FR' | 'AR', { seuil: number; text: string }[]> = {
+  FR: [
+    { seuil: 16, text: 'Très bien — Félicitations du conseil' },
+    { seuil: 14, text: 'Bien' },
+    { seuil: 12, text: 'Assez bien' },
+    { seuil: 10, text: 'Passable' },
+    { seuil: 0,  text: 'Insuffisant — Doit faire des efforts' },
+  ],
+  AR: [
+    { seuil: 16, text: 'ممتاز — تهنئة المجلس' },
+    { seuil: 14, text: 'جيد جدا' },
+    { seuil: 12, text: 'جيد' },
+    { seuil: 10, text: 'مقبول' },
+    { seuil: 0,  text: 'ضعيف — يجب بذل المزيد من الجهد' },
+  ],
+};
+
+function appreciation(m: number, filiere: Filiere = 'FR'): string {
+  // COMBINE renvoie les deux versions séparées par un retour à la ligne
+  // pour préserver les deux entêtes du bulletin bilingue.
+  if (filiere === 'COMBINE') {
+    return `${appreciation(m, 'FR')}\n${appreciation(m, 'AR')}`;
+  }
+  const table = APPRECIATIONS[filiere];
+  for (const row of table) {
+    if (m >= row.seuil) return row.text;
+  }
+  return table[table.length - 1].text;
 }
 
 type MatiereAvecCoeff = {
@@ -115,8 +139,8 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
     const { eleve_id, moyenne } = moyennes[i];
     const b = await prisma.bulletin.upsert({
       where: { eleve_id_annee_scolaire_id_filiere_periode: { eleve_id, annee_scolaire_id, filiere, periode } },
-      create: { eleve_id, annee_scolaire_id, filiere, periode, moyenne, rang: i + 1, appreciation: appreciation(moyenne), generated_at: new Date() },
-      update: { moyenne, rang: i + 1, appreciation: appreciation(moyenne), generated_at: new Date() },
+      create: { eleve_id, annee_scolaire_id, filiere, periode, moyenne, rang: i + 1, appreciation: appreciation(moyenne, filiere as Filiere), generated_at: new Date() },
+      update: { moyenne, rang: i + 1, appreciation: appreciation(moyenne, filiere as Filiere), generated_at: new Date() },
     });
     bulletins.push(b);
   }
@@ -177,8 +201,8 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
     const { eleve_id, moyenne } = moyennes[i];
     const b = await prisma.bulletin.upsert({
       where: { eleve_id_annee_scolaire_id_filiere_periode: { eleve_id, annee_scolaire_id, filiere, periode: 0 } },
-      create: { eleve_id, annee_scolaire_id, filiere, periode: 0, moyenne, rang: i + 1, appreciation: appreciation(moyenne), generated_at: new Date() },
-      update: { moyenne, rang: i + 1, appreciation: appreciation(moyenne), generated_at: new Date() },
+      create: { eleve_id, annee_scolaire_id, filiere, periode: 0, moyenne, rang: i + 1, appreciation: appreciation(moyenne, filiere as Filiere), generated_at: new Date() },
+      update: { moyenne, rang: i + 1, appreciation: appreciation(moyenne, filiere as Filiere), generated_at: new Date() },
     });
     bulletins.push(b);
   }
@@ -199,6 +223,11 @@ export async function getBulletin(id: string, etablissement_id: string) {
 
   const filieres: ('FR' | 'AR')[] = bulletin.filiere === 'COMBINE' ? ['FR', 'AR'] : [bulletin.filiere as 'FR' | 'AR'];
 
+  // Nb de périodes configurable (2=semestres, 3=trimestres, 6=bimestres). On
+  // ne dépend plus de [1,2,3] hardcodé pour les bulletins annuels.
+  const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
+  const nbPeriodes = config?.nb_periodes ?? 3;
+
   // Chercher la classe de l'élève pour l'année scolaire du bulletin
   const inscription = bulletin.eleve.inscriptions.find(
     i => i.annee_scolaire_id === bulletin.annee_scolaire_id
@@ -212,7 +241,9 @@ export async function getBulletin(id: string, etablissement_id: string) {
     const matieres = classeId
       ? await getMatieresDeclasse(classeId, f)
       : await getMatieres(etablissement_id, f);
-    const periodes = bulletin.periode === 0 ? [1, 2, 3] : [bulletin.periode];
+    const periodes = bulletin.periode === 0
+      ? Array.from({ length: nbPeriodes }, (_, i) => i + 1)
+      : [bulletin.periode];
     notesByFiliere[f] = await prisma.note.findMany({
       where: { eleve_id: bulletin.eleve_id, annee_scolaire_id: bulletin.annee_scolaire_id, periode: { in: periodes }, matiere_id: { in: matieres.map(m => m.id) } },
       include: { matiere: true },
@@ -291,6 +322,10 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
   const etab = await prisma.etablissement.findUnique({ where: { id: etablissement_id } });
   if (!etab) throw new Error('Établissement introuvable');
 
+  // Nb de périodes dynamique (cf. genererBulletinsAnnuels + getBulletin)
+  const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
+  const nbPeriodes = config?.nb_periodes ?? 3;
+
   const { generateBulletinHtml, generateBulletinAnnuelHtml } = await import('./bulletin.template');
 
   const base = {
@@ -317,7 +352,7 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
       map.get(n.matiere.nom_fr)!.vals[n.periode] = n.valeur !== null ? Number(n.valeur) : null;
     }
     return Array.from(map.values()).map(m => {
-      const vals = [1, 2, 3].map(p => m.vals[p] ?? null);
+      const vals = Array.from({ length: nbPeriodes }, (_, i) => m.vals[i + 1] ?? null);
       const nums = vals.filter(v => v !== null) as number[];
       return { ...m, valeurs: vals, moyenne_annuelle: nums.length > 0 ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length * 100) / 100 : null };
     });

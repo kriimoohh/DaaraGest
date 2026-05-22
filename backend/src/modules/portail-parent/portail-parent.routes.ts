@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { authMiddleware } from '../../middlewares/auth.middleware';
 import { requireRole } from '../../middlewares/role.middleware';
 import { ROLE_GROUPS } from '../../config/roles';
-import { genererHandler, revoquerHandler, portailHandler, listerTokensHandler } from './portail-parent.controller';
+import { genererHandler, revoquerHandler, portailHandler, listerTokensHandler, bulletinPdfHandler } from './portail-parent.controller';
 
 const gestion = requireRole(...ROLE_GROUPS.GESTION);
 
@@ -17,6 +17,17 @@ export async function portailParentRoutes(fastify: FastifyInstance) {
       },
     },
   }, portailHandler);
+
+  // Téléchargement direct du PDF d'un bulletin via token public — rate-limit
+  // plus serré (10/min/IP) car potentiellement coûteux (Puppeteer).
+  fastify.get('/acces/:token/bulletin/:bulletin_id/pdf', {
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 minute',
+      },
+    },
+  }, bulletinPdfHandler);
 
   // Authenticated (gestionnaire+)
   fastify.get('/',                    { preHandler: [authMiddleware, gestion] }, listerTokensHandler);

@@ -87,11 +87,24 @@ async function build() {
   });
 
   // Headers de sécurité HTTP sur toutes les réponses
+  const cspDirectives = [
+    "default-src 'self'",
+    "img-src 'self' data: blob:",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "script-src 'self'",
+    `connect-src 'self' ${env.CORS_ORIGIN}`,
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join('; ');
+
   fastify.addHook('onSend', async (_request, reply, payload) => {
     reply.header('X-Content-Type-Options', 'nosniff');
     reply.header('X-Frame-Options', 'DENY');
     reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
-    reply.header('Permissions-Policy', 'microphone=(), geolocation=()');
+    reply.header('Permissions-Policy', 'microphone=(), geolocation=(), camera=(self)');
+    reply.header(isProd ? 'Content-Security-Policy' : 'Content-Security-Policy-Report-Only', cspDirectives);
     if (isProd) {
       reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }

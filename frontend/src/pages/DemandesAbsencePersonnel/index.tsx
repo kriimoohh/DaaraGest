@@ -235,7 +235,7 @@ export function DemandesAbsencePersonnelPage() {
       {/* Modal: Nouvelle demande */}
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#fff', borderRadius: 12, padding: 32, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto' }}>
+          <div style={{ background: 'var(--card)', borderRadius: 12, padding: 32, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto' }}>
             <h3 style={{ margin: '0 0 20px', fontSize: 18 }}>Nouvelle demande d'absence</h3>
 
             <div style={{ marginBottom: 12 }}>
@@ -301,7 +301,7 @@ export function DemandesAbsencePersonnelPage() {
       {/* Modal: Traiter */}
       {showTraiterModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#fff', borderRadius: 12, padding: 32, width: '100%', maxWidth: 400 }}>
+          <div style={{ background: 'var(--card)', borderRadius: 12, padding: 32, width: '100%', maxWidth: 400 }}>
             <h3 style={{ margin: '0 0 16px', fontSize: 18 }}>
               {showTraiterModal.action === 'APPROUVE' ? 'Approuver la demande' : 'Refuser la demande'}
             </h3>

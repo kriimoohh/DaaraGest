@@ -5,7 +5,7 @@ const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 export const evaluationSchema = z.object({
   classe_id:         z.string().min(1),
   matiere_id:        z.string().min(1),
-  annee_scolaire_id: z.string().min(1),
+  annee_scolaire_id: z.string().uuid(),
   periode:           z.number().int().min(1),
   titre:             z.string().min(1).max(200),
   type:              z.enum(['DS', 'INTERRO', 'DM', 'EXAMEN']),

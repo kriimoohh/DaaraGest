@@ -1,9 +1,9 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
-import { paiementEleveSchema, bulkPaiementEleveSchema, updatePaiementEleveSchema, paiementProfesseurSchema } from './finances.schema';
+import { paiementEleveSchema, bulkPaiementEleveSchema, updatePaiementEleveSchema, paiementPersonnelSchema } from './finances.schema';
 import {
   listerPaiementsEleves, creerPaiementEleve, bulkCreerPaiementEleve, modifierPaiementEleve, supprimerPaiementEleve,
-  listerPaiementsProfesseurs, creerPaiementProfesseur,
+  listerPaiementsPersonnel, creerPaiementPersonnel,
   getStatsFinances, getReliquats, getStatsMensuels,
 } from './finances.service';
 
@@ -93,10 +93,10 @@ export async function supprimerPaiementEleveHandler(request: FastifyRequest, rep
   }
 }
 
-export async function listerPaiementsProfesseursHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function listerPaiementsPersonnelHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
   const { page, mois, annee } = request.query as Record<string, string | undefined>;
-  const data = await listerPaiementsProfesseurs(
+  const data = await listerPaiementsPersonnel(
     etablissement_id,
     page ? parseInt(page) : 1,
     mois ? parseInt(mois) : undefined,
@@ -105,12 +105,12 @@ export async function listerPaiementsProfesseursHandler(request: FastifyRequest,
   return reply.send(data);
 }
 
-export async function creerPaiementProfesseurHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function creerPaiementPersonnelHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id, id: acteurId } = request.user as JwtPayload;
-  const parsed = paiementProfesseurSchema.safeParse(request.body);
+  const parsed = paiementPersonnelSchema.safeParse(request.body);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
   try {
-    return reply.status(201).send(await creerPaiementProfesseur(etablissement_id, parsed.data, acteurId));
+    return reply.status(201).send(await creerPaiementPersonnel(etablissement_id, parsed.data, acteurId));
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
   }

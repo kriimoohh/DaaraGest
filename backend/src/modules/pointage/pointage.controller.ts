@@ -65,9 +65,10 @@ export async function statsHandler(request: FastifyRequest, reply: FastifyReply)
 
 export async function getQRCodeHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
-  const { professeurId } = request.params as { professeurId: string };
+  const params = request.params as { personnelId?: string; professeurId?: string };
+  const personnelId = params.personnelId ?? params.professeurId ?? '';
   try {
-    return reply.send(await getQRCode(etablissement_id, professeurId));
+    return reply.send(await getQRCode(etablissement_id, personnelId));
   } catch (err) {
     return reply.status(404).send({ error: (err as Error).message });
   }
@@ -75,9 +76,10 @@ export async function getQRCodeHandler(request: FastifyRequest, reply: FastifyRe
 
 export async function regenererQRHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
-  const { professeurId } = request.params as { professeurId: string };
+  const params = request.params as { personnelId?: string; professeurId?: string };
+  const personnelId = params.personnelId ?? params.professeurId ?? '';
   try {
-    return reply.send(await regenererQR(etablissement_id, professeurId));
+    return reply.send(await regenererQR(etablissement_id, personnelId));
   } catch (err) {
     return reply.status(404).send({ error: (err as Error).message });
   }

@@ -2,6 +2,7 @@ import prisma from '../../config/database';
 import { AbsenceInput, BulkAbsenceInput } from './absences.schema';
 import { notifierRoles } from '../notifications/notifications.service';
 import { assertProfPeutAccederClasse } from '../../utils/teachingPolicy';
+import { assertDateNonVacances } from '../../utils/calendrier';
 
 export async function getElevesJour(
   etablissement_id: string,
@@ -87,6 +88,8 @@ export async function upsertAbsence(etablissement_id: string, data: AbsenceInput
     await assertProfPeutAccederClasse(role, cree_par, data.classe_id);
   }
 
+  await assertDateNonVacances(etablissement_id, data.date, 'absence');
+
   const date = new Date(data.date);
   const payload = {
     statut: data.statut,
@@ -125,6 +128,8 @@ export async function bulkUpsertAbsences(
   if (role) {
     await assertProfPeutAccederClasse(role, cree_par, data.classe_id);
   }
+
+  await assertDateNonVacances(etablissement_id, data.date, 'feuille d\'absences');
 
   // Charger tous les élèves valides en une seule requête (élimine le N+1)
   const eleveIds = data.absences.map(a => a.eleve_id);

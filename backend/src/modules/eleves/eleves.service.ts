@@ -2,13 +2,8 @@ import prisma from '../../config/database';
 import crypto from 'crypto';
 import QRCode from 'qrcode';
 import { logAction } from '../../utils/audit';
+import { getQrSecret } from '../../utils/qrSecret';
 import { EleveInput, InscriptionInput } from './eleves.schema';
-
-function getQrSecret(): string {
-  const secret = process.env.QR_SECRET;
-  if (!secret) throw new Error('QR_SECRET non configuré');
-  return secret;
-}
 
 const VALID_SORT_FIELDS = ['nom_fr', 'prenom_fr', 'matricule', 'sexe', 'date_naissance'];
 
@@ -306,23 +301,23 @@ export async function bulkDesactiverEleves(ids: string[], etablissement_id: stri
 }
 
 export async function bulkSupprimerEleves(ids: string[], etablissement_id: string, acteurId: string) {
+  // Soft-delete : on marque les élèves inactifs et on conserve notes / bulletins /
+  // paiements / inscriptions pour l'historique (RGPD + traçabilité scolaire).
+  // Une opération de hard-delete reste possible administrativement via une route
+  // séparée (à venir) ou directement en base après archivage.
   const validIds = await prisma.eleve.findMany({
-    where: { id: { in: ids }, etablissement_id },
+    where: { id: { in: ids }, etablissement_id, actif: true },
     select: { id: true },
   }).then(rows => rows.map(r => r.id));
 
   if (validIds.length === 0) return { count: 0 };
 
-  await prisma.$transaction([
-    prisma.note.deleteMany({ where: { eleve_id: { in: validIds } } }),
-    prisma.bulletin.deleteMany({ where: { eleve_id: { in: validIds } } }),
-    prisma.paiementEleve.deleteMany({ where: { eleve_id: { in: validIds } } }),
-    prisma.inscription.deleteMany({ where: { eleve_id: { in: validIds } } }),
-    prisma.parent.deleteMany({ where: { eleve_id: { in: validIds } } }),
-    prisma.eleve.deleteMany({ where: { id: { in: validIds } } }),
-  ]);
+  await prisma.eleve.updateMany({
+    where: { id: { in: validIds } },
+    data: { actif: false },
+  });
 
-  await logAction(etablissement_id, acteurId, 'DELETE', 'Eleve', 'bulk', { ids: validIds, count: validIds.length });
+  await logAction(etablissement_id, acteurId, 'DELETE', 'Eleve', 'bulk', { ids: validIds, count: validIds.length, mode: 'soft-delete' });
   return { count: validIds.length };
 }
 

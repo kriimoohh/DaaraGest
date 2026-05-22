@@ -10,22 +10,7 @@ import { NotificationBell } from '../ui/NotificationBell';
 import { CommandPalette } from '../CommandPalette';
 import { api } from '../../lib/api';
 import { toast } from '../../store/toastStore';
-
-const PAGE_TITLES: Record<string, string> = {
-  '/dashboard':        'Tableau de bord',
-  '/eleves':           'Élèves',
-  '/professeurs':      'Professeurs',
-  '/classes':          'Classes',
-  '/annees-scolaires': 'Années scolaires',
-  '/matieres':         'Matières',
-  '/notes':            'Notes',
-  '/bulletins':        'Bulletins',
-  '/absences':         'Absences',
-  '/pointage':         'Pointage',
-  '/finances':         'Finances',
-  '/utilisateurs':     'Utilisateurs',
-  '/parametres':       'Paramètres',
-};
+import { findRoute } from '../../config/routes';
 
 interface TopbarProps {
   onMenuClick: () => void;
@@ -40,7 +25,9 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
   const role = user?.role ?? '';
   const initials = (user?.nom_fr ?? '').slice(0, 2).toUpperCase();
-  const currentTitle = PAGE_TITLES[location.pathname] ?? 'DaaraGest';
+  // Titre dérivé de config/routes — i18n via la clé nav.<key>
+  const matchedRoute = findRoute(location.pathname);
+  const currentTitle = matchedRoute ? t(`nav.${matchedRoute.key}`, matchedRoute.key) : 'DaaraGest';
 
   const [cmdOpen, setCmdOpen] = useState(false);
   const [profilOpen, setProfilOpen] = useState(false);
@@ -164,13 +151,27 @@ export function Topbar({ onMenuClick }: TopbarProps) {
               </button>
             </div>
             <div className="modal-body">
-              <div className="tabs" style={{ marginBottom: 16 }}>
-                <button className={`tab${profilTab === 'info' ? ' active' : ''}`} onClick={() => setProfilTab('info')}>Informations</button>
-                <button className={`tab${profilTab === 'password' ? ' active' : ''}`} onClick={() => setProfilTab('password')}>Mot de passe</button>
+              <div className="tabs" style={{ marginBottom: 16 }} role="tablist" aria-label="Sections du profil">
+                <button
+                  className={`tab${profilTab === 'info' ? ' active' : ''}`}
+                  onClick={() => setProfilTab('info')}
+                  role="tab"
+                  aria-selected={profilTab === 'info'}
+                  aria-controls="profil-info-panel"
+                  id="profil-info-tab"
+                >Informations</button>
+                <button
+                  className={`tab${profilTab === 'password' ? ' active' : ''}`}
+                  onClick={() => setProfilTab('password')}
+                  role="tab"
+                  aria-selected={profilTab === 'password'}
+                  aria-controls="profil-password-panel"
+                  id="profil-password-tab"
+                >Mot de passe</button>
               </div>
 
               {profilTab === 'info' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }} role="tabpanel" id="profil-info-panel" aria-labelledby="profil-info-tab">
                   {/* Avatar + identité */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 16px', background: 'var(--paper-2)', border: '1px solid var(--rule)', borderRadius: 'var(--r-lg)' }}>
                     <div className="avatar avatar-xl" style={{ background: 'var(--terra-soft)', color: 'var(--terra-ink)', flexShrink: 0 }}>{initials || '?'}</div>
@@ -216,7 +217,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
               )}
 
               {profilTab === 'password' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }} role="tabpanel" id="profil-password-panel" aria-labelledby="profil-password-tab">
                   <Input label="Mot de passe actuel" type="password" value={ancienMdp} onChange={e => setAncienMdp(e.target.value)} />
                   <Input label="Nouveau mot de passe" type="password" value={nouveauMdp} onChange={e => setNouveauMdp(e.target.value)} placeholder="Minimum 8 caractères" />
                   <Input label="Confirmer le nouveau mot de passe" type="password" value={confirmMdp} onChange={e => setConfirmMdp(e.target.value)} />

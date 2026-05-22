@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 import { api } from '../lib/api';
+import { NAV_ROUTES, type Role } from '../config/routes';
 
 interface EleveResult {
   id: string;
@@ -16,7 +17,6 @@ interface PageItem {
   label: string;
   path: string;
   roles: string[];
-  icon?: string;
 }
 
 interface ActionItem {
@@ -24,29 +24,6 @@ interface ActionItem {
   path: string;
   icon?: string;
 }
-
-const PAGES: PageItem[] = [
-  { label: 'Tableau de bord', path: '/dashboard', roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité', 'professeur', 'pointeur'] },
-  { label: 'Élèves', path: '/eleves', roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'] },
-  { label: 'Professeurs', path: '/professeurs', roles: ['admin', 'directeur', 'gestionnaire'] },
-  { label: 'Classes', path: '/classes', roles: ['admin', 'directeur', 'gestionnaire', 'professeur'] },
-  { label: 'Années scolaires', path: '/annees-scolaires', roles: ['admin', 'directeur', 'gestionnaire'] },
-  { label: 'Matières', path: '/matieres', roles: ['admin', 'directeur', 'gestionnaire'] },
-  { label: 'Notes', path: '/notes', roles: ['admin', 'directeur', 'gestionnaire', 'professeur'] },
-  { label: 'Évaluations', path: '/evaluations', roles: ['admin', 'directeur', 'gestionnaire', 'professeur'] },
-  { label: 'Bulletins', path: '/bulletins', roles: ['admin', 'directeur', 'gestionnaire', 'professeur'] },
-  { label: 'Progression', path: '/progression', roles: ['admin', 'directeur', 'gestionnaire'] },
-  { label: 'Activités', path: '/activites', roles: ['admin', 'directeur', 'gestionnaire', 'professeur'] },
-  { label: 'Absences', path: '/absences', roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité', 'professeur', 'pointeur'] },
-  { label: 'Pointage', path: '/pointage', roles: ['admin', 'directeur', 'gestionnaire', 'pointeur'] },
-  { label: 'Finances', path: '/finances', roles: ['admin', 'gestionnaire', 'agent de scolarité'] },
-  { label: 'Documents', path: '/documents', roles: ['admin', 'directeur', 'gestionnaire'] },
-  { label: 'Emploi du temps', path: '/emploi-du-temps', roles: ['admin', 'directeur', 'gestionnaire', 'professeur', 'agent de scolarité', 'pointeur'] },
-  { label: 'Calendrier', path: '/calendrier', roles: ['admin', 'directeur', 'gestionnaire', 'professeur', 'agent de scolarité', 'pointeur'] },
-  { label: 'Messagerie', path: '/messagerie', roles: ['admin', 'directeur', 'gestionnaire', 'professeur', 'agent de scolarité', 'pointeur'] },
-  { label: 'Utilisateurs', path: '/utilisateurs', roles: ['admin'] },
-  { label: 'Paramètres', path: '/parametres', roles: ['admin'] },
-];
 
 interface Props {
   open: boolean;
@@ -71,8 +48,14 @@ export function CommandPalette({ open, onClose }: Props) {
     { label: t('cmd.generer_bulletins'), path: '/bulletins?generer=1' },
   ];
 
-  const filteredPages = PAGES.filter(p =>
-    p.roles.includes(role) &&
+  // Pages dérivées de config/routes — source unique avec Sidebar/Header.
+  const pages: PageItem[] = useMemo(
+    () => NAV_ROUTES.map(r => ({ label: t(`nav.${r.key}`, r.key), path: r.path, roles: r.roles })),
+    [t],
+  );
+
+  const filteredPages = pages.filter(p =>
+    p.roles.includes(role as Role) &&
     (!query || p.label.toLowerCase().includes(query.toLowerCase()))
   );
 

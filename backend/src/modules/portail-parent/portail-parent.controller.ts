@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
 import { genererTokenSchema } from './portail-parent.schema';
-import { genererToken, revoquerToken, getPortailData, listerTokensEtablissement } from './portail-parent.service';
+import { genererToken, revoquerToken, getPortailData, listerTokensEtablissement, getBulletinPdfViaToken } from './portail-parent.service';
 
 export async function genererHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
@@ -50,4 +50,21 @@ export async function portailHandler(request: FastifyRequest, reply: FastifyRepl
 export async function listerTokensHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
   return reply.send(await listerTokensEtablissement(etablissement_id));
+}
+
+export async function bulletinPdfHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { token, bulletin_id } = request.params as { token: string; bulletin_id: string };
+  request.log.info(
+    { portail_parent_bulletin_pdf: { token_prefix: token.slice(0, 8), bulletin_id, ip: request.ip } },
+    'portail-parent bulletin pdf',
+  );
+  try {
+    const { buffer, filename } = await getBulletinPdfViaToken(token, bulletin_id);
+    return reply
+      .header('Content-Type', 'application/pdf')
+      .header('Content-Disposition', `inline; filename="${filename}"`)
+      .send(buffer);
+  } catch (err) {
+    return reply.status(404).send({ error: (err as Error).message });
+  }
 }

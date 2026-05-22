@@ -12,14 +12,15 @@ const MOIS_LABELS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet',
 
 type TypeRapport =
   | 'presences-eleves'
-  | 'presences-professeurs'
+  | 'presences-personnel'
   | 'resultats-classe'
   | 'bilan-financier'
   | 'grille-ief'
   | 'grille-performance'
   | 'performance-domaine'
   | 'releve-notes'
-  | 'propositions-fin';
+  | 'propositions-fin'
+  | 'charges-personnel';
 
 type FormatRapport = 'pdf' | 'csv';
 
@@ -42,9 +43,9 @@ const RAPPORTS: RapportDef[] = [
     groupe: 'Présences',
   },
   {
-    type: 'presences-professeurs',
-    label: 'Présences professeurs',
-    desc: 'Présences et heures travaillées par professeur',
+    type: 'presences-personnel',
+    label: 'Présences personnel',
+    desc: 'Présences et heures travaillées par membre du personnel',
     icon: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
     groupe: 'Présences',
   },
@@ -97,6 +98,14 @@ const RAPPORTS: RapportDef[] = [
     pdfOnly: true,
     groupe: 'Fin d\'année',
   },
+  // ── RH ────────────────────────────────────────────────────────────────────
+  {
+    type: 'charges-personnel',
+    label: 'Charges horaires personnel',
+    desc: 'Heures hebdomadaires par membre du personnel — agrégat sur l\'année scolaire',
+    icon: 'M12 20c4.41 0 8-3.59 8-8s-3.59-8-8-8-8 3.59-8 8 3.59 8 8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z',
+    groupe: 'RH',
+  },
   // ── Finance ───────────────────────────────────────────────────────────────
   {
     type: 'bilan-financier',
@@ -144,8 +153,8 @@ export function RapportsPage() {
   const info = RAPPORTS.find(r => r.type === selected)!;
 
   const needsClasse  = ['presences-eleves','resultats-classe','grille-ief','grille-performance','performance-domaine','releve-notes','propositions-fin'].includes(selected);
-  const needsAnnee   = ['presences-eleves','resultats-classe','grille-ief','grille-performance','performance-domaine','releve-notes','propositions-fin'].includes(selected);
-  const needsMois    = ['presences-eleves','presences-professeurs','bilan-financier'].includes(selected);
+  const needsAnnee   = ['presences-eleves','resultats-classe','grille-ief','grille-performance','performance-domaine','releve-notes','propositions-fin','charges-personnel'].includes(selected);
+  const needsMois    = ['presences-eleves','presences-personnel','bilan-financier'].includes(selected);
   const needsPeriode = ['resultats-classe','grille-ief','grille-performance','performance-domaine','releve-notes'].includes(selected);
   const annuelOnly   = selected === 'propositions-fin';
 
@@ -436,7 +445,7 @@ export function RapportsPage() {
               srcDoc={previewHtml}
               title="Aperçu rapport"
               sandbox="allow-same-origin"
-              style={{ flex: 1, width: '100%', border: 'none', borderRadius: 8, background: '#fff', boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}
+              style={{ flex: 1, width: '100%', border: 'none', borderRadius: 8, background: 'var(--card)', boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}
             />
             <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, margin: 0, textAlign: 'center' }}>
               Aperçu HTML — rendu très proche du PDF final.

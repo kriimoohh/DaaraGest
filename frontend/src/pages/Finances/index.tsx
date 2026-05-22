@@ -190,7 +190,7 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), mois: moisF, annee: anneeF });
-      const res = await api.get<{ data: PaiementProf[]; total: number }>(`/api/v1/finances/paiements-professeurs?${params}`);
+      const res = await api.get<{ data: PaiementProf[]; total: number }>(`/api/v1/finances/paiements-personnel?${params}`);
       setPaiements(res.data ?? []);
       setTotal(res.total ?? 0);
     } catch { /**/ } finally { setLoading(false); }
@@ -199,10 +199,10 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
   useEffect(() => { charger(); }, [page, moisF, anneeF]);
 
   const handleSave = async () => {
-    if (!form.personnel_id || !form.montant_brut) { toast.error('Professeur et montant requis'); return; }
+    if (!form.personnel_id || !form.montant_brut) { toast.error('Personnel et montant requis'); return; }
     setSaving(true);
     try {
-      await api.post('/api/v1/finances/paiements-professeurs', {
+      await api.post('/api/v1/finances/paiements-personnel', {
         personnel_id: form.personnel_id,
         mois: parseInt(form.mois), annee: parseInt(form.annee),
         montant_brut: parseFloat(form.montant_brut),
@@ -840,7 +840,7 @@ export function FinancesPage() {
               <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
                 <span style={{ fontSize: 36 }}>📷</span>
                 <button onClick={startQrScanner}
-                  style={{ background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                  style={{ background: 'var(--terra)', color: 'var(--card)', border: 'none', borderRadius: 'var(--r-md)', padding: '10px 24px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
                   Démarrer la caméra
                 </button>
               </div>

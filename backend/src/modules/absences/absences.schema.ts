@@ -4,9 +4,9 @@ const heureRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
 export const absenceSchema = z.object({
-  eleve_id: z.string().min(1),
-  classe_id: z.string().min(1),
-  annee_scolaire_id: z.string().min(1),
+  eleve_id: z.string().uuid(),
+  classe_id: z.string().uuid(),
+  annee_scolaire_id: z.string().uuid(),
   date: z.string().regex(dateRegex, 'Format date invalide (YYYY-MM-DD)'),
   statut: z.enum(['present', 'absent', 'retard', 'dispense']),
   justifiee: z.boolean().optional().default(false),
@@ -15,8 +15,8 @@ export const absenceSchema = z.object({
 });
 
 export const bulkAbsenceSchema = z.object({
-  classe_id: z.string().min(1),
-  annee_scolaire_id: z.string().min(1),
+  classe_id: z.string().uuid(),
+  annee_scolaire_id: z.string().uuid(),
   date: z.string().regex(dateRegex),
   absences: z.array(absenceSchema.omit({ classe_id: true, annee_scolaire_id: true, date: true })).min(1),
 });

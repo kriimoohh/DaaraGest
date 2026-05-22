@@ -58,12 +58,12 @@ const ENDPOINTS: Array<{
   { methode: 'POST',   path: '/eleves/bulk-desactiver',groupe: ROLE_GROUPS.ADMIN_ONLY, description: 'Désactiver en masse' },
   { methode: 'POST',   path: '/eleves/bulk-inscrire',  groupe: ROLE_GROUPS.SCOLARITE,  description: 'Inscrire en masse' },
 
-  // PROFESSEURS
-  { methode: 'GET',    path: '/professeurs',           groupe: ROLE_GROUPS.PRESENCE,  description: 'Lister professeurs' },
-  { methode: 'GET',    path: '/professeurs/:id',       groupe: ROLE_GROUPS.PRESENCE,  description: 'Détail professeur' },
-  { methode: 'POST',   path: '/professeurs',           groupe: ROLE_GROUPS.GESTION,   description: 'Créer professeur' },
-  { methode: 'PUT',    path: '/professeurs/:id',       groupe: ROLE_GROUPS.GESTION,   description: 'Modifier professeur' },
-  { methode: 'DELETE', path: '/professeurs/:id',       groupe: ROLE_GROUPS.ADMIN_ONLY, description: 'Supprimer professeur' },
+  // PERSONNEL (anciennement /professeurs — refactor unifié)
+  { methode: 'GET',    path: '/personnel',             groupe: ROLE_GROUPS.PRESENCE,   description: 'Lister personnel' },
+  { methode: 'GET',    path: '/personnel/:id',         groupe: ROLE_GROUPS.PRESENCE,   description: 'Détail personnel' },
+  { methode: 'POST',   path: '/personnel',             groupe: ROLE_GROUPS.GESTION,    description: 'Créer personnel' },
+  { methode: 'PUT',    path: '/personnel/:id',         groupe: ROLE_GROUPS.GESTION,    description: 'Modifier personnel' },
+  { methode: 'DELETE', path: '/personnel/:id',         groupe: ROLE_GROUPS.ADMIN_ONLY, description: 'Supprimer personnel' },
 
   // CLASSES
   { methode: 'GET',    path: '/classes',               groupe: ROLE_GROUPS.ACADEMIQUE, description: 'Lister classes' },
@@ -89,8 +89,8 @@ const ENDPOINTS: Array<{
   { methode: 'POST',   path: '/finances/paiements-eleves',   groupe: ROLE_GROUPS.SCOLARITE,  description: 'Créer paiement élève' },
   { methode: 'PUT',    path: '/finances/paiements-eleves/:id',groupe: ROLE_GROUPS.ADMIN_ONLY, description: 'Modifier paiement élève' },
   { methode: 'DELETE', path: '/finances/paiements-eleves/:id',groupe: ROLE_GROUPS.ADMIN_ONLY, description: 'Supprimer paiement élève' },
-  { methode: 'GET',    path: '/finances/paiements-professeurs',groupe: ROLE_GROUPS.GESTION,   description: 'Paiements profs' },
-  { methode: 'POST',   path: '/finances/paiements-professeurs',groupe: ROLE_GROUPS.GESTION,   description: 'Créer paiement prof' },
+  { methode: 'GET',    path: '/finances/paiements-personnel',  groupe: ROLE_GROUPS.GESTION,   description: 'Paiements personnel' },
+  { methode: 'POST',   path: '/finances/paiements-personnel',  groupe: ROLE_GROUPS.GESTION,   description: 'Créer paiement personnel' },
 
   // BULLETINS
   { methode: 'GET',    path: '/bulletins',             groupe: ROLE_GROUPS.ACADEMIQUE, description: 'Lister bulletins' },
@@ -185,7 +185,7 @@ describe('RBAC — Directeur', () => {
     }
   });
 
-  it('peut créer/modifier professeurs (GESTION)', () => {
+  it('peut créer/modifier personnel (GESTION)', () => {
     expect(hasAccess(role, ROLE_GROUPS.GESTION)).toBe(true);
   });
 
@@ -250,7 +250,7 @@ describe('RBAC — Agent de scolarité', () => {
     expect(hasAccess(role, ROLE_GROUPS.DIRECTION)).toBe(false);
   });
 
-  it('N\'a PAS accès à la création de professeurs (GESTION)', () => {
+  it('N\'a PAS accès à la création de personnel (GESTION)', () => {
     expect(hasAccess(role, ROLE_GROUPS.GESTION)).toBe(false);
   });
 

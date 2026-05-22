@@ -39,8 +39,9 @@ const TOUS_LES_JOURS = [
 const ROLES_EDIT = ['admin', 'directeur', 'gestionnaire'];
 
 function getCreneauColor(filiere: string) {
-  if (filiere === 'FR') return { bg: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8' };
-  if (filiere === 'AR') return { bg: '#F0FDF4', border: '#BBF7D0', text: '#15803D' };
+  // Tokens daara : FR → indigo (cachet officiel), AR → sahel (or, mention)
+  if (filiere === 'FR') return { bg: 'var(--indigo-soft)', border: 'var(--info-border)', text: 'var(--indigo-ink)' };
+  if (filiere === 'AR') return { bg: 'var(--sahel-soft)', border: 'var(--warning-border)', text: 'var(--sahel-ink)' };
   return { bg: 'var(--paper-2)', border: 'var(--rule)', text: 'var(--ink)' };
 }
 
@@ -285,11 +286,11 @@ export function EmploiDuTempsPage() {
         {/* Filière legend */}
         <div style={{ display: 'flex', gap: 12, marginInlineStart: 'auto', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 12, height: 12, borderRadius: 3, background: '#BFDBFE' }} />
+            <div style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--indigo-soft)', border: '1px solid var(--info-border)' }} />
             <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>Filière FR</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 12, height: 12, borderRadius: 3, background: '#BBF7D0' }} />
+            <div style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--sahel-soft)', border: '1px solid var(--warning-border)' }} />
             <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>Filière AR</span>
           </div>
         </div>

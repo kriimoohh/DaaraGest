@@ -668,11 +668,11 @@ export function LandingPage() {
           {t.cta_sub}
         </p>
         {isAuthenticated ? (
-          <Link to="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 28px', background: '#fff', color: 'var(--terra-ink)', borderRadius: 'var(--r-md)', fontWeight: 600, fontSize: 15, textDecoration: 'none', border: 'none', cursor: 'pointer', transition: 'opacity 0.15s' }}>
+          <Link to="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 28px', background: 'var(--card)', color: 'var(--terra-ink)', borderRadius: 'var(--r-md)', fontWeight: 600, fontSize: 15, textDecoration: 'none', border: 'none', cursor: 'pointer', transition: 'opacity 0.15s' }}>
             {t.hero_cta_dashboard}
           </Link>
         ) : (
-          <Link to="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 28px', background: '#fff', color: 'var(--terra-ink)', borderRadius: 'var(--r-md)', fontWeight: 600, fontSize: 15, textDecoration: 'none', border: 'none', cursor: 'pointer', transition: 'opacity 0.15s' }}>
+          <Link to="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 28px', background: 'var(--card)', color: 'var(--terra-ink)', borderRadius: 'var(--r-md)', fontWeight: 600, fontSize: 15, textDecoration: 'none', border: 'none', cursor: 'pointer', transition: 'opacity 0.15s' }}>
             {t.cta_btn}
           </Link>
         )}

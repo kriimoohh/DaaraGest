@@ -149,36 +149,36 @@ export async function bulkUpsertPresences(etablissement_id: string, data: BulkPr
   return { saved: results.length };
 }
 
-export async function getQRCode(etablissement_id: string, professeurId: string) {
-  const prof = await prisma.personnel.findFirst({
-    where: { OR: [{ id: professeurId }, { utilisateur_id: professeurId }], utilisateur: { etablissement_id } },
+export async function getQRCode(etablissement_id: string, personnelId: string) {
+  const personnel = await prisma.personnel.findFirst({
+    where: { OR: [{ id: personnelId }, { utilisateur_id: personnelId }], utilisateur: { etablissement_id } },
     include: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } },
   });
-  if (!prof) throw new Error('Personnel introuvable');
+  if (!personnel) throw new Error('Personnel introuvable');
 
   // Génère le token si absent
-  let token = prof.qr_token;
+  let token = personnel.qr_token;
   if (!token) {
     token = randomUUID();
-    await prisma.personnel.update({ where: { id: prof.id }, data: { qr_token: token } });
+    await prisma.personnel.update({ where: { id: personnel.id }, data: { qr_token: token } });
   }
 
   const dataUrl = await QRCode.toDataURL(token, { width: 300, margin: 2 });
   return {
     dataUrl,
     token,
-    nom: `${prof.utilisateur.prenom_fr ?? ''} ${prof.utilisateur.nom_fr}`.trim(),
+    nom: `${personnel.utilisateur.prenom_fr ?? ''} ${personnel.utilisateur.nom_fr}`.trim(),
   };
 }
 
-export async function regenererQR(etablissement_id: string, professeurId: string) {
-  const prof = await prisma.personnel.findFirst({
-    where: { OR: [{ id: professeurId }, { utilisateur_id: professeurId }], utilisateur: { etablissement_id } },
+export async function regenererQR(etablissement_id: string, personnelId: string) {
+  const personnel = await prisma.personnel.findFirst({
+    where: { OR: [{ id: personnelId }, { utilisateur_id: personnelId }], utilisateur: { etablissement_id } },
   });
-  if (!prof) throw new Error('Personnel introuvable');
+  if (!personnel) throw new Error('Personnel introuvable');
 
   const token = randomUUID();
-  await prisma.personnel.update({ where: { id: prof.id }, data: { qr_token: token } });
+  await prisma.personnel.update({ where: { id: personnel.id }, data: { qr_token: token } });
   const dataUrl = await QRCode.toDataURL(token, { width: 300, margin: 2 });
   return { token, dataUrl };
 }

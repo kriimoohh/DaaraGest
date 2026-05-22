@@ -41,7 +41,9 @@ export async function creerEvenement(etablissement_id: string, createur_id: stri
       date_debut: debut,
       date_fin: fin,
       type: data.type,
-      couleur: data.couleur ?? '#3B82F6',
+      // Couleur par défaut : neutre indigo (var(--info)) si non précisée.
+      // Le frontend mappe désormais le type vers les tokens daara.
+      couleur: data.couleur ?? '#2D3A6E',
     },
     include: { createur: { select: { nom_fr: true, prenom_fr: true } } },
   });

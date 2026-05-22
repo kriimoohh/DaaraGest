@@ -7,6 +7,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Convention bilingue FR / AR
+// ─────────────────────────────────────────────────────────────────────────────
+// Pour tous les libellés affichés à l'utilisateur, on stocke une version FR
+// et une version AR (`nom_fr` / `nom_ar`, `titre_fr` / `titre_ar`, etc.).
+//
+// Politique de nullabilité :
+//  - `nom_fr String`              → obligatoire (langue d'administration par défaut)
+//  - `nom_ar String?`             → nullable, le frontend retombe sur `nom_fr` quand absent
+//
+// Quelques modèles historiques conservent encore `nom_ar String` non-null
+// (Etablissement, Personnel, Classe, Matiere). Migration future : passer en
+// `String?` ou supprimer le `@default("")` legacy. La règle ci-dessus est la
+// cible pour tous les nouveaux modèles.
+// ─────────────────────────────────────────────────────────────────────────────
+
 model Etablissement {
   id                 String   @id @default(uuid())
   nom_fr             String

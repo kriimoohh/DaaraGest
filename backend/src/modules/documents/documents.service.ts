@@ -1,14 +1,10 @@
 import crypto from 'crypto';
 import QRCode from 'qrcode';
 import prisma from '../../config/database';
+import { getQrSecret } from '../../utils/qrSecret';
+import { escapeHtml } from '../../utils/escapeHtml';
 import { TypeDocument, GenererDocumentInput, GenererCartesLotInput, UpsertTemplateInput, TYPE_DOCUMENT_VALUES, CARD_TYPES } from './documents.schema';
 import { getDefaultTemplate, TYPE_DOCUMENT_LABELS, getCardTemplate } from './templates/defaults';
-
-function getQrSecret(): string {
-  const secret = process.env.QR_SECRET;
-  if (!secret) throw new Error('QR_SECRET non configuré');
-  return secret;
-}
 
 function signQrPayload(payload: object): string {
   const data = JSON.stringify(payload);
@@ -397,15 +393,6 @@ async function buildListeClasse(classe_id: string, annee_scolaire_id: string, _e
 }
 
 // ─── Replace vars ─────────────────────────────────────────────────────────────
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
 
 // Vars dont la valeur est du HTML construit côté serveur (img, tables) —
 // on les passe telles quelles. Tout le reste est échappé pour bloquer
