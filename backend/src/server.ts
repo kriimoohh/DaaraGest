@@ -34,6 +34,7 @@ import { demandesAbsencePersonnelRoutes } from './modules/demandes-absence-perso
 import { statsRoutes } from './modules/stats/stats.routes';
 import { rapportsRoutes } from './modules/rapports/rapports.routes';
 import { bibliothequeRoutes } from './modules/bibliotheque/bibliotheque.routes';
+import { fonctionsRoutes } from './modules/fonctions/fonctions.routes';
 
 // La validation des variables d'environnement (JWT_SECRET, QR_SECRET, etc.)
 // est faite au boot dans config/env.ts via Zod. On en récupère les valeurs.
@@ -118,6 +119,7 @@ async function build() {
       await api.register(classeRoutes, { prefix: '/classes' });
       await api.register(eleveRoutes, { prefix: '/eleves' });
       await api.register(personnelRoutes, { prefix: '/personnel' });
+      await api.register(fonctionsRoutes,  { prefix: '/fonctions' });
       await api.register(noteRoutes, { prefix: '/notes' });
       await api.register(bulletinRoutes, { prefix: '/bulletins' });
       await api.register(financesRoutes, { prefix: '/finances' });
