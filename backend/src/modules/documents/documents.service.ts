@@ -73,6 +73,16 @@ async function buildCommonVars(etablissement_id: string): Promise<Record<string,
   const today = new Date();
   const refDoc = `REF-${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}-${Math.floor(Math.random() * 9000 + 1000)}`;
 
+  // Accord en genre des documents : par défaut on garde la forme inclusive
+  // si la civilité n'est pas renseignée, pour éviter une régression visuelle.
+  const isFemme = etab.civilite_directeur === 'Mme';
+  const hasCivilite = etab.civilite_directeur === 'M' || etab.civilite_directeur === 'Mme';
+  const CIVILITE_DIRECTEUR  = hasCivilite ? (isFemme ? 'Mme'         : 'M.')          : '';
+  const TITRE_DIRECTEUR     = hasCivilite ? (isFemme ? 'Directrice'  : 'Directeur')   : 'Directeur(trice)';
+  const DIRECTEUR_QUALITE   = hasCivilite ? (isFemme ? 'La Directrice' : 'Le Directeur') : 'Le/La Directeur(trice)';
+  const SOUSSIGNE           = hasCivilite ? (isFemme ? 'soussignée'  : 'soussigné')   : 'soussigné(e)';
+  const NOM_COMPLET_DIRECTEUR = [CIVILITE_DIRECTEUR, etab.nom_directeur].filter(Boolean).join(' ');
+
   return {
     NOM_ETABLISSEMENT: etab.nom_fr,
     ADRESSE_ETABLISSEMENT: etab.adresse ?? '',
@@ -84,6 +94,11 @@ async function buildCommonVars(etablissement_id: string): Promise<Record<string,
     DATE_AUJOURD_HUI: fmtDate(today),
     REF_DOCUMENT: refDoc,
     NOM_DIRECTEUR: etab.nom_directeur ?? '',
+    CIVILITE_DIRECTEUR,
+    NOM_COMPLET_DIRECTEUR,
+    TITRE_DIRECTEUR,
+    DIRECTEUR_QUALITE,
+    SOUSSIGNE,
   };
 }
 

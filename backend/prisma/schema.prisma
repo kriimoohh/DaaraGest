@@ -15,7 +15,8 @@ model Etablissement {
   logo_url      String?
   signature_url String?
   cachet_url    String?
-  nom_directeur String?
+  nom_directeur      String?
+  civilite_directeur String?  // 'M' ou 'Mme' — utilisé pour accorder le texte des documents
   devise        String   @default("FCFA")
   actif       Boolean  @default(true)
   created_at  DateTime @default(now())
