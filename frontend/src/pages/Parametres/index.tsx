@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { Select } from '../../components/ui/Select';
 import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
@@ -21,6 +22,7 @@ interface Etablissement {
   adresse?: string;
   telephone?: string;
   nom_directeur?: string;
+  civilite_directeur?: 'M' | 'Mme' | null;
   logo_url?: string;
   signature_url?: string;
   cachet_url?: string;
@@ -394,6 +396,7 @@ export function ParametresPage() {
         nom_fr: etab.nom_fr, adresse: etab.adresse,
         telephone: etab.telephone, devise: etab.devise,
         nom_directeur: etab.nom_directeur || null,
+        civilite_directeur: etab.civilite_directeur || null,
         logo_url: etab.logo_url || undefined,
         signature_url: etab.signature_url || undefined,
         cachet_url: etab.cachet_url || undefined,
@@ -556,12 +559,24 @@ export function ParametresPage() {
                     onChange={e => setEtab(p => p ? { ...p, telephone: e.target.value } : p)}
                   />
                 </div>
-                <Input
-                  label="Nom du/de la Directeur(trice)"
-                  placeholder="Ex : Adama NDIAYE"
-                  value={etab.nom_directeur ?? ''}
-                  onChange={e => setEtab(p => p ? { ...p, nom_directeur: e.target.value } : p)}
-                />
+                <div className="grid-2">
+                  <Select
+                    label="Civilité"
+                    value={etab.civilite_directeur ?? ''}
+                    onChange={e => setEtab(p => p ? { ...p, civilite_directeur: (e.target.value || null) as 'M' | 'Mme' | null } : p)}
+                    options={[
+                      { value: 'M',   label: 'M.' },
+                      { value: 'Mme', label: 'Mme' },
+                    ]}
+                    placeholder="— Non précisé —"
+                  />
+                  <Input
+                    label="Nom du/de la Directeur(trice)"
+                    placeholder="Ex : Adama NDIAYE"
+                    value={etab.nom_directeur ?? ''}
+                    onChange={e => setEtab(p => p ? { ...p, nom_directeur: e.target.value } : p)}
+                  />
+                </div>
                 <Input
                   label={t('common.devise')}
                   value={etab.devise}
