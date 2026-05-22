@@ -13,7 +13,13 @@ import { useAuthStore } from '../../store/authStore';
 interface AnneeScolaire { id: string; libelle: string; active: boolean }
 interface Classe { id: string; nom_fr: string; filiere: string }
 interface Matiere { id: string; nom_fr: string; nom_ar: string; filiere: string }
-interface Personnel { id: string; utilisateur: { nom_fr: string; prenom_fr: string } }
+// GET /api/v1/personnel renvoie des Utilisateur avec leur fiche Personnel imbriquée.
+interface PersonnelRow {
+  id: string;
+  nom_fr: string;
+  prenom_fr: string;
+  personnel: { id: string } | null;
+}
 interface Creneau {
   id: string;
   jour: string;
@@ -118,7 +124,7 @@ export function EmploiDuTempsPage() {
   const [annees, setAnnees] = useState<AnneeScolaire[]>([]);
   const [classes, setClasses] = useState<Classe[]>([]);
   const [matieres, setMatieres] = useState<Matiere[]>([]);
-  const [professeurs, setProfesseurs] = useState<Personnel[]>([]);
+  const [professeurs, setProfesseurs] = useState<PersonnelRow[]>([]);
   const [creneaux, setCreneaux] = useState<Creneau[]>([]);
   const [joursActifs, setJoursActifs] = useState<string[]>(['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi']);
   const [anneeId, setAnneeId] = useState('');
@@ -166,7 +172,7 @@ export function EmploiDuTempsPage() {
   useEffect(() => {
     if (!canEdit) return;
     api.get<Matiere[]>('/api/v1/matieres?limit=200').then(r => setMatieres(r ?? [])).catch(() => {});
-    api.get<{ data: Personnel[] }>('/api/v1/personnel?limit=200').then(r => setProfesseurs(r?.data ?? [])).catch(() => {});
+    api.get<{ data: PersonnelRow[] }>('/api/v1/personnel?limit=200').then(r => setProfesseurs(r?.data ?? [])).catch(() => {});
   }, [canEdit]);
 
   // Load emploi du temps
@@ -416,9 +422,9 @@ export function EmploiDuTempsPage() {
             label="Professeur"
             value={form.personnel_id}
             onChange={e => setForm(f => ({ ...f, personnel_id: e.target.value }))}
-            options={professeurs.map(p => ({
-              value: p.id,
-              label: `${p.utilisateur.prenom_fr} ${p.utilisateur.nom_fr}`,
+            options={professeurs.filter(p => p.personnel).map(p => ({
+              value: p.personnel!.id,
+              label: `${p.prenom_fr} ${p.nom_fr}`,
             }))}
             placeholder="Sélectionner un professeur..."
           />
