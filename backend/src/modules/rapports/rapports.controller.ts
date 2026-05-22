@@ -10,6 +10,15 @@ import {
   rapportPerformanceDomaine,
   rapportReleveNotes,
   rapportPropositionsFin,
+  apercuPresencesEleves,
+  apercuPresencesProfesseurs,
+  apercuResultatsClasse,
+  apercuBilanFinancier,
+  apercuGrilleIef,
+  apercuGrillePerformance,
+  apercuPerformanceDomaine,
+  apercuReleveNotes,
+  apercuPropositionsFin,
 } from './rapports.service';
 import {
   rapportPresencesElevesSchema,
@@ -21,7 +30,32 @@ import {
   rapportPerformanceDomaineSchema,
   rapportReleveNotesSchema,
   rapportPropositionsFinSchema,
+  apercuPresencesElevesSchema,
+  apercuPresencesProfesseursSchema,
+  apercuResultatsClasseSchema,
+  apercuBilanFinancierSchema,
+  apercuGrilleIefSchema,
+  apercuGrillePerformanceSchema,
+  apercuPerformanceDomaineSchema,
+  apercuReleveNotesSchema,
+  apercuPropositionsFinSchema,
 } from './rapports.schema';
+
+type ApercuFn<P> = (etabId: string, params: P) => Promise<{ html: string }>;
+type Schema<P>   = { safeParse: (input: unknown) => { success: true; data: P } | { success: false; error: { errors: { message: string }[] } } };
+
+function buildApercuHandler<P>(schema: Schema<P>, fn: ApercuFn<P>) {
+  return async (request: FastifyRequest, reply: FastifyReply) => {
+    const { etablissement_id } = request.user as JwtPayload;
+    const parsed = schema.safeParse(request.query);
+    if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+    try {
+      return reply.send(await fn(etablissement_id, parsed.data));
+    } catch (err) {
+      return reply.status(500).send({ error: (err as Error).message });
+    }
+  };
+}
 
 function sendFile(reply: FastifyReply, result: { buffer: Buffer; mime: string; filename: string }) {
   return reply
@@ -130,3 +164,15 @@ export async function propositionsFinHandler(request: FastifyRequest, reply: Fas
     return reply.status(500).send({ error: (err as Error).message });
   }
 }
+
+// ─── Aperçus HTML ─────────────────────────────────────────────────────────────
+
+export const apercuPresencesElevesHandler      = buildApercuHandler(apercuPresencesElevesSchema, apercuPresencesEleves);
+export const apercuPresencesProfesseursHandler = buildApercuHandler(apercuPresencesProfesseursSchema, apercuPresencesProfesseurs);
+export const apercuResultatsClasseHandler      = buildApercuHandler(apercuResultatsClasseSchema, apercuResultatsClasse);
+export const apercuBilanFinancierHandler       = buildApercuHandler(apercuBilanFinancierSchema, apercuBilanFinancier);
+export const apercuGrilleIefHandler            = buildApercuHandler(apercuGrilleIefSchema, apercuGrilleIef);
+export const apercuGrillePerformanceHandler    = buildApercuHandler(apercuGrillePerformanceSchema, apercuGrillePerformance);
+export const apercuPerformanceDomaineHandler   = buildApercuHandler(apercuPerformanceDomaineSchema, apercuPerformanceDomaine);
+export const apercuReleveNotesHandler          = buildApercuHandler(apercuReleveNotesSchema, apercuReleveNotes);
+export const apercuPropositionsFinHandler      = buildApercuHandler(apercuPropositionsFinSchema, apercuPropositionsFin);

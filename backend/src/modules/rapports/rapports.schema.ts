@@ -44,3 +44,15 @@ export const rapportPropositionsFinSchema = z.object({
   classe_id:         z.string().min(1),
   annee_scolaire_id: z.string().min(1),
 });
+
+// ─── Aperçus (mêmes filtres, sans format) ────────────────────────────────────
+
+export const apercuPresencesElevesSchema       = rapportPresencesElevesSchema.omit({ format: true });
+export const apercuPresencesProfesseursSchema  = rapportPresencesProfesseursSchema.omit({ format: true });
+export const apercuResultatsClasseSchema       = rapportResultatsClasseSchema.omit({ format: true });
+export const apercuBilanFinancierSchema        = rapportBilanFinancierSchema.omit({ format: true });
+export const apercuGrilleIefSchema             = rapportGrilleIefSchema;
+export const apercuGrillePerformanceSchema     = rapportGrillePerformanceSchema;
+export const apercuPerformanceDomaineSchema    = rapportPerformanceDomaineSchema;
+export const apercuReleveNotesSchema           = rapportReleveNotesSchema;
+export const apercuPropositionsFinSchema       = rapportPropositionsFinSchema;

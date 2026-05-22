@@ -114,6 +114,8 @@ export function RapportsPage() {
   const [selected, setSelected] = useState<TypeRapport>('presences-eleves');
   const [format, setFormat]     = useState<FormatRapport>('pdf');
   const [loading, setLoading]   = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewHtml, setPreviewHtml]       = useState<string | null>(null);
 
   const [classes, setClasses]   = useState<Classe[]>([]);
   const [annees, setAnnees]     = useState<AnneeScolaire[]>([]);
@@ -152,10 +154,9 @@ export function RapportsPage() {
     if (info?.pdfOnly) setFormat('pdf');
   }, [selected, info]);
 
-  function buildUrl(): string {
-    const base = `${API_BASE}/api/v1/rapports/${selected}`;
-    const q    = new URLSearchParams({ format });
-
+  function buildQuery(includeFormat: boolean): URLSearchParams {
+    const q = new URLSearchParams();
+    if (includeFormat) q.set('format', format);
     if (needsClasse && classeId) q.set('classe_id', classeId);
     if (needsAnnee  && anneeId)  q.set('annee_scolaire_id', anneeId);
     if (needsMois) {
@@ -163,18 +164,23 @@ export function RapportsPage() {
       if (anneeNum) q.set('annee', anneeNum);
     }
     if (needsPeriode && periode) q.set('periode', periode);
+    return q;
+  }
 
-    return `${base}?${q.toString()}`;
+  function validateRequired(): boolean {
+    if (needsClasse && !classeId) {
+      toast.error('Veuillez sélectionner une classe');
+      return false;
+    }
+    return true;
   }
 
   async function telecharger() {
-    if (needsClasse && !classeId) {
-      toast.error('Veuillez sélectionner une classe');
-      return;
-    }
+    if (!validateRequired()) return;
     setLoading(true);
     try {
-      const res = await fetch(buildUrl(), { credentials: 'include' });
+      const url = `${API_BASE}/api/v1/rapports/${selected}?${buildQuery(true).toString()}`;
+      const res = await fetch(url, { credentials: 'include' });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Erreur' }));
         throw new Error(err.error ?? 'Erreur');
@@ -183,15 +189,34 @@ export function RapportsPage() {
       const disposition = res.headers.get('Content-Disposition') ?? '';
       const match = disposition.match(/filename="([^"]+)"/);
       const filename = match ? match[1] : `rapport.${format}`;
-      const url = URL.createObjectURL(blob);
+      const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = filename; a.click();
-      URL.revokeObjectURL(url);
+      a.href = blobUrl; a.download = filename; a.click();
+      URL.revokeObjectURL(blobUrl);
       toast.success('Rapport téléchargé');
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function apercu() {
+    if (!validateRequired()) return;
+    setPreviewLoading(true);
+    try {
+      const url = `${API_BASE}/api/v1/rapports/apercu/${selected}?${buildQuery(false).toString()}`;
+      const res = await fetch(url, { credentials: 'include' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Erreur' }));
+        throw new Error(err.error ?? 'Erreur');
+      }
+      const data = await res.json() as { html: string };
+      setPreviewHtml(data.html);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setPreviewLoading(false);
     }
   }
 
@@ -350,15 +375,75 @@ export function RapportsPage() {
               </div>
             )}
 
-            <Button onClick={telecharger} loading={loading} style={{ marginTop: 4 }}>
-              <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor" style={{ marginInlineEnd: 6 }}>
-                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-              </svg>
-              Télécharger le rapport
-            </Button>
+            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+              <Button
+                variant="secondary"
+                onClick={apercu}
+                loading={previewLoading}
+                disabled={loading}
+                style={{ flex: 1 }}
+              >
+                <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor" style={{ marginInlineEnd: 6 }}>
+                  <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                </svg>
+                Aperçu
+              </Button>
+              <Button onClick={telecharger} loading={loading} disabled={previewLoading} style={{ flex: 1 }}>
+                <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor" style={{ marginInlineEnd: 6 }}>
+                  <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                </svg>
+                Télécharger
+              </Button>
+            </div>
           </div>
         </div>
       </div>
+
+      {previewHtml && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(0,0,0,0.78)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 24,
+          }}
+          onClick={() => setPreviewHtml(null)}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ display: 'flex', flexDirection: 'column', gap: 14, width: 'min(1100px, 100%)', height: 'min(90vh, 1200px)' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>
+                Aperçu — {info.label}
+              </span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => { setPreviewHtml(null); telecharger(); }}
+                  style={{ background: 'var(--terra)', border: 'none', borderRadius: 6, color: '#fff', cursor: 'pointer', padding: '6px 14px', fontSize: 13, fontWeight: 600 }}
+                >
+                  Télécharger ({(info.pdfOnly ? 'pdf' : format).toUpperCase()})
+                </button>
+                <button
+                  onClick={() => setPreviewHtml(null)}
+                  style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 6, color: '#fff', cursor: 'pointer', padding: '6px 12px', fontSize: 13 }}
+                >
+                  ✕ Fermer
+                </button>
+              </div>
+            </div>
+            <iframe
+              srcDoc={previewHtml}
+              title="Aperçu rapport"
+              sandbox="allow-same-origin"
+              style={{ flex: 1, width: '100%', border: 'none', borderRadius: 8, background: '#fff', boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}
+            />
+            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, margin: 0, textAlign: 'center' }}>
+              Aperçu HTML — rendu très proche du PDF final.
+            </p>
+          </div>
+        </div>
+      )}
     </>
   );
 }
