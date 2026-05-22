@@ -11,7 +11,7 @@ type StatutDemande = 'EN_ATTENTE' | 'APPROUVE' | 'REFUSE';
 
 interface Demande {
   id: string;
-  professeur_id: string;
+  personnel_id: string;
   date_debut: string;
   date_fin: string;
   motif: string;
@@ -20,11 +20,11 @@ interface Demande {
   commentaire: string | null;
   traite_le: string | null;
   created_at: string;
-  professeur: { utilisateur: { nom_fr: string; prenom_fr: string | null } };
+  personnel: { utilisateur: { nom_fr: string; prenom_fr: string | null } };
   traiteur: { nom_fr: string; prenom_fr: string | null } | null;
 }
 
-interface Professeur { id: string; utilisateur: { nom_fr: string; prenom_fr: string | null } }
+interface Personnel { id: string; utilisateur: { nom_fr: string; prenom_fr: string | null } }
 
 const TYPE_LABELS: Record<TypeAbsence, string> = {
   CONGE_ANNUEL: 'Congé annuel',
@@ -58,7 +58,7 @@ export function DemandesAbsencePersonnelPage() {
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [professeurs, setProfesseurs] = useState<Professeur[]>([]);
+  const [personnel, setPersonnel] = useState<Personnel[]>([]);
 
   const [filtreStatut, setFiltreStatut] = useState<string>('');
   const [showModal, setShowModal] = useState(false);
@@ -67,7 +67,7 @@ export function DemandesAbsencePersonnelPage() {
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
-    professeur_id: '',
+    personnel_id: '',
     date_debut: '',
     date_fin: '',
     type_absence: 'CONGE_ANNUEL' as TypeAbsence,
@@ -84,8 +84,8 @@ export function DemandesAbsencePersonnelPage() {
 
   useEffect(() => {
     refresh();
-    api.get<{ data: Professeur[] }>('/api/v1/personnel?limit=200')
-      .then(d => setProfesseurs(d.data ?? []))
+    api.get<{ data: Personnel[] }>('/api/v1/personnel?limit=200')
+      .then(d => setPersonnel(d.data ?? []))
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -93,7 +93,7 @@ export function DemandesAbsencePersonnelPage() {
   const filtered = demandes.filter(d => !filtreStatut || d.statut === filtreStatut);
 
   async function handleSubmit() {
-    if (!form.professeur_id || !form.date_debut || !form.date_fin || !form.motif) {
+    if (!form.personnel_id || !form.date_debut || !form.date_fin || !form.motif) {
       toast.error('Remplissez tous les champs obligatoires'); return;
     }
     setSaving(true);
@@ -101,7 +101,7 @@ export function DemandesAbsencePersonnelPage() {
       await api.post('/api/v1/demandes-absence-personnel', form);
       toast.success('Demande enregistrée');
       setShowModal(false);
-      setForm({ professeur_id: '', date_debut: '', date_fin: '', type_absence: 'CONGE_ANNUEL', motif: '' });
+      setForm({ personnel_id: '', date_debut: '', date_fin: '', type_absence: 'CONGE_ANNUEL', motif: '' });
       refresh();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Erreur');
@@ -185,7 +185,7 @@ export function DemandesAbsencePersonnelPage() {
               ) : filtered.map((d, i) => (
                 <tr key={d.id} style={{ background: i % 2 === 0 ? '#fff' : '#f9f9f9', borderBottom: '1px solid #eee' }}>
                   <td style={{ padding: '10px 12px', fontWeight: 600 }}>
-                    {d.professeur.utilisateur.nom_fr} {d.professeur.utilisateur.prenom_fr ?? ''}
+                    {d.personnel.utilisateur.nom_fr} {d.personnel.utilisateur.prenom_fr ?? ''}
                   </td>
                   <td style={{ padding: '10px 12px' }}>{TYPE_LABELS[d.type_absence]}</td>
                   <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
@@ -241,12 +241,12 @@ export function DemandesAbsencePersonnelPage() {
             <div style={{ marginBottom: 12 }}>
               <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>Professeur *</label>
               <select
-                value={form.professeur_id}
-                onChange={e => setForm(f => ({ ...f, professeur_id: e.target.value }))}
+                value={form.personnel_id}
+                onChange={e => setForm(f => ({ ...f, personnel_id: e.target.value }))}
                 style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #ddd', borderRadius: 6, fontSize: 13 }}
               >
                 <option value="">— Sélectionner —</option>
-                {professeurs.map((p: Professeur) => (
+                {personnel.map((p: Personnel) => (
                   <option key={p.id} value={p.id}>
                     {p.utilisateur.nom_fr} {p.utilisateur.prenom_fr ?? ''}
                   </option>
