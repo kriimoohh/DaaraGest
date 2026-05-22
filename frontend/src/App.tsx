@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, ComponentType } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from './pages/Login';
 import { LandingPage } from './pages/LandingPage';
@@ -7,32 +7,59 @@ import { Layout } from './components/layout/Layout';
 import { ProtectedRoute } from './components/ui/ProtectedRoute';
 import './i18n';
 
+// Quand un nouveau déploiement renomme les chunks, l'ancien index-*.js
+// gardé en cache fait un dynamic import vers un fichier disparu → 404.
+// On recharge la page une fois pour récupérer le nouveau bundle racine.
+function lazyWithReload<T extends ComponentType<unknown>>(
+  factory: () => Promise<{ default: T }>,
+) {
+  return lazy(async () => {
+    try {
+      return await factory();
+    } catch (err) {
+      const msg = (err as Error)?.message ?? '';
+      const looksLikeStaleChunk =
+        msg.includes('Failed to fetch dynamically imported module') ||
+        msg.includes('error loading dynamically imported module') ||
+        msg.includes('Importing a module script failed');
+      if (looksLikeStaleChunk) {
+        const last = Number(sessionStorage.getItem('chunk-reload-at') ?? 0);
+        if (Date.now() - last > 10_000) {
+          sessionStorage.setItem('chunk-reload-at', String(Date.now()));
+          window.location.reload();
+        }
+      }
+      throw err;
+    }
+  });
+}
+
 // Code-splitting : pages lourdes ou peu utilisées → chunks séparés.
 // Tableau de bord et Login restent en eager pour TTI initial.
-const ElevesPage         = lazy(() => import('./pages/Eleves').then(m => ({ default: m.ElevesPage })));
-const PersonnelPage      = lazy(() => import('./pages/Personnel').then(m => ({ default: m.PersonnelPage })));
-const ClassesPage        = lazy(() => import('./pages/Classes').then(m => ({ default: m.ClassesPage })));
-const NotesPage          = lazy(() => import('./pages/Notes').then(m => ({ default: m.NotesPage })));
-const EvaluationsPage    = lazy(() => import('./pages/Evaluations').then(m => ({ default: m.EvaluationsPage })));
-const ProgressionPage    = lazy(() => import('./pages/Progression').then(m => ({ default: m.ProgressionPage })));
-const BulletinsPage      = lazy(() => import('./pages/Bulletins').then(m => ({ default: m.BulletinsPage })));
-const FinancesPage       = lazy(() => import('./pages/Finances').then(m => ({ default: m.FinancesPage })));
-const ParametresPage     = lazy(() => import('./pages/Parametres').then(m => ({ default: m.ParametresPage })));
-const AnneeScolairesPage = lazy(() => import('./pages/AnneeScolaires').then(m => ({ default: m.AnneeScolairesPage })));
-const MatieresPage       = lazy(() => import('./pages/Matieres').then(m => ({ default: m.MatieresPage })));
-const UtilisateursPage   = lazy(() => import('./pages/Utilisateurs').then(m => ({ default: m.UtilisateursPage })));
-const PointagePage       = lazy(() => import('./pages/Pointage').then(m => ({ default: m.PointagePage })));
-const ScannerPage        = lazy(() => import('./pages/Pointage/Scanner').then(m => ({ default: m.ScannerPage })));
-const AbsencesPage       = lazy(() => import('./pages/Absences').then(m => ({ default: m.AbsencesPage })));
-const EmploiDuTempsPage  = lazy(() => import('./pages/EmploiDuTemps').then(m => ({ default: m.EmploiDuTempsPage })));
-const CalendrierPage     = lazy(() => import('./pages/Calendrier').then(m => ({ default: m.CalendrierPage })));
-const MessageriePage     = lazy(() => import('./pages/Messagerie').then(m => ({ default: m.MessageriePage })));
-const ActivitesPage      = lazy(() => import('./pages/Activites').then(m => ({ default: m.ActivitesPage })));
-const DocumentsPage      = lazy(() => import('./pages/Documents').then(m => ({ default: m.DocumentsPage })));
-const PortailParentPage  = lazy(() => import('./pages/PortailParent').then(m => ({ default: m.PortailParentPage })));
-const RapportsPage       = lazy(() => import('./pages/Rapports').then(m => ({ default: m.RapportsPage })));
-const BibliothequeePage  = lazy(() => import('./pages/Bibliotheque').then(m => ({ default: m.BibliothequeePage })));
-const DemandesAbsencePersonnelPage = lazy(() => import('./pages/DemandesAbsencePersonnel').then(m => ({ default: m.DemandesAbsencePersonnelPage })));
+const ElevesPage         = lazyWithReload(() => import('./pages/Eleves').then(m => ({ default: m.ElevesPage })));
+const PersonnelPage      = lazyWithReload(() => import('./pages/Personnel').then(m => ({ default: m.PersonnelPage })));
+const ClassesPage        = lazyWithReload(() => import('./pages/Classes').then(m => ({ default: m.ClassesPage })));
+const NotesPage          = lazyWithReload(() => import('./pages/Notes').then(m => ({ default: m.NotesPage })));
+const EvaluationsPage    = lazyWithReload(() => import('./pages/Evaluations').then(m => ({ default: m.EvaluationsPage })));
+const ProgressionPage    = lazyWithReload(() => import('./pages/Progression').then(m => ({ default: m.ProgressionPage })));
+const BulletinsPage      = lazyWithReload(() => import('./pages/Bulletins').then(m => ({ default: m.BulletinsPage })));
+const FinancesPage       = lazyWithReload(() => import('./pages/Finances').then(m => ({ default: m.FinancesPage })));
+const ParametresPage     = lazyWithReload(() => import('./pages/Parametres').then(m => ({ default: m.ParametresPage })));
+const AnneeScolairesPage = lazyWithReload(() => import('./pages/AnneeScolaires').then(m => ({ default: m.AnneeScolairesPage })));
+const MatieresPage       = lazyWithReload(() => import('./pages/Matieres').then(m => ({ default: m.MatieresPage })));
+const UtilisateursPage   = lazyWithReload(() => import('./pages/Utilisateurs').then(m => ({ default: m.UtilisateursPage })));
+const PointagePage       = lazyWithReload(() => import('./pages/Pointage').then(m => ({ default: m.PointagePage })));
+const ScannerPage        = lazyWithReload(() => import('./pages/Pointage/Scanner').then(m => ({ default: m.ScannerPage })));
+const AbsencesPage       = lazyWithReload(() => import('./pages/Absences').then(m => ({ default: m.AbsencesPage })));
+const EmploiDuTempsPage  = lazyWithReload(() => import('./pages/EmploiDuTemps').then(m => ({ default: m.EmploiDuTempsPage })));
+const CalendrierPage     = lazyWithReload(() => import('./pages/Calendrier').then(m => ({ default: m.CalendrierPage })));
+const MessageriePage     = lazyWithReload(() => import('./pages/Messagerie').then(m => ({ default: m.MessageriePage })));
+const ActivitesPage      = lazyWithReload(() => import('./pages/Activites').then(m => ({ default: m.ActivitesPage })));
+const DocumentsPage      = lazyWithReload(() => import('./pages/Documents').then(m => ({ default: m.DocumentsPage })));
+const PortailParentPage  = lazyWithReload(() => import('./pages/PortailParent').then(m => ({ default: m.PortailParentPage })));
+const RapportsPage       = lazyWithReload(() => import('./pages/Rapports').then(m => ({ default: m.RapportsPage })));
+const BibliothequeePage  = lazyWithReload(() => import('./pages/Bibliotheque').then(m => ({ default: m.BibliothequeePage })));
+const DemandesAbsencePersonnelPage = lazyWithReload(() => import('./pages/DemandesAbsencePersonnel').then(m => ({ default: m.DemandesAbsencePersonnelPage })));
 
 // Mêmes listes que la Sidebar — source de vérité unique côté frontend
 const ROLES = {
