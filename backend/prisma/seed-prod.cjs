@@ -28,9 +28,9 @@ async function main() {
   if (!etab) {
     etab = await prisma.etablissement.create({
       data: {
-        nom_fr: 'École Franco Arabe Cheikh Abdoul Ahad Mbacké',
-        adresse: 'Guédiawaye, Dakar, Sénégal',
-        telephone: '+221 33 820 12 34',
+        nom_fr: 'F.I.C.A.A.M. — École Franco-Arabe Cheikh Abdoul Ahad Mbacké',
+        adresse: 'Cité AKF Guédiawaye',
+        telephone: '33 877 76 30',
         devise: 'FCFA',
       },
     });
