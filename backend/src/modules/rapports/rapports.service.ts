@@ -1,5 +1,29 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+import type { PDFOptions } from 'puppeteer';
 import prisma from '../../config/database';
-import { renderPdfHtml } from '../../utils/browserPool';
+import { renderPdfHtml as _renderPdfHtmlReal } from '../../utils/browserPool';
+
+// Mode aperçu : on intercepte renderPdfHtml pour capturer le HTML sans
+// passer par Puppeteer. AsyncLocalStorage isole les appels concurrents.
+const previewStore = new AsyncLocalStorage<{ html?: string }>();
+const PREVIEW_SIGNAL = Symbol('rapports-preview');
+
+async function renderPdfHtml(html: string, pdfOptions: PDFOptions): Promise<Buffer> {
+  const store = previewStore.getStore();
+  if (store) { store.html = html; throw PREVIEW_SIGNAL; }
+  return _renderPdfHtmlReal(html, pdfOptions);
+}
+
+async function capturePreviewHtml(fn: () => Promise<unknown>): Promise<string> {
+  const store: { html?: string } = {};
+  try {
+    await previewStore.run(store, fn);
+  } catch (err) {
+    if (err !== PREVIEW_SIGNAL) throw err;
+  }
+  if (!store.html) throw new Error('Aperçu indisponible pour ce rapport');
+  return store.html;
+}
 
 const MOIS_LABELS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 
@@ -1297,4 +1321,88 @@ th{background:#d0d0d0;font-weight:bold;}
     margin: { top: '8mm', bottom: '8mm', left: '8mm', right: '8mm' },
   });
   return { buffer, mime: 'application/pdf', filename: `propositions-fin-${classeRaw.nom_fr}.pdf` };
+}
+
+// ─── Aperçus HTML ─────────────────────────────────────────────────────────────
+// Chaque fonction force le format PDF, capture le HTML via AsyncLocalStorage,
+// et le renvoie sans passer par Puppeteer.
+
+export async function apercuPresencesEleves(
+  etablissement_id: string,
+  params: { classe_id?: string; annee_scolaire_id?: string; mois?: number; annee?: number },
+) {
+  const html = await capturePreviewHtml(() =>
+    rapportPresencesEleves(etablissement_id, { ...params, format: 'pdf' }),
+  );
+  return { html };
+}
+
+export async function apercuPresencesProfesseurs(
+  etablissement_id: string,
+  params: { mois?: number; annee?: number },
+) {
+  const html = await capturePreviewHtml(() =>
+    rapportPresencesProfesseurs(etablissement_id, { ...params, format: 'pdf' }),
+  );
+  return { html };
+}
+
+export async function apercuResultatsClasse(
+  etablissement_id: string,
+  params: { classe_id: string; annee_scolaire_id: string; periode?: number },
+) {
+  const html = await capturePreviewHtml(() =>
+    rapportResultatsClasse(etablissement_id, { ...params, format: 'pdf' }),
+  );
+  return { html };
+}
+
+export async function apercuBilanFinancier(
+  etablissement_id: string,
+  params: { mois?: number; annee?: number },
+) {
+  const html = await capturePreviewHtml(() =>
+    rapportBilanFinancier(etablissement_id, { ...params, format: 'pdf' }),
+  );
+  return { html };
+}
+
+export async function apercuGrilleIef(
+  etablissement_id: string,
+  params: { classe_id: string; annee_scolaire_id: string; periode?: number },
+) {
+  const html = await capturePreviewHtml(() => rapportGrilleIef(etablissement_id, params));
+  return { html };
+}
+
+export async function apercuGrillePerformance(
+  etablissement_id: string,
+  params: { classe_id: string; annee_scolaire_id: string; periode?: number },
+) {
+  const html = await capturePreviewHtml(() => rapportGrillePerformance(etablissement_id, params));
+  return { html };
+}
+
+export async function apercuPerformanceDomaine(
+  etablissement_id: string,
+  params: { classe_id: string; annee_scolaire_id: string; periode?: number },
+) {
+  const html = await capturePreviewHtml(() => rapportPerformanceDomaine(etablissement_id, params));
+  return { html };
+}
+
+export async function apercuReleveNotes(
+  etablissement_id: string,
+  params: { classe_id: string; annee_scolaire_id: string; periode?: number },
+) {
+  const html = await capturePreviewHtml(() => rapportReleveNotes(etablissement_id, params));
+  return { html };
+}
+
+export async function apercuPropositionsFin(
+  etablissement_id: string,
+  params: { classe_id: string; annee_scolaire_id: string },
+) {
+  const html = await capturePreviewHtml(() => rapportPropositionsFin(etablissement_id, params));
+  return { html };
 }
