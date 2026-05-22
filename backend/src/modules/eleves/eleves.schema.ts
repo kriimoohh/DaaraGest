@@ -22,7 +22,7 @@ export const eleveSchema = z.object({
 });
 
 export const inscriptionSchema = z.object({
-  annee_scolaire_id: z.string().min(1),
+  annee_scolaire_id: z.string().uuid(),
   classe_fr_id: z.string().optional().transform(v => (v && v.length > 0) ? v : undefined),
   classe_ar_id: z.string().optional().transform(v => (v && v.length > 0) ? v : undefined),
 });

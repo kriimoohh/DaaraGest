@@ -142,7 +142,7 @@ describe('Métier — Finances : Reliquats', () => {
   });
 });
 
-describe('Métier — Finances : Salaires professeurs', () => {
+describe('Métier — Finances : Salaires personnel', () => {
   it('retenue de 5% sur 250 000', () => {
     expect(calculerRetenues(250000, 0.05)).toBe(12500);
   });

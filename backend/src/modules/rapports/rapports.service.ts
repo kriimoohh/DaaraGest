@@ -115,9 +115,9 @@ ${absences.map(a => `<tr>
   return { buffer, mime: 'application/pdf', filename: 'presences-eleves.pdf' };
 }
 
-// ─── Rapport présences professeurs ──────────────────────────────────────────
+// ─── Rapport présences personnel ────────────────────────────────────────────
 
-export async function rapportPresencesProfesseurs(
+export async function rapportPresencesPersonnel(
   etablissement_id: string,
   params: { mois?: number; annee?: number; format: string },
 ) {
@@ -153,10 +153,10 @@ export async function rapportPresencesProfesseurs(
         p.motif ?? '',
       ])),
     ];
-    return { buffer: Buffer.from(lines.join('\n'), 'utf-8'), mime: 'text/csv', filename: 'presences-professeurs.csv' };
+    return { buffer: Buffer.from(lines.join('\n'), 'utf-8'), mime: 'text/csv', filename: 'presences-personnel.csv' };
   }
 
-  const titre = `Rapport de présences professeurs${mois && annee ? ` — ${MOIS_LABELS[mois-1]} ${annee}` : ''}`;
+  const titre = `Rapport de présences personnel${mois && annee ? ` — ${MOIS_LABELS[mois-1]} ${annee}` : ''}`;
   const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
 <style>
   body{font-family:sans-serif;font-size:12px;color:#111;margin:24px;}
@@ -184,7 +184,7 @@ ${presences.map(p => `<tr>
 </tbody></table></body></html>`;
 
   const buffer = await renderPdfHtml(html, { format: 'A4', printBackground: true, margin: { top: '12mm', bottom: '12mm', left: '10mm', right: '10mm' } });
-  return { buffer, mime: 'application/pdf', filename: 'presences-professeurs.pdf' };
+  return { buffer, mime: 'application/pdf', filename: 'presences-personnel.pdf' };
 }
 
 // ─── Rapport résultats classe ────────────────────────────────────────────────
@@ -313,7 +313,7 @@ export async function rapportBilanFinancier(
       [],
       ['TYPE','MONTANT','DEVISE'],
       ['Total encaissé (élèves)', totalEncaisse, devise],
-      ['Total versé (professeurs)', totalVersé, devise],
+      ['Total versé (personnel)', totalVersé, devise],
       ['Solde', solde, devise],
       [],
       ['DÉTAIL PAIEMENTS ÉLÈVES'],
@@ -349,7 +349,7 @@ export async function rapportBilanFinancier(
 <div class="sub">Généré le ${new Date().toLocaleDateString('fr-FR')}</div>
 <div class="kpis">
   <div class="kpi"><div class="kpi-label">Encaissé</div><div class="kpi-val green">${totalEncaisse.toLocaleString('fr-FR')} ${devise}</div></div>
-  <div class="kpi"><div class="kpi-label">Versé profs</div><div class="kpi-val red">${totalVersé.toLocaleString('fr-FR')} ${devise}</div></div>
+  <div class="kpi"><div class="kpi-label">Versé personnel</div><div class="kpi-val red">${totalVersé.toLocaleString('fr-FR')} ${devise}</div></div>
   <div class="kpi"><div class="kpi-label">Solde</div><div class="kpi-val ${solde >= 0 ? 'green' : 'red'}">${solde.toLocaleString('fr-FR')} ${devise}</div></div>
 </div>
 <h2>Paiements élèves (${paiementsEleves.length})</h2>
@@ -364,7 +364,7 @@ ${paiementsEleves.map(p => `<tr>
   <td style="text-align:right;font-family:monospace">${Number(p.montant).toLocaleString('fr-FR')}</td>
 </tr>`).join('')}
 </tbody></table>
-<h2>Versements professeurs (${paiementsProfs.length})</h2>
+<h2>Versements personnel (${paiementsProfs.length})</h2>
 <table>
 <thead><tr><th>Personnel</th><th style="text-align:right">Brut</th><th style="text-align:right">Retenues</th><th style="text-align:right">Net</th></tr></thead>
 <tbody>
@@ -1337,12 +1337,12 @@ export async function apercuPresencesEleves(
   return { html };
 }
 
-export async function apercuPresencesProfesseurs(
+export async function apercuPresencesPersonnel(
   etablissement_id: string,
   params: { mois?: number; annee?: number },
 ) {
   const html = await capturePreviewHtml(() =>
-    rapportPresencesProfesseurs(etablissement_id, { ...params, format: 'pdf' }),
+    rapportPresencesPersonnel(etablissement_id, { ...params, format: 'pdf' }),
   );
   return { html };
 }
@@ -1404,5 +1404,122 @@ export async function apercuPropositionsFin(
   params: { classe_id: string; annee_scolaire_id: string },
 ) {
   const html = await capturePreviewHtml(() => rapportPropositionsFin(etablissement_id, params));
+  return { html };
+}
+
+// ─── Rapport charges horaires personnel ─────────────────────────────────────
+// Agrège Creneau par personnel pour calculer les heures hebdomadaires.
+// Donnée RH critique pour le suivi de service / paie horaire des vacataires.
+
+function dureeHeures(heureDebut: string, heureFin: string): number {
+  // Format "HH:MM" → fraction d'heure (ex. "08:00" → "10:30" = 2.5)
+  const [hd, md] = heureDebut.split(':').map(Number);
+  const [hf, mf] = heureFin.split(':').map(Number);
+  if ([hd, md, hf, mf].some(n => Number.isNaN(n))) return 0;
+  return Math.max(0, (hf * 60 + mf - hd * 60 - md) / 60);
+}
+
+export async function rapportChargesPersonnel(
+  etablissement_id: string,
+  params: { annee_scolaire_id: string; format: string },
+) {
+  const { annee_scolaire_id, format } = params;
+
+  const creneaux = await prisma.creneau.findMany({
+    where: { etablissement_id, annee_scolaire_id },
+    include: {
+      personnel: { include: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } } },
+      matiere: { select: { nom_fr: true } },
+      classe:  { select: { nom_fr: true } },
+    },
+  });
+
+  type Agg = {
+    personnel_id: string;
+    nom: string;
+    prenom: string;
+    heuresHebdo: number;
+    nbCreneaux: number;
+    matieres: Set<string>;
+    classes: Set<string>;
+  };
+  const agg = new Map<string, Agg>();
+
+  for (const c of creneaux) {
+    const h = dureeHeures(c.heure_debut, c.heure_fin);
+    const key = c.personnel_id;
+    if (!agg.has(key)) {
+      agg.set(key, {
+        personnel_id: key,
+        nom: c.personnel.utilisateur.nom_fr,
+        prenom: c.personnel.utilisateur.prenom_fr ?? '',
+        heuresHebdo: 0,
+        nbCreneaux: 0,
+        matieres: new Set(),
+        classes: new Set(),
+      });
+    }
+    const a = agg.get(key)!;
+    a.heuresHebdo += h;
+    a.nbCreneaux += 1;
+    a.matieres.add(c.matiere.nom_fr);
+    a.classes.add(c.classe.nom_fr);
+  }
+
+  const lignes = Array.from(agg.values()).sort((x, y) => y.heuresHebdo - x.heuresHebdo);
+
+  if (format === 'csv') {
+    const rows = [
+      csvRow(['Nom', 'Prénom', 'Heures hebdo', 'Nb créneaux', 'Matières', 'Classes']),
+      ...lignes.map(l => csvRow([
+        l.nom, l.prenom,
+        l.heuresHebdo.toFixed(2),
+        l.nbCreneaux,
+        Array.from(l.matieres).join(' / '),
+        Array.from(l.classes).join(' / '),
+      ])),
+    ];
+    return { buffer: Buffer.from(rows.join('\n'), 'utf-8'), mime: 'text/csv', filename: 'charges-personnel.csv' };
+  }
+
+  const totalHeures = lignes.reduce((s, l) => s + l.heuresHebdo, 0);
+
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<style>
+  body{font-family:sans-serif;font-size:12px;color:#111;margin:24px;}
+  h1{font-size:18px;margin-bottom:4px;}
+  .sub{color:#666;font-size:11px;margin-bottom:20px;}
+  table{width:100%;border-collapse:collapse;}
+  th{background:#f3f3f3;text-align:left;padding:6px 8px;font-size:11px;border-bottom:2px solid #ddd;}
+  td{padding:5px 8px;border-bottom:1px solid #eee;font-size:11px;vertical-align:top;}
+  .num{text-align:right;font-variant-numeric:tabular-nums;}
+  .total{font-weight:600;background:#fafafa;}
+</style></head><body>
+<h1>Charges horaires hebdomadaires du personnel enseignant</h1>
+<div class="sub">Généré le ${new Date().toLocaleDateString('fr-FR')} — ${lignes.length} personne(s) — Total ${totalHeures.toFixed(1)} h hebdo</div>
+<table>
+<thead><tr><th>Personnel</th><th class="num">H. hebdo</th><th class="num">Créneaux</th><th>Matières</th><th>Classes</th></tr></thead>
+<tbody>
+${lignes.map(l => `<tr>
+  <td>${esc(l.nom)} ${esc(l.prenom)}</td>
+  <td class="num">${l.heuresHebdo.toFixed(2)} h</td>
+  <td class="num">${l.nbCreneaux}</td>
+  <td>${Array.from(l.matieres).map(esc).join(', ')}</td>
+  <td>${Array.from(l.classes).map(esc).join(', ')}</td>
+</tr>`).join('')}
+<tr class="total"><td>Total</td><td class="num">${totalHeures.toFixed(2)} h</td><td class="num">${creneaux.length}</td><td colspan="2"></td></tr>
+</tbody></table></body></html>`;
+
+  const buffer = await renderPdfHtml(html, { format: 'A4', printBackground: true, margin: { top: '12mm', bottom: '12mm', left: '10mm', right: '10mm' } });
+  return { buffer, mime: 'application/pdf', filename: 'charges-personnel.pdf' };
+}
+
+export async function apercuChargesPersonnel(
+  etablissement_id: string,
+  params: { annee_scolaire_id: string },
+) {
+  const html = await capturePreviewHtml(() =>
+    rapportChargesPersonnel(etablissement_id, { ...params, format: 'pdf' }),
+  );
   return { html };
 }

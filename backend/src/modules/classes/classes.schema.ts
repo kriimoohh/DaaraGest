@@ -4,12 +4,12 @@ export const classeSchema = z.object({
   nom_fr: z.string().min(1),
   filiere: z.enum(['FR', 'AR']),
   niveau_id: z.string().optional().nullable(),
-  annee_scolaire_id: z.string().min(1),
+  annee_scolaire_id: z.string().uuid(),
   capacite: z.number().int().positive().optional(),
 });
 
 export const classeMatiereSchema = z.object({
-  matiere_id: z.string().min(1),
+  matiere_id: z.string().uuid(),
   coeff_override: z.number().positive().optional(),
   ordre_override: z.number().int().min(0).optional(),
 });

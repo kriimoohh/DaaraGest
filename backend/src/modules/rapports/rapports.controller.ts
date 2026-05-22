@@ -2,7 +2,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
 import {
   rapportPresencesEleves,
-  rapportPresencesProfesseurs,
+  rapportPresencesPersonnel,
   rapportResultatsClasse,
   rapportBilanFinancier,
   rapportGrilleIef,
@@ -10,8 +10,9 @@ import {
   rapportPerformanceDomaine,
   rapportReleveNotes,
   rapportPropositionsFin,
+  rapportChargesPersonnel,
   apercuPresencesEleves,
-  apercuPresencesProfesseurs,
+  apercuPresencesPersonnel,
   apercuResultatsClasse,
   apercuBilanFinancier,
   apercuGrilleIef,
@@ -19,10 +20,11 @@ import {
   apercuPerformanceDomaine,
   apercuReleveNotes,
   apercuPropositionsFin,
+  apercuChargesPersonnel,
 } from './rapports.service';
 import {
   rapportPresencesElevesSchema,
-  rapportPresencesProfesseursSchema,
+  rapportPresencesPersonnelSchema,
   rapportResultatsClasseSchema,
   rapportBilanFinancierSchema,
   rapportGrilleIefSchema,
@@ -30,8 +32,9 @@ import {
   rapportPerformanceDomaineSchema,
   rapportReleveNotesSchema,
   rapportPropositionsFinSchema,
+  rapportChargesPersonnelSchema,
   apercuPresencesElevesSchema,
-  apercuPresencesProfesseursSchema,
+  apercuPresencesPersonnelSchema,
   apercuResultatsClasseSchema,
   apercuBilanFinancierSchema,
   apercuGrilleIefSchema,
@@ -39,6 +42,7 @@ import {
   apercuPerformanceDomaineSchema,
   apercuReleveNotesSchema,
   apercuPropositionsFinSchema,
+  apercuChargesPersonnelSchema,
 } from './rapports.schema';
 
 type ApercuFn<P> = (etabId: string, params: P) => Promise<{ html: string }>;
@@ -75,12 +79,12 @@ export async function presencesElevesHandler(request: FastifyRequest, reply: Fas
   }
 }
 
-export async function presencesProfesseursHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function presencesPersonnelHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
-  const parsed = rapportPresencesProfesseursSchema.safeParse(request.query);
+  const parsed = rapportPresencesPersonnelSchema.safeParse(request.query);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
   try {
-    return sendFile(reply, await rapportPresencesProfesseurs(etablissement_id, parsed.data));
+    return sendFile(reply, await rapportPresencesPersonnel(etablissement_id, parsed.data));
   } catch (err) {
     return reply.status(500).send({ error: (err as Error).message });
   }
@@ -165,10 +169,21 @@ export async function propositionsFinHandler(request: FastifyRequest, reply: Fas
   }
 }
 
+export async function chargesPersonnelHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const parsed = rapportChargesPersonnelSchema.safeParse(request.query);
+  if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  try {
+    return sendFile(reply, await rapportChargesPersonnel(etablissement_id, parsed.data));
+  } catch (err) {
+    return reply.status(500).send({ error: (err as Error).message });
+  }
+}
+
 // ─── Aperçus HTML ─────────────────────────────────────────────────────────────
 
 export const apercuPresencesElevesHandler      = buildApercuHandler(apercuPresencesElevesSchema, apercuPresencesEleves);
-export const apercuPresencesProfesseursHandler = buildApercuHandler(apercuPresencesProfesseursSchema, apercuPresencesProfesseurs);
+export const apercuPresencesPersonnelHandler = buildApercuHandler(apercuPresencesPersonnelSchema, apercuPresencesPersonnel);
 export const apercuResultatsClasseHandler      = buildApercuHandler(apercuResultatsClasseSchema, apercuResultatsClasse);
 export const apercuBilanFinancierHandler       = buildApercuHandler(apercuBilanFinancierSchema, apercuBilanFinancier);
 export const apercuGrilleIefHandler            = buildApercuHandler(apercuGrilleIefSchema, apercuGrilleIef);
@@ -176,3 +191,4 @@ export const apercuGrillePerformanceHandler    = buildApercuHandler(apercuGrille
 export const apercuPerformanceDomaineHandler   = buildApercuHandler(apercuPerformanceDomaineSchema, apercuPerformanceDomaine);
 export const apercuReleveNotesHandler          = buildApercuHandler(apercuReleveNotesSchema, apercuReleveNotes);
 export const apercuPropositionsFinHandler      = buildApercuHandler(apercuPropositionsFinSchema, apercuPropositionsFin);
+export const apercuChargesPersonnelHandler     = buildApercuHandler(apercuChargesPersonnelSchema, apercuChargesPersonnel);

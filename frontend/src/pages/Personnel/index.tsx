@@ -23,8 +23,8 @@ interface QRData {
   nom: string;
 }
 
-function QRCodeModal({ professeurId, nom, onClose, api }: {
-  professeurId: string; nom: string; onClose: () => void;
+function QRCodeModal({ personnelId, nom, onClose, api }: {
+  personnelId: string; nom: string; onClose: () => void;
   api: ReturnType<typeof useApi>;
 }) {
   const [qrData, setQrData] = useState<QRData | null>(null);
@@ -34,14 +34,14 @@ function QRCodeModal({ professeurId, nom, onClose, api }: {
   const charger = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.get<QRData>(`/api/v1/pointage/qr/${professeurId}`);
+      const data = await api.get<QRData>(`/api/v1/pointage/qr/${personnelId}`);
       setQrData(data);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [professeurId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [personnelId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { charger(); }, [charger]);
 
@@ -49,7 +49,7 @@ function QRCodeModal({ professeurId, nom, onClose, api }: {
     if (!confirm(`Régénérer le QR code de ${nom} ? L'ancien QR code ne fonctionnera plus.`)) return;
     setRegenerating(true);
     try {
-      const data = await api.post<QRData>(`/api/v1/pointage/qr/${professeurId}/regenerer`, {});
+      const data = await api.post<QRData>(`/api/v1/pointage/qr/${personnelId}/regenerer`, {});
       setQrData(data);
       toast.success('QR code régénéré');
     } catch (err) {
@@ -98,7 +98,7 @@ function QRCodeModal({ professeurId, nom, onClose, api }: {
         ) : qrData ? (
           <>
             <div style={{
-              background: '#fff', borderRadius: 12, padding: 16,
+              background: 'var(--card)', borderRadius: 12, padding: 16,
               border: '1px solid var(--rule)', display: 'inline-block',
             }}>
               <img src={qrData.dataUrl} alt="QR Code" style={{ width: 240, height: 240, display: 'block' }} />
@@ -790,7 +790,7 @@ export function PersonnelPage() {
 
       {qrTarget && (
         <QRCodeModal
-          professeurId={qrTarget.id}
+          personnelId={qrTarget.id}
           nom={`${qrTarget.prenom_fr ?? ''} ${qrTarget.nom_fr}`.trim()}
           onClose={() => setQrTarget(null)}
           api={api}

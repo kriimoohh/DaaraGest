@@ -1,28 +1,35 @@
 import prisma from '../../config/database';
 import { EtablissementUpdateInput, ConfigNotesInput, ConfigNotificationsInput } from './parametres.schema';
+import { etablissementCache, configNotesCache, invalidateEtablissement } from '../../utils/cache';
 
 export async function getParametres(etablissement_id: string) {
-  const etablissement = await prisma.etablissement.findUnique({
-    where: { id: etablissement_id },
-    include: { config_notes: true },
+  return etablissementCache.getOrLoad(etablissement_id, async () => {
+    const etablissement = await prisma.etablissement.findUnique({
+      where: { id: etablissement_id },
+      include: { config_notes: true },
+    });
+    if (!etablissement) throw new Error('Établissement introuvable');
+    return etablissement;
   });
-  if (!etablissement) throw new Error('Établissement introuvable');
-  return etablissement;
 }
 
 export async function updateEtablissement(etablissement_id: string, data: EtablissementUpdateInput) {
-  return prisma.etablissement.update({
+  const updated = await prisma.etablissement.update({
     where: { id: etablissement_id },
     data,
   });
+  invalidateEtablissement(etablissement_id);
+  return updated;
 }
 
 export async function getConfigNotes(etablissement_id: string) {
-  return prisma.configNotes.findUnique({ where: { etablissement_id } });
+  return configNotesCache.getOrLoad(etablissement_id, async () => {
+    return prisma.configNotes.findUnique({ where: { etablissement_id } });
+  });
 }
 
 export async function updateConfigNotes(etablissement_id: string, data: ConfigNotesInput) {
-  return prisma.configNotes.upsert({
+  const updated = await prisma.configNotes.upsert({
     where: { etablissement_id },
     create: {
       etablissement_id,
@@ -30,6 +37,8 @@ export async function updateConfigNotes(etablissement_id: string, data: ConfigNo
     },
     update: data,
   });
+  invalidateEtablissement(etablissement_id);
+  return updated;
 }
 
 export async function getConfigNotifications(etablissement_id: string) {
@@ -45,9 +54,11 @@ export async function getConfigNotifications(etablissement_id: string) {
 }
 
 export async function updateConfigNotifications(etablissement_id: string, data: ConfigNotificationsInput) {
-  return prisma.configNotes.upsert({
+  const updated = await prisma.configNotes.upsert({
     where: { etablissement_id },
     create: { etablissement_id, ...data },
     update: data,
   });
+  invalidateEtablissement(etablissement_id);
+  return updated;
 }

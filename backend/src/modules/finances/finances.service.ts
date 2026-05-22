@@ -1,6 +1,6 @@
 import prisma from '../../config/database';
 import { logAction } from '../../utils/audit';
-import { PaiementEleveInput, BulkPaiementEleveInput, UpdatePaiementEleveInput, PaiementProfesseurInput } from './finances.schema';
+import { PaiementEleveInput, BulkPaiementEleveInput, UpdatePaiementEleveInput, PaiementPersonnelInput } from './finances.schema';
 
 async function genererRecu(): Promise<string> {
   const now = new Date();
@@ -141,7 +141,7 @@ export async function supprimerPaiementEleve(id: string, etablissement_id: strin
   });
 }
 
-export async function listerPaiementsProfesseurs(
+export async function listerPaiementsPersonnel(
   etablissement_id: string,
   page = 1,
   mois?: number,
@@ -177,11 +177,11 @@ export async function listerPaiementsProfesseurs(
   return { total, page, limit, data: items };
 }
 
-export async function creerPaiementProfesseur(etablissement_id: string, data: PaiementProfesseurInput, acteurId: string) {
-  const professeur = await prisma.personnel.findFirst({
+export async function creerPaiementPersonnel(etablissement_id: string, data: PaiementPersonnelInput, acteurId: string) {
+  const personnel = await prisma.personnel.findFirst({
     where: { id: data.personnel_id, utilisateur: { etablissement_id } },
   });
-  if (!professeur) throw new Error('Personnel introuvable');
+  if (!personnel) throw new Error('Personnel introuvable');
 
   const paiement = await prisma.paiementPersonnel.create({
     data: {

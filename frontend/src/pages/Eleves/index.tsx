@@ -186,7 +186,7 @@ function QRCodeEleveModal({ eleveId, nom, onClose, api }: {
           <div style={{ padding: 40, color: 'var(--ink-3)' }}>Chargement…</div>
         ) : qrData ? (
           <>
-            <div style={{ padding: 12, background: '#fff', borderRadius: 12, border: '1px solid var(--rule)', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            <div style={{ padding: 12, background: 'var(--card)', borderRadius: 12, border: '1px solid var(--rule)', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
               {/* QR code reste sur fond blanc même en dark mode : le scanner caméra
                   nécessite un contraste élevé du QR pour la détection. */}
               <img src={qrData.dataUrl} alt="QR Code" style={{ width: 220, height: 220, display: 'block' }} />

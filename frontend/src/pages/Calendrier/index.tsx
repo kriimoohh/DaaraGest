@@ -26,11 +26,11 @@ interface Evenement {
 // ── Constantes ────────────────────────────────────────────────────────────────
 
 const TYPE_COLORS: Record<string, string> = {
-  vacances:  '#10B981',
-  examen:    '#F59E0B',
-  evenement: '#3B82F6',
-  fermeture: '#EF4444',
-  reunion:   '#8B5CF6',
+  vacances:  'var(--success)',
+  examen:    'var(--warning)',
+  evenement: 'var(--info)',
+  fermeture: 'var(--danger)',
+  reunion:   'var(--terra)',
 };
 
 const TYPE_LABELS: Record<string, string> = {

@@ -15,7 +15,9 @@ interface Alerte { type: string; eleve_id: string; nom: string; matricule: strin
 
 interface TableauDeBord {
   presence_eleves:      TauxPresence;
-  presence_professeurs: TauxPresence;
+  presence_personnel:   TauxPresence;
+  // Alias rétro-compat (le backend renvoie aussi presence_professeurs)
+  presence_professeurs?: TauxPresence;
   moyennes_classes:     MoyenneClasse[];
   top5_eleves:          EleveRanked[];
   bottom5_eleves:       EleveRanked[];
@@ -174,7 +176,7 @@ export function Dashboard() {
               {/* Présences */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
                 <TauxCard label="Présence élèves" data={tdb.presence_eleves} />
-                <TauxCard label="Présence professeurs" data={tdb.presence_professeurs} />
+                <TauxCard label="Présence personnel" data={tdb.presence_personnel ?? tdb.presence_professeurs!} />
               </div>
 
               {/* Moyennes classes + Top/Bottom */}

@@ -130,3 +130,25 @@ export async function listerTokensEtablissement(etablissement_id: string) {
     orderBy: { created_at: 'desc' },
   });
 }
+
+// Sert le PDF d'un bulletin via le token portail parent.
+// Le bulletin doit appartenir à l'élève du token, sinon 404.
+export async function getBulletinPdfViaToken(token: string, bulletin_id: string): Promise<{ buffer: Buffer; filename: string }> {
+  const record = await prisma.portailParentToken.findUnique({
+    where: { token },
+    select: { actif: true, expires_at: true, etablissement_id: true, eleve_id: true },
+  });
+  if (!record || !record.actif) throw new Error('Lien invalide ou désactivé');
+  if (record.expires_at && record.expires_at < new Date()) throw new Error('Lien expiré');
+
+  const bulletin = await prisma.bulletin.findFirst({
+    where: { id: bulletin_id, eleve_id: record.eleve_id },
+    select: { id: true, periode: true, filiere: true },
+  });
+  if (!bulletin) throw new Error('Bulletin introuvable');
+
+  const { genererPdfBulletin } = await import('../bulletins/bulletins.service');
+  const buffer = await genererPdfBulletin(bulletin.id, record.etablissement_id);
+  const filename = `bulletin-${bulletin.filiere}-P${bulletin.periode}.pdf`;
+  return { buffer, filename };
+}

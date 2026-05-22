@@ -22,7 +22,7 @@ export const upsertTemplateSchema = z.object({
 export const genererDocumentSchema = z.object({
   type: z.enum(TYPE_DOCUMENT_VALUES),
   destinataire_type: z.enum(['eleve', 'professeur', 'classe']),
-  destinataire_id: z.string().min(1),
+  destinataire_id: z.string().uuid(),
   parametres: z.record(z.string()).optional(),
 });
 

@@ -34,6 +34,9 @@ jobs:
       - name: Type-check
         working-directory: backend
         run: npx tsc --noEmit
+      - name: Lint (non bloquant le temps de stabiliser le code)
+        working-directory: backend
+        run: npm run lint || true
       - name: Tests
         working-directory: backend
         run: npm test

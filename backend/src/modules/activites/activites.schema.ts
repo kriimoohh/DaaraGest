@@ -6,14 +6,14 @@ export const activiteSchema = z.object({
   nom_fr:         z.string().min(1).max(200),
   nom_ar:         z.string().max(200).optional(),
   description:    z.string().max(1000).optional(),
-  responsable_id: z.string().min(1).optional(),
+  responsable_id: z.string().uuid().optional(),
   capacite_max:   z.number().int().min(1).optional(),
   actif:          z.boolean().optional().default(true),
 });
 
 export const inscriptionActiviteSchema = z.object({
   eleve_id:          z.string().min(1),
-  annee_scolaire_id: z.string().min(1),
+  annee_scolaire_id: z.string().uuid(),
 });
 
 export const seanceSchema = z.object({
@@ -23,7 +23,7 @@ export const seanceSchema = z.object({
 });
 
 export const presenceActiviteItemSchema = z.object({
-  eleve_id: z.string().min(1),
+  eleve_id: z.string().uuid(),
   statut:   z.enum(['present', 'absent', 'retard']),
 });
 

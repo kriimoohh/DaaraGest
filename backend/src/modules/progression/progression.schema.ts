@@ -8,7 +8,7 @@ export const validerProgressionSchema = z.object({
 });
 
 export const genererProgressionsSchema = z.object({
-  annee_scolaire_id: z.string().min(1),
+  annee_scolaire_id: z.string().uuid(),
 });
 
 export type ValiderProgressionInput  = z.infer<typeof validerProgressionSchema>;
