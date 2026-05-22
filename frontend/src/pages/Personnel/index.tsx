@@ -206,7 +206,7 @@ interface PersonnelFormData {
   nom_ar: string;
   identifiant: string;
   mot_de_passe: string;
-  fonction: Fonction;
+  fonction: string;
   sexe: Sexe;
   specialite_fr: string;
   telephone: string;
@@ -276,6 +276,16 @@ export function PersonnelPage() {
   const [carteLotModal, setCarteLotModal] = useState(false);
   const [carteLotGenerating, setCarteLotGenerating] = useState(false);
   const [carteLotErreurs, setCarteLotErreurs] = useState<{ id: string; message: string }[]>([]);
+  const [fonctions, setFonctions] = useState<{ id: string; code: string; libelle_fr: string }[]>([]);
+
+  useEffect(() => {
+    api.get<{ id: string; code: string; libelle_fr: string }[]>('/api/v1/fonctions')
+      .then(setFonctions)
+      .catch(() => {
+        // En cas d'erreur (DB pas migrée…), fallback sur la liste hardcodée
+        setFonctions(FONCTION_VALUES.map((code) => ({ id: code, code, libelle_fr: FONCTION_LABELS[code] })));
+      });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchProfs = useCallback(async () => {
     setLoading(true);
@@ -309,7 +319,7 @@ export function PersonnelPage() {
       nom_fr: prof.nom_fr,
       nom_ar: prof.nom_ar,
       identifiant: prof.identifiant, mot_de_passe: '',
-      fonction: (prof.personnel?.fonction as Fonction) ?? 'ENSEIGNANT',
+      fonction: prof.personnel?.fonction ?? 'ENSEIGNANT',
       sexe: (prof.sexe ?? '') as Sexe,
       specialite_fr: profSpecialite(prof),
       telephone: profTelephone(prof),
@@ -689,8 +699,8 @@ export function PersonnelPage() {
               <Select
                 label="Fonction"
                 value={form.fonction}
-                onChange={(e) => setField('fonction', e.target.value as Fonction)}
-                options={FONCTION_VALUES.map(f => ({ value: f, label: FONCTION_LABELS[f] }))}
+                onChange={(e) => setField('fonction', e.target.value)}
+                options={fonctions.map(f => ({ value: f.code, label: f.libelle_fr }))}
               />
               <Select
                 label="Sexe"

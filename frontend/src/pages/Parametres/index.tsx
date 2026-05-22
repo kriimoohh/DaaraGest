@@ -8,12 +8,21 @@ import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 
-type Tab = 'etablissement' | 'pedagogie' | 'niveaux' | 'compte' | 'bareme' | 'tarifs' | 'notifications' | 'securite';
+type Tab = 'etablissement' | 'pedagogie' | 'niveaux' | 'fonctions' | 'compte' | 'bareme' | 'tarifs' | 'notifications' | 'securite';
 
 interface Niveau {
   id: string;
   libelle: string;
   ordre: number;
+}
+
+interface Fonction {
+  id: string;
+  code: string;
+  libelle_fr: string;
+  libelle_ar?: string | null;
+  ordre: number;
+  supprimable: boolean;
 }
 
 interface Etablissement {
@@ -294,6 +303,14 @@ export function ParametresPage() {
   const [niveauOrdre, setNiveauOrdre] = useState('');
   const [editNiveau, setEditNiveau] = useState<Niveau | null>(null);
   const [savingNiveau, setSavingNiveau] = useState(false);
+
+  const [fonctions, setFonctions] = useState<Fonction[]>([]);
+  const [fonctionCode, setFonctionCode] = useState('');
+  const [fonctionLibelle, setFonctionLibelle] = useState('');
+  const [fonctionLibelleAr, setFonctionLibelleAr] = useState('');
+  const [fonctionOrdre, setFonctionOrdre] = useState('');
+  const [editFonction, setEditFonction] = useState<Fonction | null>(null);
+  const [savingFonction, setSavingFonction] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
 
@@ -315,8 +332,12 @@ export function ParametresPage() {
   const fetchNiveaux = () =>
     api.get<Niveau[]>('/api/v1/niveaux').then(setNiveaux).catch(() => {});
 
+  const fetchFonctions = () =>
+    api.get<Fonction[]>('/api/v1/fonctions').then(setFonctions).catch(() => {});
+
   useEffect(() => {
     fetchNiveaux();
+    fetchFonctions();
     Promise.all([
       api.get<Etablissement>('/api/v1/parametres'),
       api.get<Record<string, unknown>>('/api/v1/parametres/notes'),
@@ -377,6 +398,52 @@ export function ParametresPage() {
       await api.delete(`/api/v1/niveaux/${n.id}`);
       toast.success('Niveau supprimé');
       fetchNiveaux();
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    }
+  };
+
+  const resetFonctionForm = () => {
+    setEditFonction(null);
+    setFonctionCode(''); setFonctionLibelle(''); setFonctionLibelleAr(''); setFonctionOrdre('');
+  };
+
+  const handleSaveFonction = async () => {
+    if (!fonctionLibelle.trim()) return;
+    setSavingFonction(true);
+    try {
+      const ordre = Number(fonctionOrdre) || 99;
+      if (editFonction) {
+        await api.patch(`/api/v1/fonctions/${editFonction.id}`, {
+          libelle_fr: fonctionLibelle.trim(),
+          libelle_ar: fonctionLibelleAr.trim() || null,
+          ordre,
+        });
+        toast.success('Fonction modifiée');
+      } else {
+        const code = fonctionCode.trim().toUpperCase().replace(/[^A-Z_]/g, '_');
+        if (!code) { toast.error('Code requis (lettres et underscores)'); return; }
+        await api.post('/api/v1/fonctions', {
+          code,
+          libelle_fr: fonctionLibelle.trim(),
+          libelle_ar: fonctionLibelleAr.trim() || null,
+          ordre,
+        });
+        toast.success('Fonction ajoutée');
+      }
+      resetFonctionForm();
+      fetchFonctions();
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    } finally { setSavingFonction(false); }
+  };
+
+  const handleDeleteFonction = async (f: Fonction) => {
+    if (!confirm(`Supprimer la fonction "${f.libelle_fr}" ?`)) return;
+    try {
+      await api.delete(`/api/v1/fonctions/${f.id}`);
+      toast.success('Fonction supprimée');
+      fetchFonctions();
     } catch (err) {
       toast.error((err as Error).message || 'Erreur');
     }
@@ -485,6 +552,7 @@ export function ParametresPage() {
             { key: 'etablissement', label: t('parametre.etablissement') },
             { key: 'pedagogie', label: t('parametre.pedagogie') },
             { key: 'niveaux', label: 'Niveaux' },
+            { key: 'fonctions', label: 'Fonctions personnel' },
             { key: 'bareme', label: t('parametre.bareme_mentions') },
             { key: 'tarifs', label: t('parametre.tarifs') },
             { key: 'compte', label: t('parametre.mon_compte') },
@@ -816,6 +884,97 @@ export function ParametresPage() {
               ))}
               {niveaux.length === 0 && (
                 <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Aucun niveau défini</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ── Onglet Fonctions ── */}
+      {tab === 'fonctions' && (
+        <div className="card card-pad">
+          <h3 style={{ marginBottom: 8 }}>Fonctions du personnel</h3>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
+            Catalogue des fonctions disponibles pour les membres du personnel. Les fonctions
+            par défaut (enseignant, directeur, …) sont protégées et ne peuvent pas être supprimées.
+          </p>
+
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 20, flexWrap: 'wrap' }}>
+            {!editFonction && (
+              <Input
+                label="Code"
+                value={fonctionCode}
+                onChange={e => setFonctionCode(e.target.value.toUpperCase())}
+                placeholder="Ex: VEILLEUR_NUIT"
+              />
+            )}
+            <Input
+              label="Libellé FR"
+              value={fonctionLibelle}
+              onChange={e => setFonctionLibelle(e.target.value)}
+              placeholder="Ex: Veilleur de nuit"
+            />
+            <Input
+              label="Libellé AR (optionnel)"
+              value={fonctionLibelleAr}
+              onChange={e => setFonctionLibelleAr(e.target.value)}
+            />
+            <Input
+              label="Ordre"
+              type="number"
+              value={fonctionOrdre}
+              onChange={e => setFonctionOrdre(e.target.value)}
+              placeholder="99"
+            />
+            <div style={{ paddingTop: 22 }}>
+              <Button onClick={handleSaveFonction} loading={savingFonction} disabled={!fonctionLibelle.trim()}>
+                {editFonction ? 'Modifier' : 'Ajouter'}
+              </Button>
+            </div>
+            {editFonction && (
+              <div style={{ paddingTop: 22 }}>
+                <Button variant="ghost" onClick={resetFonctionForm}>Annuler</Button>
+              </div>
+            )}
+          </div>
+
+          <table className="table">
+            <thead>
+              <tr><th>Code</th><th>Libellé FR</th><th>Libellé AR</th><th>Ordre</th><th></th></tr>
+            </thead>
+            <tbody>
+              {fonctions.map(f => (
+                <tr key={f.id}>
+                  <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{f.code}</td>
+                  <td>{f.libelle_fr}</td>
+                  <td>{f.libelle_ar ?? '—'}</td>
+                  <td>{f.ordre}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    <span style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <Button size="sm" variant="ghost" onClick={() => {
+                        setEditFonction(f);
+                        setFonctionCode(f.code);
+                        setFonctionLibelle(f.libelle_fr);
+                        setFonctionLibelleAr(f.libelle_ar ?? '');
+                        setFonctionOrdre(String(f.ordre));
+                      }}>
+                        Modifier
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        onClick={() => handleDeleteFonction(f)}
+                        disabled={!f.supprimable}
+                        title={f.supprimable ? '' : 'Fonction par défaut non supprimable'}
+                      >
+                        Supprimer
+                      </Button>
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {fonctions.length === 0 && (
+                <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Aucune fonction définie</td></tr>
               )}
             </tbody>
           </table>

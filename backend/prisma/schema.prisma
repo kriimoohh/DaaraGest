@@ -8,22 +8,22 @@ datasource db {
 }
 
 model Etablissement {
-  id            String   @id @default(uuid())
-  nom_fr        String
-  adresse       String?
-  telephone     String?
-  logo_url      String?
-  signature_url String?
-  cachet_url    String?
+  id                 String   @id @default(uuid())
+  nom_fr             String
+  adresse            String?
+  telephone          String?
+  logo_url           String?
+  signature_url      String?
+  cachet_url         String?
   // Champs deprecated : conservés pour rétro-compat tant que tous les établissements
   // n'ont pas un directeur Personnel associé. À supprimer dans une migration ultérieure.
   nom_directeur      String?
   civilite_directeur String?
-  directeur_id  String? // FK vers Personnel (fonction=DIRECTEUR). Si défini, override nom_directeur/civilite_directeur pour les documents.
-  devise        String   @default("FCFA")
-  actif         Boolean  @default(true)
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  directeur_id       String? // FK vers Personnel (fonction=DIRECTEUR). Si défini, override nom_directeur/civilite_directeur pour les documents.
+  devise             String   @default("FCFA")
+  actif              Boolean  @default(true)
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
 
   directeur             Personnel?                @relation("EtablissementDirecteur", fields: [directeur_id], references: [id])
   utilisateurs          Utilisateur[]
@@ -45,6 +45,7 @@ model Etablissement {
   document_templates    DocumentTemplate[]
   documents_generes     DocumentGenere[]
   demandes_absence      DemandeAbsencePersonnel[]
+  fonctions             Fonction[]
 }
 
 model Role {
@@ -63,7 +64,7 @@ model Utilisateur {
   nom_fr               String
   nom_ar               String
   prenom_fr            String?
-  sexe                 String?   // 'M' ou 'F' — utilisé pour l'accord en genre des documents
+  sexe                 String? // 'M' ou 'F' — utilisé pour l'accord en genre des documents
   identifiant          String    @unique
   email                String?
   mot_de_passe         String
@@ -91,10 +92,28 @@ model Utilisateur {
   @@index([etablissement_id, actif])
 }
 
+// Catalogue des fonctions disponibles par établissement. Le code reste un
+// simple identifiant (ex: ENSEIGNANT) ; le libellé est ce qu'affiche l'UI.
+// Les fonctions par défaut sont marquées non supprimables (supprimable=false).
+model Fonction {
+  id               String   @id @default(uuid())
+  etablissement_id String
+  code             String // identifiant technique, stocké dans Personnel.fonction
+  libelle_fr       String
+  libelle_ar       String?
+  ordre            Int      @default(0)
+  supprimable      Boolean  @default(true)
+  created_at       DateTime @default(now())
+
+  etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
+
+  @@unique([etablissement_id, code])
+}
+
 model Personnel {
   id               String    @id @default(uuid())
   utilisateur_id   String    @unique
-  fonction         String    @default("ENSEIGNANT") // ENSEIGNANT, DIRECTEUR, SURVEILLANT, AGENT_SCOLARITE, COMPTABLE, INTENDANT, AUTRE
+  fonction         String    @default("ENSEIGNANT") // code Fonction (configurable par établissement, cf. table Fonction)
   specialite_fr    String?
   specialite_ar    String?
   telephone        String?
