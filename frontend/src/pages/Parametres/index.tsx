@@ -4,6 +4,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
@@ -306,6 +307,8 @@ export function ParametresPage() {
   const [fonctionOrdre, setFonctionOrdre] = useState('');
   const [editFonction, setEditFonction] = useState<Fonction | null>(null);
   const [savingFonction, setSavingFonction] = useState(false);
+  const [confirmDeleteFonction, setConfirmDeleteFonction] = useState<Fonction | null>(null);
+  const [deletingFonction, setDeletingFonction] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
 
@@ -431,14 +434,18 @@ export function ParametresPage() {
     } finally { setSavingFonction(false); }
   };
 
-  const handleDeleteFonction = async (f: Fonction) => {
-    if (!confirm(`Supprimer la fonction "${f.libelle_fr}" ?`)) return;
+  const performDeleteFonction = async () => {
+    if (!confirmDeleteFonction) return;
+    setDeletingFonction(true);
     try {
-      await api.delete(`/api/v1/fonctions/${f.id}`);
+      await api.delete(`/api/v1/fonctions/${confirmDeleteFonction.id}`);
       toast.success('Fonction supprimée');
+      setConfirmDeleteFonction(null);
       fetchFonctions();
     } catch (err) {
       toast.error((err as Error).message || 'Erreur');
+    } finally {
+      setDeletingFonction(false);
     }
   };
 
@@ -702,28 +709,18 @@ export function ParametresPage() {
                 </div>
               </div>
 
-              <div className="grid-2">
-                <div className="field">
-                  <label className="field-label">{t('parametre.nb_periodes')}</label>
-                  <select
-                    className="select"
-                    value={config.nb_periodes}
-                    onChange={e => handleNbPeriodes(parseInt(e.target.value))}
-                  >
-                    <option value={1}>1 {t('parametre.periode')}</option>
-                    <option value={2}>2 {t('parametre.periodes')}</option>
-                    <option value={3}>3 {t('parametre.periodes')} — Trimestres</option>
-                    <option value={4}>4 {t('parametre.periodes')}</option>
-                  </select>
-                </div>
-                <div className="field">
-                  <label className="field-label">{t('parametre.mensualite')}</label>
-                  <input
-                    className="input" type="number" min={0}
-                    value={config.montant_mensualite}
-                    onChange={e => setConfig(p => p ? { ...p, montant_mensualite: parseFloat(e.target.value) } : p)}
-                  />
-                </div>
+              <div className="field">
+                <label className="field-label">{t('parametre.nb_periodes')}</label>
+                <select
+                  className="select"
+                  value={config.nb_periodes}
+                  onChange={e => handleNbPeriodes(parseInt(e.target.value))}
+                >
+                  <option value={1}>1 {t('parametre.periode')}</option>
+                  <option value={2}>2 {t('parametre.periodes')}</option>
+                  <option value={3}>3 {t('parametre.periodes')} — Trimestres</option>
+                  <option value={4}>4 {t('parametre.periodes')}</option>
+                </select>
               </div>
 
               <Toggle
@@ -930,7 +927,7 @@ export function ParametresPage() {
                   <td>{f.libelle_fr}</td>
                   <td>{f.ordre}</td>
                   <td style={{ textAlign: 'right' }}>
-                    <span style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    <span style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
                       <Button size="sm" variant="ghost" onClick={() => {
                         setEditFonction(f);
                         setFonctionCode(f.code);
@@ -939,15 +936,30 @@ export function ParametresPage() {
                       }}>
                         Modifier
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        onClick={() => handleDeleteFonction(f)}
-                        disabled={!f.supprimable}
-                        title={f.supprimable ? '' : 'Fonction par défaut non supprimable'}
-                      >
-                        Supprimer
-                      </Button>
+                      {f.supprimable ? (
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          onClick={() => setConfirmDeleteFonction(f)}
+                        >
+                          Supprimer
+                        </Button>
+                      ) : (
+                        <span
+                          title="Fonction par défaut, non supprimable"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            fontSize: 12, color: 'var(--ink-3)', fontStyle: 'italic',
+                            padding: '4px 8px',
+                          }}
+                        >
+                          <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                            <rect x={3} y={11} width={18} height={11} rx={2} ry={2}/>
+                            <path d="M7 11V7a5 5 0 0110 0v4"/>
+                          </svg>
+                          Verrouillée
+                        </span>
+                      )}
                     </span>
                   </td>
                 </tr>
@@ -1209,7 +1221,7 @@ export function ParametresPage() {
             </div>
             <div style={{ padding: '0 16px 16px' }}>
               <div style={{ padding: '10px 14px', background: 'var(--info-soft)', border: '1px solid var(--info-border)', borderRadius: 'var(--r-md)', fontSize: 13, color: 'var(--info-text)' }}>
-                Ces seuils sont également utilisés dans la configuration pédagogique. Une modification ici sera reflétée dans l'onglet Pédagogie.
+                Ces seuils déclenchent l'envoi d'alertes (e-mail / notification) aux parents et au personnel.
               </div>
             </div>
           </div>
@@ -1284,6 +1296,15 @@ export function ParametresPage() {
 
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={!!confirmDeleteFonction}
+        onClose={() => setConfirmDeleteFonction(null)}
+        onConfirm={performDeleteFonction}
+        loading={deletingFonction}
+        title="Supprimer la fonction"
+        message={`Supprimer la fonction "${confirmDeleteFonction?.libelle_fr ?? ''}" ? Cette action est irréversible.`}
+      />
     </>
   );
 }
