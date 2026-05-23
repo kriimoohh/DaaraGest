@@ -3,7 +3,6 @@ import { photoUrlSchema } from '../../utils/photoUrl';
 
 export const parentSchema = z.object({
   nom_fr: z.string().min(1),
-  nom_ar: z.string().optional(),
   lien: z.enum(['pere', 'mere', 'tuteur']),
   telephone: z.string().min(1),
   email: z.string().email().optional(),

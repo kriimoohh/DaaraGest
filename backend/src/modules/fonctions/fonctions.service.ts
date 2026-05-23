@@ -14,7 +14,6 @@ export async function creerFonction(etablissement_id: string, data: CreerFonctio
       etablissement_id,
       code:       data.code,
       libelle_fr: data.libelle_fr,
-      libelle_ar: data.libelle_ar ?? null,
       ordre:      data.ordre ?? 99,
       supprimable: true,
     },
@@ -29,7 +28,6 @@ export async function modifierFonction(id: string, etablissement_id: string, dat
     where: { id },
     data: {
       libelle_fr: data.libelle_fr,
-      libelle_ar: data.libelle_ar === undefined ? undefined : data.libelle_ar,
       ordre:      data.ordre,
     },
   });

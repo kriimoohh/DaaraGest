@@ -12,7 +12,7 @@ import { useAuthStore } from '../../store/authStore';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Activite {
-  id: string; nom_fr: string; nom_ar?: string; description?: string;
+  id: string; nom_fr: string; description?: string;
   capacite_max?: number; actif: boolean;
   responsable?: { id: string; nom_fr: string; prenom_fr: string } | null;
   _count: { inscriptions: number; seances: number };
@@ -69,7 +69,7 @@ export function ActivitesPage() {
   // Modals activité
   const [actModal,  setActModal]  = useState(false);
   const [editAct,   setEditAct]   = useState<Activite | null>(null);
-  const [actForm,   setActForm]   = useState({ nom_fr: '', nom_ar: '', description: '', capacite_max: '' });
+  const [actForm,   setActForm]   = useState({ nom_fr: '', description: '', capacite_max: '' });
   const [submitting, setSubmitting] = useState(false);
 
   // Modal séance
@@ -135,10 +135,10 @@ export function ActivitesPage() {
 
   // ── Actions activités ────────────────────────────────────────────────────────
 
-  const openCreate = () => { setEditAct(null); setActForm({ nom_fr: '', nom_ar: '', description: '', capacite_max: '' }); setActModal(true); };
+  const openCreate = () => { setEditAct(null); setActForm({ nom_fr: '', description: '', capacite_max: '' }); setActModal(true); };
   const openEdit   = (a: Activite) => {
     setEditAct(a);
-    setActForm({ nom_fr: a.nom_fr, nom_ar: a.nom_ar ?? '', description: a.description ?? '', capacite_max: a.capacite_max ? String(a.capacite_max) : '' });
+    setActForm({ nom_fr: a.nom_fr, description: a.description ?? '', capacite_max: a.capacite_max ? String(a.capacite_max) : '' });
     setActModal(true);
   };
 
@@ -146,7 +146,7 @@ export function ActivitesPage() {
     if (!actForm.nom_fr) { toast.error('Le nom est requis'); return; }
     setSubmitting(true);
     try {
-      const body = { nom_fr: actForm.nom_fr, nom_ar: actForm.nom_ar || undefined, description: actForm.description || undefined, capacite_max: actForm.capacite_max ? parseInt(actForm.capacite_max) : undefined };
+      const body = { nom_fr: actForm.nom_fr, description: actForm.description || undefined, capacite_max: actForm.capacite_max ? parseInt(actForm.capacite_max) : undefined };
       if (editAct) {
         await api.put(`/api/v1/activites/${editAct.id}`, body);
         toast.success('Activité modifiée');
@@ -468,7 +468,6 @@ export function ActivitesPage() {
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
                     <div>
                       <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)', margin: 0 }}>{a.nom_fr}</h3>
-                      {a.nom_ar && <p style={{ fontSize: 12, color: 'var(--ink-3)', direction: 'rtl', marginTop: 2 }}>{a.nom_ar}</p>}
                     </div>
                     <Badge label={a.actif ? 'Actif' : 'Inactif'} variant={a.actif ? 'success' : 'neutral'} />
                   </div>
@@ -494,8 +493,7 @@ export function ActivitesPage() {
       <Modal isOpen={actModal} onClose={() => setActModal(false)} title={editAct ? "Modifier l'activité" : 'Nouvelle activité'} size="md"
         footer={<div className="row" style={{ gap: 8, justifyContent: 'flex-end' }}><Button variant="secondary" onClick={() => setActModal(false)}>Annuler</Button><Button onClick={submitAct} loading={submitting}>{editAct ? 'Enregistrer' : 'Créer'}</Button></div>}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <Input label="Nom (Français) *" value={actForm.nom_fr} onChange={e => setActForm(f => ({ ...f, nom_fr: e.target.value }))} placeholder="Ex : Club de football" />
-          <Input label="Nom (Arabe)" value={actForm.nom_ar} onChange={e => setActForm(f => ({ ...f, nom_ar: e.target.value }))} placeholder="اختياري" dir="rtl" />
+          <Input label="Nom *" value={actForm.nom_fr} onChange={e => setActForm(f => ({ ...f, nom_fr: e.target.value }))} placeholder="Ex : Club de football" />
           <div className="field"><label className="field-label">Description</label><textarea className="input" rows={2} value={actForm.description} onChange={e => setActForm(f => ({ ...f, description: e.target.value }))} style={{ resize: 'vertical' }} /></div>
           <Input label="Capacité maximale" type="number" min="1" value={actForm.capacite_max} onChange={e => setActForm(f => ({ ...f, capacite_max: e.target.value }))} placeholder="Illimitée si vide" />
         </div>

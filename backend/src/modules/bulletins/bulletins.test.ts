@@ -106,7 +106,7 @@ describe('calculerMoyenne — cas limites', () => {
 
 describe('observations bulletin', () => {
   it('observation vide reste vide', () => {
-    const obs = { observation_fr: '', observation_ar: '', observation_prof: '' };
+    const obs = { observation_fr: '', observation_prof: '' };
     expect(obs.observation_fr).toBe('');
   });
 

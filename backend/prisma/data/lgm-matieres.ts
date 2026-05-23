@@ -29,7 +29,6 @@ export type LgmFiliere = 'FR' | 'AR';
 export interface LgmDomaine {
   code: LgmDomaineCode;
   nom_fr: string;
-  nom_ar: string;
   sigle: string;
   ordre: number;
 }
