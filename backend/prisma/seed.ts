@@ -224,7 +224,7 @@ async function main() {
   }
   console.log('✅ Utilisateurs test :', testUsers.map(u => u.identifiant).join(', '));
 
-  // Professeurs
+  // Personnel (anciennement Professeur — refactor unifié)
   const profsData = [
     { id: ID.profs.p1, utilisateur_id: ID.users.prof1, specialite_fr: 'Français & Mathématiques', type_contrat: 'permanent', salaire_base: new Prisma.Decimal(250000), date_embauche: new Date('2020-09-01') },
     { id: ID.profs.p2, utilisateur_id: ID.users.prof2, specialite_fr: 'Sciences Naturelles',      type_contrat: 'permanent', salaire_base: new Prisma.Decimal(220000), date_embauche: new Date('2019-09-01') },
@@ -232,7 +232,7 @@ async function main() {
     { id: ID.profs.p4, utilisateur_id: ID.users.prof4, specialite_fr: 'Langue Arabe & Nahw',      type_contrat: 'vacataire', salaire_base: new Prisma.Decimal(180000), date_embauche: new Date('2022-01-15') },
   ];
   for (const p of profsData) {
-    await prisma.professeur.upsert({ where: { utilisateur_id: p.utilisateur_id }, update: {}, create: p });
+    await prisma.personnel.upsert({ where: { utilisateur_id: p.utilisateur_id }, update: {}, create: p });
   }
 
   // Années scolaires
@@ -245,12 +245,13 @@ async function main() {
     await prisma.anneeScolaire.upsert({ where: { id: a.id }, update: { active: a.active }, create: { ...a, etablissement_id: ID.etab } });
   }
 
-  // Classes
+  // Classes — niveau_id laissé null pour le seed dev (renseigné via Paramètres
+  // ou via le script seed-prod.cjs qui peuple les 16 Niveau du référentiel).
   const classes = [
-    { id: ID.classes.cm1fr, nom_fr: 'CM1 Français', filiere: 'FR', niveau: 'CM1', capacite: 35, annee_scolaire_id: ID.annees.y2425 },
-    { id: ID.classes.cm2fr, nom_fr: 'CM2 Français', filiere: 'FR', niveau: 'CM2', capacite: 30, annee_scolaire_id: ID.annees.y2425 },
-    { id: ID.classes.a5ar,  nom_fr: '5ème Arabe',   filiere: 'AR', niveau: '5ème', capacite: 30, annee_scolaire_id: ID.annees.y2425 },
-    { id: ID.classes.a6ar,  nom_fr: '6ème Arabe',   filiere: 'AR', niveau: '6ème', capacite: 25, annee_scolaire_id: ID.annees.y2425 },
+    { id: ID.classes.cm1fr, nom_fr: 'CM1 Français', filiere: 'FR', capacite: 35, annee_scolaire_id: ID.annees.y2425 },
+    { id: ID.classes.cm2fr, nom_fr: 'CM2 Français', filiere: 'FR', capacite: 30, annee_scolaire_id: ID.annees.y2425 },
+    { id: ID.classes.a5ar,  nom_fr: '5ème Arabe',   filiere: 'AR', capacite: 30, annee_scolaire_id: ID.annees.y2425 },
+    { id: ID.classes.a6ar,  nom_fr: '6ème Arabe',   filiere: 'AR', capacite: 25, annee_scolaire_id: ID.annees.y2425 },
   ];
   for (const cl of classes) {
     await prisma.classe.upsert({ where: { id: cl.id }, update: {}, create: { ...cl, etablissement_id: ID.etab } });
@@ -369,7 +370,7 @@ async function main() {
   }
   console.log(`✅ Paiements test élèves : ${paiCount}`);
 
-  // Paiements professeurs
+  // Paiements personnel
   let profPaiCount = 0;
   const profPaie = [
     [ID.profs.p1, 250000], [ID.profs.p2, 220000],
@@ -378,14 +379,14 @@ async function main() {
   for (const [profId, brut] of profPaie) {
     for (const mois of [9, 10, 11, 12, 1, 2]) {
       const annee = mois >= 9 ? 2024 : 2025;
-      if (!await prisma.paiementProfesseur.findFirst({ where: { professeur_id: profId, mois, annee } })) {
+      if (!await prisma.paiementPersonnel.findFirst({ where: { personnel_id: profId, mois, annee } })) {
         const retenues = Math.round(brut * 0.05);
-        await prisma.paiementProfesseur.create({ data: { professeur_id: profId, mois, annee, montant_brut: brut, retenues, net_a_payer: brut - retenues, statut: 'paye' } });
+        await prisma.paiementPersonnel.create({ data: { personnel_id: profId, mois, annee, montant_brut: brut, retenues, net_a_payer: brut - retenues, statut: 'paye' } });
         profPaiCount++;
       }
     }
   }
-  console.log(`✅ Paiements test profs : ${profPaiCount}`);
+  console.log(`✅ Paiements test personnel : ${profPaiCount}`);
 
   console.log('\n🎉  Seed développement terminé !\n');
   console.log('  admin / Admin123!  |  directeur / Directeur123!');
