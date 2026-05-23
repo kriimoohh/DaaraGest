@@ -439,6 +439,8 @@ const DOM_LABELS: Record<string, string> = {
   MATHEMATIQUES:        'Mathématiques',
   ESVS:                 'Éd. Science et Vie Sociale',
   EPSA:                 'Éd. Physique Sportive et Artistique',
+  RELIGION:             'Religion',
+  EVEIL:                'Éveil',
 };
 
 // ─── Rapport Grille IEF (inspection officielle, portrait A4) ─────────────────
