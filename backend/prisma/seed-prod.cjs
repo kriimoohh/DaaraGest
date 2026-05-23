@@ -6,19 +6,23 @@
  */
 const { PrismaClient, Prisma } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+const LGM = require('./data/lgm-matieres.json');
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('\n🏫  DaaraGest — Seed production\n');
 
-  // Court-circuit : si l'établissement + les rôles + un admin existent déjà,
-  // le seed a déjà tourné — on saute tout pour accélérer les redémarrages.
-  const [etabCount, roleCount, adminUser] = await Promise.all([
+  // Court-circuit : si l'établissement + les rôles + un admin + les 6 domaines
+  // LGM existent déjà, le seed a déjà tourné — on saute tout. Le check sur les
+  // domaines force un re-run après l'introduction du référentiel LGM (bases
+  // pré-existantes qui n'avaient ni domaines ni les 76 matières).
+  const [etabCount, roleCount, adminUser, domaineCount] = await Promise.all([
     prisma.etablissement.count(),
     prisma.role.count(),
     prisma.utilisateur.findFirst({ where: { identifiant: 'admin' } }),
+    prisma.domaine.count(),
   ]);
-  if (etabCount > 0 && roleCount >= 6 && adminUser) {
+  if (etabCount > 0 && roleCount >= 6 && adminUser && domaineCount >= 6) {
     console.log('✅  Seed déjà effectué — démarrage immédiat.\n');
     return;
   }
@@ -75,28 +79,44 @@ async function main() {
     console.log('✅ Admin (compte existant conservé)');
   }
 
-  // ── Matières ─────────────────────────────────────────────────────────────────
-  const matieres = [
-    { nom_fr: 'Français',            nom_ar: 'اللغة الفرنسية',    filiere: 'FR', coeff_defaut: new Prisma.Decimal(3), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 1 },
-    { nom_fr: 'Mathématiques',       nom_ar: 'الرياضيات',          filiere: 'FR', coeff_defaut: new Prisma.Decimal(3), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 2 },
-    { nom_fr: 'Sciences',            nom_ar: 'علوم الحياة',        filiere: 'FR', coeff_defaut: new Prisma.Decimal(2), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 3 },
-    { nom_fr: 'Histoire-Géographie', nom_ar: 'التاريخ والجغرافيا', filiere: 'FR', coeff_defaut: new Prisma.Decimal(2), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 4 },
-    { nom_fr: 'Éducation Civique',   nom_ar: 'التربية المدنية',    filiere: 'FR', coeff_defaut: new Prisma.Decimal(1), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 5 },
-    { nom_fr: 'Coran',               nom_ar: 'القرآن الكريم',      filiere: 'AR', coeff_defaut: new Prisma.Decimal(4), note_max: new Prisma.Decimal(30), note_min: new Prisma.Decimal(0), ordre_bulletin: 1 },
-    { nom_fr: 'Fiqh',                nom_ar: 'الفقه',              filiere: 'AR', coeff_defaut: new Prisma.Decimal(2), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 2 },
-    { nom_fr: 'Nahw',                nom_ar: 'النحو',              filiere: 'AR', coeff_defaut: new Prisma.Decimal(2), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 3 },
-    { nom_fr: 'Adab (Littérature)',  nom_ar: 'الأدب العربي',       filiere: 'AR', coeff_defaut: new Prisma.Decimal(2), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 4 },
-    { nom_fr: 'Histoire Islamique',  nom_ar: 'التاريخ الإسلامي',   filiere: 'AR', coeff_defaut: new Prisma.Decimal(1), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 5 },
-  ];
-  for (const m of matieres) {
+  // ── Domaines pédagogiques (référentiel LGM) ──────────────────────────────────
+  for (const d of LGM.domaines) {
+    await prisma.domaine.upsert({
+      where: { etablissement_id_code: { etablissement_id: etab.id, code: d.code } },
+      update: { nom_fr: d.nom_fr, nom_ar: d.nom_ar, ordre: d.ordre, actif: true },
+      create: { etablissement_id: etab.id, code: d.code, nom_fr: d.nom_fr, nom_ar: d.nom_ar, ordre: d.ordre, actif: true },
+    });
+  }
+  console.log(`✅ Domaines (${LGM.domaines.length})`);
+
+  // ── Matières (référentiel LGM — 76 matières classées par domaine) ────────────
+  const domaineRows = await prisma.domaine.findMany({ where: { etablissement_id: etab.id } });
+  const domaineByCode = new Map(domaineRows.map(d => [d.code, d.id]));
+  for (const m of LGM.matieres) {
     const existing = await prisma.matiere.findFirst({
       where: { nom_fr: m.nom_fr, filiere: m.filiere, etablissement_id: etab.id },
     });
-    if (!existing) {
-      await prisma.matiere.create({ data: { ...m, etablissement_id: etab.id } });
+    const data = {
+      etablissement_id: etab.id,
+      nom_fr: m.nom_fr,
+      nom_ar: m.nom_ar,
+      filiere: m.filiere,
+      coeff_defaut: new Prisma.Decimal(1),
+      note_max: new Prisma.Decimal(20),
+      note_min: new Prisma.Decimal(0),
+      ordre_bulletin: m.ordre_bulletin,
+      code_court: m.code_court,
+      type_note: m.type_note,
+      domaine_id: domaineByCode.get(m.domaine_code) || null,
+      active: true,
+    };
+    if (existing) {
+      await prisma.matiere.update({ where: { id: existing.id }, data });
+    } else {
+      await prisma.matiere.create({ data });
     }
   }
-  console.log('✅ Matières (5 FR + 5 AR)');
+  console.log(`✅ Matières (${LGM.matieres.length} — référentiel LGM)`);
 
   // ── Niveaux ──────────────────────────────────────────────────────────────────
   const niveaux = [

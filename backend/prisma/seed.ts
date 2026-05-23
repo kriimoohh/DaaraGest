@@ -1,5 +1,6 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { LGM_DOMAINES, LGM_MATIERES } from './data/lgm-matieres';
 
 const prisma = new PrismaClient();
 const isProd = process.env.NODE_ENV === 'production';
@@ -31,18 +32,8 @@ const ID = {
     pointeur:  '30000000-0000-4000-a000-000000000008',
   },
 
-  matieres: {
-    francais:  '40000000-0000-4000-a000-000000000001',
-    maths:     '40000000-0000-4000-a000-000000000002',
-    sciences:  '40000000-0000-4000-a000-000000000003',
-    histgeo:   '40000000-0000-4000-a000-000000000004',
-    edcivique: '40000000-0000-4000-a000-000000000005',
-    coran:     '40000000-0000-4000-a000-000000000006',
-    fiqh:      '40000000-0000-4000-a000-000000000007',
-    nahw:      '40000000-0000-4000-a000-000000000008',
-    adab:      '40000000-0000-4000-a000-000000000009',
-    histislam: '40000000-0000-4000-a000-00000000000a',
-  },
+  // Matières : pilotées par data/lgm-matieres.ts (76 matières du référentiel LGM).
+  // Pas d'IDs fixes ici — on les retrouve par nom_fr+filiere lors du seeding des notes.
 
   profs: {
     p1: '50000000-0000-4000-a000-000000000001',
@@ -154,23 +145,46 @@ async function main() {
   });
   console.log('✅ Compte admin créé (admin / Admin123!) — changement de mot de passe requis à la connexion');
 
-  // ── 5. Matières (utiles dès le départ, même en production) ──────────────────
-  const matieres = [
-    { id: ID.matieres.francais,  nom_fr: 'Français',            nom_ar: 'اللغة الفرنسية',    filiere: 'FR', coeff_defaut: new Prisma.Decimal(3), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 1 },
-    { id: ID.matieres.maths,     nom_fr: 'Mathématiques',       nom_ar: 'الرياضيات',          filiere: 'FR', coeff_defaut: new Prisma.Decimal(3), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 2 },
-    { id: ID.matieres.sciences,  nom_fr: 'Sciences',            nom_ar: 'علوم الحياة',        filiere: 'FR', coeff_defaut: new Prisma.Decimal(2), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 3 },
-    { id: ID.matieres.histgeo,   nom_fr: 'Histoire-Géographie', nom_ar: 'التاريخ والجغرافيا',  filiere: 'FR', coeff_defaut: new Prisma.Decimal(2), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 4 },
-    { id: ID.matieres.edcivique, nom_fr: 'Éducation Civique',   nom_ar: 'التربية المدنية',    filiere: 'FR', coeff_defaut: new Prisma.Decimal(1), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 5 },
-    { id: ID.matieres.coran,     nom_fr: 'Coran',               nom_ar: 'القرآن الكريم',      filiere: 'AR', coeff_defaut: new Prisma.Decimal(4), note_max: new Prisma.Decimal(30), note_min: new Prisma.Decimal(0), ordre_bulletin: 1 },
-    { id: ID.matieres.fiqh,      nom_fr: 'Fiqh',                nom_ar: 'الفقه',              filiere: 'AR', coeff_defaut: new Prisma.Decimal(2), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 2 },
-    { id: ID.matieres.nahw,      nom_fr: 'Nahw',                nom_ar: 'النحو',              filiere: 'AR', coeff_defaut: new Prisma.Decimal(2), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 3 },
-    { id: ID.matieres.adab,      nom_fr: 'Adab (Littérature)',  nom_ar: 'الأدب العربي',       filiere: 'AR', coeff_defaut: new Prisma.Decimal(2), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 4 },
-    { id: ID.matieres.histislam, nom_fr: 'Histoire Islamique',  nom_ar: 'التاريخ الإسلامي',   filiere: 'AR', coeff_defaut: new Prisma.Decimal(1), note_max: new Prisma.Decimal(20), note_min: new Prisma.Decimal(0), ordre_bulletin: 5 },
-  ];
-  for (const m of matieres) {
-    await prisma.matiere.upsert({ where: { id: m.id }, update: {}, create: { ...m, etablissement_id: ID.etab } });
+  // ── 5. Domaines pédagogiques (référentiel LGM) ──────────────────────────────
+  for (const d of LGM_DOMAINES) {
+    await prisma.domaine.upsert({
+      where: { etablissement_id_code: { etablissement_id: ID.etab, code: d.code } },
+      update: { nom_fr: d.nom_fr, nom_ar: d.nom_ar, ordre: d.ordre, actif: true },
+      create: { etablissement_id: ID.etab, code: d.code, nom_fr: d.nom_fr, nom_ar: d.nom_ar, ordre: d.ordre, actif: true },
+    });
   }
-  console.log('✅ Matières (5 FR + 5 AR)');
+  console.log(`✅ Domaines (${LGM_DOMAINES.length})`);
+
+  // ── 6. Matières (référentiel LGM — 76 matières classées par domaine) ────────
+  const domainesByCode = new Map(
+    (await prisma.domaine.findMany({ where: { etablissement_id: ID.etab } }))
+      .map(d => [d.code, d.id]),
+  );
+  for (const m of LGM_MATIERES) {
+    const existing = await prisma.matiere.findFirst({
+      where: { etablissement_id: ID.etab, nom_fr: m.nom_fr, filiere: m.filiere },
+    });
+    const data = {
+      etablissement_id: ID.etab,
+      nom_fr: m.nom_fr,
+      nom_ar: m.nom_ar,
+      filiere: m.filiere,
+      coeff_defaut: new Prisma.Decimal(1),
+      note_max: new Prisma.Decimal(20),
+      note_min: new Prisma.Decimal(0),
+      ordre_bulletin: m.ordre_bulletin,
+      code_court: m.code_court,
+      type_note: m.type_note,
+      domaine_id: domainesByCode.get(m.domaine_code) ?? null,
+      active: true,
+    };
+    if (existing) {
+      await prisma.matiere.update({ where: { id: existing.id }, data });
+    } else {
+      await prisma.matiere.create({ data });
+    }
+  }
+  console.log(`✅ Matières (${LGM_MATIERES.length} — référentiel LGM)`);
 
   if (isProd) {
     console.log('\n✅  Seed production terminé — base prête.\n');
@@ -290,9 +304,29 @@ async function main() {
   }
   console.log('✅ Élèves test (20) + inscriptions');
 
-  // Notes T1 + T2
-  const matFR = [ID.matieres.francais, ID.matieres.maths, ID.matieres.sciences, ID.matieres.histgeo, ID.matieres.edcivique];
-  const matAR = [ID.matieres.coran, ID.matieres.fiqh, ID.matieres.nahw, ID.matieres.adab, ID.matieres.histislam];
+  // Notes T1 + T2 — échantillon représentatif (5 matières FR + 5 matières AR)
+  // Choix : Lecture, Grammaire, Mathématiques: Ressources, Géométrie, Calcul (FR)
+  //         Coran, Hadith, Tawhid, Étude du Texte / Arabe, Arabe (AR)
+  const matieresAll = await prisma.matiere.findMany({ where: { etablissement_id: ID.etab } });
+  const pick = (nom: string, fil: 'FR' | 'AR') => {
+    const m = matieresAll.find(x => x.nom_fr === nom && x.filiere === fil);
+    if (!m) throw new Error(`Matière introuvable pour seed notes : ${nom} (${fil})`);
+    return m.id;
+  };
+  const matFR = [
+    pick('Lecture', 'FR'),
+    pick('Grammaire', 'FR'),
+    pick('Mathématiques : Ressources', 'FR'),
+    pick('Géométrie', 'FR'),
+    pick('Calcul', 'FR'),
+  ];
+  const matAR = [
+    pick('Coran', 'AR'),
+    pick('Hadith', 'AR'),
+    pick('Tawhid', 'AR'),
+    pick('Étude du Texte / Arabe', 'AR'),
+    pick('Arabe', 'AR'),
+  ];
   let noteCount = 0;
   for (const periode of [1, 2]) {
     for (const e of elevesData.filter(e => e.cf)) {
