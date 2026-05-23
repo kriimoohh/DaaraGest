@@ -14,7 +14,7 @@ import { ConfirmModal } from '../../components/ui/ConfirmModal';
 interface Matiere {
   id: string;
   nom_fr: string;
-  nom_ar: string;
+  nom_ar: string | null;
   filiere: 'FR' | 'AR';
   coeff_defaut: number;
   note_max: number;
@@ -59,7 +59,7 @@ export function MatieresPage() {
     setEdit(m);
     setForm({
       nom_fr: m.nom_fr,
-      nom_ar: m.nom_ar,
+      nom_ar: m.nom_ar ?? '',
       filiere: m.filiere,
       coeff_defaut: String(m.coeff_defaut),
       note_max: String(m.note_max),

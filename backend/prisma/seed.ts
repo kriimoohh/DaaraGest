@@ -107,15 +107,15 @@ async function main() {
 
   // ── 2. Rôles ────────────────────────────────────────────────────────────────
   const roles = [
-    { id: ID.roles.admin,        libelle_fr: 'admin',              libelle_ar: 'مدير النظام' },
-    { id: ID.roles.directeur,    libelle_fr: 'directeur',          libelle_ar: 'المدير' },
-    { id: ID.roles.gestionnaire, libelle_fr: 'gestionnaire',       libelle_ar: 'المدير التنفيذي' },
-    { id: ID.roles.caissier,     libelle_fr: 'agent de scolarité', libelle_ar: 'عون التمدرس' },
-    { id: ID.roles.professeur,   libelle_fr: 'professeur',         libelle_ar: 'الأستاذ' },
-    { id: ID.roles.pointeur,     libelle_fr: 'pointeur',           libelle_ar: 'مسجّل الحضور' },
+    { id: ID.roles.admin,        libelle_fr: 'admin' },
+    { id: ID.roles.directeur,    libelle_fr: 'directeur' },
+    { id: ID.roles.gestionnaire, libelle_fr: 'gestionnaire' },
+    { id: ID.roles.caissier,     libelle_fr: 'agent de scolarité' },
+    { id: ID.roles.professeur,   libelle_fr: 'professeur' },
+    { id: ID.roles.pointeur,     libelle_fr: 'pointeur' },
   ];
   for (const r of roles) {
-    await prisma.role.upsert({ where: { id: r.id }, update: { libelle_fr: r.libelle_fr, libelle_ar: r.libelle_ar }, create: r });
+    await prisma.role.upsert({ where: { id: r.id }, update: { libelle_fr: r.libelle_fr }, create: r });
   }
   console.log('✅ Rôles :', roles.map(r => r.libelle_fr).join(', '));
 
@@ -138,7 +138,6 @@ async function main() {
       role_id: ID.roles.admin,
       etablissement_id: ID.etab,
       nom_fr: 'Administrateur',
-      nom_ar: 'مدير',
       langue: 'fr', theme: 'light',
       must_change_password: true,
     },
@@ -149,8 +148,8 @@ async function main() {
   for (const d of LGM_DOMAINES) {
     await prisma.domaine.upsert({
       where: { etablissement_id_code: { etablissement_id: ID.etab, code: d.code } },
-      update: { nom_fr: d.nom_fr, nom_ar: d.nom_ar, ordre: d.ordre, actif: true },
-      create: { etablissement_id: ID.etab, code: d.code, nom_fr: d.nom_fr, nom_ar: d.nom_ar, ordre: d.ordre, actif: true },
+      update: { nom_fr: d.nom_fr, ordre: d.ordre, actif: true },
+      create: { etablissement_id: ID.etab, code: d.code, nom_fr: d.nom_fr, ordre: d.ordre, actif: true },
     });
   }
   console.log(`✅ Domaines (${LGM_DOMAINES.length})`);
@@ -202,19 +201,19 @@ async function main() {
   // Utilisateurs test
   const testUsers = [
     { id: ID.users.directeur, identifiant: 'directeur',   mot_de_passe: await bcrypt.hash('Directeur123!', 10), role_id: ID.roles.directeur,
-      nom_fr: 'Diop', nom_ar: 'ديوب' },
+      nom_fr: 'Diop' },
     { id: ID.users.caissier,  identifiant: 'caissier',    mot_de_passe: await bcrypt.hash('Caissier123!', 10),  role_id: ID.roles.caissier,
-      nom_fr: 'Sow', nom_ar: 'ساو' },
+      nom_fr: 'Sow' },
     { id: ID.users.prof1,     identifiant: 'prof.fall',   mot_de_passe: await bcrypt.hash('Prof123!', 10),      role_id: ID.roles.professeur,
-      nom_fr: 'Fall', nom_ar: 'فال' },
+      nom_fr: 'Fall' },
     { id: ID.users.prof2,     identifiant: 'prof.diallo', mot_de_passe: await bcrypt.hash('Prof123!', 10),      role_id: ID.roles.professeur,
-      nom_fr: 'Diallo', nom_ar: 'ديالو' },
+      nom_fr: 'Diallo' },
     { id: ID.users.prof3,     identifiant: 'prof.ahmed',  mot_de_passe: await bcrypt.hash('Prof123!', 10),      role_id: ID.roles.professeur,
-      nom_fr: 'Ahmed', nom_ar: 'أحمد' },
+      nom_fr: 'Ahmed' },
     { id: ID.users.prof4,     identifiant: 'prof.ndiaye', mot_de_passe: await bcrypt.hash('Prof123!', 10),      role_id: ID.roles.professeur,
-      nom_fr: 'Ndiaye', nom_ar: 'نجاي' },
+      nom_fr: 'Ndiaye' },
     { id: ID.users.pointeur,  identifiant: 'pointeur',    mot_de_passe: await bcrypt.hash('Pointeur123!', 10),  role_id: ID.roles.pointeur,
-      nom_fr: 'Ba', nom_ar: 'با' },
+      nom_fr: 'Ba' },
   ];
   for (const u of testUsers) {
     await prisma.utilisateur.upsert({

@@ -15,7 +15,6 @@ export const genererBulletinAnnuelSchema = z.object({
 
 export const observationSchema = z.object({
   observation_fr: z.string().max(500).optional(),
-  observation_ar: z.string().max(500).optional(),
   observation_prof: z.string().max(500).optional(),
 });
 

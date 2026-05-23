@@ -23,7 +23,6 @@ import { PhotoPicker } from '../../components/ui/PhotoPicker';
 interface Parent {
   id?: string;
   nom_fr: string;
-  nom_ar?: string;
   lien: string;
   telephone: string;
   email?: string;
@@ -1229,7 +1228,6 @@ export function ElevesPage() {
                         <FicheRow label="Téléphone" value={p.telephone || '—'} />
                         <FicheRow label="Email" value={p.email || '—'} />
                         {p.adresse && <FicheRow label="Adresse" value={p.adresse} />}
-                        {p.nom_ar && <FicheRow label="Nom (AR)" value={p.nom_ar} />}
                       </div>
                     </div>
                   ))}

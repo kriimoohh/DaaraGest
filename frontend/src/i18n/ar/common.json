@@ -433,8 +433,7 @@
     "evenement": "حدث",
     "fermeture": "إغلاق",
     "reunion": "اجتماع",
-    "titre_fr": "العنوان (بالفرنسية)",
-    "titre_ar": "العنوان (بالعربية، اختياري)",
+    "titre_fr": "العنوان",
     "description": "الوصف (اختياري)"
   },
   "notifications": {

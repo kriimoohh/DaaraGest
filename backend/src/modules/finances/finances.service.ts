@@ -166,7 +166,7 @@ export async function listerPaiementsPersonnel(
       include: {
         personnel: {
           include: {
-            utilisateur: { select: { nom_fr: true, nom_ar: true } },
+            utilisateur: { select: { nom_fr: true } },
           },
         },
       },

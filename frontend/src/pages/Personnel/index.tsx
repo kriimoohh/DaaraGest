@@ -133,7 +133,6 @@ interface PersonnelRow {
   id: string;
   nom_fr: string;
   prenom_fr?: string;
-  nom_ar: string;
   identifiant: string;
   actif: boolean;
   sexe?: 'M' | 'F' | null;
@@ -142,7 +141,6 @@ interface PersonnelRow {
     photo_url?: string;
     fonction?: string;
     specialite_fr?: string;
-    specialite_ar?: string;
     telephone?: string;
     type_contrat?: 'permanent' | 'vacataire' | 'stagiaire' | 'CDD' | 'CDI';
     date_embauche?: string;
@@ -204,7 +202,6 @@ const TYPE_CONTRAT_LABELS: Record<Exclude<TypeContratValue, ''>, string> = {
 
 interface PersonnelFormData {
   nom_fr: string;
-  nom_ar: string;
   identifiant: string;
   mot_de_passe: string;
   fonction: string;
@@ -223,7 +220,7 @@ interface PersonnelFormData {
 type FormErrors = Partial<Record<keyof PersonnelFormData, string>>;
 
 const EMPTY_FORM: PersonnelFormData = {
-  nom_fr: '', nom_ar: '',
+  nom_fr: '',
   identifiant: '', mot_de_passe: '',
   fonction: 'ENSEIGNANT',
   sexe: '',
@@ -318,7 +315,6 @@ export function PersonnelPage() {
     setEditTarget(prof);
     setForm({
       nom_fr: prof.nom_fr,
-      nom_ar: prof.nom_ar,
       identifiant: prof.identifiant, mot_de_passe: '',
       fonction: prof.personnel?.fonction ?? 'ENSEIGNANT',
       sexe: (prof.sexe ?? '') as Sexe,
@@ -356,7 +352,6 @@ export function PersonnelPage() {
       const isStagiaire = form.type_contrat === 'stagiaire';
       const payload: Record<string, unknown> = {
         nom_fr: form.nom_fr,
-        nom_ar: form.nom_ar,
         identifiant: form.identifiant,
         fonction: form.fonction,
         sexe: form.sexe || null,

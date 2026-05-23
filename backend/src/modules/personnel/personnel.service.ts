@@ -20,7 +20,6 @@ export async function listerPersonnel(etablissement_id: string, page = 1, search
   if (search) {
     where.OR = [
       { nom_fr: { contains: search, mode: 'insensitive' } },
-      { nom_ar: { contains: search, mode: 'insensitive' } },
       { identifiant: { contains: search, mode: 'insensitive' } },
     ];
   }
@@ -65,7 +64,6 @@ export async function creerPersonnel(etablissement_id: string, data: PersonnelIn
       etablissement_id,
       role_id: roleProf.id,
       nom_fr: data.nom_fr,
-      nom_ar: data.nom_ar,
       sexe: data.sexe ?? undefined,
       identifiant: data.identifiant,
       mot_de_passe: hashedPassword,
@@ -77,7 +75,6 @@ export async function creerPersonnel(etablissement_id: string, data: PersonnelIn
       utilisateur_id: utilisateur.id,
       fonction: data.fonction ?? 'ENSEIGNANT',
       specialite_fr: data.specialite_fr,
-      specialite_ar: data.specialite_ar,
       telephone: data.telephone,
       date_embauche: data.date_embauche ? new Date(data.date_embauche) : undefined,
       type_contrat: data.type_contrat ?? 'permanent',
@@ -104,13 +101,12 @@ export async function modifierPersonnel(id: string, etablissement_id: string, da
 
   const updateTasks: Promise<unknown>[] = [];
 
-  if (data.nom_fr || data.nom_ar || data.sexe !== undefined) {
+  if (data.nom_fr || data.sexe !== undefined) {
     updateTasks.push(
       prisma.utilisateur.update({
         where: { id: professeur.utilisateur_id },
         data: {
           nom_fr: data.nom_fr,
-          nom_ar: data.nom_ar,
           sexe: data.sexe === undefined ? undefined : data.sexe,
         },
       })
@@ -127,7 +123,6 @@ export async function modifierPersonnel(id: string, etablissement_id: string, da
       data: {
         fonction: data.fonction,
         specialite_fr: data.specialite_fr,
-        specialite_ar: data.specialite_ar,
         telephone: data.telephone,
         date_embauche: data.date_embauche ? new Date(data.date_embauche) : undefined,
         type_contrat: data.type_contrat,

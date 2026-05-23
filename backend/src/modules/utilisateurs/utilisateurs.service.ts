@@ -53,7 +53,6 @@ export async function creerUtilisateur(etablissement_id: string, data: Utilisate
       etablissement_id,
       role_id: data.role_id ?? 'role-professeur',
       nom_fr: data.nom_fr,
-      nom_ar: '',
       prenom_fr: data.prenom_fr ?? null,
       identifiant: data.identifiant,
       email: data.email,
