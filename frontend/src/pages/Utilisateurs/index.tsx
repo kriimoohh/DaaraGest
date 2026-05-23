@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { useApi } from '../../hooks/useApi';
+import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
@@ -16,7 +17,7 @@ interface Role { id: string; libelle_fr: string; }
 interface Utilisateur {
   id: string; identifiant: string; nom_fr: string;
   prenom_fr?: string; email?: string; langue: string;
-  actif: boolean; role: { libelle_fr: string; };
+  actif: boolean; role: { id: string; libelle_fr: string; };
 }
 
 const EMPTY_FORM = {
@@ -27,6 +28,7 @@ const EMPTY_FORM = {
 export function UtilisateursPage() {
   const { t } = useTranslation();
   const api = useApi();
+  const currentUserId = useAuthStore((s) => s.user?.id);
   const [users, setUsers] = useState<Utilisateur[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [total, setTotal] = useState(0);
@@ -39,6 +41,7 @@ export function UtilisateursPage() {
   const [edit, setEdit] = useState<Utilisateur | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [confirmRoleChange, setConfirmRoleChange] = useState<{ nextRoleLabel: string } | null>(null);
 
   const [resetModal, setResetModal] = useState<Utilisateur | null>(null);
   const [newPwd, setNewPwd] = useState('');
@@ -77,20 +80,12 @@ export function UtilisateursPage() {
     setForm({
       identifiant: u.identifiant, mot_de_passe: '',
       nom_fr: u.nom_fr, prenom_fr: u.prenom_fr ?? '',
-      email: u.email ?? '', role_id: '', langue: u.langue,
+      email: u.email ?? '', role_id: u.role.id, langue: u.langue,
     });
     setModal(true);
   };
 
-  const handleSave = async () => {
-    if (!form.identifiant || !form.nom_fr) {
-      toast.error(t('utilisateur.err_identifiant_nom'));
-      return;
-    }
-    if (!edit && !form.mot_de_passe) {
-      toast.error(t('utilisateur.err_mdp_requis'));
-      return;
-    }
+  const persistSave = async () => {
     setSaving(true);
     try {
       const payload: Record<string, string> = {
@@ -99,7 +94,7 @@ export function UtilisateursPage() {
       if (form.prenom_fr) payload.prenom_fr = form.prenom_fr;
       if (form.email) payload.email = form.email;
       if (!edit && form.mot_de_passe) payload.mot_de_passe = form.mot_de_passe;
-      if (!edit && form.role_id) payload.role_id = form.role_id;
+      if (form.role_id) payload.role_id = form.role_id;
 
       if (edit) {
         const updated = await api.put<Utilisateur>(`/api/v1/utilisateurs/${edit.id}`, payload);
@@ -116,7 +111,27 @@ export function UtilisateursPage() {
       toast.error((err as Error).message);
     } finally {
       setSaving(false);
+      setConfirmRoleChange(null);
     }
+  };
+
+  const handleSave = async () => {
+    if (!form.identifiant || !form.nom_fr) {
+      toast.error(t('utilisateur.err_identifiant_nom'));
+      return;
+    }
+    if (!edit && !form.mot_de_passe) {
+      toast.error(t('utilisateur.err_mdp_requis'));
+      return;
+    }
+    // Demande confirmation si on change le rôle d'un utilisateur existant
+    if (edit && form.role_id && form.role_id !== edit.role.id) {
+      const nextRole = roles.find((r) => r.id === form.role_id);
+      const label = nextRole?.libelle_fr ?? '';
+      setConfirmRoleChange({ nextRoleLabel: label.charAt(0).toUpperCase() + label.slice(1) });
+      return;
+    }
+    await persistSave();
   };
 
   const handleReset = async () => {
@@ -242,14 +257,20 @@ export function UtilisateursPage() {
             <Input label={t('auth.password')} type="password" value={form.mot_de_passe} onChange={(e) => setForm((f) => ({ ...f, mot_de_passe: e.target.value }))} />
           )}
           <div className="grid-2">
-            {!edit && (
+            <div>
               <Select
                 label={t('utilisateur.role')}
                 value={form.role_id}
+                disabled={!!edit && edit.id === currentUserId}
                 onChange={(e) => setForm((f) => ({ ...f, role_id: e.target.value }))}
                 options={[{ value: '', label: t('common.selectionner') }, ...roles.map((r) => ({ value: r.id, label: r.libelle_fr.charAt(0).toUpperCase() + r.libelle_fr.slice(1) }))]}
               />
-            )}
+              {edit && edit.id === currentUserId && (
+                <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 4 }}>
+                  Vous ne pouvez pas modifier votre propre rôle.
+                </div>
+              )}
+            </div>
             <Select
               label={t('utilisateur.langue')}
               value={form.langue}
@@ -286,6 +307,15 @@ export function UtilisateursPage() {
         loading={deleting}
         title={t('utilisateur.desactiver')}
         message={t('utilisateur.confirm_desactiver_msg', { id: confirm?.identifiant ?? '' })}
+      />
+
+      <ConfirmModal
+        isOpen={!!confirmRoleChange}
+        onClose={() => setConfirmRoleChange(null)}
+        onConfirm={persistSave}
+        loading={saving}
+        title="Changement de rôle"
+        message={`Confirmer le changement de rôle de "${edit?.identifiant ?? ''}" — ancien : ${(edit?.role.libelle_fr ?? '').charAt(0).toUpperCase() + (edit?.role.libelle_fr ?? '').slice(1)}, nouveau : ${confirmRoleChange?.nextRoleLabel ?? ''} ?`}
       />
     </>
   );

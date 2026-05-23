@@ -81,6 +81,12 @@ export async function modifierUtilisateur(
   const existing = await prisma.utilisateur.findFirst({ where: { id, etablissement_id } });
   if (!existing) throw new Error('Utilisateur introuvable');
 
+  // Garde-fou : un utilisateur ne peut pas modifier son propre rôle
+  // (évite qu'un admin se rétrograde et perde l'accès à l'administration).
+  if (data.role_id && id === acteurId && data.role_id !== existing.role_id) {
+    throw new Error('Vous ne pouvez pas modifier votre propre rôle');
+  }
+
   const updateData: Record<string, unknown> = {};
   if (data.identifiant) updateData.identifiant = data.identifiant;
   if (data.nom_fr) updateData.nom_fr = data.nom_fr;

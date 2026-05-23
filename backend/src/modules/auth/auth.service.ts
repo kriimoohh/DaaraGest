@@ -75,8 +75,17 @@ export async function changePassword(id: string, ancien: string, nouveau: string
   return { payload };
 }
 
-export async function updateProfil(id: string, data: { nom_fr?: string; langue?: string; theme?: string }) {
-  return prisma.utilisateur.update({ where: { id }, data });
+export async function updateProfil(
+  id: string,
+  data: { nom_fr?: string; prenom_fr?: string | null; email?: string | null; langue?: string; theme?: string },
+) {
+  const updateData: Record<string, unknown> = {};
+  if (data.nom_fr !== undefined && data.nom_fr.trim()) updateData.nom_fr = data.nom_fr.trim();
+  if (data.prenom_fr !== undefined) updateData.prenom_fr = data.prenom_fr || null;
+  if (data.email !== undefined) updateData.email = data.email || null;
+  if (data.langue) updateData.langue = data.langue;
+  if (data.theme)  updateData.theme  = data.theme;
+  return prisma.utilisateur.update({ where: { id }, data: updateData });
 }
 
 // ─── Refresh token ────────────────────────────────────────────────────────────
@@ -123,6 +132,7 @@ export async function getMe(id: string) {
     id: utilisateur.id,
     nom_fr: utilisateur.nom_fr,
     prenom_fr: utilisateur.prenom_fr,
+    email: utilisateur.email,
     identifiant: utilisateur.identifiant,
     langue: utilisateur.langue,
     theme: utilisateur.theme,

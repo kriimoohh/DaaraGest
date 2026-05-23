@@ -41,6 +41,7 @@ model Etablissement {
   matieres              Matiere[]
   domaines              Domaine[]
   niveaux               Niveau[]
+  tarifs                Tarif[]
   config_notes          ConfigNotes?
   absences_eleves       AbsenceEleve[]
   creneaux              Creneau[]
@@ -242,6 +243,29 @@ model AnneeScolaire {
   @@index([etablissement_id, active])
 }
 
+// Catalogue des tarifs facturés aux familles (mensualité, inscription, examens,
+// uniforme, transport, etc.). Configurable par établissement via Paramètres > Tarifs.
+// `code` est libre (en majuscules/underscores) ; les paiements pourront s'y rattacher.
+model Tarif {
+  id               String   @id @default(uuid())
+  etablissement_id String
+  code             String
+  libelle_fr       String
+  description      String?
+  montant_defaut   Decimal  @db.Decimal(10, 2)
+  periodicite      String   @default("ponctuel") // 'ponctuel' | 'mensuel' | 'annuel'
+  obligatoire      Boolean  @default(true)
+  actif            Boolean  @default(true)
+  ordre            Int      @default(0)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
+
+  @@unique([etablissement_id, code])
+  @@index([etablissement_id, actif])
+}
+
 model ConfigNotes {
   id                      String   @id @default(uuid())
   etablissement_id        String   @unique
@@ -254,6 +278,10 @@ model ConfigNotes {
   montant_mensualite      Decimal  @default(7500) @db.Decimal(10, 2)
   seuil_absences_alerte   Int      @default(3)
   seuil_note_insuffisante Decimal  @default(10) @db.Decimal(5, 2)
+  seuil_tres_bien         Decimal  @default(16) @db.Decimal(5, 2)
+  seuil_bien              Decimal  @default(14) @db.Decimal(5, 2)
+  seuil_assez_bien        Decimal  @default(12) @db.Decimal(5, 2)
+  seuil_passable          Decimal  @default(10) @db.Decimal(5, 2)
   jours_cours             Json     @default("[\"lundi\",\"mardi\",\"mercredi\",\"jeudi\",\"vendredi\"]")
   notif_paiement_retard   Boolean  @default(true)
   notif_absences_eleves   Boolean  @default(true)

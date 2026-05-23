@@ -6,34 +6,55 @@ import { logAction } from '../../utils/audit';
 
 type Filiere = 'FR' | 'AR' | 'COMBINE';
 
-const APPRECIATIONS: Record<'FR' | 'AR', { seuil: number; text: string }[]> = {
-  FR: [
-    { seuil: 16, text: 'Très bien — Félicitations du conseil' },
-    { seuil: 14, text: 'Bien' },
-    { seuil: 12, text: 'Assez bien' },
-    { seuil: 10, text: 'Passable' },
-    { seuil: 0,  text: 'Insuffisant — Doit faire des efforts' },
-  ],
-  AR: [
-    { seuil: 16, text: 'ممتاز — تهنئة المجلس' },
-    { seuil: 14, text: 'جيد جدا' },
-    { seuil: 12, text: 'جيد' },
-    { seuil: 10, text: 'مقبول' },
-    { seuil: 0,  text: 'ضعيف — يجب بذل المزيد من الجهد' },
-  ],
+export type SeuilsMentions = {
+  tres_bien: number;
+  bien: number;
+  assez_bien: number;
+  passable: number;
 };
 
-function appreciation(m: number, filiere: Filiere = 'FR'): string {
+const SEUILS_DEFAUT: SeuilsMentions = { tres_bien: 16, bien: 14, assez_bien: 12, passable: 10 };
+
+const LIBELLES: Record<'FR' | 'AR', { tres_bien: string; bien: string; assez_bien: string; passable: string; insuffisant: string }> = {
+  FR: {
+    tres_bien:   'Très bien — Félicitations du conseil',
+    bien:        'Bien',
+    assez_bien:  'Assez bien',
+    passable:    'Passable',
+    insuffisant: 'Insuffisant — Doit faire des efforts',
+  },
+  AR: {
+    tres_bien:   'ممتاز — تهنئة المجلس',
+    bien:        'جيد جدا',
+    assez_bien:  'جيد',
+    passable:    'مقبول',
+    insuffisant: 'ضعيف — يجب بذل المزيد من الجهد',
+  },
+};
+
+/** Extrait les seuils de ConfigNotes (ou applique les valeurs par défaut). */
+export function extractSeuilsMentions(config: { seuil_tres_bien?: unknown; seuil_bien?: unknown; seuil_assez_bien?: unknown; seuil_passable?: unknown } | null): SeuilsMentions {
+  if (!config) return SEUILS_DEFAUT;
+  return {
+    tres_bien:  Number(config.seuil_tres_bien)  || SEUILS_DEFAUT.tres_bien,
+    bien:       Number(config.seuil_bien)       || SEUILS_DEFAUT.bien,
+    assez_bien: Number(config.seuil_assez_bien) || SEUILS_DEFAUT.assez_bien,
+    passable:   Number(config.seuil_passable)   || SEUILS_DEFAUT.passable,
+  };
+}
+
+export function appreciation(m: number, filiere: Filiere = 'FR', seuils: SeuilsMentions = SEUILS_DEFAUT): string {
   // COMBINE renvoie les deux versions séparées par un retour à la ligne
   // pour préserver les deux entêtes du bulletin bilingue.
   if (filiere === 'COMBINE') {
-    return `${appreciation(m, 'FR')}\n${appreciation(m, 'AR')}`;
+    return `${appreciation(m, 'FR', seuils)}\n${appreciation(m, 'AR', seuils)}`;
   }
-  const table = APPRECIATIONS[filiere];
-  for (const row of table) {
-    if (m >= row.seuil) return row.text;
-  }
-  return table[table.length - 1].text;
+  const l = LIBELLES[filiere];
+  if (m >= seuils.tres_bien)  return l.tres_bien;
+  if (m >= seuils.bien)       return l.bien;
+  if (m >= seuils.assez_bien) return l.assez_bien;
+  if (m >= seuils.passable)   return l.passable;
+  return l.insuffisant;
 }
 
 type MatiereAvecCoeff = {
@@ -97,6 +118,7 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
   const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
   if (!classe) throw new Error('Classe introuvable');
   const inscriptions = await getElevesClasse(classe_id, annee_scolaire_id);
+  const seuils = extractSeuilsMentions(await prisma.configNotes.findUnique({ where: { etablissement_id } }));
   if (inscriptions.length === 0) return { message: 'Aucun élève inscrit', bulletins: [] };
 
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
@@ -139,8 +161,8 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
     const { eleve_id, moyenne } = moyennes[i];
     const b = await prisma.bulletin.upsert({
       where: { eleve_id_annee_scolaire_id_filiere_periode: { eleve_id, annee_scolaire_id, filiere, periode } },
-      create: { eleve_id, annee_scolaire_id, filiere, periode, moyenne, rang: i + 1, appreciation: appreciation(moyenne, filiere as Filiere), generated_at: new Date() },
-      update: { moyenne, rang: i + 1, appreciation: appreciation(moyenne, filiere as Filiere), generated_at: new Date() },
+      create: { eleve_id, annee_scolaire_id, filiere, periode, moyenne, rang: i + 1, appreciation: appreciation(moyenne, filiere as Filiere, seuils), generated_at: new Date() },
+      update: { moyenne, rang: i + 1, appreciation: appreciation(moyenne, filiere as Filiere, seuils), generated_at: new Date() },
     });
     bulletins.push(b);
   }
@@ -161,6 +183,7 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
   const nbPeriodes = config?.nb_periodes ?? 3;
   const periodesAnnuelles = Array.from({ length: nbPeriodes }, (_, i) => i + 1);
+  const seuils = extractSeuilsMentions(config);
 
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
   const matMapAnnuel: Record<string, MatiereAvecCoeff[]> = {};
@@ -201,8 +224,8 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
     const { eleve_id, moyenne } = moyennes[i];
     const b = await prisma.bulletin.upsert({
       where: { eleve_id_annee_scolaire_id_filiere_periode: { eleve_id, annee_scolaire_id, filiere, periode: 0 } },
-      create: { eleve_id, annee_scolaire_id, filiere, periode: 0, moyenne, rang: i + 1, appreciation: appreciation(moyenne, filiere as Filiere), generated_at: new Date() },
-      update: { moyenne, rang: i + 1, appreciation: appreciation(moyenne, filiere as Filiere), generated_at: new Date() },
+      create: { eleve_id, annee_scolaire_id, filiere, periode: 0, moyenne, rang: i + 1, appreciation: appreciation(moyenne, filiere as Filiere, seuils), generated_at: new Date() },
+      update: { moyenne, rang: i + 1, appreciation: appreciation(moyenne, filiere as Filiere, seuils), generated_at: new Date() },
     });
     bulletins.push(b);
   }

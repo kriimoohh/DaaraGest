@@ -21,6 +21,8 @@ export const etablissementUpdateSchema = z.object({
   devise: z.string().optional(),
 });
 
+const zodSeuil = zodDecimalString.pipe(z.string().refine(s => parseFloat(s) >= 0, 'Doit être ≥ 0'));
+
 export const configNotesSchema = z.object({
   note_max: zodDecimalString.pipe(z.string().refine(s => parseFloat(s) > 0, 'Doit être positif')).optional(),
   note_min: zodDecimalString.pipe(z.string().refine(s => parseFloat(s) >= 0, 'Doit être ≥ 0')).optional(),
@@ -30,7 +32,24 @@ export const configNotesSchema = z.object({
   chiffres_arabes: z.boolean().optional(),
   montant_mensualite: zodDecimalString.pipe(z.string().refine(s => parseFloat(s) > 0, 'Doit être positif')).optional(),
   jours_cours: z.array(z.enum(['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'])).min(1, 'Au moins un jour de cours requis').optional(),
-});
+  seuil_tres_bien:  zodSeuil.optional(),
+  seuil_bien:       zodSeuil.optional(),
+  seuil_assez_bien: zodSeuil.optional(),
+  seuil_passable:   zodSeuil.optional(),
+}).refine(
+  (d) => {
+    // Si on touche aux seuils, ils doivent être dans l'ordre décroissant strict
+    const tb = d.seuil_tres_bien  !== undefined ? parseFloat(d.seuil_tres_bien)  : null;
+    const b  = d.seuil_bien       !== undefined ? parseFloat(d.seuil_bien)       : null;
+    const ab = d.seuil_assez_bien !== undefined ? parseFloat(d.seuil_assez_bien) : null;
+    const p  = d.seuil_passable   !== undefined ? parseFloat(d.seuil_passable)   : null;
+    if (tb !== null && b  !== null && tb <= b)  return false;
+    if (b  !== null && ab !== null && b  <= ab) return false;
+    if (ab !== null && p  !== null && ab <= p)  return false;
+    return true;
+  },
+  { message: 'Les seuils doivent être strictement décroissants (Très bien > Bien > Assez bien > Passable)' },
+);
 
 export const configNotificationsSchema = z.object({
   notif_paiement_retard: z.boolean().optional(),
