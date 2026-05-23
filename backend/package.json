@@ -8,6 +8,8 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:cleanup": "tsx prisma/cleanup.ts",
+    "db:migrate-matieres": "tsx prisma/migrate-matieres-lgm.ts",
+    "db:migrate-matieres:apply": "tsx prisma/migrate-matieres-lgm.ts --apply",
     "db:studio": "prisma studio",
     "test": "vitest run",
     "test:watch": "vitest",
