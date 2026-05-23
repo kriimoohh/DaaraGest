@@ -41,6 +41,7 @@ model Etablissement {
   matieres              Matiere[]
   domaines              Domaine[]
   niveaux               Niveau[]
+  tarifs                Tarif[]
   config_notes          ConfigNotes?
   absences_eleves       AbsenceEleve[]
   creneaux              Creneau[]
@@ -240,6 +241,29 @@ model AnneeScolaire {
 
   @@index([etablissement_id])
   @@index([etablissement_id, active])
+}
+
+// Catalogue des tarifs facturés aux familles (mensualité, inscription, examens,
+// uniforme, transport, etc.). Configurable par établissement via Paramètres > Tarifs.
+// `code` est libre (en majuscules/underscores) ; les paiements pourront s'y rattacher.
+model Tarif {
+  id               String   @id @default(uuid())
+  etablissement_id String
+  code             String
+  libelle_fr       String
+  description      String?
+  montant_defaut   Decimal  @db.Decimal(10, 2)
+  periodicite      String   @default("ponctuel") // 'ponctuel' | 'mensuel' | 'annuel'
+  obligatoire      Boolean  @default(true)
+  actif            Boolean  @default(true)
+  ordre            Int      @default(0)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
+
+  @@unique([etablissement_id, code])
+  @@index([etablissement_id, actif])
 }
 
 model ConfigNotes {

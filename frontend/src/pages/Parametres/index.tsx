@@ -25,6 +25,20 @@ interface Fonction {
   supprimable: boolean;
 }
 
+type Periodicite = 'ponctuel' | 'mensuel' | 'annuel';
+
+interface Tarif {
+  id: string;
+  code: string;
+  libelle_fr: string;
+  description?: string | null;
+  montant_defaut: number | string;
+  periodicite: Periodicite;
+  obligatoire: boolean;
+  actif: boolean;
+  ordre: number;
+}
+
 interface Etablissement {
   id: string;
   nom_fr: string;
@@ -305,6 +319,16 @@ export function ParametresPage() {
   const [editNiveau, setEditNiveau] = useState<Niveau | null>(null);
   const [savingNiveau, setSavingNiveau] = useState(false);
 
+  const [tarifs, setTarifs] = useState<Tarif[]>([]);
+  const [editTarif, setEditTarif] = useState<Tarif | null>(null);
+  const [tarifForm, setTarifForm] = useState({
+    code: '', libelle_fr: '', montant_defaut: '',
+    periodicite: 'ponctuel' as Periodicite, obligatoire: true, actif: true, ordre: '',
+  });
+  const [savingTarif, setSavingTarif] = useState(false);
+  const [confirmDeleteTarif, setConfirmDeleteTarif] = useState<Tarif | null>(null);
+  const [deletingTarif, setDeletingTarif] = useState(false);
+
   const [fonctions, setFonctions] = useState<Fonction[]>([]);
   const [fonctionCode, setFonctionCode] = useState('');
   const [fonctionLibelle, setFonctionLibelle] = useState('');
@@ -337,9 +361,13 @@ export function ParametresPage() {
   const fetchFonctions = () =>
     api.get<Fonction[]>('/api/v1/fonctions').then(setFonctions).catch(() => {});
 
+  const fetchTarifs = () =>
+    api.get<Tarif[]>('/api/v1/tarifs').then(setTarifs).catch(() => {});
+
   useEffect(() => {
     fetchNiveaux();
     fetchFonctions();
+    fetchTarifs();
     Promise.all([
       api.get<Etablissement>('/api/v1/parametres'),
       api.get<Record<string, unknown>>('/api/v1/parametres/notes'),
@@ -454,6 +482,62 @@ export function ParametresPage() {
       toast.error((err as Error).message || 'Erreur');
     } finally {
       setDeletingFonction(false);
+    }
+  };
+
+  const resetTarifForm = () => {
+    setEditTarif(null);
+    setTarifForm({ code: '', libelle_fr: '', montant_defaut: '', periodicite: 'ponctuel', obligatoire: true, actif: true, ordre: '' });
+  };
+
+  const handleSaveTarif = async () => {
+    if (!tarifForm.libelle_fr.trim()) { toast.error('Libellé requis'); return; }
+    const montant = parseFloat(tarifForm.montant_defaut);
+    if (isNaN(montant) || montant < 0) { toast.error('Montant invalide'); return; }
+    setSavingTarif(true);
+    try {
+      const ordre = Number(tarifForm.ordre) || 0;
+      if (editTarif) {
+        await api.patch(`/api/v1/tarifs/${editTarif.id}`, {
+          libelle_fr: tarifForm.libelle_fr.trim(),
+          montant_defaut: montant,
+          periodicite: tarifForm.periodicite,
+          obligatoire: tarifForm.obligatoire,
+          actif: tarifForm.actif,
+          ordre,
+        });
+        toast.success('Tarif modifié');
+      } else {
+        const code = tarifForm.code.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+        if (!code) { toast.error('Code requis'); return; }
+        await api.post('/api/v1/tarifs', {
+          code, libelle_fr: tarifForm.libelle_fr.trim(),
+          montant_defaut: montant, periodicite: tarifForm.periodicite,
+          obligatoire: tarifForm.obligatoire, actif: tarifForm.actif, ordre,
+        });
+        toast.success('Tarif ajouté');
+      }
+      resetTarifForm();
+      fetchTarifs();
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    } finally {
+      setSavingTarif(false);
+    }
+  };
+
+  const performDeleteTarif = async () => {
+    if (!confirmDeleteTarif) return;
+    setDeletingTarif(true);
+    try {
+      await api.delete(`/api/v1/tarifs/${confirmDeleteTarif.id}`);
+      toast.success('Tarif supprimé');
+      setConfirmDeleteTarif(null);
+      fetchTarifs();
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    } finally {
+      setDeletingTarif(false);
     }
   };
 
@@ -1175,21 +1259,154 @@ export function ParametresPage() {
         </div>
       )}
 
-      {/* ── Tarifs & mensualités ── */}
-      {!loading && tab === 'tarifs' && config && (
-        <div className="card">
-          <div className="card-hd">
-            <h3 style={{ margin: 0 }}>{t('parametre.tarifs')}</h3>
-            <Button onClick={saveConfig} loading={saving === 'notes'}>{t('actions.enregistrer')}</Button>
-          </div>
-          <div className="card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* ── Tarifs ── */}
+      {!loading && tab === 'tarifs' && (
+        <div className="card card-pad">
+          <h3 style={{ marginBottom: 8 }}>Catalogue des tarifs</h3>
+          <p style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 20 }}>
+            Définissez ici tous les frais facturés aux familles (mensualité, inscription, examen,
+            uniforme, transport…). Le tarif <code>MENSUALITE</code> alimente le calcul des reliquats
+            et ne peut pas être supprimé (vous pouvez le désactiver).
+          </p>
+
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 20, flexWrap: 'wrap' }}>
+            {!editTarif && (
+              <Input
+                label="Code"
+                value={tarifForm.code}
+                onChange={e => setTarifForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
+                placeholder="Ex: INSCRIPTION"
+              />
+            )}
             <Input
-              label={t('parametre.mensualite')}
-              type="number"
-              value={String(config.montant_mensualite)}
-              onChange={e => setConfig(c => c ? { ...c, montant_mensualite: Number(e.target.value) } : c)}
+              label="Libellé"
+              value={tarifForm.libelle_fr}
+              onChange={e => setTarifForm(f => ({ ...f, libelle_fr: e.target.value }))}
+              placeholder="Ex: Frais d'inscription"
             />
+            <Input
+              label="Montant"
+              type="number"
+              value={tarifForm.montant_defaut}
+              onChange={e => setTarifForm(f => ({ ...f, montant_defaut: e.target.value }))}
+              placeholder="0"
+            />
+            <Select
+              label="Périodicité"
+              value={tarifForm.periodicite}
+              onChange={e => setTarifForm(f => ({ ...f, periodicite: e.target.value as Periodicite }))}
+              options={[
+                { value: 'ponctuel', label: 'Ponctuel' },
+                { value: 'mensuel',  label: 'Mensuel' },
+                { value: 'annuel',   label: 'Annuel' },
+              ]}
+            />
+            <Input
+              label="Ordre"
+              type="number"
+              value={tarifForm.ordre}
+              onChange={e => setTarifForm(f => ({ ...f, ordre: e.target.value }))}
+              placeholder="0"
+            />
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, paddingBottom: 8, fontSize: 13 }}>
+              <input
+                type="checkbox"
+                checked={tarifForm.obligatoire}
+                onChange={e => setTarifForm(f => ({ ...f, obligatoire: e.target.checked }))}
+              />
+              Obligatoire
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, paddingBottom: 8, fontSize: 13 }}>
+              <input
+                type="checkbox"
+                checked={tarifForm.actif}
+                onChange={e => setTarifForm(f => ({ ...f, actif: e.target.checked }))}
+              />
+              Actif
+            </label>
+            <div style={{ paddingTop: 22 }}>
+              <Button onClick={handleSaveTarif} loading={savingTarif} disabled={!tarifForm.libelle_fr.trim()}>
+                {editTarif ? 'Modifier' : 'Ajouter'}
+              </Button>
+            </div>
+            {editTarif && (
+              <div style={{ paddingTop: 22 }}>
+                <Button variant="ghost" onClick={resetTarifForm}>Annuler</Button>
+              </div>
+            )}
           </div>
+
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Libellé</th>
+                <th>Montant</th>
+                <th>Périodicité</th>
+                <th>Obligatoire</th>
+                <th>Statut</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {tarifs.map(tarif => (
+                <tr key={tarif.id}>
+                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{tarif.code}</td>
+                  <td>{tarif.libelle_fr}</td>
+                  <td style={{ fontFamily: 'var(--font-mono)' }}>
+                    {Number(tarif.montant_defaut).toLocaleString('fr-FR')} {etab?.devise ?? 'FCFA'}
+                  </td>
+                  <td style={{ textTransform: 'capitalize' }}>{tarif.periodicite}</td>
+                  <td>{tarif.obligatoire ? 'Oui' : 'Non'}</td>
+                  <td>
+                    <span className={`badge badge-${tarif.actif ? 'success' : 'neutral'}`}>
+                      {tarif.actif ? 'Actif' : 'Inactif'}
+                    </span>
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <span style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
+                      <Button size="sm" variant="ghost" onClick={() => {
+                        setEditTarif(tarif);
+                        setTarifForm({
+                          code: tarif.code,
+                          libelle_fr: tarif.libelle_fr,
+                          montant_defaut: String(tarif.montant_defaut),
+                          periodicite: tarif.periodicite,
+                          obligatoire: tarif.obligatoire,
+                          actif: tarif.actif,
+                          ordre: String(tarif.ordre),
+                        });
+                      }}>
+                        Modifier
+                      </Button>
+                      {tarif.code !== 'MENSUALITE' ? (
+                        <Button size="sm" variant="danger" onClick={() => setConfirmDeleteTarif(tarif)}>
+                          Supprimer
+                        </Button>
+                      ) : (
+                        <span
+                          title="Tarif système, non supprimable (vous pouvez le désactiver)"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            fontSize: 12, color: 'var(--ink-3)', fontStyle: 'italic', padding: '4px 8px',
+                          }}
+                        >
+                          <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                            <rect x={3} y={11} width={18} height={11} rx={2} ry={2}/>
+                            <path d="M7 11V7a5 5 0 0110 0v4"/>
+                          </svg>
+                          Système
+                        </span>
+                      )}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {tarifs.length === 0 && (
+                <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--ink-3)' }}>Aucun tarif défini</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -1341,6 +1558,15 @@ export function ParametresPage() {
         loading={deletingFonction}
         title="Supprimer la fonction"
         message={`Supprimer la fonction "${confirmDeleteFonction?.libelle_fr ?? ''}" ? Cette action est irréversible.`}
+      />
+
+      <ConfirmModal
+        isOpen={!!confirmDeleteTarif}
+        onClose={() => setConfirmDeleteTarif(null)}
+        onConfirm={performDeleteTarif}
+        loading={deletingTarif}
+        title="Supprimer le tarif"
+        message={`Supprimer le tarif "${confirmDeleteTarif?.libelle_fr ?? ''}" ? Les paiements déjà enregistrés ne sont pas affectés.`}
       />
     </>
   );
