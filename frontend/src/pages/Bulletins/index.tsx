@@ -27,7 +27,6 @@ interface NoteDetail {
 
 interface DetailBulletin extends Bulletin {
   observation_fr: string | null;
-  observation_ar: string | null;
   observation_prof: string | null;
   eleve: Bulletin['eleve'] & {
     inscriptions: { classe_fr: { nom_fr: string } | null; classe_ar: { nom_fr: string } | null; }[];
@@ -567,7 +566,6 @@ function BulletinDetailContent({
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const [obsFr, setObsFr] = useState(detail.observation_fr ?? '');
-  const [obsAr, setObsAr] = useState(detail.observation_ar ?? '');
   const [obsProf, setObsProf] = useState(detail.observation_prof ?? '');
   const [savingObs, setSavingObs] = useState(false);
   const canEditObs = ['admin', 'directeur', 'professeur'].includes(user?.role ?? '');
@@ -577,7 +575,6 @@ function BulletinDetailContent({
     try {
       await api.patch(`/api/v1/bulletins/${detail.id}/observation`, {
         observation_fr: obsFr || undefined,
-        observation_ar: obsAr || undefined,
         observation_prof: obsProf || undefined,
       });
       toast.success('Observations enregistrées');
@@ -675,20 +672,6 @@ function BulletinDetailContent({
               rows={2}
               maxLength={500}
               placeholder={canEditObs ? "Saisir une observation…" : "Aucune observation"}
-              className="input"
-              style={{ width: '100%', resize: 'none' }}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--ink-3)', marginBottom: 4 }}>ملاحظة المدير (العربية)</label>
-            <textarea
-              value={obsAr}
-              onChange={e => setObsAr(e.target.value)}
-              readOnly={!canEditObs}
-              rows={2}
-              maxLength={500}
-              dir="rtl"
-              placeholder={canEditObs ? "أدخل ملاحظة…" : "لا توجد ملاحظة"}
               className="input"
               style={{ width: '100%', resize: 'none' }}
             />

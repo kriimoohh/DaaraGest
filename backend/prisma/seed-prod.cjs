@@ -69,7 +69,7 @@ async function main() {
       data: {
         identifiant: 'admin', mot_de_passe: hash,
         role_id: roleAdmin.id, etablissement_id: etab.id,
-        nom_fr: 'Administrateur', nom_ar: 'مدير',
+        nom_fr: 'Administrateur',
         langue: 'fr', theme: 'light',
         must_change_password: true,
       },
@@ -83,8 +83,8 @@ async function main() {
   for (const d of LGM.domaines) {
     await prisma.domaine.upsert({
       where: { etablissement_id_code: { etablissement_id: etab.id, code: d.code } },
-      update: { nom_fr: d.nom_fr, nom_ar: d.nom_ar, ordre: d.ordre, actif: true },
-      create: { etablissement_id: etab.id, code: d.code, nom_fr: d.nom_fr, nom_ar: d.nom_ar, ordre: d.ordre, actif: true },
+      update: { nom_fr: d.nom_fr, ordre: d.ordre, actif: true },
+      create: { etablissement_id: etab.id, code: d.code, nom_fr: d.nom_fr, ordre: d.ordre, actif: true },
     });
   }
   console.log(`✅ Domaines (${LGM.domaines.length})`);

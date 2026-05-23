@@ -36,7 +36,7 @@ interface PortailData {
   }>
   activites: Array<{
     id: string;
-    activite: { nom_fr: string; nom_ar: string; description: string | null }
+    activite: { nom_fr: string; description: string | null }
     evaluations: Array<{ id: string; periode: number; note: string | null; appreciation: string | null }>
   }>
 }

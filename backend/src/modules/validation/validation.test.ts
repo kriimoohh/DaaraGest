@@ -15,7 +15,6 @@ const eleveSchema = z.object({
 
 const parentSchema = z.object({
   nom_fr: z.string().min(1),
-  nom_ar: z.string().optional(),
   lien: z.enum(['pere', 'mere', 'tuteur']),
   telephone: z.string().min(1),
   email: z.string().email().optional(),
@@ -53,7 +52,6 @@ const evaluationSchema = z.object({
 
 const activiteSchema = z.object({
   nom_fr: z.string().min(1).max(200),
-  nom_ar: z.string().max(200).optional(),
   description: z.string().max(1000).optional(),
   capacite_max: z.number().int().min(1).optional(),
   actif: z.boolean().optional().default(true),

@@ -20,7 +20,6 @@ interface Fonction {
   id: string;
   code: string;
   libelle_fr: string;
-  libelle_ar?: string | null;
   ordre: number;
   supprimable: boolean;
 }
@@ -40,7 +39,6 @@ interface Etablissement {
 
 interface NomsPeriodes {
   fr: string[];
-  ar: string[];
 }
 
 interface ConfigNotes {
@@ -73,12 +71,10 @@ const TOUS_JOURS = [
 ];
 
 const DEFAULT_FR = ['1er Trimestre', '2ème Trimestre', '3ème Trimestre', '4ème Trimestre'];
-const DEFAULT_AR = ['الفصل الأول', 'الفصل الثاني', 'الفصل الثالث', 'الفصل الرابع'];
 
 function buildPeriodes(n: number, existing?: NomsPeriodes): NomsPeriodes {
   return {
     fr: Array.from({ length: n }, (_, i) => existing?.fr?.[i] ?? DEFAULT_FR[i]),
-    ar: Array.from({ length: n }, (_, i) => existing?.ar?.[i] ?? DEFAULT_AR[i]),
   };
 }
 
@@ -307,7 +303,6 @@ export function ParametresPage() {
   const [fonctions, setFonctions] = useState<Fonction[]>([]);
   const [fonctionCode, setFonctionCode] = useState('');
   const [fonctionLibelle, setFonctionLibelle] = useState('');
-  const [fonctionLibelleAr, setFonctionLibelleAr] = useState('');
   const [fonctionOrdre, setFonctionOrdre] = useState('');
   const [editFonction, setEditFonction] = useState<Fonction | null>(null);
   const [savingFonction, setSavingFonction] = useState(false);
@@ -405,7 +400,7 @@ export function ParametresPage() {
 
   const resetFonctionForm = () => {
     setEditFonction(null);
-    setFonctionCode(''); setFonctionLibelle(''); setFonctionLibelleAr(''); setFonctionOrdre('');
+    setFonctionCode(''); setFonctionLibelle(''); setFonctionOrdre('');
   };
 
   const handleSaveFonction = async () => {
@@ -416,7 +411,6 @@ export function ParametresPage() {
       if (editFonction) {
         await api.patch(`/api/v1/fonctions/${editFonction.id}`, {
           libelle_fr: fonctionLibelle.trim(),
-          libelle_ar: fonctionLibelleAr.trim() || null,
           ordre,
         });
         toast.success('Fonction modifiée');
@@ -426,7 +420,6 @@ export function ParametresPage() {
         await api.post('/api/v1/fonctions', {
           code,
           libelle_fr: fonctionLibelle.trim(),
-          libelle_ar: fonctionLibelleAr.trim() || null,
           ordre,
         });
         toast.success('Fonction ajoutée');
@@ -798,30 +791,17 @@ export function ParametresPage() {
             </div>
             <div className="card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {Array.from({ length: config.nb_periodes }, (_, i) => (
-                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'end' }}>
-                  <Input
-                    label={`${t('parametre.periode')} ${i + 1} — Français`}
-                    value={config.noms_periodes?.fr?.[i] ?? ''}
-                    onChange={e => setConfig(p => {
-                      if (!p) return p;
-                      const fr = [...(p.noms_periodes?.fr ?? [])];
-                      fr[i] = e.target.value;
-                      return { ...p, noms_periodes: { ...p.noms_periodes, fr } };
-                    })}
-                  />
-                  <div style={{ direction: 'rtl', fontFamily: 'var(--font-arabic)' }}>
-                    <Input
-                      label={`الفصل ${i + 1} — عربي`}
-                      value={config.noms_periodes?.ar?.[i] ?? ''}
-                      onChange={e => setConfig(p => {
-                        if (!p) return p;
-                        const ar = [...(p.noms_periodes?.ar ?? [])];
-                        ar[i] = e.target.value;
-                        return { ...p, noms_periodes: { ...p.noms_periodes, ar } };
-                      })}
-                    />
-                  </div>
-                </div>
+                <Input
+                  key={i}
+                  label={`${t('parametre.periode')} ${i + 1}`}
+                  value={config.noms_periodes?.fr?.[i] ?? ''}
+                  onChange={e => setConfig(p => {
+                    if (!p) return p;
+                    const fr = [...(p.noms_periodes?.fr ?? [])];
+                    fr[i] = e.target.value;
+                    return { ...p, noms_periodes: { fr } };
+                  })}
+                />
               ))}
             </div>
           </div>
@@ -915,11 +895,6 @@ export function ParametresPage() {
               placeholder="Ex: Veilleur de nuit"
             />
             <Input
-              label="Libellé AR (optionnel)"
-              value={fonctionLibelleAr}
-              onChange={e => setFonctionLibelleAr(e.target.value)}
-            />
-            <Input
               label="Ordre"
               type="number"
               value={fonctionOrdre}
@@ -940,14 +915,13 @@ export function ParametresPage() {
 
           <table className="table">
             <thead>
-              <tr><th>Code</th><th>Libellé FR</th><th>Libellé AR</th><th>Ordre</th><th></th></tr>
+              <tr><th>Code</th><th>Libellé FR</th><th>Ordre</th><th></th></tr>
             </thead>
             <tbody>
               {fonctions.map(f => (
                 <tr key={f.id}>
                   <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{f.code}</td>
                   <td>{f.libelle_fr}</td>
-                  <td>{f.libelle_ar ?? '—'}</td>
                   <td>{f.ordre}</td>
                   <td style={{ textAlign: 'right' }}>
                     <span style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -955,7 +929,6 @@ export function ParametresPage() {
                         setEditFonction(f);
                         setFonctionCode(f.code);
                         setFonctionLibelle(f.libelle_fr);
-                        setFonctionLibelleAr(f.libelle_ar ?? '');
                         setFonctionOrdre(String(f.ordre));
                       }}>
                         Modifier

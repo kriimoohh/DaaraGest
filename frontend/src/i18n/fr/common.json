@@ -310,7 +310,7 @@
     "mensualite": "Montant mensualité",
     "chiffres_arabes": "Chiffres arabes sur les bulletins",
     "noms_periodes": "Noms des périodes",
-    "noms_periodes_desc": "Personnalisez les noms affichés sur les bulletins (français et arabe)",
+    "noms_periodes_desc": "Personnalisez les noms affichés sur les bulletins",
     "mon_profil": "Mon profil",
     "langue_theme": "Langue & Thème",
     "langue_theme_desc": "Personnalisez l'interface selon vos préférences",
@@ -433,8 +433,7 @@
     "evenement": "Événement",
     "fermeture": "Fermeture",
     "reunion": "Réunion",
-    "titre_fr": "Titre (Français)",
-    "titre_ar": "Titre (Arabe, optionnel)",
+    "titre_fr": "Titre",
     "description": "Description (optionnel)"
   },
   "notifications": {

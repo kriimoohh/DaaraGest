@@ -14,7 +14,6 @@ import { useAuthStore } from '../../store/authStore';
 interface Evenement {
   id: string;
   titre_fr: string;
-  titre_ar: string | null;
   description: string | null;
   date_debut: string;
   date_fin: string;
@@ -100,7 +99,6 @@ function EventForm({
 }: {
   form: {
     titre_fr: string;
-    titre_ar: string;
     description: string;
     date_debut: string;
     date_fin: string;
@@ -128,16 +126,10 @@ function EventForm({
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <Input
-          label="Titre (Français)"
+          label="Titre"
           value={form.titre_fr}
           onChange={e => setForm(f => ({ ...f, titre_fr: e.target.value }))}
           placeholder="Titre de l'événement"
-        />
-        <Input
-          label="Titre (Arabe, optionnel)"
-          value={form.titre_ar}
-          onChange={e => setForm(f => ({ ...f, titre_ar: e.target.value }))}
-          placeholder="العنوان بالعربية"
         />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <Input
@@ -221,7 +213,6 @@ export function CalendrierPage() {
   // Modal add/edit
   const emptyForm = {
     titre_fr: '',
-    titre_ar: '',
     description: '',
     date_debut: '',
     date_fin: '',
@@ -272,7 +263,6 @@ export function CalendrierPage() {
     try {
       await api.post('/api/v1/calendrier', {
         titre_fr: addForm.titre_fr,
-        titre_ar: addForm.titre_ar || undefined,
         description: addForm.description || undefined,
         date_debut: addForm.date_debut,
         date_fin: addForm.date_fin,
@@ -298,7 +288,6 @@ export function CalendrierPage() {
     try {
       await api.put(`/api/v1/calendrier/${editEvt.id}`, {
         titre_fr: editForm.titre_fr,
-        titre_ar: editForm.titre_ar || undefined,
         description: editForm.description || undefined,
         date_debut: editForm.date_debut,
         date_fin: editForm.date_fin,
@@ -327,7 +316,6 @@ export function CalendrierPage() {
   const openEdit = (ev: Evenement) => {
     setEditForm({
       titre_fr: ev.titre_fr,
-      titre_ar: ev.titre_ar ?? '',
       description: ev.description ?? '',
       date_debut: ev.date_debut.split('T')[0],
       date_fin: ev.date_fin.split('T')[0],

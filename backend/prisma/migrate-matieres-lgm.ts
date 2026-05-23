@@ -42,14 +42,14 @@ async function migrerEtablissement(etabId: string, etabNom: string) {
       if (APPLY) {
         await prisma.domaine.update({
           where: { id: existing.id },
-          data: { nom_fr: d.nom_fr, nom_ar: d.nom_ar, ordre: d.ordre, actif: true },
+          data: { nom_fr: d.nom_fr, ordre: d.ordre, actif: true },
         });
       }
       domUpdated++;
     } else {
       if (APPLY) {
         await prisma.domaine.create({
-          data: { etablissement_id: etabId, code: d.code, nom_fr: d.nom_fr, nom_ar: d.nom_ar, ordre: d.ordre, actif: true },
+          data: { etablissement_id: etabId, code: d.code, nom_fr: d.nom_fr, ordre: d.ordre, actif: true },
         });
       }
       domCreated++;

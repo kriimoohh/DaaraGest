@@ -107,15 +107,15 @@ async function main() {
 
   // ── 2. Rôles ────────────────────────────────────────────────────────────────
   const roles = [
-    { id: ID.roles.admin,        libelle_fr: 'admin',              libelle_ar: 'مدير النظام' },
-    { id: ID.roles.directeur,    libelle_fr: 'directeur',          libelle_ar: 'المدير' },
-    { id: ID.roles.gestionnaire, libelle_fr: 'gestionnaire',       libelle_ar: 'المدير التنفيذي' },
-    { id: ID.roles.caissier,     libelle_fr: 'agent de scolarité', libelle_ar: 'عون التمدرس' },
-    { id: ID.roles.professeur,   libelle_fr: 'professeur',         libelle_ar: 'الأستاذ' },
-    { id: ID.roles.pointeur,     libelle_fr: 'pointeur',           libelle_ar: 'مسجّل الحضور' },
+    { id: ID.roles.admin,        libelle_fr: 'admin' },
+    { id: ID.roles.directeur,    libelle_fr: 'directeur' },
+    { id: ID.roles.gestionnaire, libelle_fr: 'gestionnaire' },
+    { id: ID.roles.caissier,     libelle_fr: 'agent de scolarité' },
+    { id: ID.roles.professeur,   libelle_fr: 'professeur' },
+    { id: ID.roles.pointeur,     libelle_fr: 'pointeur' },
   ];
   for (const r of roles) {
-    await prisma.role.upsert({ where: { id: r.id }, update: { libelle_fr: r.libelle_fr, libelle_ar: r.libelle_ar }, create: r });
+    await prisma.role.upsert({ where: { id: r.id }, update: { libelle_fr: r.libelle_fr }, create: r });
   }
   console.log('✅ Rôles :', roles.map(r => r.libelle_fr).join(', '));
 
@@ -138,7 +138,6 @@ async function main() {
       role_id: ID.roles.admin,
       etablissement_id: ID.etab,
       nom_fr: 'Administrateur',
-      nom_ar: 'مدير',
       langue: 'fr', theme: 'light',
       must_change_password: true,
     },
@@ -149,8 +148,8 @@ async function main() {
   for (const d of LGM_DOMAINES) {
     await prisma.domaine.upsert({
       where: { etablissement_id_code: { etablissement_id: ID.etab, code: d.code } },
-      update: { nom_fr: d.nom_fr, nom_ar: d.nom_ar, ordre: d.ordre, actif: true },
-      create: { etablissement_id: ID.etab, code: d.code, nom_fr: d.nom_fr, nom_ar: d.nom_ar, ordre: d.ordre, actif: true },
+      update: { nom_fr: d.nom_fr, ordre: d.ordre, actif: true },
+      create: { etablissement_id: ID.etab, code: d.code, nom_fr: d.nom_fr, ordre: d.ordre, actif: true },
     });
   }
   console.log(`✅ Domaines (${LGM_DOMAINES.length})`);
@@ -202,19 +201,19 @@ async function main() {
   // Utilisateurs test
   const testUsers = [
     { id: ID.users.directeur, identifiant: 'directeur',   mot_de_passe: await bcrypt.hash('Directeur123!', 10), role_id: ID.roles.directeur,
-      nom_fr: 'Diop', nom_ar: 'ديوب' },
+      nom_fr: 'Diop' },
     { id: ID.users.caissier,  identifiant: 'caissier',    mot_de_passe: await bcrypt.hash('Caissier123!', 10),  role_id: ID.roles.caissier,
-      nom_fr: 'Sow', nom_ar: 'ساو' },
+      nom_fr: 'Sow' },
     { id: ID.users.prof1,     identifiant: 'prof.fall',   mot_de_passe: await bcrypt.hash('Prof123!', 10),      role_id: ID.roles.professeur,
-      nom_fr: 'Fall', nom_ar: 'فال' },
+      nom_fr: 'Fall' },
     { id: ID.users.prof2,     identifiant: 'prof.diallo', mot_de_passe: await bcrypt.hash('Prof123!', 10),      role_id: ID.roles.professeur,
-      nom_fr: 'Diallo', nom_ar: 'ديالو' },
+      nom_fr: 'Diallo' },
     { id: ID.users.prof3,     identifiant: 'prof.ahmed',  mot_de_passe: await bcrypt.hash('Prof123!', 10),      role_id: ID.roles.professeur,
-      nom_fr: 'Ahmed', nom_ar: 'أحمد' },
+      nom_fr: 'Ahmed' },
     { id: ID.users.prof4,     identifiant: 'prof.ndiaye', mot_de_passe: await bcrypt.hash('Prof123!', 10),      role_id: ID.roles.professeur,
-      nom_fr: 'Ndiaye', nom_ar: 'نجاي' },
+      nom_fr: 'Ndiaye' },
     { id: ID.users.pointeur,  identifiant: 'pointeur',    mot_de_passe: await bcrypt.hash('Pointeur123!', 10),  role_id: ID.roles.pointeur,
-      nom_fr: 'Ba', nom_ar: 'با' },
+      nom_fr: 'Ba' },
   ];
   for (const u of testUsers) {
     await prisma.utilisateur.upsert({
@@ -225,7 +224,7 @@ async function main() {
   }
   console.log('✅ Utilisateurs test :', testUsers.map(u => u.identifiant).join(', '));
 
-  // Professeurs
+  // Personnel (anciennement Professeur — refactor unifié)
   const profsData = [
     { id: ID.profs.p1, utilisateur_id: ID.users.prof1, specialite_fr: 'Français & Mathématiques', type_contrat: 'permanent', salaire_base: new Prisma.Decimal(250000), date_embauche: new Date('2020-09-01') },
     { id: ID.profs.p2, utilisateur_id: ID.users.prof2, specialite_fr: 'Sciences Naturelles',      type_contrat: 'permanent', salaire_base: new Prisma.Decimal(220000), date_embauche: new Date('2019-09-01') },
@@ -233,7 +232,7 @@ async function main() {
     { id: ID.profs.p4, utilisateur_id: ID.users.prof4, specialite_fr: 'Langue Arabe & Nahw',      type_contrat: 'vacataire', salaire_base: new Prisma.Decimal(180000), date_embauche: new Date('2022-01-15') },
   ];
   for (const p of profsData) {
-    await prisma.professeur.upsert({ where: { utilisateur_id: p.utilisateur_id }, update: {}, create: p });
+    await prisma.personnel.upsert({ where: { utilisateur_id: p.utilisateur_id }, update: {}, create: p });
   }
 
   // Années scolaires
@@ -246,12 +245,13 @@ async function main() {
     await prisma.anneeScolaire.upsert({ where: { id: a.id }, update: { active: a.active }, create: { ...a, etablissement_id: ID.etab } });
   }
 
-  // Classes
+  // Classes — niveau_id laissé null pour le seed dev (renseigné via Paramètres
+  // ou via le script seed-prod.cjs qui peuple les 16 Niveau du référentiel).
   const classes = [
-    { id: ID.classes.cm1fr, nom_fr: 'CM1 Français', filiere: 'FR', niveau: 'CM1', capacite: 35, annee_scolaire_id: ID.annees.y2425 },
-    { id: ID.classes.cm2fr, nom_fr: 'CM2 Français', filiere: 'FR', niveau: 'CM2', capacite: 30, annee_scolaire_id: ID.annees.y2425 },
-    { id: ID.classes.a5ar,  nom_fr: '5ème Arabe',   filiere: 'AR', niveau: '5ème', capacite: 30, annee_scolaire_id: ID.annees.y2425 },
-    { id: ID.classes.a6ar,  nom_fr: '6ème Arabe',   filiere: 'AR', niveau: '6ème', capacite: 25, annee_scolaire_id: ID.annees.y2425 },
+    { id: ID.classes.cm1fr, nom_fr: 'CM1 Français', filiere: 'FR', capacite: 35, annee_scolaire_id: ID.annees.y2425 },
+    { id: ID.classes.cm2fr, nom_fr: 'CM2 Français', filiere: 'FR', capacite: 30, annee_scolaire_id: ID.annees.y2425 },
+    { id: ID.classes.a5ar,  nom_fr: '5ème Arabe',   filiere: 'AR', capacite: 30, annee_scolaire_id: ID.annees.y2425 },
+    { id: ID.classes.a6ar,  nom_fr: '6ème Arabe',   filiere: 'AR', capacite: 25, annee_scolaire_id: ID.annees.y2425 },
   ];
   for (const cl of classes) {
     await prisma.classe.upsert({ where: { id: cl.id }, update: {}, create: { ...cl, etablissement_id: ID.etab } });
@@ -370,7 +370,7 @@ async function main() {
   }
   console.log(`✅ Paiements test élèves : ${paiCount}`);
 
-  // Paiements professeurs
+  // Paiements personnel
   let profPaiCount = 0;
   const profPaie = [
     [ID.profs.p1, 250000], [ID.profs.p2, 220000],
@@ -379,14 +379,14 @@ async function main() {
   for (const [profId, brut] of profPaie) {
     for (const mois of [9, 10, 11, 12, 1, 2]) {
       const annee = mois >= 9 ? 2024 : 2025;
-      if (!await prisma.paiementProfesseur.findFirst({ where: { professeur_id: profId, mois, annee } })) {
+      if (!await prisma.paiementPersonnel.findFirst({ where: { personnel_id: profId, mois, annee } })) {
         const retenues = Math.round(brut * 0.05);
-        await prisma.paiementProfesseur.create({ data: { professeur_id: profId, mois, annee, montant_brut: brut, retenues, net_a_payer: brut - retenues, statut: 'paye' } });
+        await prisma.paiementPersonnel.create({ data: { personnel_id: profId, mois, annee, montant_brut: brut, retenues, net_a_payer: brut - retenues, statut: 'paye' } });
         profPaiCount++;
       }
     }
   }
-  console.log(`✅ Paiements test profs : ${profPaiCount}`);
+  console.log(`✅ Paiements test personnel : ${profPaiCount}`);
 
   console.log('\n🎉  Seed développement terminé !\n');
   console.log('  admin / Admin123!  |  directeur / Directeur123!');

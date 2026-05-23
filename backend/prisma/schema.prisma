@@ -10,17 +10,9 @@ datasource db {
 // ─────────────────────────────────────────────────────────────────────────────
 // Convention bilingue FR / AR
 // ─────────────────────────────────────────────────────────────────────────────
-// Pour tous les libellés affichés à l'utilisateur, on stocke une version FR
-// et une version AR (`nom_fr` / `nom_ar`, `titre_fr` / `titre_ar`, etc.).
-//
-// Politique de nullabilité :
-//  - `nom_fr String`              → obligatoire (langue d'administration par défaut)
-//  - `nom_ar String?`             → nullable, le frontend retombe sur `nom_fr` quand absent
-//
-// Quelques modèles historiques conservent encore `nom_ar String` non-null
-// (Etablissement, Personnel, Classe, Matiere). Migration future : passer en
-// `String?` ou supprimer le `@default("")` legacy. La règle ci-dessus est la
-// cible pour tous les nouveaux modèles.
+// Seul le modèle Matiere conserve un champ AR (`nom_ar String?`) car les
+// bulletins/relevés affichent les matières dans les deux langues. Tous les
+// autres champs de l'application n'utilisent que `_fr`.
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Etablissement {
@@ -79,7 +71,6 @@ model Utilisateur {
   etablissement_id     String
   role_id              String
   nom_fr               String
-  nom_ar               String
   prenom_fr            String?
   sexe                 String? // 'M' ou 'F' — utilisé pour l'accord en genre des documents
   identifiant          String    @unique
@@ -117,7 +108,6 @@ model Fonction {
   etablissement_id String
   code             String // identifiant technique, stocké dans Personnel.fonction
   libelle_fr       String
-  libelle_ar       String?
   ordre            Int      @default(0)
   supprimable      Boolean  @default(true)
   created_at       DateTime @default(now())
@@ -132,7 +122,6 @@ model Personnel {
   utilisateur_id   String    @unique
   fonction         String    @default("ENSEIGNANT") // code Fonction (configurable par établissement, cf. table Fonction)
   specialite_fr    String?
-  specialite_ar    String?
   telephone        String?
   date_embauche    DateTime?
   type_contrat     String    @default("permanent")
@@ -259,7 +248,7 @@ model ConfigNotes {
   note_max                Decimal  @default(20) @db.Decimal(5, 2)
   note_min                Decimal  @default(0) @db.Decimal(5, 2)
   nb_periodes             Int      @default(3)
-  noms_periodes           Json     @default("{\"fr\":[\"1er Trimestre\",\"2ème Trimestre\",\"3ème Trimestre\"],\"ar\":[\"الفصل الأول\",\"الفصل الثاني\",\"الفصل الثالث\"]}")
+  noms_periodes           Json     @default("{\"fr\":[\"1er Trimestre\",\"2ème Trimestre\",\"3ème Trimestre\"]}")
   arrondi                 Int      @default(2)
   chiffres_arabes         Boolean  @default(false)
   montant_mensualite      Decimal  @default(7500) @db.Decimal(10, 2)
@@ -282,7 +271,6 @@ model Domaine {
   id               String  @id @default(uuid())
   etablissement_id String
   nom_fr           String
-  nom_ar           String  @default("")
   code             String // 'LANGUE_COMMUNICATION' | 'MATHEMATIQUES' | 'ESVS' | 'EPSA' | 'AUTRE'
   ordre            Int     @default(0)
   actif            Boolean @default(true)
@@ -298,7 +286,7 @@ model Matiere {
   id               String  @id @default(uuid())
   etablissement_id String
   nom_fr           String
-  nom_ar           String
+  nom_ar           String?
   filiere          String
   coeff_defaut     Decimal @default(1) @db.Decimal(4, 2)
   note_max         Decimal @default(20) @db.Decimal(5, 2)
@@ -430,7 +418,6 @@ model Parent {
   id        String  @id @default(uuid())
   eleve_id  String
   nom_fr    String
-  nom_ar    String?
   lien      String
   telephone String
   email     String?
@@ -517,7 +504,6 @@ model Bulletin {
   rang              Int?
   appreciation      String?
   observation_fr    String?
-  observation_ar    String?
   observation_prof  String?
   valide_par        String?
   valide_le         DateTime?
@@ -585,7 +571,6 @@ model EvenementCalendrier {
   id               String   @id @default(uuid())
   etablissement_id String
   titre_fr         String
-  titre_ar         String?
   description      String?
   date_debut       DateTime @db.Date
   date_fin         DateTime @db.Date
@@ -751,7 +736,6 @@ model Activite {
   id               String   @id @default(uuid())
   etablissement_id String
   nom_fr           String
-  nom_ar           String?
   description      String?
   responsable_id   String?
   capacite_max     Int?

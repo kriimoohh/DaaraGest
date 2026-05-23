@@ -37,7 +37,7 @@ function appreciation(m: number, filiere: Filiere = 'FR'): string {
 }
 
 type MatiereAvecCoeff = {
-  id: string; nom_fr: string; nom_ar: string; filiere: string;
+  id: string; nom_fr: string; nom_ar: string | null; filiere: string;
   coeff_defaut: unknown; coeff_effectif: unknown;
   note_max: unknown; note_min: unknown; ordre_bulletin: number;
 };
@@ -298,7 +298,6 @@ export async function mettreAJourObservation(
     where: { id },
     data: {
       observation_fr: data.observation_fr ?? bulletin.observation_fr,
-      observation_ar: data.observation_ar ?? bulletin.observation_ar,
       observation_prof: data.observation_prof ?? bulletin.observation_prof,
       valide_par,
       valide_le: new Date(),
@@ -308,7 +307,6 @@ export async function mettreAJourObservation(
   await logAction(etablissement_id, valide_par, 'UPDATE', 'Bulletin', id, {
     action: 'observation',
     has_fr: data.observation_fr !== undefined,
-    has_ar: data.observation_ar !== undefined,
     has_prof: data.observation_prof !== undefined,
   });
 
@@ -329,26 +327,25 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
   const { generateBulletinHtml, generateBulletinAnnuelHtml } = await import('./bulletin.template');
 
   const base = {
-    etablissement_nom_fr: etab.nom_fr, etablissement_nom_ar: '',
+    etablissement_nom_fr: etab.nom_fr,
     eleve_nom_fr: `${data.eleve.prenom_fr} ${data.eleve.nom_fr}`,
-    eleve_nom_ar: '',
     eleve_matricule: data.eleve.matricule, annee_libelle: data.annee_scolaire.libelle,
     moyenne: data.moyenne !== null ? Number(data.moyenne) : null, rang: data.rang,
     appreciation: data.appreciation, devise: etab.devise,
   };
 
-  type NoteRaw = { valeur: unknown; periode: number; matiere: { nom_fr: string; nom_ar: string; coeff_defaut: unknown } };
+  type NoteRaw = { valeur: unknown; periode: number; matiere: { nom_fr: string; nom_ar: string | null; coeff_defaut: unknown } };
 
   const toRows = (f: 'FR' | 'AR') =>
     ((data.notesByFiliere[f] ?? []) as NoteRaw[]).map(n => ({
-      nom_fr: n.matiere.nom_fr, nom_ar: n.matiere.nom_ar,
+      nom_fr: n.matiere.nom_fr, nom_ar: n.matiere.nom_ar ?? n.matiere.nom_fr,
       coeff: Number(n.matiere.coeff_defaut), valeur: n.valeur !== null ? Number(n.valeur) : null,
     }));
 
   const toAnnuelRows = (f: 'FR' | 'AR') => {
     const map = new Map<string, { nom_fr: string; nom_ar: string; coeff: number; vals: Record<number, number | null> }>();
     for (const n of (data.notesByFiliere[f] ?? []) as NoteRaw[]) {
-      if (!map.has(n.matiere.nom_fr)) map.set(n.matiere.nom_fr, { nom_fr: n.matiere.nom_fr, nom_ar: n.matiere.nom_ar, coeff: Number(n.matiere.coeff_defaut), vals: {} });
+      if (!map.has(n.matiere.nom_fr)) map.set(n.matiere.nom_fr, { nom_fr: n.matiere.nom_fr, nom_ar: n.matiere.nom_ar ?? n.matiere.nom_fr, coeff: Number(n.matiere.coeff_defaut), vals: {} });
       map.get(n.matiere.nom_fr)!.vals[n.periode] = n.valeur !== null ? Number(n.valeur) : null;
     }
     return Array.from(map.values()).map(m => {
@@ -412,19 +409,18 @@ export async function genererPdfClasse(
         include: { matiere: true }, orderBy: { matiere: { ordre_bulletin: 'asc' } },
       });
     }
-    type NoteRaw = { valeur: unknown; matiere: { nom_fr: string; nom_ar: string; coeff_defaut: unknown } };
+    type NoteRaw = { valeur: unknown; matiere: { nom_fr: string; nom_ar: string | null; coeff_defaut: unknown } };
     const toRows = (f: 'FR' | 'AR') =>
       ((notesByFiliere[f] ?? []) as NoteRaw[]).map(n => ({
-        nom_fr: n.matiere.nom_fr, nom_ar: n.matiere.nom_ar,
+        nom_fr: n.matiere.nom_fr, nom_ar: n.matiere.nom_ar ?? n.matiere.nom_fr,
         coeff: Number(n.matiere.coeff_defaut), valeur: n.valeur !== null ? Number(n.valeur) : null,
         note_max: Number((n.matiere as {note_max?: unknown}).note_max ?? 20),
       }));
 
     pages.push(generateBulletinHtml({
       type: filiere as 'FR' | 'AR' | 'COMBINE', periode: bulletin.periode,
-      etablissement_nom_fr: etab.nom_fr, etablissement_nom_ar: '',
+      etablissement_nom_fr: etab.nom_fr,
       eleve_nom_fr: `${bulletin.eleve.prenom_fr} ${bulletin.eleve.nom_fr}`,
-      eleve_nom_ar: '',
       eleve_matricule: bulletin.eleve.matricule, annee_libelle: bulletin.annee_scolaire.libelle,
       moyenne: bulletin.moyenne !== null ? Number(bulletin.moyenne) : null,
       rang: bulletin.rang, appreciation: bulletin.appreciation, devise: etab.devise,

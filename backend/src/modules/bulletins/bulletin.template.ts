@@ -21,9 +21,7 @@ interface TrimestreRow {
 
 interface BulletinBaseData {
   etablissement_nom_fr: string;
-  etablissement_nom_ar: string;
   eleve_nom_fr: string;
-  eleve_nom_ar: string;
   eleve_matricule: string;
   annee_libelle: string;
   moyenne: number | null;

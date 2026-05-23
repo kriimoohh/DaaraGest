@@ -1,11 +1,11 @@
 {
   "domaines": [
-    { "code": "LANGUE_COMMUNICATION", "nom_fr": "Langue et Communication",                  "nom_ar": "اللغة والتواصل",                  "sigle": "LC",    "ordre": 1 },
-    { "code": "MATHEMATIQUES",        "nom_fr": "Mathématique",                            "nom_ar": "الرياضيات",                       "sigle": "MATHS", "ordre": 2 },
-    { "code": "RELIGION",             "nom_fr": "Religion",                                "nom_ar": "التربية الدينية",                 "sigle": "RELI",  "ordre": 3 },
-    { "code": "EPSA",                 "nom_fr": "Éducation Physique Sportive et Artistique", "nom_ar": "التربية البدنية والفنية",       "sigle": "EPSA",  "ordre": 4 },
-    { "code": "ESVS",                 "nom_fr": "Éducation à la Science et à la Vie Sociale", "nom_ar": "التربية العلمية والاجتماعية", "sigle": "ESVS",  "ordre": 5 },
-    { "code": "EVEIL",                "nom_fr": "Éveil",                                   "nom_ar": "الإيقاظ",                         "sigle": "EVL",   "ordre": 6 }
+    { "code": "LANGUE_COMMUNICATION", "nom_fr": "Langue et Communication",                  "sigle": "LC",    "ordre": 1 },
+    { "code": "MATHEMATIQUES",        "nom_fr": "Mathématique",                            "sigle": "MATHS", "ordre": 2 },
+    { "code": "RELIGION",             "nom_fr": "Religion",                                "sigle": "RELI",  "ordre": 3 },
+    { "code": "EPSA",                 "nom_fr": "Éducation Physique Sportive et Artistique", "sigle": "EPSA",  "ordre": 4 },
+    { "code": "ESVS",                 "nom_fr": "Éducation à la Science et à la Vie Sociale", "sigle": "ESVS",  "ordre": 5 },
+    { "code": "EVEIL",                "nom_fr": "Éveil",                                   "sigle": "EVL",   "ordre": 6 }
   ],
   "matieres": [
     { "ordre_bulletin": 1,  "nom_fr": "Écriture / Copie",                            "nom_ar": "",                          "code_court": "E.C",                     "domaine_code": "LANGUE_COMMUNICATION", "filiere": "FR", "type_note": "SIMPLE" },

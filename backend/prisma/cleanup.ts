@@ -15,14 +15,14 @@ async function main() {
   const bulletin     = await prisma.bulletin.deleteMany({});
   const note         = await prisma.note.deleteMany({});
   const paiEleve     = await prisma.paiementEleve.deleteMany({});
-  const paiProf      = await prisma.paiementProfesseur.deleteMany({});
-  const presence     = await prisma.presenceProfesseur.deleteMany({});
+  const paiProf      = await prisma.paiementPersonnel.deleteMany({});
+  const presence     = await prisma.presencePersonnel.deleteMany({});
   const inscription  = await prisma.inscription.deleteMany({});
   const parent       = await prisma.parent.deleteMany({});
   const eleve        = await prisma.eleve.deleteMany({});
   const classe       = await prisma.classe.deleteMany({});
   const annee        = await prisma.anneeScolaire.deleteMany({});
-  const professeur   = await prisma.professeur.deleteMany({});
+  const personnel    = await prisma.personnel.deleteMany({});
 
   // Supprimer les utilisateurs test (garder admin)
   const usersTest    = await prisma.utilisateur.deleteMany({
@@ -32,14 +32,14 @@ async function main() {
   console.log(`✅ Bulletins supprimés     : ${bulletin.count}`);
   console.log(`✅ Notes supprimées        : ${note.count}`);
   console.log(`✅ Paiements élèves        : ${paiEleve.count}`);
-  console.log(`✅ Paiements profs         : ${paiProf.count}`);
+  console.log(`✅ Paiements personnel     : ${paiProf.count}`);
   console.log(`✅ Présences               : ${presence.count}`);
   console.log(`✅ Inscriptions            : ${inscription.count}`);
   console.log(`✅ Parents                 : ${parent.count}`);
   console.log(`✅ Élèves                  : ${eleve.count}`);
   console.log(`✅ Classes                 : ${classe.count}`);
   console.log(`✅ Années scolaires        : ${annee.count}`);
-  console.log(`✅ Professeurs             : ${professeur.count}`);
+  console.log(`✅ Personnel               : ${personnel.count}`);
   console.log(`✅ Utilisateurs test       : ${usersTest.count}`);
   console.log('\n✅  Base nettoyée. Seuls admin, rôles, matières et config sont conservés.\n');
 }

@@ -36,7 +36,6 @@ export async function creerEvenement(etablissement_id: string, createur_id: stri
       etablissement_id,
       createur_id,
       titre_fr: data.titre_fr,
-      titre_ar: data.titre_ar ?? null,
       description: data.description ?? null,
       date_debut: debut,
       date_fin: fin,
@@ -55,7 +54,6 @@ export async function modifierEvenement(id: string, etablissement_id: string, da
 
   const updateData: Record<string, unknown> = {};
   if (data.titre_fr !== undefined) updateData.titre_fr = data.titre_fr;
-  if (data.titre_ar !== undefined) updateData.titre_ar = data.titre_ar;
   if (data.description !== undefined) updateData.description = data.description;
   if (data.type !== undefined) updateData.type = data.type;
   if (data.couleur !== undefined) updateData.couleur = data.couleur;

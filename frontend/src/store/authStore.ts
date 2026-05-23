@@ -5,7 +5,6 @@ export interface AuthUser {
   id: string;
   nom_fr: string;
   prenom_fr?: string;
-  nom_ar: string;
   identifiant: string;
   langue: string;
   theme: string;

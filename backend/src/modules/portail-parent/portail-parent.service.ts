@@ -99,7 +99,7 @@ export async function getPortailData(token: string) {
   const activitesInscriptions = inscription ? await prisma.inscriptionActivite.findMany({
     where: { eleve_id: eleve.id, annee_scolaire_id: inscription.annee_scolaire_id },
     include: {
-      activite: { select: { nom_fr: true, nom_ar: true, description: true } },
+      activite: { select: { nom_fr: true, description: true } },
       evaluations: { orderBy: { periode: 'asc' } },
     },
   }) : [];

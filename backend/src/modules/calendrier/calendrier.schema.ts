@@ -5,7 +5,6 @@ const TYPES = ['vacances', 'examen', 'evenement', 'fermeture', 'reunion'] as con
 
 export const evenementSchema = z.object({
   titre_fr: z.string().min(1).max(200),
-  titre_ar: z.string().max(200).optional(),
   description: z.string().max(1000).optional(),
   date_debut: z.string().regex(dateRegex, 'Format date invalide (YYYY-MM-DD)'),
   date_fin: z.string().regex(dateRegex, 'Format date invalide (YYYY-MM-DD)'),
