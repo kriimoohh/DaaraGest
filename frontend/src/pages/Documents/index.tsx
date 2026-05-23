@@ -15,7 +15,8 @@ type TypeDocument =
   | 'CERTIFICAT_BONNE_CONDUITE' | 'FICHE_RENSEIGNEMENTS' | 'ATTESTATION_RESULTATS'
   | 'LISTE_CLASSE' | 'ATTESTATION_TRAVAIL' | 'ORDRE_MISSION' | 'FICHE_PAIE' | 'PLANNING_COURS'
   | 'CERTIFICAT_TRAVAIL_PERMANENT' | 'CERTIFICAT_TRAVAIL_STAGIAIRE'
-  | 'AUTORISATION_ABSENCE_ELEVE' | 'BILLET_ENTREE'
+  | 'AUTORISATION_ABSENCE_ELEVE' | 'AUTORISATION_ABSENCE_PERSONNEL'
+  | 'CONVOCATION_PARENT' | 'BILLET_ENTREE'
   | 'CARTE_ELEVE' | 'CARTE_PROFESSEUR';
 
 const CARD_TYPES = new Set<TypeDocument>(['CARTE_ELEVE', 'CARTE_PROFESSEUR']);
@@ -53,6 +54,8 @@ const LABELS: Record<TypeDocument, string> = {
   CERTIFICAT_TRAVAIL_PERMANENT: 'Certificat de travail (permanent)',
   CERTIFICAT_TRAVAIL_STAGIAIRE: 'Certificat de travail (stagiaire)',
   AUTORISATION_ABSENCE_ELEVE:   "Autorisation d'absence (élève)",
+  AUTORISATION_ABSENCE_PERSONNEL: "Demande d'autorisation d'absence (personnel)",
+  CONVOCATION_PARENT:           'Convocation des parents',
   BILLET_ENTREE:                "Billet d'entrée",
   CARTE_ELEVE:                  "Carte scolaire élève (CR80)",
   CARTE_PROFESSEUR:             'Carte professeur (CR80)',
@@ -76,6 +79,8 @@ const DEST_TYPE: Record<TypeDocument, DestType> = {
   CERTIFICAT_TRAVAIL_PERMANENT: 'professeur',
   CERTIFICAT_TRAVAIL_STAGIAIRE: 'professeur',
   AUTORISATION_ABSENCE_ELEVE:   'eleve',
+  AUTORISATION_ABSENCE_PERSONNEL: 'professeur',
+  CONVOCATION_PARENT:           'eleve',
   BILLET_ENTREE:                'eleve',
   CARTE_ELEVE:                  'eleve',
   CARTE_PROFESSEUR:             'professeur',
@@ -85,7 +90,7 @@ const GROUPS: { label: string; icon: string; types: TypeDocument[] }[] = [
   {
     label: 'Documents élèves',
     icon: 'M12 3C9.79 3 8 4.79 8 7s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 10c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
-    types: ['CERTIFICAT_SCOLARITE','ATTESTATION_INSCRIPTION','CONVOCATION_EXAMEN','FICHE_TRANSFERT','EMPLOI_DU_TEMPS_ELEVE','RELEVE_NOTES','CERTIFICAT_BONNE_CONDUITE','FICHE_RENSEIGNEMENTS','ATTESTATION_RESULTATS','AUTORISATION_ABSENCE_ELEVE','BILLET_ENTREE'],
+    types: ['CERTIFICAT_SCOLARITE','ATTESTATION_INSCRIPTION','CONVOCATION_EXAMEN','CONVOCATION_PARENT','FICHE_TRANSFERT','EMPLOI_DU_TEMPS_ELEVE','RELEVE_NOTES','CERTIFICAT_BONNE_CONDUITE','FICHE_RENSEIGNEMENTS','ATTESTATION_RESULTATS','AUTORISATION_ABSENCE_ELEVE','BILLET_ENTREE'],
   },
   {
     label: 'Documents de classe',
@@ -95,7 +100,7 @@ const GROUPS: { label: string; icon: string; types: TypeDocument[] }[] = [
   {
     label: 'Documents professeurs',
     icon: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
-    types: ['ATTESTATION_TRAVAIL','CERTIFICAT_TRAVAIL_PERMANENT','CERTIFICAT_TRAVAIL_STAGIAIRE','ORDRE_MISSION','FICHE_PAIE','PLANNING_COURS'],
+    types: ['ATTESTATION_TRAVAIL','CERTIFICAT_TRAVAIL_PERMANENT','CERTIFICAT_TRAVAIL_STAGIAIRE','ORDRE_MISSION','FICHE_PAIE','PLANNING_COURS','AUTORISATION_ABSENCE_PERSONNEL'],
   },
   {
     label: "Cartes d'identité (CR80)",
@@ -120,6 +125,29 @@ const EXTRA_PARAMS: Record<TypeDocument, { key: string; label: string; type: 'te
     { key: 'HEURE_RETOUR',        label: 'Heure de retour',         type: 'text' },
     { key: 'MOTIF_ABSENCE',       label: "Motif de l'absence",      type: 'textarea' },
   ],
+  AUTORISATION_ABSENCE_PERSONNEL: [
+    { key: 'CLASSE_SERVICE',          label: 'Classe / Service',                     type: 'text' },
+    { key: 'DATE_DEBUT_ABSENCE',      label: "Date de début d'absence",              type: 'date' },
+    { key: 'DATE_FIN_ABSENCE',        label: "Date de fin d'absence",                type: 'date' },
+    { key: 'DUREE_JOURS',             label: 'Durée (jours)',                         type: 'number' },
+    { key: 'RATTRAPAGE_1_DATE',       label: 'Rattrapage 1 — date',                  type: 'date' },
+    { key: 'RATTRAPAGE_1_HEURE_DEBUT',label: 'Rattrapage 1 — heure début',           type: 'text' },
+    { key: 'RATTRAPAGE_1_HEURE_FIN',  label: 'Rattrapage 1 — heure fin',             type: 'text' },
+    { key: 'RATTRAPAGE_2_DATE',       label: 'Rattrapage 2 — date',                  type: 'date' },
+    { key: 'RATTRAPAGE_2_HEURE_DEBUT',label: 'Rattrapage 2 — heure début',           type: 'text' },
+    { key: 'RATTRAPAGE_2_HEURE_FIN',  label: 'Rattrapage 2 — heure fin',             type: 'text' },
+    { key: 'MOTIFS_COCHES',           label: 'Motifs à cocher (codes séparés par virgule)', type: 'text' },
+    { key: 'AUTRE_MOTIF',             label: 'Autre motif (texte libre)',            type: 'text' },
+    { key: 'DECISION_DATE_DEBUT',     label: 'Décision — date début',                type: 'date' },
+    { key: 'DECISION_DATE_FIN',       label: 'Décision — date fin',                  type: 'date' },
+    { key: 'DECISION_DUREE_JOURS',    label: 'Décision — durée (jours)',             type: 'number' },
+    { key: 'DECISION_AUTORISATION',   label: 'Décision (OUI / NON)',                 type: 'text' },
+  ],
+  CONVOCATION_PARENT: [
+    { key: 'DATE_CONVOCATION',     label: 'Date de la convocation (émission)',  type: 'date' },
+    { key: 'DATE_RDV_CONVOCATION', label: 'Date du rendez-vous',                type: 'date' },
+    { key: 'HEURE_RDV_CONVOCATION',label: 'Heure du rendez-vous',               type: 'text' },
+  ],
   BILLET_ENTREE: [
     { key: 'HEURE_RETARD', label: "Heure d'arrivée", type: 'text' },
   ],
@@ -137,6 +165,7 @@ const VAR_GROUPS: { label: string; vars: { key: string; desc: string }[] }[] = [
     vars: [
       { key: 'NOM_ETABLISSEMENT',   desc: "Nom de l'établissement" },
       { key: 'ADRESSE_ETABLISSEMENT', desc: 'Adresse' },
+      { key: 'VILLE_ETABLISSEMENT', desc: 'Ville (dernière partie de l\'adresse)' },
       { key: 'TEL_ETABLISSEMENT',   desc: 'Téléphone' },
       { key: 'ANNEE_SCOLAIRE',      desc: 'Année scolaire active' },
       { key: 'DATE_AUJOURD_HUI',    desc: "Date du jour" },
@@ -169,6 +198,9 @@ const VAR_GROUPS: { label: string; vars: { key: string; desc: string }[] }[] = [
       { key: 'DATE_FIN_ABSENCE',    desc: 'Date fin absence' },
       { key: 'DATE_RETOUR_ABSENCE', desc: 'Date de retour' },
       { key: 'HEURE_RETARD',        desc: "Heure d'arrivée (billet)" },
+      { key: 'DATE_CONVOCATION',    desc: 'Date d\'émission de la convocation' },
+      { key: 'DATE_RDV_CONVOCATION',desc: 'Date du RDV (convocation parent)' },
+      { key: 'HEURE_RDV_CONVOCATION',desc: 'Heure du RDV (convocation parent)' },
     ],
   },
   {
@@ -181,9 +213,15 @@ const VAR_GROUPS: { label: string; vars: { key: string; desc: string }[] }[] = [
       { key: 'TYPE_CONTRAT',        desc: 'Type de contrat' },
       { key: 'DATE_EMBAUCHE',       desc: "Date d'embauche" },
       { key: 'POSTE_OCCUPE',        desc: 'Poste occupé' },
+      { key: 'FONCTIONS_PERSONNEL', desc: 'Fonctions (auto = poste ou code fonction)' },
       { key: 'PERIODE_STAGE_DEBUT', desc: 'Début du stage' },
       { key: 'PERIODE_STAGE_FIN',   desc: 'Fin du stage' },
       { key: 'DATE_FIN_CONTRAT',    desc: 'Date de fin de contrat' },
+      { key: 'CLASSE_SERVICE',      desc: 'Classe ou service (demande absence)' },
+      { key: 'DUREE_JOURS',         desc: 'Durée en jours (demande absence)' },
+      { key: 'MOTIFS_COCHES',       desc: 'Motifs cochés CSV (ex: BAPTEME,RDV_MEDICAL)' },
+      { key: 'AUTRE_MOTIF',         desc: 'Autre motif (texte libre)' },
+      { key: 'DECISION_AUTORISATION', desc: 'OUI ou NON (coche la décision)' },
     ],
   },
   {

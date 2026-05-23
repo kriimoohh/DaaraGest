@@ -92,9 +92,16 @@ async function buildCommonVars(etablissement_id: string): Promise<Record<string,
   const SOUSSIGNE           = hasCivilite ? (isFemme ? 'soussignée'  : 'soussigné')   : 'soussigné(e)';
   const NOM_COMPLET_DIRECTEUR = [CIVILITE_DIRECTEUR, nomDirecteur].filter(Boolean).join(' ');
 
+  // Tente d'extraire la ville depuis l'adresse de l'établissement (dernière virgule)
+  const adresse = etab.adresse ?? '';
+  const ville = adresse.includes(',')
+    ? adresse.split(',').pop()!.trim()
+    : adresse.trim();
+
   return {
     NOM_ETABLISSEMENT: etab.nom_fr,
-    ADRESSE_ETABLISSEMENT: etab.adresse ?? '',
+    ADRESSE_ETABLISSEMENT: adresse,
+    VILLE_ETABLISSEMENT: ville,
     TEL_ETABLISSEMENT: etab.telephone ?? '',
     ANNEE_SCOLAIRE: annee?.libelle ?? '',
     LOGO: logoHtml,
@@ -179,6 +186,9 @@ async function buildEleveVars(eleve_id: string, etablissement_id: string): Promi
     DATE_RETOUR_ABSENCE: '',
     HEURE_RETOUR: '',
     HEURE_RETARD: '',
+    DATE_CONVOCATION: '',
+    DATE_RDV_CONVOCATION: '',
+    HEURE_RDV_CONVOCATION: '',
   };
 }
 
@@ -192,9 +202,12 @@ async function buildProfVars(prof_id: string, _etablissement_id: string): Promis
 
   return {
     NOM_PRENOM_PROF: `${prof.utilisateur.nom_fr} ${prof.utilisateur.prenom_fr ?? ''}`.trim(),
+    NOM_PROF: prof.utilisateur.nom_fr,
+    PRENOM_PROF: prof.utilisateur.prenom_fr ?? '',
     SPECIALITE: prof.specialite_fr ?? '',
     TYPE_CONTRAT: prof.type_contrat,
     DATE_EMBAUCHE: fmtDate(prof.date_embauche),
+    FONCTIONS_PERSONNEL:  prof.poste_fr ?? prof.fonction,
     // defaults for parametrized fields
     DESTINATION: '',
     OBJET_MISSION: '',
@@ -215,6 +228,21 @@ async function buildProfVars(prof_id: string, _etablissement_id: string): Promis
     PERIODE_STAGE_DEBUT: fmtDate(prof.date_debut_stage),
     PERIODE_STAGE_FIN:   fmtDate(prof.date_fin_stage),
     DATE_FIN_CONTRAT:    fmtDate(prof.date_fin_contrat),
+    // Demande d'autorisation d'absence (personnel)
+    CLASSE_SERVICE:        '',
+    DATE_DEBUT_ABSENCE:    '',
+    DATE_FIN_ABSENCE:      '',
+    DUREE_JOURS:           '',
+    RATTRAPAGE_1_DATE:        '',
+    RATTRAPAGE_1_HEURE_DEBUT: '',
+    RATTRAPAGE_1_HEURE_FIN:   '',
+    RATTRAPAGE_2_DATE:        '',
+    RATTRAPAGE_2_HEURE_DEBUT: '',
+    RATTRAPAGE_2_HEURE_FIN:   '',
+    AUTRE_MOTIF:           '',
+    DECISION_DATE_DEBUT:   '',
+    DECISION_DATE_FIN:     '',
+    DECISION_DUREE_JOURS:  '',
   };
 }
 
@@ -411,6 +439,44 @@ function replaceVars(html: string, vars: Record<string, string>): string {
     (acc, [k, v]) => acc.replaceAll(`{{${k}}}`, HTML_KEYS.has(k) ? (v ?? '') : escapeHtml(v ?? '')),
     html,
   );
+}
+
+// Toutes les cases à cocher utilisées par les templates avec checkboxes.
+// Les clés ici doivent matcher les {{COCHE_xxx}} déclarées dans les templates.
+const CHECKBOX_KEYS = [
+  // AUTORISATION_ABSENCE_PERSONNEL — motifs
+  'BAPTEME', 'HOSPIT_CONJOINT', 'HOSPIT_ENFANT', 'CONCOURS',
+  'MARIAGE_TRAV', 'MARIAGE_ENFANT', 'MARIAGE_FRERE_SOEUR',
+  'DECES_CONJOINT', 'DECES_DESC', 'DECES_ASC', 'DECES_FRERE_SOEUR', 'DECES_BEAU_PARENT',
+  'PIECE_ADMIN', 'FETE_RELIG', 'PELERINAGE', 'RDV_MEDICAL', 'RDV_MEDICAL_ENFANT',
+  // Décision
+  'AUTORISATION_OUI', 'AUTORISATION_NON',
+] as const;
+
+// Convertit les paramètres "MOTIFS_COCHES" (CSV) et "DECISION_AUTORISATION" en
+// variables COCHE_xxx avec ☐ (vide) ou ☒ (coché). Initialise toutes les cases
+// à ☐ pour éviter les {{COCHE_xxx}} non remplacés dans le rendu final.
+function applyCheckboxes(vars: Record<string, string>): void {
+  const cochees = new Set(
+    (vars.MOTIFS_COCHES ?? '')
+      .split(',')
+      .map(s => s.trim().toUpperCase())
+      .filter(Boolean),
+  );
+
+  const decision = (vars.DECISION_AUTORISATION ?? '').trim().toUpperCase();
+  if (decision === 'OUI' || decision === 'ACCORDEE' || decision === 'ACCORDÉE') {
+    cochees.add('AUTORISATION_OUI');
+  } else if (decision === 'NON' || decision === 'REFUSEE' || decision === 'REFUSÉE') {
+    cochees.add('AUTORISATION_NON');
+  }
+
+  for (const key of CHECKBOX_KEYS) {
+    const target = `COCHE_${key}`;
+    if (vars[target] === undefined || vars[target] === '') {
+      vars[target] = cochees.has(key) ? '☒' : '☐';
+    }
+  }
 }
 
 // ─── Public service functions ─────────────────────────────────────────────────
@@ -653,6 +719,7 @@ async function buildA4DocumentHtml(
     }
   }
 
+  applyCheckboxes(vars);
   html = replaceVars(html, vars);
   return { html, customTplId: customTpl?.id ?? null };
 }
