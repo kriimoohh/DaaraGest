@@ -308,7 +308,7 @@ function ImageFieldUploader({ label, value, onChange }: { label: string; value: 
 export function ParametresPage() {
   const { t, i18n } = useTranslation();
   const api = useApi();
-  const { user, updatePreferences } = useAuthStore();
+  const { user, updatePreferences, updateProfile } = useAuthStore();
 
   const [tab, setTab] = useState<Tab>('etablissement');
   const [etab, setEtab] = useState<Etablissement | null>(null);
@@ -342,6 +342,9 @@ export function ParametresPage() {
 
   const [langue, setLangue] = useState(user?.langue ?? 'fr');
   const [themeVal, setThemeVal] = useState<'light' | 'dark'>((user?.theme as 'light' | 'dark') ?? 'light');
+  const [profilNom, setProfilNom] = useState(user?.nom_fr ?? '');
+  const [profilPrenom, setProfilPrenom] = useState(user?.prenom_fr ?? '');
+  const [profilEmail, setProfilEmail] = useState(user?.email ?? '');
   const [ancienMdp, setAncienMdp] = useState('');
   const [nouveauMdp, setNouveauMdp] = useState('');
   const [confirmMdp, setConfirmMdp] = useState('');
@@ -578,10 +581,25 @@ export function ParametresPage() {
   };
 
   const saveCompte = async () => {
+    if (!profilNom.trim()) { toast.error('Le nom est requis'); return; }
+    if (profilEmail.trim() && !/^\S+@\S+\.\S+$/.test(profilEmail.trim())) {
+      toast.error('Email invalide'); return;
+    }
     setSaving('compte');
     try {
-      await api.put('/api/v1/auth/profil', { langue, theme: themeVal });
+      await api.put('/api/v1/auth/profil', {
+        nom_fr: profilNom.trim(),
+        prenom_fr: profilPrenom.trim() || null,
+        email: profilEmail.trim() || null,
+        langue,
+        theme: themeVal,
+      });
       updatePreferences(langue, themeVal);
+      updateProfile({
+        nom_fr: profilNom.trim(),
+        prenom_fr: profilPrenom.trim() || undefined,
+        email: profilEmail.trim() || null,
+      });
       await i18n.changeLanguage(langue);
       toast.success(t('parametre.preferences_ok'));
     } catch (err) {
@@ -1067,36 +1085,58 @@ export function ParametresPage() {
       {/* ── Onglet Mon compte ── */}
       {tab === 'compte' && (
         <>
-          {/* Carte profil */}
+          {/* Carte profil — éditable */}
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="card-hd">
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <SectionIcon path="M12 3C9.79 3 8 4.79 8 7s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 10c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                <h3 style={{ margin: 0 }}>{t('parametre.mon_profil')}</h3>
+                <div>
+                  <h3 style={{ margin: 0 }}>{t('parametre.mon_profil')}</h3>
+                  <span className="sub">Vos informations personnelles. L'identifiant et le rôle ne peuvent pas être modifiés ici.</span>
+                </div>
               </div>
+              <Button onClick={saveCompte} loading={saving === 'compte'}>{t('actions.enregistrer')}</Button>
             </div>
-            <div className="card-pad">
+            <div className="card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 18,
-                padding: '16px 20px', background: 'var(--paper-2)',
+                padding: '12px 16px', background: 'var(--paper-2)',
                 border: '1px solid var(--rule)', borderRadius: 'var(--r-lg)',
               }}>
                 <div className="avatar avatar-xl" style={{
                   background: 'var(--terra-soft)', color: 'var(--terra-ink)',
                   fontSize: 22, fontWeight: 700, border: 'none',
                 }}>
-                  {(user?.nom_fr ?? '').slice(0, 2).toUpperCase() || '?'}
+                  {((profilPrenom || profilNom) ?? '').slice(0, 2).toUpperCase() || '?'}
                 </div>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 17, color: 'var(--ink)', lineHeight: 1.2 }}>{user?.nom_fr}</div>
-                  <div style={{ fontSize: 13, color: 'var(--ink-3)', textTransform: 'capitalize', marginTop: 4 }}>{user?.role}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <div style={{ fontSize: 13, color: 'var(--ink-3)', textTransform: 'capitalize' }}>{user?.role}</div>
                   {user?.identifiant && (
-                    <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--ink-4)', marginTop: 5 }}>
+                    <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--ink-4)' }}>
                       @{user.identifiant}
                     </div>
                   )}
                 </div>
               </div>
+              <div className="grid-2">
+                <Input
+                  label={t('common.prenom_fr')}
+                  value={profilPrenom}
+                  onChange={e => setProfilPrenom(e.target.value)}
+                />
+                <Input
+                  label={t('common.nom_fr')}
+                  value={profilNom}
+                  onChange={e => setProfilNom(e.target.value)}
+                />
+              </div>
+              <Input
+                label={t('common.email')}
+                type="email"
+                placeholder="exemple@daara.sn"
+                value={profilEmail}
+                onChange={e => setProfilEmail(e.target.value)}
+              />
             </div>
           </div>
 

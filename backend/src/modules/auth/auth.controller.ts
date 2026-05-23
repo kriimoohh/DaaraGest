@@ -102,9 +102,19 @@ export async function changePasswordHandler(request: FastifyRequest, reply: Fast
 
 export async function updateProfilHandler(request: FastifyRequest, reply: FastifyReply) {
   const { id } = request.user as JwtPayload;
-  const { nom_fr, langue, theme } = request.body as Record<string, string>;
+  const body = request.body as Record<string, string | null | undefined>;
+  const { nom_fr, prenom_fr, email, langue, theme } = body;
+  if (email && !/^\S+@\S+\.\S+$/.test(email)) {
+    return reply.status(400).send({ error: 'Email invalide' });
+  }
   try {
-    const updated = await updateProfil(id, { nom_fr, langue, theme });
+    const updated = await updateProfil(id, {
+      nom_fr: typeof nom_fr === 'string' ? nom_fr : undefined,
+      prenom_fr: prenom_fr === undefined ? undefined : prenom_fr,
+      email: email === undefined ? undefined : email,
+      langue: typeof langue === 'string' ? langue : undefined,
+      theme: typeof theme === 'string' ? theme : undefined,
+    });
     return reply.send(updated);
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
