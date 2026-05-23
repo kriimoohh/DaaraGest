@@ -64,8 +64,10 @@ export async function creerPersonnel(etablissement_id: string, data: PersonnelIn
       etablissement_id,
       role_id: roleProf.id,
       nom_fr: data.nom_fr,
+      prenom_fr: data.prenom_fr ?? null,
       sexe: data.sexe ?? undefined,
       identifiant: data.identifiant,
+      email: data.email ?? null,
       mot_de_passe: hashedPassword,
     },
   });
@@ -101,12 +103,19 @@ export async function modifierPersonnel(id: string, etablissement_id: string, da
 
   const updateTasks: Promise<unknown>[] = [];
 
-  if (data.nom_fr || data.sexe !== undefined) {
+  if (
+    data.nom_fr ||
+    data.prenom_fr !== undefined ||
+    data.email !== undefined ||
+    data.sexe !== undefined
+  ) {
     updateTasks.push(
       prisma.utilisateur.update({
         where: { id: professeur.utilisateur_id },
         data: {
           nom_fr: data.nom_fr,
+          prenom_fr: data.prenom_fr === undefined ? undefined : (data.prenom_fr || null),
+          email:     data.email     === undefined ? undefined : (data.email     || null),
           sexe: data.sexe === undefined ? undefined : data.sexe,
         },
       })

@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import type { PDFOptions } from 'puppeteer';
 import prisma from '../../config/database';
 import { renderPdfHtml as _renderPdfHtmlReal } from '../../utils/browserPool';
+import { appreciation, extractSeuilsMentions } from '../bulletins/bulletins.service';
 
 // Mode aperçu : on intercepte renderPdfHtml pour capturer le HTML sans
 // passer par Puppeteer. AsyncLocalStorage isole les appels concurrents.
@@ -198,6 +199,8 @@ export async function rapportResultatsClasse(
   const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
   if (!classe) throw new Error('Classe introuvable');
 
+  const seuils = extractSeuilsMentions(await prisma.configNotes.findUnique({ where: { etablissement_id } }));
+
   const inscriptions = await prisma.inscription.findMany({
     where: {
       annee_scolaire_id,
@@ -264,7 +267,7 @@ export async function rapportResultatsClasse(
 ${rows.map((r, i) => {
   const m = r.moyenne;
   const cls = m === null ? '' : m >= 10 ? 'ok' : 'nok';
-  const app = m === null ? '—' : m >= 16 ? 'Très bien' : m >= 14 ? 'Bien' : m >= 12 ? 'Assez bien' : m >= 10 ? 'Passable' : 'Insuffisant';
+  const app = m === null ? '—' : appreciation(m, 'FR', seuils).split(' — ')[0];
   return `<tr>
   <td class="rang">${i + 1}</td>
   <td>${esc(r.matricule)}</td>

@@ -5,6 +5,7 @@ export interface AuthUser {
   id: string;
   nom_fr: string;
   prenom_fr?: string;
+  email?: string | null;
   identifiant: string;
   langue: string;
   theme: string;
@@ -21,6 +22,7 @@ interface AuthState {
   login: (user: AuthUser) => void;
   logout: () => void;
   updatePreferences: (langue: string, theme: string) => void;
+  updateProfile: (patch: Partial<Pick<AuthUser, 'nom_fr' | 'prenom_fr' | 'email'>>) => void;
   setGlobalTheme: (theme: 'light' | 'dark') => void;
 }
 
@@ -49,6 +51,12 @@ export const useAuthStore = create<AuthState>()(
         set((state) => ({
           globalTheme: theme as 'light' | 'dark',
           user: state.user ? { ...state.user, langue, theme } : null,
+        }));
+      },
+
+      updateProfile: (patch) => {
+        set((state) => ({
+          user: state.user ? { ...state.user, ...patch } : null,
         }));
       },
 
