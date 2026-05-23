@@ -7,11 +7,13 @@ export type Fonction = typeof FONCTION_VALUES[number];
 
 export const personnelSchema = z.object({
   nom_fr: z.string().min(1),
+  prenom_fr: z.string().optional(),
   identifiant: z.string().min(1),
   mot_de_passe: z.string().refine(
     (val) => validerForceMotDePasse(val).valide,
     (val) => ({ message: `Mot de passe insuffisant : ${validerForceMotDePasse(val).raisons.join(', ')}` }),
   ),
+  email: z.string().email().optional(),
   fonction:      z.enum(FONCTION_VALUES).default('ENSEIGNANT'),
   sexe:          z.enum(['M', 'F']).optional().nullable(),
   specialite_fr: z.string().optional(),

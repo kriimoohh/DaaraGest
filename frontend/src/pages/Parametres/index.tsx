@@ -638,6 +638,12 @@ export function ParametresPage() {
                     onChange={e => setEtab(p => p ? { ...p, nom_directeur: e.target.value } : p)}
                   />
                 </div>
+                <div style={{ fontSize: 12, color: 'var(--ink-3)', padding: '8px 12px', background: 'var(--paper-2)', borderRadius: 6, border: '1px solid var(--rule)' }}>
+                  Ces deux champs servent de <strong>repli</strong> pour la génération des documents
+                  (bulletins, certificats, cartes…) lorsque l'établissement n'a pas encore de
+                  Personnel de fonction <em>Directeur</em>. Dès qu'un Personnel directeur est défini
+                  dans le module RH, ses informations sont utilisées en priorité.
+                </div>
                 <Input
                   label={t('common.devise')}
                   value={etab.devise}

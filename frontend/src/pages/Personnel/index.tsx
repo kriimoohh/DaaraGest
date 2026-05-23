@@ -134,6 +134,7 @@ interface PersonnelRow {
   nom_fr: string;
   prenom_fr?: string;
   identifiant: string;
+  email?: string;
   actif: boolean;
   sexe?: 'M' | 'F' | null;
   photo_url?: string;
@@ -202,8 +203,10 @@ const TYPE_CONTRAT_LABELS: Record<Exclude<TypeContratValue, ''>, string> = {
 
 interface PersonnelFormData {
   nom_fr: string;
+  prenom_fr: string;
   identifiant: string;
   mot_de_passe: string;
+  email: string;
   fonction: string;
   sexe: Sexe;
   specialite_fr: string;
@@ -220,8 +223,8 @@ interface PersonnelFormData {
 type FormErrors = Partial<Record<keyof PersonnelFormData, string>>;
 
 const EMPTY_FORM: PersonnelFormData = {
-  nom_fr: '',
-  identifiant: '', mot_de_passe: '',
+  nom_fr: '', prenom_fr: '',
+  identifiant: '', mot_de_passe: '', email: '',
   fonction: 'ENSEIGNANT',
   sexe: '',
   specialite_fr: '', telephone: '', type_contrat: '',
@@ -237,6 +240,9 @@ function validate(form: PersonnelFormData, isEdit: boolean): FormErrors {
   if (!form.nom_fr.trim()) errors.nom_fr = 'Le nom est requis';
   if (!form.identifiant.trim()) errors.identifiant = "L'identifiant est requis";
   if (!isEdit && !form.mot_de_passe.trim()) errors.mot_de_passe = 'Le mot de passe est requis';
+  if (form.email.trim() && !/^\S+@\S+\.\S+$/.test(form.email.trim())) {
+    errors.email = 'Email invalide';
+  }
   if (!form.type_contrat) errors.type_contrat = 'Le type de contrat est requis';
   if (form.type_contrat === 'CDD' && !form.date_fin_contrat) {
     errors.date_fin_contrat = "La date de fin de contrat est requise pour un CDD";
@@ -315,7 +321,9 @@ export function PersonnelPage() {
     setEditTarget(prof);
     setForm({
       nom_fr: prof.nom_fr,
+      prenom_fr: prof.prenom_fr ?? '',
       identifiant: prof.identifiant, mot_de_passe: '',
+      email: prof.email ?? '',
       fonction: prof.personnel?.fonction ?? 'ENSEIGNANT',
       sexe: (prof.sexe ?? '') as Sexe,
       specialite_fr: profSpecialite(prof),
@@ -352,7 +360,9 @@ export function PersonnelPage() {
       const isStagiaire = form.type_contrat === 'stagiaire';
       const payload: Record<string, unknown> = {
         nom_fr: form.nom_fr,
+        prenom_fr: form.prenom_fr || undefined,
         identifiant: form.identifiant,
+        email: form.email || undefined,
         fonction: form.fonction,
         sexe: form.sexe || null,
         specialite_fr: form.fonction === 'ENSEIGNANT' ? form.specialite_fr : undefined,
@@ -683,7 +693,10 @@ export function PersonnelPage() {
               </div>
             </div>
 
-            <Input label={t('common.nom_fr')} value={form.nom_fr} onChange={(e) => setField('nom_fr', e.target.value)} error={formErrors.nom_fr} />
+            <div className="grid-2">
+              <Input label={t('common.prenom_fr')} value={form.prenom_fr} onChange={(e) => setField('prenom_fr', e.target.value)} />
+              <Input label={t('common.nom_fr')} value={form.nom_fr} onChange={(e) => setField('nom_fr', e.target.value)} error={formErrors.nom_fr} />
+            </div>
 
             <div className="grid-2">
               <Input label={t('auth.identifiant')} value={form.identifiant} onChange={(e) => setField('identifiant', e.target.value)} error={formErrors.identifiant} />
@@ -715,6 +728,14 @@ export function PersonnelPage() {
               )}
               <Input label={t('common.telephone')} type="tel" value={form.telephone} onChange={(e) => setField('telephone', e.target.value)} />
             </div>
+            <Input
+              label={t('common.email')}
+              type="email"
+              placeholder="exemple@daara.sn"
+              value={form.email}
+              onChange={(e) => setField('email', e.target.value)}
+              error={formErrors.email}
+            />
             <Select
               label={t('professeur.type_contrat')}
               value={form.type_contrat}
