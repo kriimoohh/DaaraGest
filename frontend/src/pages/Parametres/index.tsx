@@ -51,6 +51,10 @@ interface ConfigNotes {
   chiffres_arabes: boolean;
   montant_mensualite: number;
   jours_cours: string[];
+  seuil_tres_bien: number;
+  seuil_bien: number;
+  seuil_assez_bien: number;
+  seuil_passable: number;
 }
 
 interface ConfigNotifications {
@@ -355,6 +359,10 @@ export function ParametresPage() {
             montant_mensualite: Number(rawNotes.montant_mensualite),
             noms_periodes: buildPeriodes(nb, rawPeriodes),
             jours_cours: (rawNotes.jours_cours as string[]) ?? ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'],
+            seuil_tres_bien:  Number(rawNotes.seuil_tres_bien  ?? 16),
+            seuil_bien:       Number(rawNotes.seuil_bien       ?? 14),
+            seuil_assez_bien: Number(rawNotes.seuil_assez_bien ?? 12),
+            seuil_passable:   Number(rawNotes.seuil_passable   ?? 10),
           });
         }
         if (rawNotif) {
@@ -1099,40 +1107,69 @@ export function ParametresPage() {
       )}
 
       {/* ── Barème des mentions ── */}
-      {!loading && tab === 'bareme' && (
+      {!loading && tab === 'bareme' && config && (
         <div className="card">
           <div className="card-hd">
-            <h3 style={{ margin: 0 }}>{t('parametre.bareme_mentions')}</h3>
+            <div>
+              <h3 style={{ margin: 0 }}>{t('parametre.bareme_mentions')}</h3>
+              <span className="sub">Seuils minimums (sur {config.note_max}) appliqués aux bulletins et aux rapports de classe.</span>
+            </div>
+            <Button onClick={saveConfig} loading={saving === 'notes'}>{t('actions.enregistrer')}</Button>
           </div>
           <div className="card-pad">
-            <div className="tbl-wrap">
-              <table className="tbl">
-                <thead>
-                  <tr>
-                    <th>Mention</th>
-                    <th>Seuil min</th>
-                    <th>Seuil max</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { label: t('parametre.tres_bien'), min: 16, max: 20, variant: 'success' },
-                    { label: t('parametre.bien'), min: 14, max: 16, variant: 'info' },
-                    { label: t('parametre.assez_bien'), min: 12, max: 14, variant: 'info' },
-                    { label: t('parametre.passable'), min: 10, max: 12, variant: 'warning' },
-                    { label: t('parametre.insuffisant'), min: 0, max: 10, variant: 'error' },
-                  ].map(m => (
-                    <tr key={m.label}>
-                      <td><span className={`badge badge-${m.variant}`}>{m.label}</span></td>
-                      <td style={{ fontFamily: 'var(--font-mono)' }}>{m.min}</td>
-                      <td style={{ fontFamily: 'var(--font-mono)' }}>{m.max}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {(() => {
+              const lignes: { key: 'seuil_tres_bien' | 'seuil_bien' | 'seuil_assez_bien' | 'seuil_passable' | null; label: string; variant: string; min: number; max: number | null }[] = [
+                { key: 'seuil_tres_bien',  label: t('parametre.tres_bien'),  variant: 'success', min: config.seuil_tres_bien,  max: config.note_max },
+                { key: 'seuil_bien',       label: t('parametre.bien'),       variant: 'info',    min: config.seuil_bien,       max: config.seuil_tres_bien },
+                { key: 'seuil_assez_bien', label: t('parametre.assez_bien'), variant: 'info',    min: config.seuil_assez_bien, max: config.seuil_bien },
+                { key: 'seuil_passable',   label: t('parametre.passable'),   variant: 'warning', min: config.seuil_passable,   max: config.seuil_assez_bien },
+                { key: null,               label: t('parametre.insuffisant'), variant: 'error',  min: 0,                       max: config.seuil_passable },
+              ];
+              return (
+                <div className="tbl-wrap">
+                  <table className="tbl">
+                    <thead>
+                      <tr>
+                        <th>Mention</th>
+                        <th style={{ width: 160 }}>Seuil min (≥)</th>
+                        <th>Seuil max (&lt;)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lignes.map(m => (
+                        <tr key={m.label}>
+                          <td><span className={`badge badge-${m.variant}`}>{m.label}</span></td>
+                          <td>
+                            {m.key ? (
+                              <input
+                                className="input"
+                                type="number"
+                                min={0}
+                                max={config.note_max}
+                                step={0.5}
+                                value={m.min}
+                                onChange={e => {
+                                  const v = parseFloat(e.target.value);
+                                  setConfig(p => p ? { ...p, [m.key as string]: isNaN(v) ? 0 : v } : p);
+                                }}
+                                style={{ fontFamily: 'var(--font-mono)' }}
+                              />
+                            ) : (
+                              <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--ink-3)' }}>0</span>
+                            )}
+                          </td>
+                          <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--ink-3)' }}>
+                            {m.max !== null ? m.max : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
             <div style={{ marginTop: 16, padding: '12px 14px', background: 'var(--info-soft)', border: '1px solid var(--info-border)', borderRadius: 'var(--r-md)', fontSize: 13, color: 'var(--info-text)' }}>
-              Le barème des mentions est défini dans les paramètres globaux et peut évoluer selon le règlement de l'établissement. Contactez l'administrateur pour modifier les seuils.
+              Les seuils doivent être strictement décroissants : Très bien &gt; Bien &gt; Assez bien &gt; Passable. Le seuil « Insuffisant » est implicite (toute moyenne &lt; Passable).
             </div>
           </div>
         </div>
