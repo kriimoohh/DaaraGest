@@ -18,6 +18,8 @@ export const TYPE_DOCUMENT_LABELS: Record<TypeDocument, string> = {
   CERTIFICAT_TRAVAIL_PERMANENT: 'Certificat de travail (permanent)',
   CERTIFICAT_TRAVAIL_STAGIAIRE: 'Certificat de travail (stagiaire)',
   AUTORISATION_ABSENCE_ELEVE:   "Autorisation d'absence (élève)",
+  AUTORISATION_ABSENCE_PERSONNEL: "Demande d'autorisation d'absence (personnel)",
+  CONVOCATION_PARENT:           'Convocation des parents',
   BILLET_ENTREE:                "Billet d'entrée",
   CARTE_ELEVE:                  "Carte d'identité scolaire (élève)",
   CARTE_PROFESSEUR:             "Carte d'identité professeur",
@@ -428,6 +430,187 @@ const BILLET_ENTREE_TPL = wrapPage("Billet d'entrée", `
     </div>
   </div>`);
 
+// ─── Convocation des parents (souche + talon, 2 exemplaires par page) ────────
+
+const CONVOCATION_PARENT_BLOC = `
+  <div style="border:1.5px dashed #999;padding:20px 28px;margin-bottom:14px;page-break-inside:avoid;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        {{LOGO}}
+        <div>
+          <div style="font-size:11px;font-weight:bold;color:#1a5276;line-height:1.3;">{{NOM_ETABLISSEMENT}}</div>
+          <div style="font-size:9px;color:#666;line-height:1.4;">{{ADRESSE_ETABLISSEMENT}}<br>Tél : {{TEL_ETABLISSEMENT}}</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:#555;text-align:right;line-height:1.5;">
+        Année scolaire {{ANNEE_SCOLAIRE}}<br>
+        {{VILLE_ETABLISSEMENT}}, le {{DATE_CONVOCATION}}
+      </div>
+    </div>
+    <div style="text-align:center;font-size:14px;font-weight:bold;letter-spacing:2px;background:#ddd;padding:4px 0;margin:8px 0 12px;">CONVOCATION</div>
+    <p style="font-size:12px;margin:8px 0 6px;"><strong>CHER(E) PARENT(E),</strong></p>
+    <p style="font-size:12px;line-height:1.8;margin:6px 0;">
+      Nous vous prions de bien vouloir vous présenter à l'école le
+      <strong>{{DATE_RDV_CONVOCATION}}</strong> à <strong>{{HEURE_RDV_CONVOCATION}}</strong>
+      pour affaire concernant l'élève
+      <strong>{{NOM_PRENOM_ELEVE}}</strong> de la classe de <strong>{{CLASSE_FR}}</strong>.
+    </p>
+    <p style="font-size:11px;font-style:italic;margin:10px 0 6px;text-decoration:underline;">La présente convocation doit être rapportée.</p>
+    <div style="font-size:11px;line-height:1.7;margin:6px 0 10px;">
+      <strong>• S'ADRESSER :</strong>
+      <span style="margin-left:14px;">- AU RÉGISSEUR.</span>
+      <span style="margin-left:14px;">- AU DIRECTEUR.</span>
+      <span style="margin-left:14px;">- AU MAÎTRE(SSE).</span>
+    </div>
+    <div style="text-align:right;font-size:11px;margin-top:14px;">
+      <em>{{DIRECTEUR_QUALITE}}</em><br>
+      <span style="display:inline-block;margin-top:18px;min-width:160px;border-bottom:1px solid #333;">{{NOM_COMPLET_DIRECTEUR}}</span>
+    </div>
+  </div>`;
+
+const CONVOCATION_PARENT_TPL = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Convocation des parents</title>
+  <style>${COMMON_CSS}</style>
+</head>
+<body>
+  <div class="page" style="padding:18px 28px;">
+    ${CONVOCATION_PARENT_BLOC}
+    ${CONVOCATION_PARENT_BLOC}
+  </div>
+</body>
+</html>`;
+
+// ─── Demande d'autorisation d'absence (personnel) ────────────────────────────
+
+function motifCheckbox(key: string, label: string): string {
+  return `<span style="display:inline-block;margin-right:6px;font-family:monospace;font-size:13px;">{{COCHE_${key}}}</span>${label}`;
+}
+
+const AUTORISATION_ABSENCE_PERSONNEL_TPL = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Demande d'autorisation d'absence</title>
+  <style>${COMMON_CSS}</style>
+</head>
+<body>
+  <div class="page">
+    ${SHARED_HEADER}
+    <div class="doc-title">Demande d'autorisation d'absence</div>
+    <div class="doc-subtitle">(À remplir en 2 exemplaires)</div>
+    <div class="ref-line">Année scolaire : {{ANNEE_SCOLAIRE}}</div>
+
+    <table class="info-table" style="margin-top:8px;">
+    <tr><td>Prénom(s)</td><td>{{PRENOM_PROF}}</td></tr>
+    <tr><td>Nom</td><td><strong>{{NOM_PROF}}</strong></td></tr>
+    <tr><td>Fonctions</td><td>{{FONCTIONS_PERSONNEL}}</td></tr>
+    <tr><td>Classe / Service</td><td>{{CLASSE_SERVICE}}</td></tr>
+    <tr><td>Durée demandée</td><td>du <strong>{{DATE_DEBUT_ABSENCE}}</strong> au <strong>{{DATE_FIN_ABSENCE}}</strong>, soit <strong>{{DUREE_JOURS}}</strong> jour(s)</td></tr>
+  </table>
+
+  <p style="font-size:13px;line-height:1.8;margin:14px 0;">
+    Je m'engage à restituer le temps perdu et à dispenser les leçons non réalisées aux jours et heures suivants :
+  </p>
+  <table class="info-table">
+    <tr>
+      <td>Séance 1</td>
+      <td>le {{RATTRAPAGE_1_DATE}} de {{RATTRAPAGE_1_HEURE_DEBUT}} à {{RATTRAPAGE_1_HEURE_FIN}}</td>
+    </tr>
+    <tr>
+      <td>Séance 2</td>
+      <td>le {{RATTRAPAGE_2_DATE}} de {{RATTRAPAGE_2_HEURE_DEBUT}} à {{RATTRAPAGE_2_HEURE_FIN}}</td>
+    </tr>
+  </table>
+
+  <p style="font-size:12px;margin:14px 0 4px;">À {{VILLE_ETABLISSEMENT}}, le {{DATE_AUJOURD_HUI}}</p>
+  <p style="font-size:12px;margin:0 0 18px;">Signature de l'intéressé(e) : <span style="display:inline-block;min-width:200px;border-bottom:1px solid #333;">&nbsp;</span></p>
+
+  <div style="border:1px solid #aaa;padding:12px 14px;margin-top:10px;">
+    <p style="font-size:13px;font-weight:bold;text-align:center;margin:0 0 10px;text-decoration:underline;">
+      PARTIE À REMPLIR PAR L'INTÉRESSÉ(E)
+    </p>
+    <table style="width:100%;font-size:12px;border-collapse:collapse;">
+      <tr>
+        <td style="vertical-align:top;width:50%;padding:3px 6px;">${motifCheckbox('BAPTEME', "Baptême d'un enfant")}</td>
+        <td style="vertical-align:top;width:50%;padding:3px 6px;">${motifCheckbox('PIECE_ADMIN', "Besoin d'une pièce administrative")}</td>
+      </tr>
+      <tr>
+        <td style="padding:3px 6px;">${motifCheckbox('HOSPIT_CONJOINT', "Hospitalisation d'un conjoint")}</td>
+        <td style="padding:3px 6px;">${motifCheckbox('FETE_RELIG', 'Fête religieuse')}</td>
+      </tr>
+      <tr>
+        <td style="padding:3px 6px;">${motifCheckbox('HOSPIT_ENFANT', "Hospitalisation d'un enfant du travailleur")}</td>
+        <td style="padding:3px 6px;">${motifCheckbox('PELERINAGE', 'Pèlerinage à la Mecque')}</td>
+      </tr>
+      <tr>
+        <td style="padding:3px 6px;">${motifCheckbox('CONCOURS', 'Candidature à un concours ou examen')}</td>
+        <td style="padding:3px 6px;">${motifCheckbox('RDV_MEDICAL', 'Rendez-vous médical du travailleur')}</td>
+      </tr>
+      <tr>
+        <td style="padding:3px 6px;">${motifCheckbox('MARIAGE_TRAV', 'Mariage du travailleur')}</td>
+        <td style="padding:3px 6px;">${motifCheckbox('RDV_MEDICAL_ENFANT', "Rendez-vous médical d'un fils du travailleur")}</td>
+      </tr>
+      <tr>
+        <td style="padding:3px 6px;">${motifCheckbox('MARIAGE_ENFANT', "Mariage d'un de ses enfants")}</td>
+        <td style="padding:3px 6px;vertical-align:top;">Autres : <span style="display:inline-block;min-width:140px;border-bottom:1px solid #333;">{{AUTRE_MOTIF}}</span></td>
+      </tr>
+      <tr>
+        <td style="padding:3px 6px;">${motifCheckbox('MARIAGE_FRERE_SOEUR', "Mariage d'un frère ou d'une sœur")}</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td style="padding:3px 6px;">${motifCheckbox('DECES_CONJOINT', "Décès d'un conjoint")}</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td style="padding:3px 6px;">${motifCheckbox('DECES_DESC', "Décès d'un descendant en lignée directe")}</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td style="padding:3px 6px;">${motifCheckbox('DECES_ASC', "Décès d'un ascendant en lignée directe")}</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td style="padding:3px 6px;">${motifCheckbox('DECES_FRERE_SOEUR', "Décès d'un frère ou d'une sœur")}</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td style="padding:3px 6px;">${motifCheckbox('DECES_BEAU_PARENT', "Décès d'un beau-père ou d'une belle-mère")}</td>
+        <td></td>
+      </tr>
+    </table>
+  </div>
+
+  <div style="border:1px solid #aaa;padding:12px 14px;margin-top:10px;">
+    <p style="font-size:13px;font-weight:bold;margin:0 0 8px;">Décision de la Direction :</p>
+    <p style="font-size:12px;margin:4px 0;">
+      Durée : du <strong>{{DECISION_DATE_DEBUT}}</strong> au <strong>{{DECISION_DATE_FIN}}</strong>,
+      soit <strong>{{DECISION_DUREE_JOURS}}</strong> jour(s)
+    </p>
+    <p style="font-size:12px;margin:8px 0;">
+      <span style="font-family:monospace;">{{COCHE_AUTORISATION_OUI}}</span> Autorisation accordée &nbsp;&nbsp;
+      <span style="font-family:monospace;">{{COCHE_AUTORISATION_NON}}</span> Autorisation non accordée
+    </p>
+  </div>
+
+    <div style="margin-top:24px;display:flex;justify-content:space-between;gap:20px;">
+      <div style="text-align:center;flex:1;">
+        <p style="font-size:12px;margin:0 0 6px;"><strong>LE RÉGISSEUR :</strong></p>
+        <div style="height:50px;border-bottom:1px solid #333;"></div>
+      </div>
+      <div style="text-align:center;flex:1;">
+        <p style="font-size:12px;margin:0 0 6px;"><strong>LE DIRECTEUR :</strong></p>
+        <p style="font-size:12px;font-weight:bold;margin:0 0 4px;">{{NOM_COMPLET_DIRECTEUR}}</p>
+        {{SIGNATURE}}
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+
 // ─── Carte d'identité scolaire (élève) — CR80 85.6×54mm ──────────────────────
 
 const CARTE_ELEVE_HTML = `<!DOCTYPE html>
@@ -638,6 +821,8 @@ const TEMPLATES: Record<TypeDocument, string> = {
   CERTIFICAT_TRAVAIL_PERMANENT: CERTIFICAT_TRAVAIL_PERMANENT_TPL,
   CERTIFICAT_TRAVAIL_STAGIAIRE: CERTIFICAT_TRAVAIL_STAGIAIRE_TPL,
   AUTORISATION_ABSENCE_ELEVE:   AUTORISATION_ABSENCE_ELEVE_TPL,
+  AUTORISATION_ABSENCE_PERSONNEL: AUTORISATION_ABSENCE_PERSONNEL_TPL,
+  CONVOCATION_PARENT:           CONVOCATION_PARENT_TPL,
   BILLET_ENTREE:                BILLET_ENTREE_TPL,
   CARTE_ELEVE:                  CARTE_ELEVE_HTML,
   CARTE_PROFESSEUR:             CARTE_PROFESSEUR_HTML,
