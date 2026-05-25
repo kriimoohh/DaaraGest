@@ -7,14 +7,14 @@ import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
 import { useAuthStore } from '../../store/authStore';
 
-function appreciation(valeur: number, max: number): { label: string; color: string } {
+function appreciation(valeur: number, max: number): { key: string; color: string } {
   const pct = valeur / max;
-  if (pct >= 0.9) return { label: 'Excellent', color: 'var(--success-text)' };
-  if (pct >= 0.8) return { label: 'Très bien', color: 'var(--success-text)' };
-  if (pct >= 0.7) return { label: 'Bien', color: 'var(--success-text)' };
-  if (pct >= 0.6) return { label: 'Assez bien', color: 'var(--ink-2)' };
-  if (pct >= 0.5) return { label: 'Passable', color: 'var(--warning-text)' };
-  return { label: 'Insuffisant', color: 'var(--danger-text)' };
+  if (pct >= 0.9) return { key: 'note.appreciation_excellent', color: 'var(--success-text)' };
+  if (pct >= 0.8) return { key: 'note.appreciation_tres_bien', color: 'var(--success-text)' };
+  if (pct >= 0.7) return { key: 'note.appreciation_bien', color: 'var(--success-text)' };
+  if (pct >= 0.6) return { key: 'note.appreciation_assez_bien', color: 'var(--ink-2)' };
+  if (pct >= 0.5) return { key: 'note.appreciation_passable', color: 'var(--warning-text)' };
+  return { key: 'note.appreciation_insuffisant', color: 'var(--danger-text)' };
 }
 
 interface AnneeScolaire { id: string; libelle: string; active: boolean; }
@@ -49,12 +49,12 @@ export function NotesPage() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    api.get<AnneeScolaire[]>('/api/v1/annees-scolaires').then(setAnnees).catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
+    api.get<AnneeScolaire[]>('/api/v1/annees-scolaires').then(setAnnees).catch((err) => toast.error((err as Error).message || t('note.err_chargement')));
   }, []);
 
   useEffect(() => {
     if (!anneeId) return;
-    api.get<Classe[]>(`/api/v1/classes?annee_scolaire_id=${anneeId}`).then(setClasses).catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
+    api.get<Classe[]>(`/api/v1/classes?annee_scolaire_id=${anneeId}`).then(setClasses).catch((err) => toast.error((err as Error).message || t('note.err_chargement')));
   }, [anneeId]);
 
   useEffect(() => {
@@ -69,10 +69,10 @@ export function NotesPage() {
         setMatieres(mats);
         if (mats.length === 0) setProgrammeSansMatiere(true);
       })
-      .catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
+      .catch((err) => toast.error((err as Error).message || t('note.err_chargement')));
     api.get<{ data: Eleve[] }>(`/api/v1/eleves?classe_id=${classeId}&limit=100`)
       .then((r) => setEleves([...(r.data ?? [])].sort((a, b) => `${a.nom_fr} ${a.prenom_fr}`.localeCompare(`${b.nom_fr} ${b.prenom_fr}`, 'fr'))))
-      .catch((err) => toast.error((err as Error).message || 'Erreur de chargement'));
+      .catch((err) => toast.error((err as Error).message || t('note.err_chargement')));
   }, [classeId]);
 
   useEffect(() => {
@@ -113,7 +113,7 @@ export function NotesPage() {
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur lors de l\'enregistrement');
+      toast.error((err as Error).message || t('note.err_enregistrement'));
     } finally {
       setSaving(false);
     }
@@ -127,7 +127,7 @@ export function NotesPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Saisie en masse" title={t('note.saisie')} />
+      <PageHeader eyebrow={t('note.saisie_eyebrow')} title={t('note.saisie')} />
 
       <div className="card-pad" style={{ marginBottom: 16 }}>
         <div className="grid-3" style={{ marginBottom: 12 }}>
@@ -175,7 +175,7 @@ export function NotesPage() {
 
       {classeId && programmeSansMatiere && (
         <div style={{ padding: '12px 16px', background: 'var(--warning-soft)', border: '1px solid var(--warning-border)', borderRadius: 'var(--r-lg)', fontSize: 13, color: 'var(--warning-text)', marginBottom: 16 }}>
-          ⚠️ Cette classe n'a pas encore de programme de matières. Rendez-vous dans <strong>Classes → Programme</strong> pour assigner les matières.
+          ⚠️ {t('note.programme_vide')}
         </div>
       )}
 
@@ -183,17 +183,17 @@ export function NotesPage() {
         <div className="card">
           <div className="card-hd" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
             <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>
-              {eleves.length} élève(s)
+              {t('note.eleves_count', { count: eleves.length })}
             </span>
             <div className="row" style={{ gap: 12 }}>
               {isProfesseur && (
                 <span style={{ fontSize: 12, color: 'var(--info-text)', background: 'var(--info-soft)', border: '1px solid var(--info-border)', padding: '4px 10px', borderRadius: 'var(--r-md)' }}>
-                  Ajout uniquement — les notes déjà saisies ne peuvent pas être modifiées
+                  {t('note.prof_ajout_only')}
                 </span>
               )}
               {success && (
                 <span style={{ fontSize: 13, color: 'var(--success)', fontWeight: 500 }}>
-                  ✓ Notes enregistrées
+                  ✓ {t('note.notes_enregistrees')}
                 </span>
               )}
               {(canEdit || isProfesseur) && (
@@ -205,18 +205,18 @@ export function NotesPage() {
           </div>
 
           {loading ? (
-            <div className="empty">Chargement...</div>
+            <div className="empty">{t('common.chargement')}</div>
           ) : eleves.length === 0 ? (
-            <div className="empty">Aucun élève dans cette classe</div>
+            <div className="empty">{t('note.aucun_eleve')}</div>
           ) : (
             <div className="tbl-wrap">
               <table className="tbl">
                 <thead>
                   <tr>
-                    <th>Matricule</th>
-                    <th>Élève</th>
-                    <th style={{ width: 128 }}>Note /{matMax}</th>
-                    <th style={{ width: 120 }}>Appréciation</th>
+                    <th>{t('note.col_matricule')}</th>
+                    <th>{t('note.col_eleve')}</th>
+                    <th style={{ width: 128 }}>{t('note.col_note')} /{matMax}</th>
+                    <th style={{ width: 120 }}>{t('note.col_appreciation')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -245,7 +245,7 @@ export function NotesPage() {
                                 placeholder="—"
                               />
                               {fieldReadOnly && (
-                                <span title="Note déjà saisie — modification non autorisée" style={{ fontSize: 12, color: 'var(--ink-4)' }}>🔒</span>
+                                <span title={t('note.note_verrouillee')} style={{ fontSize: 12, color: 'var(--ink-4)' }}>🔒</span>
                               )}
                             </div>
                           );
@@ -256,7 +256,7 @@ export function NotesPage() {
                           const v = parseFloat(notes[eleve.id]);
                           if (isNaN(v)) return null;
                           const app = appreciation(v, matMax);
-                          return <span style={{ color: app.color, fontWeight: 500 }}>{app.label}</span>;
+                          return <span style={{ color: app.color, fontWeight: 500 }}>{t(app.key)}</span>;
                         })()}
                       </td>
                     </tr>

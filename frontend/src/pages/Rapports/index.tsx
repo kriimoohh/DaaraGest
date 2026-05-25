@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
 import { useApi } from '../../hooks/useApi';
@@ -8,7 +9,8 @@ import { API_BASE } from '../../lib/api';
 interface Classe { id: string; nom_fr: string; }
 interface AnneeScolaire { id: string; libelle: string; active: boolean; }
 
-const MOIS_LABELS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const MOIS_LABELS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const MOIS_LABELS_AR = ['يناير','فبراير','مارس','أبريل','ماي','يونيو','يوليو','غشت','شتنبر','أكتوبر','نونبر','دجنبر'];
 
 type TypeRapport =
   | 'presences-eleves'
@@ -26,99 +28,101 @@ type FormatRapport = 'pdf' | 'csv';
 
 interface RapportDef {
   type: TypeRapport;
-  label: string;
-  desc: string;
+  labelKey: string;
+  descKey: string;
   icon: string;
   pdfOnly?: boolean;
-  groupe?: string;
+  groupe: string;
 }
 
 const RAPPORTS: RapportDef[] = [
   // ── Rapports de présence ──────────────────────────────────────────────────
   {
     type: 'presences-eleves',
-    label: 'Présences élèves',
-    desc: 'Absences et retards par classe et période',
+    labelKey: 'rapport.presences_eleves_label',
+    descKey: 'rapport.presences_eleves_desc',
     icon: 'M12 3C9.79 3 8 4.79 8 7s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 10c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
-    groupe: 'Présences',
+    groupe: 'presences',
   },
   {
     type: 'presences-personnel',
-    label: 'Présences personnel',
-    desc: 'Présences et heures travaillées par membre du personnel',
+    labelKey: 'rapport.presences_personnel_label',
+    descKey: 'rapport.presences_personnel_desc',
     icon: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
-    groupe: 'Présences',
+    groupe: 'presences',
   },
   // ── Résultats académiques ─────────────────────────────────────────────────
   {
     type: 'resultats-classe',
-    label: 'Résultats par classe',
-    desc: 'Tableau récapitulatif des résultats et classement',
+    labelKey: 'rapport.resultats_classe_label',
+    descKey: 'rapport.resultats_classe_desc',
     icon: 'M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z',
-    groupe: 'Académique',
+    groupe: 'academique',
   },
   {
     type: 'performance-domaine',
-    label: 'Performance par domaine',
-    desc: 'Scores par domaine pédagogique (LC · Maths · ESVS · EPSA) — paysage',
+    labelKey: 'rapport.performance_domaine_label',
+    descKey: 'rapport.performance_domaine_desc',
     icon: 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z',
     pdfOnly: true,
-    groupe: 'Académique',
+    groupe: 'academique',
   },
   {
     type: 'releve-notes',
-    label: 'Relevé de notes',
-    desc: 'Tableau détaillé matière par matière avec statistiques — paysage',
+    labelKey: 'rapport.releve_notes_label',
+    descKey: 'rapport.releve_notes_desc',
     icon: 'M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z',
-    groupe: 'Académique',
+    groupe: 'academique',
   },
   // ── Grilles IEF ───────────────────────────────────────────────────────────
   {
     type: 'grille-ief',
-    label: 'Grille IEF',
-    desc: 'Format inspection officielle — résultats globaux + par domaine + propositions',
+    labelKey: 'rapport.grille_ief_label',
+    descKey: 'rapport.grille_ief_desc',
     icon: 'M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.05 15.96 0 13.5 0c-1.31 0-2.46.54-3.32 1.39L9 3.5 7.82 2.39C6.96.54 5.81 0 4.5 0 2.04 0 0 2.05 0 4.64c0 .48.11.92.18 1.36H0v14c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6zm-7.5 0h-3V3.5l1.5-1.5 1.5 1.5V6z',
     pdfOnly: true,
-    groupe: 'Grilles IEF',
+    groupe: 'grilles_ief',
   },
   {
     type: 'grille-performance',
-    label: 'Grille de performance',
-    desc: 'CI-CP / CE1-CE2 / CM1-CM2 — seuils de maîtrise par domaine, ventilation G/F/T',
+    labelKey: 'rapport.grille_performance_label',
+    descKey: 'rapport.grille_performance_desc',
     icon: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zM8 11c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z',
     pdfOnly: true,
-    groupe: 'Grilles IEF',
+    groupe: 'grilles_ief',
   },
   // ── Fin d'année ───────────────────────────────────────────────────────────
   {
     type: 'propositions-fin',
-    label: 'Conseil de classe (fin d\'année)',
-    desc: 'Comparatif T1/T2/T3 et moyennes annuelles pour décision de passage — paysage',
+    labelKey: 'rapport.propositions_fin_label',
+    descKey: 'rapport.propositions_fin_desc',
     icon: 'M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z',
     pdfOnly: true,
-    groupe: 'Fin d\'année',
+    groupe: 'fin_annee',
   },
   // ── RH ────────────────────────────────────────────────────────────────────
   {
     type: 'charges-personnel',
-    label: 'Charges horaires personnel',
-    desc: 'Heures hebdomadaires par membre du personnel — agrégat sur l\'année scolaire',
+    labelKey: 'rapport.charges_personnel_label',
+    descKey: 'rapport.charges_personnel_desc',
     icon: 'M12 20c4.41 0 8-3.59 8-8s-3.59-8-8-8-8 3.59-8 8 3.59 8 8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z',
-    groupe: 'RH',
+    groupe: 'rh',
   },
   // ── Finance ───────────────────────────────────────────────────────────────
   {
     type: 'bilan-financier',
-    label: 'Bilan financier',
-    desc: 'Encaissements, versements et solde mensuel',
+    labelKey: 'rapport.bilan_financier_label',
+    descKey: 'rapport.bilan_financier_desc',
     icon: 'M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z',
-    groupe: 'Finance',
+    groupe: 'finance',
   },
 ];
 
-const GROUPES = ['Présences', 'Académique', 'Grilles IEF', 'Fin d\'année', 'Finance'];
+const GROUPES = ['presences', 'academique', 'grilles_ief', 'fin_annee', 'finance', 'rh'];
 
 export function RapportsPage() {
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language === 'ar';
   const api = useApi();
   const [selected, setSelected] = useState<TypeRapport>('presences-eleves');
   const [format, setFormat]     = useState<FormatRapport>('pdf');
@@ -273,10 +277,10 @@ export function RapportsPage() {
                       </svg>
                       <div>
                         <div style={{ fontWeight: 600, fontSize: 12, color: selected === r.type ? 'var(--terra-ink)' : 'var(--ink-1)' }}>
-                          {r.label}
+                          {t(r.labelKey)}
                           {r.pdfOnly && <span style={{ marginLeft: 6, fontSize: 9, background: 'var(--ink-5)', color: 'var(--ink-2)', borderRadius: 3, padding: '1px 4px' }}>PDF</span>}
                         </div>
-                        <div style={{ fontSize: 10, color: 'var(--ink-3)', marginTop: 2, lineHeight: 1.3 }}>{r.desc}</div>
+                        <div style={{ fontSize: 10, color: 'var(--ink-3)', marginTop: 2, lineHeight: 1.3 }}>{t(r.descKey)}</div>
                       </div>
                     </button>
                   ))}
@@ -288,7 +292,7 @@ export function RapportsPage() {
 
         {/* Panneau de filtres et export */}
         <div className="card" style={{ padding: 20 }}>
-          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16 }}>{info.label}</div>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16 }}>{t(info.labelKey)}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
             {needsClasse && (
@@ -321,7 +325,7 @@ export function RapportsPage() {
                   label="Mois"
                   value={mois}
                   onChange={e => setMois(e.target.value)}
-                  options={MOIS_LABELS.map((m, i) => ({ value: String(i + 1), label: m }))}
+                  options={(isAr ? MOIS_LABELS_AR : MOIS_LABELS_FR).map((m, i) => ({ value: String(i + 1), label: m }))}
                 />
                 <Select
                   label="Année"
@@ -424,7 +428,7 @@ export function RapportsPage() {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>
-                Aperçu — {info.label}
+                {t('rapport.apercu_titre', { label: t(info.labelKey) })}
               </span>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button

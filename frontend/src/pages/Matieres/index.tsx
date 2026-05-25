@@ -46,7 +46,7 @@ export function MatieresPage() {
       const data = await api.get<Matiere[]>(url);
       setMatieres(data);
     } catch {
-      toast.error('Erreur lors du chargement des matières');
+      toast.error(t('matiere.err_chargement'));
     } finally {
       setLoading(false);
     }
@@ -71,7 +71,7 @@ export function MatieresPage() {
 
   const handleSave = async () => {
     if (!form.nom_fr || !form.filiere) {
-      toast.error('Nom FR et filière sont requis');
+      toast.error(t('matiere.err_nom_filiere'));
       return;
     }
     setSaving(true);
@@ -87,15 +87,15 @@ export function MatieresPage() {
       };
       if (edit) {
         await api.put(`/api/v1/matieres/${edit.id}`, payload);
-        toast.success('Matière modifiée');
+        toast.success(t('matiere.ok_modifiee'));
       } else {
         await api.post('/api/v1/matieres', payload);
-        toast.success('Matière créée');
+        toast.success(t('matiere.ok_creee'));
       }
       setModal(false);
       charger();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message);
     } finally {
       setSaving(false);
     }
@@ -106,11 +106,11 @@ export function MatieresPage() {
     setDeleting(true);
     try {
       await api.delete(`/api/v1/matieres/${confirm.id}`);
-      toast.success('Matière désactivée');
+      toast.success(t('matiere.ok_desactivee'));
       setConfirm(null);
       charger();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message);
     } finally {
       setDeleting(false);
     }
@@ -119,50 +119,53 @@ export function MatieresPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Pédagogie"
-        title="Matières"
-        subtitle="Gérer les matières FR et AR"
-        action={<Button onClick={openAdd}>+ Ajouter une matière</Button>}
+        eyebrow={t('matiere.pedagogie')}
+        title={t('matiere.titre')}
+        subtitle={t('matiere.subtitle')}
+        action={<Button onClick={openAdd}>{t('matiere.ajouter_btn')}</Button>}
       />
 
       {/* Bandeau guide filière — couleurs lisibles dark mode */}
       <div style={{ padding: 16, background: 'var(--info-soft)', border: '1px solid var(--info-border)', borderRadius: 'var(--r-lg)', fontSize: 13, color: 'var(--info-text)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <span style={{ fontSize: 16, flexShrink: 0, color: 'var(--info-text)' }}>ℹ️</span>
         <div>
-          <strong style={{ color: 'var(--info-text)' }}>Configuration des notes par filière :</strong> chaque matière possède sa propre plage de notation (Note Max / Note Min).
-          Les matières arabes peuvent avoir une notation différente des matières françaises (ex. sur 10 au lieu de 20).
-          Pour modifier la plage d'une matière, cliquez sur <em>Modifier</em>.
+          <strong style={{ color: 'var(--info-text)' }}>{t('matiere.banner_titre')}</strong>{' '}
+          <span dangerouslySetInnerHTML={{ __html: t('matiere.banner_desc') }} />
         </div>
       </div>
 
       <div className="tabs">
         <button className={`tab${filiere === '' ? ' active' : ''}`} onClick={() => setFiliere('')}>
-          Toutes <span className="count">{matieres.length}</span>
+          {t('matiere.tab_toutes')} <span className="count">{matieres.length}</span>
         </button>
         <button className={`tab${filiere === 'FR' ? ' active' : ''}`} onClick={() => setFiliere('FR')}>
-          Française <span className="count">{matieres.filter(m => m.filiere === 'FR').length}</span>
+          {t('matiere.tab_francaise')} <span className="count">{matieres.filter(m => m.filiere === 'FR').length}</span>
         </button>
         <button className={`tab${filiere === 'AR' ? ' active' : ''}`} onClick={() => setFiliere('AR')}>
-          Arabe <span className="count">{matieres.filter(m => m.filiere === 'AR').length}</span>
+          {t('matiere.tab_arabe')} <span className="count">{matieres.filter(m => m.filiere === 'AR').length}</span>
         </button>
       </div>
 
       <div className="card">
         {loading ? (
-          <div className="empty">Chargement...</div>
+          <div className="empty">{t('common.chargement')}</div>
         ) : matieres.length === 0 ? (
           <div className="empty" style={{ flexDirection: 'column', gap: 8 }}>
             <span style={{ fontSize: 36 }}>📚</span>
-            <p>Aucune matière trouvée.</p>
+            <p>{t('matiere.aucune_trouvee')}</p>
           </div>
         ) : (
           <div className="tbl-wrap">
             <table className="tbl">
               <thead>
                 <tr>
-                  {['Nom FR', 'Nom AR', 'Filière', 'Coefficient', 'Note Max', 'Note Min', 'Actions'].map((h) => (
-                    <th key={h}>{h}</th>
-                  ))}
+                  <th>{t('matiere.nom_fr')}</th>
+                  <th>{t('matiere.nom_ar')}</th>
+                  <th>{t('matiere.col_filiere')}</th>
+                  <th>{t('note.coefficient')}</th>
+                  <th>{t('parametre.note_max')}</th>
+                  <th>{t('parametre.note_min')}</th>
+                  <th>{t('matiere.col_actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -190,20 +193,20 @@ export function MatieresPage() {
         )}
       </div>
 
-      <Modal isOpen={modal} onClose={() => setModal(false)} title={edit ? 'Modifier la matière' : 'Nouvelle matière'} size="md">
+      <Modal isOpen={modal} onClose={() => setModal(false)} title={edit ? t('matiere.modifier_titre') : t('matiere.nouvelle_titre')} size="md">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div className="grid-2">
             <Input
               label={t('common.nom_fr')}
               value={form.nom_fr}
               onChange={(e) => setForm((f) => ({ ...f, nom_fr: e.target.value }))}
-              placeholder="Mathématiques"
+              placeholder={t('matiere.placeholder_fr')}
             />
             <Input
               label={t('common.nom_ar')}
               value={form.nom_ar}
               onChange={(e) => setForm((f) => ({ ...f, nom_ar: e.target.value }))}
-              placeholder="الرياضيات"
+              placeholder={t('matiere.placeholder_ar')}
               dir="rtl"
             />
           </div>
@@ -259,7 +262,7 @@ export function MatieresPage() {
         onClose={() => setConfirm(null)}
         onConfirm={handleDelete}
         loading={deleting}
-        message={`Désactiver la matière "${confirm?.nom_fr}" ?`}
+        message={t('matiere.confirm_desactiver', { nom: confirm?.nom_fr })}
       />
     </>
   );

@@ -26,7 +26,12 @@ interface NoteEval {
   eleve: { id: string; matricule: string; nom_fr: string; prenom_fr: string };
 }
 
-const TYPE_LABELS: Record<string, string> = { DS: 'DS', INTERRO: 'Interro', DM: 'DM', EXAMEN: 'Examen' };
+const TYPE_LABEL_KEYS: Record<string, string> = {
+  DS: 'evaluation.type_court_ds',
+  INTERRO: 'evaluation.type_court_interro',
+  DM: 'evaluation.type_court_dm',
+  EXAMEN: 'evaluation.type_court_examen',
+};
 const TYPE_VARIANTS: Record<string, 'info' | 'warning' | 'neutral' | 'accent'> = {
   DS: 'info', INTERRO: 'warning', DM: 'neutral', EXAMEN: 'accent',
 };
@@ -34,7 +39,8 @@ const TYPE_VARIANTS: Record<string, 'info' | 'warning' | 'neutral' | 'accent'> =
 const EMPTY_FORM = { titre: '', type: 'DS', date: '', coefficient: '1', note_max: '20', periode: '1' };
 
 export function EvaluationsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'ar' ? 'ar-SN' : 'fr-FR';
   const api    = useApi();
   const role   = useAuthStore(s => s.user?.role ?? '');
   const canEdit = ['admin', 'directeur', 'gestionnaire', 'professeur'].includes(role);
@@ -133,7 +139,7 @@ export function EvaluationsPage() {
         valeur:   !absentsMap[e.id] && notesMap[e.id] !== '' ? parseFloat(notesMap[e.id]) : null,
       }));
       await api.post(`/api/v1/evaluations/${activeEval.id}/notes/bulk`, { notes });
-      toast.success('Notes enregistrées');
+      toast.success(t('evaluation.ok_notes'));
       loadEvaluations();
     } catch (err) {
       toast.error((err as Error).message);
@@ -161,7 +167,7 @@ export function EvaluationsPage() {
 
   const submitForm = async () => {
     if (!form.titre || !form.date || !classeId || !matiereId || !anneeId) {
-      toast.error('Remplissez tous les champs obligatoires'); return;
+      toast.error(t('evaluation.err_champs_obligatoires')); return;
     }
     setSubmitting(true);
     try {
@@ -173,10 +179,10 @@ export function EvaluationsPage() {
       };
       if (editTarget) {
         await api.put(`/api/v1/evaluations/${editTarget.id}`, body);
-        toast.success('Évaluation modifiée');
+        toast.success(t('evaluation.ok_modifiee'));
       } else {
         await api.post('/api/v1/evaluations', body);
-        toast.success('Évaluation créée');
+        toast.success(t('evaluation.ok_creee'));
       }
       setModalOpen(false); loadEvaluations();
     } catch (err) {
@@ -185,17 +191,17 @@ export function EvaluationsPage() {
   };
 
   const deleteEval = async (ev: Evaluation) => {
-    if (!confirm(`Supprimer "${ev.titre}" et toutes ses notes ?`)) return;
+    if (!confirm(t('evaluation.confirm_suppression', { titre: ev.titre }))) return;
     try {
       await api.delete(`/api/v1/evaluations/${ev.id}`);
-      toast.success('Évaluation supprimée'); loadEvaluations();
+      toast.success(t('evaluation.ok_supprimee')); loadEvaluations();
     } catch (err) { toast.error((err as Error).message); }
   };
 
   const nbPeriodes = 3;
   const periodeOptions = [
-    { value: '', label: 'Toutes les périodes' },
-    ...Array.from({ length: nbPeriodes }, (_, i) => ({ value: String(i + 1), label: `Période ${i + 1}` })),
+    { value: '', label: t('evaluation.periode_toutes') },
+    ...Array.from({ length: nbPeriodes }, (_, i) => ({ value: String(i + 1), label: t('evaluation.periode_n', { n: i + 1 }) })),
   ];
 
   // ── Vue saisie des notes ────────────────────────────────────────────────────
@@ -203,38 +209,38 @@ export function EvaluationsPage() {
     return (
       <>
         <PageHeader
-          title={`Saisie — ${activeEval.titre}`}
+          title={t('evaluation.saisie_titre', { titre: activeEval.titre })}
           action={
             <div className="row" style={{ gap: 8 }}>
-              <Button variant="secondary" onClick={() => setActiveEval(null)}>← Retour</Button>
-              {canEdit && <Button onClick={saveNotes} loading={saving}>Enregistrer</Button>}
+              <Button variant="secondary" onClick={() => setActiveEval(null)}>{t('evaluation.retour')}</Button>
+              {canEdit && <Button onClick={saveNotes} loading={saving}>{t('actions.enregistrer')}</Button>}
             </div>
           }
         />
 
         <div className="card" style={{ marginBottom: 16, padding: '12px 16px' }}>
           <div className="row" style={{ gap: 24, flexWrap: 'wrap', fontSize: 13, color: 'var(--ink-2)' }}>
-            <span><strong>Matière :</strong> {activeEval.matiere.nom_fr}</span>
-            <span><strong>Classe :</strong> {activeEval.classe.nom_fr}</span>
-            <span><strong>Type :</strong> <Badge label={TYPE_LABELS[activeEval.type] ?? activeEval.type} variant={TYPE_VARIANTS[activeEval.type] ?? 'neutral'} /></span>
-            <span><strong>Coeff :</strong> {activeEval.coefficient}</span>
-            <span><strong>Barème :</strong> /{activeEval.note_max}</span>
-            <span><strong>Date :</strong> {new Date(activeEval.date).toLocaleDateString('fr-FR')}</span>
+            <span><strong>{t('evaluation.info_matiere')} :</strong> {activeEval.matiere.nom_fr}</span>
+            <span><strong>{t('evaluation.info_classe')} :</strong> {activeEval.classe.nom_fr}</span>
+            <span><strong>{t('evaluation.info_type')} :</strong> <Badge label={TYPE_LABEL_KEYS[activeEval.type] ? t(TYPE_LABEL_KEYS[activeEval.type]) : activeEval.type} variant={TYPE_VARIANTS[activeEval.type] ?? 'neutral'} /></span>
+            <span><strong>{t('evaluation.info_coeff')} :</strong> {activeEval.coefficient}</span>
+            <span><strong>{t('evaluation.info_bareme')} :</strong> /{activeEval.note_max}</span>
+            <span><strong>{t('evaluation.info_date')} :</strong> {new Date(activeEval.date).toLocaleDateString(locale)}</span>
           </div>
         </div>
 
         <div className="card">
           {eleves.length === 0 ? (
-            <div className="empty">Aucun élève dans cette classe</div>
+            <div className="empty">{t('evaluation.aucun_eleve')}</div>
           ) : (
             <div className="tbl-wrap">
               <table className="tbl">
                 <thead>
                   <tr>
-                    <th>Matricule</th>
-                    <th>Élève</th>
-                    <th style={{ width: 100 }}>Absent</th>
-                    <th style={{ width: 140 }}>Note /{activeEval.note_max}</th>
+                    <th>{t('note.col_matricule')}</th>
+                    <th>{t('note.col_eleve')}</th>
+                    <th style={{ width: 100 }}>{t('evaluation.col_absent')}</th>
+                    <th style={{ width: 140 }}>{t('evaluation.col_note')} /{activeEval.note_max}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -280,9 +286,9 @@ export function EvaluationsPage() {
   return (
     <>
       <PageHeader
-        title="Évaluations formatives"
+        title={t('evaluation.titre')}
         action={canEdit && classeId && matiereId ? (
-          <Button onClick={openCreate}>+ Créer une évaluation</Button>
+          <Button onClick={openCreate}>{t('evaluation.creer_btn')}</Button>
         ) : undefined}
       />
 
@@ -290,27 +296,27 @@ export function EvaluationsPage() {
       <div className="card-pad" style={{ marginBottom: 16 }}>
         <div className="grid-4">
           <Select
-            label="Année scolaire"
+            label={t('classe.annee_scolaire')}
             value={anneeId}
             onChange={e => setAnneeId(e.target.value)}
-            options={[{ value: '', label: 'Sélectionner...' }, ...annees.map(a => ({ value: a.id, label: a.libelle }))]}
+            options={[{ value: '', label: t('common.selectionner') }, ...annees.map(a => ({ value: a.id, label: a.libelle }))]}
           />
           <Select
             label={t('nav.classes')}
             value={classeId}
             onChange={e => { setClasseId(e.target.value); setMatiereId(''); }}
-            options={[{ value: '', label: 'Sélectionner...' }, ...classes.map(c => ({ value: c.id, label: c.nom_fr }))]}
+            options={[{ value: '', label: t('common.selectionner') }, ...classes.map(c => ({ value: c.id, label: c.nom_fr }))]}
             disabled={!anneeId}
           />
           <Select
             label={t('nav.matieres')}
             value={matiereId}
             onChange={e => setMatiereId(e.target.value)}
-            options={[{ value: '', label: 'Toutes les matières' }, ...matieres.map(m => ({ value: m.id, label: m.nom_fr }))]}
+            options={[{ value: '', label: t('evaluation.matiere_toutes') }, ...matieres.map(m => ({ value: m.id, label: m.nom_fr }))]}
             disabled={!classeId}
           />
           <Select
-            label="Période"
+            label={t('note.periode')}
             value={periode}
             onChange={e => setPeriode(e.target.value)}
             options={periodeOptions}
@@ -320,24 +326,24 @@ export function EvaluationsPage() {
       </div>
 
       {!classeId ? (
-        <div className="empty">Sélectionnez une classe pour afficher les évaluations</div>
+        <div className="empty">{t('evaluation.empty_classe_requise')}</div>
       ) : loading ? (
-        <div className="empty">Chargement...</div>
+        <div className="empty">{t('common.chargement')}</div>
       ) : evaluations.length === 0 ? (
-        <div className="empty">Aucune évaluation pour ces filtres</div>
+        <div className="empty">{t('evaluation.empty_aucune')}</div>
       ) : (
         <div className="card">
           <div className="tbl-wrap">
             <table className="tbl">
               <thead>
                 <tr>
-                  <th>Titre</th>
-                  <th>Type</th>
-                  <th>Matière</th>
-                  <th>Période</th>
-                  <th>Date</th>
-                  <th style={{ width: 70, textAlign: 'center' }}>Coeff</th>
-                  <th style={{ width: 80, textAlign: 'center' }}>Notes</th>
+                  <th>{t('evaluation.col_titre')}</th>
+                  <th>{t('evaluation.col_type')}</th>
+                  <th>{t('evaluation.col_matiere')}</th>
+                  <th>{t('evaluation.col_periode')}</th>
+                  <th>{t('evaluation.col_date')}</th>
+                  <th style={{ width: 70, textAlign: 'center' }}>{t('evaluation.col_coeff')}</th>
+                  <th style={{ width: 80, textAlign: 'center' }}>{t('evaluation.col_notes')}</th>
                   <th style={{ width: 140 }} />
                 </tr>
               </thead>
@@ -345,10 +351,10 @@ export function EvaluationsPage() {
                 {evaluations.map(ev => (
                   <tr key={ev.id}>
                     <td style={{ fontWeight: 500 }}>{ev.titre}</td>
-                    <td><Badge label={TYPE_LABELS[ev.type] ?? ev.type} variant={TYPE_VARIANTS[ev.type] ?? 'neutral'} /></td>
+                    <td><Badge label={TYPE_LABEL_KEYS[ev.type] ? t(TYPE_LABEL_KEYS[ev.type]) : ev.type} variant={TYPE_VARIANTS[ev.type] ?? 'neutral'} /></td>
                     <td style={{ color: 'var(--ink-2)', fontSize: 13 }}>{ev.matiere.nom_fr}</td>
-                    <td style={{ color: 'var(--ink-2)', fontSize: 13 }}>P{ev.periode}</td>
-                    <td style={{ color: 'var(--ink-2)', fontSize: 13 }}>{new Date(ev.date).toLocaleDateString('fr-FR')}</td>
+                    <td style={{ color: 'var(--ink-2)', fontSize: 13 }}>{t('evaluation.periode_p_court', { n: ev.periode })}</td>
+                    <td style={{ color: 'var(--ink-2)', fontSize: 13 }}>{new Date(ev.date).toLocaleDateString(locale)}</td>
                     <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 13 }}>{ev.coefficient}</td>
                     <td style={{ textAlign: 'center' }}>
                       <span style={{
@@ -363,21 +369,21 @@ export function EvaluationsPage() {
                     <td>
                       <div className="row" style={{ gap: 6, justifyContent: 'flex-end' }}>
                         {canEdit && (
-                          <button className="tb-btn" onClick={() => openNotes(ev)} title="Saisir les notes">
+                          <button className="tb-btn" onClick={() => openNotes(ev)} title={t('evaluation.tt_saisir_notes')}>
                             <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor">
                               <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                             </svg>
                           </button>
                         )}
                         {canEdit && (
-                          <button className="tb-btn" onClick={() => openEdit(ev)} title="Modifier">
+                          <button className="tb-btn" onClick={() => openEdit(ev)} title={t('evaluation.tt_modifier')}>
                             <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor">
                               <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
                             </svg>
                           </button>
                         )}
                         {canDelete && (
-                          <button className="tb-btn tb-btn-danger" onClick={() => deleteEval(ev)} title="Supprimer">
+                          <button className="tb-btn tb-btn-danger" onClick={() => deleteEval(ev)} title={t('evaluation.tt_supprimer')}>
                             <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor">
                               <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
                             </svg>
@@ -397,57 +403,57 @@ export function EvaluationsPage() {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editTarget ? 'Modifier l\'évaluation' : 'Nouvelle évaluation'}
+        title={editTarget ? t('evaluation.modifier_titre') : t('evaluation.creer_titre')}
         size="md"
         footer={
           <div className="row" style={{ gap: 8, justifyContent: 'flex-end' }}>
-            <Button variant="secondary" onClick={() => setModalOpen(false)}>Annuler</Button>
+            <Button variant="secondary" onClick={() => setModalOpen(false)}>{t('actions.annuler')}</Button>
             <Button onClick={submitForm} loading={submitting}>
-              {editTarget ? 'Enregistrer' : 'Créer'}
+              {editTarget ? t('actions.enregistrer') : t('evaluation.creer_btn_label')}
             </Button>
           </div>
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <Input
-            label="Titre *"
+            label={t('evaluation.titre_label')}
             value={form.titre}
             onChange={e => setForm(f => ({ ...f, titre: e.target.value }))}
-            placeholder="Ex : DS de mi-trimestre"
+            placeholder={t('evaluation.titre_placeholder')}
           />
           <div className="grid-2">
             <Select
-              label="Type *"
+              label={t('evaluation.type_label')}
               value={form.type}
               onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
               options={[
-                { value: 'DS',     label: 'Devoir Surveillé (DS)' },
-                { value: 'INTERRO',label: 'Interrogation' },
-                { value: 'DM',     label: 'Devoir Maison (DM)' },
-                { value: 'EXAMEN', label: 'Examen' },
+                { value: 'DS',     label: t('evaluation.type_ds') },
+                { value: 'INTERRO',label: t('evaluation.type_interro') },
+                { value: 'DM',     label: t('evaluation.type_dm') },
+                { value: 'EXAMEN', label: t('evaluation.type_examen') },
               ]}
             />
             <Select
-              label="Période *"
+              label={t('evaluation.periode_label')}
               value={form.periode}
               onChange={e => setForm(f => ({ ...f, periode: e.target.value }))}
-              options={Array.from({ length: nbPeriodes }, (_, i) => ({ value: String(i + 1), label: `Période ${i + 1}` }))}
+              options={Array.from({ length: nbPeriodes }, (_, i) => ({ value: String(i + 1), label: t('evaluation.periode_n', { n: i + 1 }) }))}
             />
           </div>
           <Input
-            label="Date *" type="date"
+            label={t('evaluation.date_label')} type="date"
             value={form.date}
             onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
           />
           <div className="grid-2">
             <Input
-              label="Coefficient"
+              label={t('evaluation.coefficient_label')}
               type="number" min="0.5" max="10" step="0.5"
               value={form.coefficient}
               onChange={e => setForm(f => ({ ...f, coefficient: e.target.value }))}
             />
             <Input
-              label="Barème (note max)"
+              label={t('evaluation.bareme_label')}
               type="number" min="1" max="100" step="1"
               value={form.note_max}
               onChange={e => setForm(f => ({ ...f, note_max: e.target.value }))}
