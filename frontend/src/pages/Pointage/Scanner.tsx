@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Html5Qrcode } from 'html5-qrcode';
 import { API_BASE } from '../../lib/api';
 
@@ -23,13 +24,14 @@ interface ScanDuJour {
   personnel: { utilisateur: { nom_fr: string; prenom_fr: string | null } };
 }
 
-const ACTION_LABELS = {
-  arrivee: { label: 'Arrivée enregistrée', bg: 'var(--success)', icon: '✓' },
-  depart: { label: 'Départ enregistré', bg: 'var(--info)', icon: '✓' },
-  deja_complet: { label: 'Déjà enregistré aujourd\'hui', bg: 'var(--warning)', icon: '⚠' },
+const ACTION_STYLES = {
+  arrivee: { bg: 'var(--success)', icon: '✓' },
+  depart: { bg: 'var(--info)', icon: '✓' },
+  deja_complet: { bg: 'var(--warning)', icon: '⚠' },
 };
 
 export function ScannerPage() {
+  const { t } = useTranslation();
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const [started, setStarted] = useState(false);
   const [feedback, setFeedback] = useState<ScanResult | null>(null);
@@ -171,7 +173,10 @@ export function ScannerPage() {
     };
   }, []);
 
-  const feedbackInfo = feedback ? ACTION_LABELS[feedback.action] : null;
+  const feedbackInfo = feedback ? {
+    ...ACTION_STYLES[feedback.action],
+    label: t(`pointage.action_${feedback.action}`),
+  } : null;
   const overlayVisible = !!feedback || !!error;
 
   return (
@@ -188,13 +193,13 @@ export function ScannerPage() {
       {/* En-tête */}
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
         <div style={{ fontSize: 13, letterSpacing: 2, color: 'var(--ink-3)', textTransform: 'uppercase', marginBottom: 6 }}>
-          DaaraGest
+          {t('app.name', 'DaaraGest')}
         </div>
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: 'var(--ink)', fontFamily: 'var(--font-display)' }}>
-          Pointage par QR Code
+          {t('pointage.scanner_titre')}
         </h1>
         <p style={{ fontSize: 13, color: 'var(--ink-3)', marginTop: 6 }}>
-          Scannez votre QR code pour enregistrer votre présence
+          {t('pointage.scanner_sub')}
         </p>
       </div>
 
@@ -249,7 +254,7 @@ export function ScannerPage() {
               <circle cx="12" cy="13" r="4" />
             </svg>
             <p style={{ fontSize: 14, color: 'var(--ink-3)', textAlign: 'center', margin: 0 }}>
-              Cliquez sur le bouton ci-dessous pour démarrer la caméra
+              {t('pointage.scanner_intro')}
             </p>
             <button
               onClick={startScanner}
@@ -259,7 +264,7 @@ export function ScannerPage() {
                 fontWeight: 600, cursor: 'pointer',
               }}
             >
-              Démarrer le scanner
+              {t('pointage.scanner_demarrer')}
             </button>
           </div>
         )}
@@ -274,7 +279,7 @@ export function ScannerPage() {
             fontSize: 13, cursor: 'pointer',
           }}
         >
-          Arrêter la caméra
+          {t('pointage.scanner_arreter')}
         </button>
       )}
 
@@ -282,7 +287,7 @@ export function ScannerPage() {
       {historique.length > 0 && (
         <div style={{ width: '100%', maxWidth: 420, marginTop: 20 }}>
           <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 8, letterSpacing: 1, textTransform: 'uppercase' }}>
-            Cette session
+            {t('pointage.scanner_session')}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {historique.map(h => (
@@ -300,7 +305,7 @@ export function ScannerPage() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>
-                    {h.action === 'arrivee' ? 'Arrivée' : 'Départ'}
+                    {t(h.action === 'arrivee' ? 'pointage.label_arrivee' : 'pointage.label_depart')}
                   </span>
                   <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--ink-2)' }}>
                     {h.heure}
@@ -319,7 +324,7 @@ export function ScannerPage() {
           marginBottom: 8,
         }}>
           <div style={{ fontSize: 12, color: 'var(--ink-3)', letterSpacing: 1, textTransform: 'uppercase' }}>
-            Pointages du jour
+            {t('pointage.scanner_du_jour')}
           </div>
           <button
             onClick={chargerScansDuJour}
@@ -328,13 +333,13 @@ export function ScannerPage() {
               cursor: 'pointer', fontSize: 11, padding: '2px 8px',
             }}
           >
-            {loadingScans ? '…' : '↻ Actualiser'}
+            {loadingScans ? '…' : `↻ ${t('actions.actualiser')}`}
           </button>
         </div>
 
         {scansDuJour.length === 0 ? (
           <div style={{ color: 'var(--ink-4)', fontSize: 13, textAlign: 'center', padding: '12px 0' }}>
-            Aucun scan aujourd'hui
+            {t('pointage.scanner_aucun_jour')}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
