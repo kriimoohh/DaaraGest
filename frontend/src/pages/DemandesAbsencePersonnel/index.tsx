@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -56,6 +57,7 @@ function fmtDate(s: string) {
 }
 
 export function DemandesAbsencePersonnelPage() {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const role = user?.role ?? '';
   const isDirection = ['admin', 'directeur', 'gestionnaire'].includes(role);
@@ -100,17 +102,17 @@ export function DemandesAbsencePersonnelPage() {
 
   async function handleSubmit() {
     if (!form.personnel_id || !form.date_debut || !form.date_fin || !form.motif) {
-      toast.error('Remplissez tous les champs obligatoires'); return;
+      toast.error(t('demande_absence.champs_obligatoires')); return;
     }
     setSaving(true);
     try {
       await api.post('/api/v1/demandes-absence-personnel', form);
-      toast.success('Demande enregistrée');
+      toast.success(t('demande_absence.ok_enregistree'));
       setShowModal(false);
       setForm({ personnel_id: '', date_debut: '', date_fin: '', type_absence: 'CONGE_ANNUEL', motif: '' });
       refresh();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'Erreur');
+      toast.error(e instanceof Error ? e.message : t('common.erreur', 'Erreur'));
     } finally { setSaving(false); }
   }
 
@@ -122,12 +124,12 @@ export function DemandesAbsencePersonnelPage() {
         statut: showTraiterModal.action,
         commentaire,
       });
-      toast.success(showTraiterModal.action === 'APPROUVE' ? 'Demande approuvée' : 'Demande refusée');
+      toast.success(t(showTraiterModal.action === 'APPROUVE' ? 'demande_absence.ok_approuvee' : 'demande_absence.ok_refusee'));
       setShowTraiterModal(null);
       setCommentaire('');
       refresh();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'Erreur');
+      toast.error(e instanceof Error ? e.message : t('common.erreur', 'Erreur'));
     } finally { setSaving(false); }
   }
 
@@ -137,15 +139,15 @@ export function DemandesAbsencePersonnelPage() {
       await api.delete(`/api/v1/demandes-absence-personnel/${id}`);
       refresh();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'Erreur');
+      toast.error(e instanceof Error ? e.message : t('common.erreur', 'Erreur'));
     }
   }
 
   return (
     <div style={{ padding: '0 0 40px' }}>
       <PageHeader
-        title="Demandes d'absence (Professeurs)"
-        subtitle="Gérer les demandes d'absence du personnel enseignant"
+        title={t('demande_absence.titre')}
+        subtitle={t('demande_absence.subtitle')}
         action={
           <Button onClick={() => setShowModal(true)}>+ Nouvelle demande</Button>
         }
@@ -171,23 +173,23 @@ export function DemandesAbsencePersonnelPage() {
       </div>
 
       {/* Table */}
-      {loading ? <p>Chargement…</p> : error ? <p style={{ color: 'red' }}>Erreur de chargement</p> : (
+      {loading ? <p>{t('demande_absence.chargement')}</p> : error ? <p style={{ color: 'red' }}>{t('demande_absence.err_chargement')}</p> : (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: '#1a5276', color: '#fff' }}>
-                <th style={{ padding: '10px 12px', textAlign: 'left' }}>Professeur</th>
-                <th style={{ padding: '10px 12px', textAlign: 'left' }}>Type</th>
-                <th style={{ padding: '10px 12px', textAlign: 'left' }}>Période</th>
-                <th style={{ padding: '10px 12px', textAlign: 'left' }}>Motif</th>
-                <th style={{ padding: '10px 12px', textAlign: 'left' }}>Statut</th>
-                <th style={{ padding: '10px 12px', textAlign: 'left' }}>Traité par</th>
-                <th style={{ padding: '10px 12px', textAlign: 'left' }}>Actions</th>
+                <th style={{ padding: '10px 12px', textAlign: 'left' }}>{t('demande_absence.col_professeur')}</th>
+                <th style={{ padding: '10px 12px', textAlign: 'left' }}>{t('demande_absence.col_type')}</th>
+                <th style={{ padding: '10px 12px', textAlign: 'left' }}>{t('demande_absence.col_periode')}</th>
+                <th style={{ padding: '10px 12px', textAlign: 'left' }}>{t('demande_absence.col_motif')}</th>
+                <th style={{ padding: '10px 12px', textAlign: 'left' }}>{t('demande_absence.col_statut')}</th>
+                <th style={{ padding: '10px 12px', textAlign: 'left' }}>{t('demande_absence.col_traite_par')}</th>
+                <th style={{ padding: '10px 12px', textAlign: 'left' }}>{t('demande_absence.col_actions')}</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: '#777' }}>Aucune demande</td></tr>
+                <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: '#777' }}>{t('demande_absence.aucune')}</td></tr>
               ) : filtered.map((d, i) => (
                 <tr key={d.id} style={{ background: i % 2 === 0 ? '#fff' : '#f9f9f9', borderBottom: '1px solid #eee' }}>
                   <td style={{ padding: '10px 12px', fontWeight: 600 }}>
@@ -216,18 +218,18 @@ export function DemandesAbsencePersonnelPage() {
                           <button
                             onClick={() => setShowTraiterModal({ id: d.id, action: 'APPROUVE' })}
                             style={{ padding: '4px 10px', background: '#0f5132', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}
-                          >Approuver</button>
+                          >{t('demande_absence.approuver_btn')}</button>
                           <button
                             onClick={() => setShowTraiterModal({ id: d.id, action: 'REFUSE' })}
                             style={{ padding: '4px 10px', background: '#842029', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}
-                          >Refuser</button>
+                          >{t('demande_absence.refuser_btn')}</button>
                         </>
                       )}
                       {d.statut === 'EN_ATTENTE' && (
                         <button
                           onClick={() => handleDelete(d.id)}
                           style={{ padding: '4px 10px', background: '#eee', color: '#333', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}
-                        >Supprimer</button>
+                        >{t('demande_absence.supprimer_btn')}</button>
                       )}
                     </div>
                   </td>
@@ -242,7 +244,7 @@ export function DemandesAbsencePersonnelPage() {
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: 'var(--card)', borderRadius: 12, padding: 32, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ margin: '0 0 20px', fontSize: 18 }}>Nouvelle demande d'absence</h3>
+            <h3 style={{ margin: '0 0 20px', fontSize: 18 }}>{t('demande_absence.nouvelle_titre')}</h3>
 
             <div style={{ marginBottom: 12 }}>
               <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>Professeur *</label>
@@ -278,10 +280,10 @@ export function DemandesAbsencePersonnelPage() {
                 onChange={e => setForm(f => ({ ...f, type_absence: e.target.value as TypeAbsence }))}
                 style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #ddd', borderRadius: 6, fontSize: 13 }}
               >
-                <option value="CONGE_ANNUEL">Congé annuel</option>
-                <option value="MALADIE">Maladie</option>
-                <option value="PERMISSION">Permission</option>
-                <option value="AUTRE">Autre</option>
+                <option value="CONGE_ANNUEL">{t('demande_absence.type_conge')}</option>
+                <option value="MALADIE">{t('demande_absence.type_maladie')}</option>
+                <option value="PERMISSION">{t('demande_absence.type_permission')}</option>
+                <option value="AUTRE">{t('demande_absence.type_autre')}</option>
               </select>
             </div>
 
@@ -292,12 +294,12 @@ export function DemandesAbsencePersonnelPage() {
                 onChange={e => setForm(f => ({ ...f, motif: e.target.value }))}
                 rows={3}
                 style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #ddd', borderRadius: 6, fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }}
-                placeholder="Décrivez le motif de l'absence..."
+                placeholder={t('demande_absence.motif_placeholder')}
               />
             </div>
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <Button variant="secondary" onClick={() => setShowModal(false)}>Annuler</Button>
+              <Button variant="secondary" onClick={() => setShowModal(false)}>{t('actions.annuler')}</Button>
               <Button onClick={handleSubmit} disabled={saving}>{saving ? 'Enregistrement…' : 'Enregistrer'}</Button>
             </div>
           </div>
@@ -321,7 +323,7 @@ export function DemandesAbsencePersonnelPage() {
               />
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <Button variant="secondary" onClick={() => { setShowTraiterModal(null); setCommentaire(''); }}>Annuler</Button>
+              <Button variant="secondary" onClick={() => { setShowTraiterModal(null); setCommentaire(''); }}>{t('actions.annuler')}</Button>
               <Button
                 onClick={handleTraiter}
                 disabled={saving}

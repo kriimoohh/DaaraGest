@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
@@ -27,6 +28,7 @@ interface Eleve { id: string; matricule: string; nom_fr: string; prenom_fr: stri
 type Tab = 'livres' | 'emprunts' | 'retards';
 
 export function BibliothequeePage() {
+  const { t } = useTranslation();
   const api  = useApi();
   const role = useAuthStore(s => s.user?.role ?? '');
   const canEdit   = ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'].includes(role);
@@ -122,7 +124,7 @@ export function BibliothequeePage() {
   }
 
   async function saveLivre() {
-    if (!livreForm.titre.trim()) { toast.error('Le titre est requis'); return; }
+    if (!livreForm.titre.trim()) { toast.error(t('bibliotheque.titre_obligatoire')); return; }
     setSaving(true);
     try {
       const body = {
@@ -136,10 +138,10 @@ export function BibliothequeePage() {
       };
       if (editLivre) {
         await api.put(`/api/v1/bibliotheque/livres/${editLivre.id}`, body);
-        toast.success('Livre modifié');
+        toast.success(t('bibliotheque.ok_livre_modifie'));
       } else {
         await api.post('/api/v1/bibliotheque/livres', body);
-        toast.success('Livre ajouté');
+        toast.success(t('bibliotheque.ok_livre_ajoute'));
       }
       setLivreModal(false);
       chargerLivres();
@@ -152,7 +154,7 @@ export function BibliothequeePage() {
     if (!confirm('Supprimer ce livre ?')) return;
     try {
       await api.delete(`/api/v1/bibliotheque/livres/${id}`);
-      toast.success('Livre supprimé');
+      toast.success(t('bibliotheque.ok_livre_supprime'));
       chargerLivres();
     } catch (err) { toast.error((err as Error).message); }
   }
@@ -166,13 +168,13 @@ export function BibliothequeePage() {
   }
 
   async function creerEmprunt() {
-    if (!livreSelId) { toast.error('Sélectionnez un livre'); return; }
-    if (!eleveSelId) { toast.error('Sélectionnez un élève'); return; }
-    if (!dateRetour) { toast.error('Date de retour requise'); return; }
+    if (!livreSelId) { toast.error(t('bibliotheque.select_livre')); return; }
+    if (!eleveSelId) { toast.error(t('bibliotheque.select_eleve')); return; }
+    if (!dateRetour) { toast.error(t('bibliotheque.date_retour_requise')); return; }
     setSavingEmp(true);
     try {
       await api.post('/api/v1/bibliotheque/emprunts', { livre_id: livreSelId, eleve_id: eleveSelId, date_retour_prevue: dateRetour });
-      toast.success('Emprunt enregistré');
+      toast.success(t('bibliotheque.ok_emprunt'));
       setEmpruntModal(false);
       chargerLivres();
       if (tab === 'emprunts') chargerEmprunts();
@@ -184,7 +186,7 @@ export function BibliothequeePage() {
     if (!confirm('Enregistrer le retour de ce livre ?')) return;
     try {
       await api.put(`/api/v1/bibliotheque/emprunts/${id}/retour`, { statut: 'rendu' });
-      toast.success('Retour enregistré');
+      toast.success(t('bibliotheque.ok_retour'));
       chargerEmprunts();
       chargerRetards();
       chargerLivres();
@@ -201,8 +203,8 @@ export function BibliothequeePage() {
     <>
       <div className="page-head">
         <div>
-          <div className="page-eyebrow">Administration</div>
-          <h1 className="page-title">Bibliothèque</h1>
+          <div className="page-eyebrow">{t('bibliotheque.eyebrow')}</div>
+          <h1 className="page-title">{t('bibliotheque.titre')}</h1>
           <p className="page-sub">Gestion des livres, emprunts et retours</p>
         </div>
         {canEdit && tab === 'livres' && (
@@ -245,22 +247,22 @@ export function BibliothequeePage() {
       {tab === 'livres' && (
         <>
           <div style={{ marginBottom: 16 }}>
-            <SearchInput value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder="Rechercher titre, auteur, ISBN..." />
+            <SearchInput value={search} onChange={v => { setSearch(v); setPage(1); }} placeholder={t('bibliotheque.rechercher_livre')} />
           </div>
           <div className="card">
             <div className="tbl-wrap">
               <table className="tbl">
                 <thead>
                   <tr>
-                    <th>Titre</th><th>Auteur</th><th>ISBN</th><th>Catégorie</th>
-                    <th style={{ textAlign: 'center' }}>Stock</th>
-                    <th style={{ textAlign: 'center' }}>Dispo</th>
+                    <th>{t('bibliotheque.col_titre')}</th><th>{t('bibliotheque.col_auteur')}</th><th>{t('bibliotheque.col_isbn')}</th><th>{t('bibliotheque.col_categorie')}</th>
+                    <th style={{ textAlign: 'center' }}>{t('bibliotheque.col_stock')}</th>
+                    <th style={{ textAlign: 'center' }}>{t('bibliotheque.col_dispo')}</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading && <tr><td colSpan={7} className="empty">Chargement…</td></tr>}
-                  {!loading && livres.length === 0 && <tr><td colSpan={7} className="empty">Aucun livre</td></tr>}
+                  {!loading && livres.length === 0 && <tr><td colSpan={7} className="empty">{t('bibliotheque.aucun_livre')}</td></tr>}
                   {livres.map(l => (
                     <tr key={l.id}>
                       <td style={{ fontWeight: 500 }}>{l.titre}</td>
