@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
@@ -119,6 +120,7 @@ function CreneauCard({
 // ── Page principale ───────────────────────────────────────────────────────────
 
 export function EmploiDuTempsPage() {
+  const { t } = useTranslation();
   const api = useApi();
   const { user } = useAuthStore();
   const canEdit = ROLES_EDIT.includes(user?.role ?? '');
@@ -185,7 +187,7 @@ export function EmploiDuTempsPage() {
       const data = await api.get<Creneau[]>(`/api/v1/emploi-du-temps?annee_scolaire_id=${anneeId}&classe_id=${classeId}`);
       setCreneaux(data ?? []);
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur de chargement');
+      toast.error((err as Error).message || t('common.chargement'));
     } finally {
       setLoading(false);
     }
@@ -197,20 +199,20 @@ export function EmploiDuTempsPage() {
 
   // Delete créneau
   const handleDelete = async (id: string) => {
-    if (!confirm('Supprimer ce créneau ?')) return;
+    if (!confirm(t('emploi_du_temps.confirm_suppression'))) return;
     try {
       await api.delete(`/api/v1/emploi-du-temps/${id}`);
-      toast.success('Créneau supprimé');
+      toast.success(t('emploi_du_temps.creneau_supprime'));
       setCreneaux(prev => prev.filter(c => c.id !== id));
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message);
     }
   };
 
   // Add créneau
   const handleAdd = async () => {
     if (!form.jour || !form.heure_debut || !form.heure_fin || !form.classe_id || !form.matiere_id || !form.personnel_id) {
-      toast.error('Tous les champs obligatoires doivent être remplis');
+      toast.error(t('emploi_du_temps.tous_champs_obligatoires'));
       return;
     }
     setSaving(true);
@@ -226,12 +228,12 @@ export function EmploiDuTempsPage() {
         annee_scolaire_id: anneeId,
       };
       await api.post('/api/v1/emploi-du-temps', payload);
-      toast.success('Créneau ajouté');
+      toast.success(t('emploi_du_temps.creneau_ajoute'));
       setModalOpen(false);
       setForm({ jour: '', heure_debut: '', heure_fin: '', classe_id: classeId, matiere_id: '', personnel_id: '', salle: '' });
       chargerEmploi();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message);
     } finally {
       setSaving(false);
     }
@@ -264,7 +266,7 @@ export function EmploiDuTempsPage() {
   return (
     <>
       <PageHeader
-        title="Emploi du temps"
+        title={t('emploi_du_temps.titre')}
         action={
           canEdit ? (
             <Button onClick={openModal} disabled={!classeId}>
@@ -283,13 +285,13 @@ export function EmploiDuTempsPage() {
           value={anneeId}
           onChange={e => setAnneeId(e.target.value)}
           options={annees.map(a => ({ value: a.id, label: a.libelle }))}
-          placeholder="Année scolaire..."
+          placeholder={t('emploi_du_temps.annee_placeholder')}
         />
         <Select
           value={classeId}
           onChange={e => setClasseId(e.target.value)}
           options={classes.map(c => ({ value: c.id, label: c.nom_fr }))}
-          placeholder="Classe..."
+          placeholder={t('emploi_du_temps.classe_placeholder')}
         />
         {/* Filière legend */}
         <div style={{ display: 'flex', gap: 12, marginInlineStart: 'auto', alignItems: 'center' }}>
@@ -310,7 +312,7 @@ export function EmploiDuTempsPage() {
           <svg width={48} height={48} viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--ink-4)' }}>
             <path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z" />
           </svg>
-          <p style={{ color: 'var(--ink-3)' }}>Sélectionnez une classe pour afficher l'emploi du temps</p>
+          <p style={{ color: 'var(--ink-3)' }}>{t('emploi_du_temps.selectionner_classe')}</p>
         </div>
       ) : loading ? (
         <div className="card empty">Chargement...</div>
@@ -375,66 +377,66 @@ export function EmploiDuTempsPage() {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title="Ajouter un créneau"
+        title={t('emploi_du_temps.ajouter_creneau')}
         size="md"
         footer={
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <Button variant="secondary" onClick={() => setModalOpen(false)}>Annuler</Button>
-            <Button onClick={handleAdd} loading={saving}>Ajouter</Button>
+            <Button variant="secondary" onClick={() => setModalOpen(false)}>{t('actions.annuler')}</Button>
+            <Button onClick={handleAdd} loading={saving}>{t('actions.ajouter')}</Button>
           </div>
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <Select
-            label="Jour"
+            label={t('emploi_du_temps.jour')}
             value={form.jour}
             onChange={e => setForm(f => ({ ...f, jour: e.target.value }))}
             options={JOURS}
-            placeholder="Sélectionner un jour..."
+            placeholder={t('emploi_du_temps.jour_placeholder')}
           />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Input
-              label="Heure de début"
+              label={t('emploi_du_temps.heure_debut')}
               type="time"
               value={form.heure_debut}
               onChange={e => setForm(f => ({ ...f, heure_debut: e.target.value }))}
             />
             <Input
-              label="Heure de fin"
+              label={t('emploi_du_temps.heure_fin')}
               type="time"
               value={form.heure_fin}
               onChange={e => setForm(f => ({ ...f, heure_fin: e.target.value }))}
             />
           </div>
           <Select
-            label="Classe"
+            label={t('emploi_du_temps.classe')}
             value={form.classe_id}
             onChange={e => setForm(f => ({ ...f, classe_id: e.target.value, matiere_id: '' }))}
             options={classes.map(c => ({ value: c.id, label: c.nom_fr }))}
-            placeholder="Sélectionner une classe..."
+            placeholder={t('emploi_du_temps.classe_select_placeholder')}
           />
           <Select
-            label="Matière"
+            label={t('emploi_du_temps.matiere')}
             value={form.matiere_id}
             onChange={e => setForm(f => ({ ...f, matiere_id: e.target.value }))}
             options={filteredMatieres.map(m => ({ value: m.id, label: m.nom_fr }))}
-            placeholder="Sélectionner une matière..."
+            placeholder={t('emploi_du_temps.matiere_placeholder')}
           />
           <Select
-            label="Professeur"
+            label={t('emploi_du_temps.professeur')}
             value={form.personnel_id}
             onChange={e => setForm(f => ({ ...f, personnel_id: e.target.value }))}
             options={professeurs.filter(p => p.personnel).map(p => ({
               value: p.personnel!.id,
               label: `${p.prenom_fr} ${p.nom_fr}`,
             }))}
-            placeholder="Sélectionner un professeur..."
+            placeholder={t('emploi_du_temps.professeur_placeholder')}
           />
           <Input
-            label="Salle (optionnel)"
+            label={t('emploi_du_temps.salle')}
             value={form.salle}
             onChange={e => setForm(f => ({ ...f, salle: e.target.value }))}
-            placeholder="Ex: Salle A1"
+            placeholder={t('emploi_du_temps.salle_placeholder')}
           />
         </div>
       </Modal>
