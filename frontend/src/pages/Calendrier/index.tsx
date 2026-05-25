@@ -1,4 +1,5 @@
 import { useState, useEffect, type Dispatch, type SetStateAction } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -111,6 +112,7 @@ function EventForm({
   saving: boolean;
   title: string;
 }) {
+  const { t } = useTranslation();
   return (
     <Modal
       isOpen
@@ -119,41 +121,41 @@ function EventForm({
       size="md"
       footer={
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <Button variant="secondary" onClick={onCancel}>Annuler</Button>
-          <Button onClick={onSubmit} loading={saving}>Enregistrer</Button>
+          <Button variant="secondary" onClick={onCancel}>{t('actions.annuler')}</Button>
+          <Button onClick={onSubmit} loading={saving}>{t('actions.enregistrer')}</Button>
         </div>
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <Input
-          label="Titre"
+          label={t('calendrier.titre_fr')}
           value={form.titre_fr}
           onChange={e => setForm(f => ({ ...f, titre_fr: e.target.value }))}
-          placeholder="Titre de l'événement"
+          placeholder={t('calendrier.titre_placeholder')}
         />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <Input
-            label="Date de début"
+            label={t('calendrier.date_debut')}
             type="date"
             value={form.date_debut}
             onChange={e => setForm(f => ({ ...f, date_debut: e.target.value }))}
           />
           <Input
-            label="Date de fin"
+            label={t('calendrier.date_fin')}
             type="date"
             value={form.date_fin}
             onChange={e => setForm(f => ({ ...f, date_fin: e.target.value }))}
           />
         </div>
         <Select
-          label="Type"
+          label={t('calendrier.type')}
           value={form.type}
           onChange={e => {
             const t = e.target.value;
             setForm(f => ({ ...f, type: t, couleur: TYPE_COLORS[t] ?? f.couleur }));
           }}
           options={Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label }))}
-          placeholder="Sélectionner un type..."
+          placeholder={t('calendrier.type_placeholder')}
         />
         <div className="field">
           <label className="field-label">Couleur</label>
@@ -189,7 +191,7 @@ function EventForm({
             rows={3}
             className="input"
             style={{ resize: 'vertical', fontFamily: 'inherit' }}
-            placeholder="Description de l'événement..."
+            placeholder={t('calendrier.description_placeholder')}
           />
         </div>
       </div>
@@ -200,6 +202,7 @@ function EventForm({
 // ── Page principale ───────────────────────────────────────────────────────────
 
 export function CalendrierPage() {
+  const { t } = useTranslation();
   const api = useApi();
   const { user } = useAuthStore();
   const canManage = GESTION_ROLES.includes(user?.role ?? '');
@@ -256,7 +259,7 @@ export function CalendrierPage() {
 
   const handleAdd = async () => {
     if (!addForm.titre_fr || !addForm.date_debut || !addForm.date_fin || !addForm.type) {
-      toast.error('Titre, dates et type sont obligatoires');
+      toast.error(t('calendrier.champs_obligatoires'));
       return;
     }
     setSaving(true);
@@ -269,7 +272,7 @@ export function CalendrierPage() {
         type: addForm.type,
         couleur: addForm.couleur,
       });
-      toast.success('Événement ajouté');
+      toast.success(t('calendrier.evenement_ajoute'));
       setShowAdd(false);
       setAddForm(emptyForm);
       loadEvents();
@@ -281,7 +284,7 @@ export function CalendrierPage() {
   const handleEdit = async () => {
     if (!editEvt) return;
     if (!editForm.titre_fr || !editForm.date_debut || !editForm.date_fin || !editForm.type) {
-      toast.error('Titre, dates et type sont obligatoires');
+      toast.error(t('calendrier.champs_obligatoires'));
       return;
     }
     setSaving(true);
@@ -294,7 +297,7 @@ export function CalendrierPage() {
         type: editForm.type,
         couleur: editForm.couleur,
       });
-      toast.success('Événement modifié');
+      toast.success(t('calendrier.evenement_modifie'));
       setEditEvt(null);
       loadEvents();
     } catch (err) {
@@ -306,7 +309,7 @@ export function CalendrierPage() {
     if (!confirm('Supprimer cet événement ?')) return;
     try {
       await api.delete(`/api/v1/calendrier/${id}`);
-      toast.success('Événement supprimé');
+      toast.success(t('calendrier.evenement_supprime'));
       setEvents(prev => prev.filter(e => e.id !== id));
     } catch (err) {
       toast.error((err as Error).message || 'Erreur');
@@ -357,7 +360,7 @@ export function CalendrierPage() {
   return (
     <>
       <PageHeader
-        title="Calendrier scolaire"
+        title={t('calendrier.titre', 'Calendrier scolaire')}
         action={
           canManage ? (
             <Button onClick={() => { setAddForm(emptyForm); setShowAdd(true); }}>
@@ -665,7 +668,7 @@ export function CalendrierPage() {
           onSubmit={handleAdd}
           onCancel={() => setShowAdd(false)}
           saving={saving}
-          title="Ajouter un événement"
+          title={t('calendrier.ajouter_evenement', 'Ajouter un événement')}
         />
       )}
 
@@ -677,7 +680,7 @@ export function CalendrierPage() {
           onSubmit={handleEdit}
           onCancel={() => setEditEvt(null)}
           saving={saving}
-          title="Modifier l'événement"
+          title={t('calendrier.modifier_evenement', 'Modifier l\'événement')}
         />
       )}
     </>
