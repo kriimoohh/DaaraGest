@@ -241,7 +241,7 @@ export function ClassesPage() {
       } else {
         await api.post('/api/v1/classes', payload);
       }
-      toast.success(editTarget ? 'Classe modifiée' : 'Classe créée');
+      toast.success(t(editTarget ? 'classe.ok_modifiee' : 'classe.ok_creee'));
       setModalOpen(false);
       fetchClasses();
     } catch (err) {
@@ -257,7 +257,7 @@ export function ClassesPage() {
     setDeleting(true);
     try {
       await api.delete(`/api/v1/classes/${confirmDelete.id}`);
-      toast.success('Classe supprimée');
+      toast.success(t('classe.ok_supprimee'));
       setConfirmDelete(null);
       fetchClasses();
     } catch (err) {
@@ -283,7 +283,7 @@ export function ClassesPage() {
       setProgramme(prog);
       setToutesMatieresFiliere(matieres);
     } catch (err) {
-      toast.error((err as Error).message || 'Impossible de charger le programme');
+      toast.error((err as Error).message || t('classe.err_charger_programme'));
       setProgrammeModal(null);
     } finally {
       setProgrammeLoading(false);
@@ -298,7 +298,7 @@ export function ClassesPage() {
       if (ajoutCoeff) payload.coeff_override = parseFloat(ajoutCoeff);
       if (ajoutOrdre) payload.ordre_override = parseInt(ajoutOrdre);
       await api.post(`/api/v1/classes/${programmeModal.id}/matieres`, payload);
-      toast.success('Matière ajoutée au programme');
+      toast.success(t('classe.ok_matiere_ajoutee'));
       setAjoutMatiereId('');
       setAjoutCoeff('');
       setAjoutOrdre('');
@@ -326,7 +326,7 @@ export function ClassesPage() {
         ordre_override: editOrdre ? parseInt(editOrdre) : null,
       };
       await api.put(`/api/v1/classes/${programmeModal.id}/matieres/${editProgramme.matiere_id}`, payload);
-      toast.success('Coefficient modifié');
+      toast.success(t('classe.ok_coeff_modifie'));
       setEditProgramme(null);
       const prog = await api.get<ClasseMatiere[]>(`/api/v1/classes/${programmeModal.id}/matieres`);
       setProgramme(prog);
@@ -342,7 +342,7 @@ export function ClassesPage() {
     setSupprimerProgrammeLoading(true);
     try {
       await api.delete(`/api/v1/classes/${programmeModal.id}/matieres/${supprimerProgramme.matiere_id}`);
-      toast.success('Matière retirée du programme');
+      toast.success(t('classe.ok_matiere_retiree'));
       setSupprimerProgramme(null);
       const prog = await api.get<ClasseMatiere[]>(`/api/v1/classes/${programmeModal.id}/matieres`);
       setProgramme(prog);
@@ -362,7 +362,7 @@ export function ClassesPage() {
       const data = await api.get<ListeElevesResponse>(`/api/v1/classes/${classe.id}/eleves`);
       setListeData(data);
     } catch (err) {
-      toast.error((err as Error).message || 'Impossible de charger la liste');
+      toast.error((err as Error).message || t('classe.err_charger_liste'));
       setListeModal(null);
     } finally {
       setListeLoading(false);
@@ -456,7 +456,7 @@ export function ClassesPage() {
     if (!listeData) return;
     const html = buildListeHtml(listeData, true);
     const win = window.open('', '_blank');
-    if (!win) { toast.error('Autoriser les popups pour imprimer'); return; }
+    if (!win) { toast.error(t('classe.err_popup')); return; }
     win.document.write(html);
     win.document.close();
   }
@@ -520,7 +520,7 @@ export function ClassesPage() {
           if (data.eleves.length > 0) allData.push(data);
         } catch { /* ignore */ }
       }
-      if (allData.length === 0) { toast.error('Aucun élève trouvé'); return; }
+      if (allData.length === 0) { toast.error(t('classe.err_aucun_eleve')); return; }
 
       const sharedCss = `
         * { margin:0; padding:0; box-sizing:border-box; }
@@ -593,7 +593,7 @@ export function ClassesPage() {
       <body>${pages}<script>window.onload = () => { window.print(); }<\/script></body></html>`;
 
       const win = window.open('', '_blank');
-      if (!win) { toast.error('Autoriser les popups pour imprimer'); return; }
+      if (!win) { toast.error(t('classe.err_popup')); return; }
       win.document.write(html);
       win.document.close();
     } catch (err) {
@@ -639,12 +639,12 @@ export function ClassesPage() {
   return (
     <>
     <PageHeader
-        eyebrow="Pédagogie"
-        title="Classes"
-        subtitle="Gestion des classes et sections"
+        eyebrow={t('classe.pedagogie')}
+        title={t('classe.titre')}
+        subtitle={t('classe.subtitle')}
         action={
           <Button onClick={openAdd} icon={<span>+</span>}>
-            Ajouter une classe
+            {t('classe.ajouter')}
           </Button>
         }
       />
@@ -675,7 +675,7 @@ export function ClassesPage() {
           />
         </div>
         <div className="row" style={{ marginInlineStart: 'auto' }}>
-          <span style={{ fontSize: 12, color: 'var(--ink-4)', fontWeight: 500, whiteSpace: 'nowrap' }}>Toutes les classes :</span>
+          <span style={{ fontSize: 12, color: 'var(--ink-4)', fontWeight: 500, whiteSpace: 'nowrap' }}>{t('classe.toutes_les_classes')}</span>
           <Button
             size="sm"
             variant="secondary"
@@ -683,7 +683,7 @@ export function ClassesPage() {
             loading={imprimerToutesLoading}
             icon={<span>🖨</span>}
           >
-            Imprimer
+            {t('classe.imprimer')}
           </Button>
           <Button
             size="sm"
@@ -692,7 +692,7 @@ export function ClassesPage() {
             loading={pdfToutesLoading}
             icon={<span>⬇</span>}
           >
-            PDF
+            {t('classe.pdf')}
           </Button>
         </div>
       </div>
@@ -700,7 +700,7 @@ export function ClassesPage() {
       {loading ? (
         <div className="empty">{t('common.chargement')}</div>
       ) : classes.length === 0 ? (
-        <div className="empty">Aucune classe trouvée</div>
+        <div className="empty">{t('classe.aucune_trouvee')}</div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
           {classes.map(c => {
@@ -731,7 +731,7 @@ export function ClassesPage() {
 
                 <div>
                   <div className="row" style={{ justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
-                    <span className="muted">Effectif</span>
+                    <span className="muted">{t('classe.effectif')}</span>
                     <span className="font-mono">
                       <strong>{effectif}</strong>
                       <span className="muted"> / {capacite}</span>
@@ -746,8 +746,8 @@ export function ClassesPage() {
                 </div>
 
                 <div className="row gap-2">
-                  <button className="btn btn-secondary btn-sm grow" onClick={() => openListeEleves(c)}>Élèves</button>
-                  <button className="btn btn-secondary btn-sm grow" onClick={() => openProgramme(c)}>Programme</button>
+                  <button className="btn btn-secondary btn-sm grow" onClick={() => openListeEleves(c)}>{t('classe.btn_eleves')}</button>
+                  <button className="btn btn-secondary btn-sm grow" onClick={() => openProgramme(c)}>{t('classe.btn_programme')}</button>
                 </div>
               </div>
             );
@@ -760,7 +760,7 @@ export function ClassesPage() {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editTarget ? 'Modifier la classe' : 'Ajouter une classe'}
+        title={t(editTarget ? 'classe.modifier_titre' : 'classe.ajouter_titre')}
         size="md"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -788,7 +788,7 @@ export function ClassesPage() {
               value={form.niveau_id}
               onChange={(e) => setField('niveau_id', e.target.value)}
               options={niveaux.map(n => ({ value: n.id, label: n.libelle }))}
-              placeholder="Choisir un niveau..."
+              placeholder={t('classe.choisir_niveau')}
             />
           </div>
 
@@ -807,7 +807,7 @@ export function ClassesPage() {
               onChange={(e) => setField('annee_scolaire_id', e.target.value)}
               error={formErrors.annee_scolaire_id}
               options={anneeOptions}
-              placeholder="Choisir..."
+              placeholder={t('classe.choisir')}
             />
           </div>
 
@@ -835,7 +835,7 @@ export function ClassesPage() {
       <Modal
         isOpen={!!programmeModal}
         onClose={() => { setProgrammeModal(null); setEditProgramme(null); setSupprimerProgramme(null); }}
-        title={`Programme — ${programmeModal.nom_fr}`}
+        title={t('classe.programme_titre', { nom: programmeModal.nom_fr })}
         size="xl"
       >
         {programmeLoading ? (
@@ -904,13 +904,13 @@ export function ClassesPage() {
                             <div className="row" style={{ gap: 6 }}>
                               {editProgramme?.id === cm.id ? (
                                 <>
-                                  <Button size="sm" onClick={handleEditProgramme} loading={editProgrammeSaving}>Enregistrer</Button>
-                                  <Button size="sm" variant="secondary" onClick={() => setEditProgramme(null)}>Annuler</Button>
+                                  <Button size="sm" onClick={handleEditProgramme} loading={editProgrammeSaving}>{t('classe.enregistrer')}</Button>
+                                  <Button size="sm" variant="secondary" onClick={() => setEditProgramme(null)}>{t('actions.annuler')}</Button>
                                 </>
                               ) : (
                                 <>
-                                  <Button size="sm" variant="ghost" onClick={() => openEditProgramme(cm)}>Modifier</Button>
-                                  <Button size="sm" variant="danger" onClick={() => setSupprimerProgramme(cm)}>Retirer</Button>
+                                  <Button size="sm" variant="ghost" onClick={() => openEditProgramme(cm)}>{t('classe.modifier')}</Button>
+                                  <Button size="sm" variant="danger" onClick={() => setSupprimerProgramme(cm)}>{t('classe.retirer')}</Button>
                                 </>
                               )}
                             </div>
@@ -925,22 +925,22 @@ export function ClassesPage() {
 
             {/* Ajout d'une matière */}
             <div style={{ padding: '14px 16px', background: 'var(--surface-2)', borderRadius: 'var(--r-lg)', border: '1px solid var(--rule)' }}>
-              <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--ink-2)' }}>Ajouter une matière</p>
+              <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--ink-2)' }}>{t('classe.ajouter_matiere')}</p>
               <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
                 <div style={{ flex: '1 1 180px' }}>
                   <Select
-                    label="Matière"
+                    label={t('classe.matiere')}
                     value={ajoutMatiereId}
                     onChange={e => setAjoutMatiereId(e.target.value)}
                     options={toutesMatieresFiliere
                       .filter(m => !programme.some(p => p.matiere_id === m.id))
                       .map(m => ({ value: m.id, label: m.nom_fr }))}
-                    placeholder="Choisir une matière..."
+                    placeholder={t('classe.choisir_matiere')}
                   />
                 </div>
                 <div style={{ width: 100 }}>
                   <Input
-                    label="Coeff (optionnel)"
+                    label={t('classe.coeff_optionnel')}
                     type="number"
                     step="0.25"
                     min="0.25"
@@ -951,7 +951,7 @@ export function ClassesPage() {
                 </div>
                 <div style={{ width: 80 }}>
                   <Input
-                    label="Ordre (opt.)"
+                    label={t('classe.ordre_optionnel')}
                     type="number"
                     min="0"
                     value={ajoutOrdre}
@@ -966,7 +966,7 @@ export function ClassesPage() {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button variant="secondary" onClick={() => { setProgrammeModal(null); setEditProgramme(null); }}>Fermer</Button>
+              <Button variant="secondary" onClick={() => { setProgrammeModal(null); setEditProgramme(null); }}>{t('classe.fermer')}</Button>
             </div>
           </div>
         )}
@@ -986,7 +986,7 @@ export function ClassesPage() {
       <Modal
         isOpen={!!listeModal}
         onClose={() => { setListeModal(null); setListeData(null); }}
-        title={`Liste des élèves — ${listeModal.nom_fr}`}
+        title={t('classe.liste_titre', { nom: listeModal.nom_fr })}
         size="xl"
       >
         {listeLoading ? (
@@ -1007,7 +1007,7 @@ export function ClassesPage() {
               </span>
               <div className="row" style={{ marginInlineStart: 'auto' }}>
                 <Button size="sm" variant="secondary" onClick={downloadCsv} icon={<span>⬇</span>}>CSV</Button>
-                <Button size="sm" variant="secondary" onClick={imprimerListe} icon={<span>🖨</span>}>Imprimer</Button>
+                <Button size="sm" variant="secondary" onClick={imprimerListe} icon={<span>🖨</span>}>{t('classe.imprimer')}</Button>
                 <Button size="sm" variant="secondary" onClick={telechargerPdfListe} loading={pdfLoading} icon={<span>⬇</span>}>PDF</Button>
               </div>
             </div>
@@ -1016,7 +1016,7 @@ export function ClassesPage() {
               type="text"
               value={listeSearch}
               onChange={e => setListeSearch(e.target.value)}
-              placeholder="Filtrer par nom, prénom ou matricule..."
+              placeholder={t('classe.filtrer_eleves')}
               className="input"
             />
 
@@ -1066,12 +1066,12 @@ export function ClassesPage() {
                 const q = listeSearch.toLowerCase();
                 return e.nom_fr.toLowerCase().includes(q) || e.prenom_fr.toLowerCase().includes(q) || e.matricule.toLowerCase().includes(q);
               }).length === 0 && (
-                <div className="empty">Aucun élève trouvé</div>
+                <div className="empty">{t('classe.aucun_eleve_trouve')}</div>
               )}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button variant="secondary" onClick={() => { setListeModal(null); setListeData(null); }}>Fermer</Button>
+              <Button variant="secondary" onClick={() => { setListeModal(null); setListeData(null); }}>{t('classe.fermer')}</Button>
             </div>
           </div>
         ) : null}
