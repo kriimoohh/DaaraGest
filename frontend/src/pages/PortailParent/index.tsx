@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -110,10 +111,11 @@ function Badge({ label, color }: { label: string; color: 'green' | 'red' | 'oran
 // ── Tab components ─────────────────────────────────────────────────────────────
 
 function NotesTab({ notes, bulletins }: { notes: PortailData['notes']; bulletins: PortailData['bulletins'] }) {
+  const { t } = useTranslation();
   const periodes = [...new Set(notes.map(n => n.periode))].sort();
 
   if (periodes.length === 0) {
-    return <div style={{ padding: 24, textAlign: 'center', color: '#6b7280', fontSize: 14 }}>Aucune note disponible</div>;
+    return <div style={{ padding: 24, textAlign: 'center', color: '#6b7280', fontSize: 14 }}>{t('portail_parent.aucune_note')}</div>;
   }
 
   return (
@@ -169,7 +171,7 @@ function NotesTab({ notes, bulletins }: { notes: PortailData['notes']; bulletins
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: '#f3f4f6' }}>
-                    <th style={{ padding: '8px 16px', textAlign: 'start', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>Matière</th>
+                    <th style={{ padding: '8px 16px', textAlign: 'start', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>{t('portail_parent.col_matiere')}</th>
                     <th style={{ padding: '8px 16px', textAlign: 'center', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb', width: 100 }}>Note /20</th>
                     <th style={{ padding: '8px 16px', textAlign: 'center', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb', width: 80 }}>Coeff.</th>
                   </tr>
@@ -207,8 +209,9 @@ function NotesTab({ notes, bulletins }: { notes: PortailData['notes']; bulletins
 }
 
 function PaiementsTab({ paiements }: { paiements: PortailData['paiements'] }) {
+  const { t } = useTranslation();
   if (paiements.length === 0) {
-    return <div style={{ padding: 24, textAlign: 'center', color: '#6b7280', fontSize: 14 }}>Aucun paiement</div>;
+    return <div style={{ padding: 24, textAlign: 'center', color: '#6b7280', fontSize: 14 }}>{t('portail_parent.aucun_paiement')}</div>;
   }
 
   return (
@@ -254,6 +257,7 @@ function PaiementsTab({ paiements }: { paiements: PortailData['paiements'] }) {
 }
 
 function AbsencesTab({ absences }: { absences: PortailData['absences'] }) {
+  const { t } = useTranslation();
   const total = absences.length;
   const justifiees = absences.filter(a => a.justifiee).length;
   const nonJustifiees = total - justifiees;
@@ -277,7 +281,7 @@ function AbsencesTab({ absences }: { absences: PortailData['absences'] }) {
       )}
 
       {absences.length === 0 ? (
-        <div style={{ padding: 24, textAlign: 'center', color: '#6b7280', fontSize: 14 }}>Aucune absence enregistrée</div>
+        <div style={{ padding: 24, textAlign: 'center', color: '#6b7280', fontSize: 14 }}>{t('portail_parent.aucune_absence')}</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {absences.map(a => (
@@ -339,8 +343,9 @@ const TYPE_EVAL_COLOR: Record<string, { bg: string; text: string }> = {
 };
 
 function EvaluationsFormativesTab({ evaluations }: { evaluations: PortailData['evaluations_formatives'] }) {
+  const { t } = useTranslation();
   if (evaluations.length === 0) {
-    return <div style={{ padding: 24, textAlign: 'center', color: '#6b7280', fontSize: 14 }}>Aucune évaluation formative disponible</div>;
+    return <div style={{ padding: 24, textAlign: 'center', color: '#6b7280', fontSize: 14 }}>{t('portail_parent.aucune_evaluation')}</div>;
   }
 
   const periodes = [...new Set(evaluations.map(e => e.evaluation.periode))].sort();
@@ -381,7 +386,7 @@ function EvaluationsFormativesTab({ evaluations }: { evaluations: PortailData['e
                         </td>
                         <td style={{ padding: '10px 12px', color: '#6b7280', fontSize: 12, whiteSpace: 'nowrap' }}>{formatDate(ev.evaluation.date)}</td>
                         <td style={{ padding: '10px 12px', fontWeight: 700, textAlign: 'center', color: ev.absent ? '#9ca3af' : note !== null ? (note >= noteMax / 2 ? '#16a34a' : '#dc2626') : '#6b7280' }}>
-                          {ev.absent ? <span style={{ fontSize: 11, color: '#9ca3af' }}>Absent</span> : note !== null ? `${note}/${noteMax}` : '—'}
+                          {ev.absent ? <span style={{ fontSize: 11, color: '#9ca3af' }}>{t('portail_parent.label_absent')}</span> : note !== null ? `${note}/${noteMax}` : '—'}
                         </td>
                         <td style={{ padding: '10px 12px', textAlign: 'center', color: '#6b7280', fontSize: 12 }}>×{ev.evaluation.coefficient}</td>
                       </tr>
@@ -398,8 +403,9 @@ function EvaluationsFormativesTab({ evaluations }: { evaluations: PortailData['e
 }
 
 function ActivitesTab({ activites }: { activites: PortailData['activites'] }) {
+  const { t } = useTranslation();
   if (activites.length === 0) {
-    return <div style={{ padding: 24, textAlign: 'center', color: '#6b7280', fontSize: 14 }}>Aucune activité parascolaire enregistrée</div>;
+    return <div style={{ padding: 24, textAlign: 'center', color: '#6b7280', fontSize: 14 }}>{t('portail_parent.aucune_activite')}</div>;
   }
 
   return (
@@ -413,7 +419,7 @@ function ActivitesTab({ activites }: { activites: PortailData['activites'] }) {
             )}
           </div>
           {insc.evaluations.length === 0 ? (
-            <div style={{ padding: '12px 16px', fontSize: 13, color: '#9ca3af' }}>Aucune évaluation</div>
+            <div style={{ padding: '12px 16px', fontSize: 13, color: '#9ca3af' }}>{t('portail_parent.aucune_evaluation_act')}</div>
           ) : (
             <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
               {insc.evaluations.map(ev => (
@@ -438,6 +444,7 @@ function ActivitesTab({ activites }: { activites: PortailData['activites'] }) {
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export function PortailParentPage() {
+  const { t } = useTranslation();
   const { token } = useParams<{ token: string }>();
   const [data, setData] = useState<PortailData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -479,7 +486,7 @@ export function PortailParentPage() {
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
             </svg>
           </div>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#111827', marginBottom: 8 }}>Lien invalide ou expiré</h2>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#111827', marginBottom: 8 }}>{t('portail_parent.invalide')}</h2>
           <p style={{ fontSize: 14, color: '#6b7280' }}>
             Ce lien de portail parent n'est plus valide. Veuillez contacter l'établissement pour obtenir un nouveau lien.
           </p>
@@ -514,7 +521,7 @@ export function PortailParentPage() {
             )}
             <div>
               <h1 style={{ fontSize: 18, fontWeight: 700, color: '#111827', margin: 0 }}>{data.etablissement.nom_fr}</h1>
-              <p style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>Portail parent</p>
+              <p style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>{t('portail_parent.titre')}</p>
             </div>
           </div>
 
