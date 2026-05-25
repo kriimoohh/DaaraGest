@@ -11,6 +11,13 @@
     "logout": "Déconnexion",
     "error": "Identifiant ou mot de passe incorrect"
   },
+  "login": {
+    "langue": "Langue",
+    "theme": "Thème",
+    "tagline": "Gestion scolaire franco-arabe",
+    "connexion_loading": "Connexion…",
+    "footer": "École franco-arabe · Sénégal"
+  },
   "nav": {
     "accueil": "Accueil",
     "dashboard": "Tableau de bord",
