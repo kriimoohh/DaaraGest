@@ -87,7 +87,7 @@ function RangMedal({ rang }: { rang: number | null }) {
   return <span style={{ fontWeight: 600, color: 'var(--ink-2)' }}>{rang}ème</span>;
 }
 
-function ClasseStats({ bulletins }: { bulletins: Bulletin[] }) {
+function ClasseStats({ bulletins, t }: { bulletins: Bulletin[]; t: (k: string) => string }) {
   if (bulletins.length === 0) return null;
   const avecMoy = bulletins.filter(b => b.moyenne !== null);
   if (avecMoy.length === 0) return null;
@@ -102,23 +102,23 @@ function ClasseStats({ bulletins }: { bulletins: Bulletin[] }) {
         <div style={{ fontSize: 22, fontWeight: 700, color: moyenneColor(moyClasse) }}>
           {moyClasse.toFixed(2)}
         </div>
-        <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>Moyenne classe</div>
+        <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>{t('bulletin.stats_moyenne_classe')}</div>
       </div>
       <div className="card" style={{ padding: 16, textAlign: 'center' }}>
         <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)' }}>{bulletins.length}</div>
-        <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>Élèves</div>
+        <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>{t('bulletin.stats_eleves')}</div>
       </div>
       <div className="card" style={{ padding: 16, textAlign: 'center' }}>
         <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--success)' }}>
           {avecMoy.length > 0 ? Math.round((reussite / avecMoy.length) * 100) : 0}%
         </div>
-        <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>Taux de réussite</div>
+        <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>{t('bulletin.stats_taux_reussite')}</div>
       </div>
       <div className="card" style={{ padding: 16, textAlign: 'center' }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--warning)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {meilleur ? `${meilleur.eleve.prenom_fr} ${meilleur.eleve.nom_fr}` : '—'}
         </div>
-        <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>1er de classe</div>
+        <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>{t('bulletin.stats_premier')}</div>
       </div>
     </div>
   );
@@ -147,7 +147,7 @@ export function BulletinsPage() {
   const filiere = isAnnuel ? type.replace('ANNUEL_', '') : type;
 
   useEffect(() => {
-    api.get<AnneeScolaire[]>('/api/v1/annees-scolaires').then(setAnnees).catch(() => toast.error('Erreur de chargement'));
+    api.get<AnneeScolaire[]>('/api/v1/annees-scolaires').then(setAnnees).catch(() => toast.error(t('bulletin.err_chargement')));
   }, []);
 
   useEffect(() => {
@@ -165,14 +165,14 @@ export function BulletinsPage() {
       const data = await api.get<Bulletin[]>(`/api/v1/bulletins?${params}`);
       setBulletins(data);
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur de chargement');
+      toast.error((err as Error).message || t('bulletin.err_chargement'));
     } finally {
       setLoading(false);
     }
   };
 
   const generer = async () => {
-    if (!classeId || !anneeId) { toast.error('Sélectionnez une classe'); return; }
+    if (!classeId || !anneeId) { toast.error(t('bulletin.err_classe_requise')); return; }
     setGenerating(true);
     try {
       if (isAnnuel) {
@@ -180,10 +180,10 @@ export function BulletinsPage() {
       } else {
         await api.post('/api/v1/bulletins/generer', { classe_id: classeId, annee_scolaire_id: anneeId, periode: parseInt(periode), filiere: type });
       }
-      toast.success('Bulletins générés avec succès');
+      toast.success(t('bulletin.ok_generes'));
       await charger();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur lors de la génération');
+      toast.error((err as Error).message || t('bulletin.err_generation'));
     } finally {
       setGenerating(false);
     }
@@ -205,9 +205,9 @@ export function BulletinsPage() {
       a.download = `bulletin-${b.eleve.matricule}-${suffix}-${b.filiere}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('PDF téléchargé');
+      toast.success(t('bulletin.ok_pdf_eleve'));
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur PDF');
+      toast.error((err as Error).message || t('bulletin.err_pdf'));
     } finally {
       setDownloading(null);
     }
@@ -232,9 +232,9 @@ export function BulletinsPage() {
       a.download = `bulletins-classe-${isAnnuel ? 'Annuel' : `T${periode}`}-${filiereFetch}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success(`PDF de la classe téléchargé (${bulletins.length} bulletin(s))`);
+      toast.success(t('bulletin.ok_pdf_classe', { count: bulletins.length }));
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur PDF classe');
+      toast.error((err as Error).message || t('bulletin.err_pdf_classe'));
     } finally {
       setDownloadingClasse(false);
     }
@@ -246,7 +246,7 @@ export function BulletinsPage() {
       const data = await api.get<DetailBulletin>(`/api/v1/bulletins/${b.id}`);
       setDetail(data);
     } catch {
-      toast.error('Impossible de charger le détail');
+      toast.error(t('bulletin.err_detail'));
     } finally {
       setLoadingDetail(false);
     }
@@ -256,7 +256,7 @@ export function BulletinsPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Édition" title={t('bulletin.titre')} />
+      <PageHeader eyebrow={t('bulletin.eyebrow')} title={t('bulletin.titre')} />
 
       {/* Filtres */}
       <div className="card-pad" style={{ marginBottom: 16 }}>
@@ -327,7 +327,7 @@ export function BulletinsPage() {
       </div>
 
       {/* Stats de classe */}
-      {bulletins.length > 0 && <ClasseStats bulletins={bulletins} />}
+      {bulletins.length > 0 && <ClasseStats bulletins={bulletins} t={t} />}
 
       {/* Vue cartes */}
       {bulletins.length > 0 && view === 'cards' && (
@@ -477,6 +477,7 @@ function noteColor(valeur: number | string | null, noteMax: number | string): st
 }
 
 function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere: string; isAnnuel: boolean }) {
+  const { t } = useTranslation();
   if (notes.length === 0) return null;
 
   if (!isAnnuel) {
@@ -485,7 +486,7 @@ function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere
         <thead>
           <tr>
             <th style={{ textAlign: 'start' }}>Matière ({filiere})</th>
-            <th style={{ textAlign: 'center', width: 56 }}>Coeff</th>
+            <th style={{ textAlign: 'center', width: 56 }}>{t('bulletin.col_coeff')}</th>
             <th style={{ textAlign: 'center', width: 96 }}>Note / Max</th>
           </tr>
         </thead>
@@ -527,7 +528,7 @@ function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere
       <thead>
         <tr>
           <th style={{ textAlign: 'start' }}>Matière ({filiere})</th>
-          <th style={{ textAlign: 'center', width: 40 }}>Coeff</th>
+          <th style={{ textAlign: 'center', width: 40 }}>{t('bulletin.col_coeff')}</th>
           {['T1', 'T2', 'T3'].map(t => (
             <th key={t} style={{ textAlign: 'center', width: 56 }}>{t}</th>
           ))}
@@ -563,7 +564,8 @@ function BulletinDetailContent({
   onClose: () => void;
   api: ReturnType<typeof useApi>;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'ar' ? 'ar-SN' : 'fr-FR';
   const { user } = useAuthStore();
   const [obsFr, setObsFr] = useState(detail.observation_fr ?? '');
   const [obsProf, setObsProf] = useState(detail.observation_prof ?? '');
@@ -577,9 +579,9 @@ function BulletinDetailContent({
         observation_fr: obsFr || undefined,
         observation_prof: obsProf || undefined,
       });
-      toast.success('Observations enregistrées');
+      toast.success(t('bulletin.obs_enregistrees'));
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message || t('bulletin.obs_erreur'));
     } finally { setSavingObs(false); }
   };
 
@@ -607,7 +609,7 @@ function BulletinDetailContent({
         <div style={{ textAlign: 'end' }}>
           <RangMedal rang={detail.rang} />
           <div style={{ fontSize: 12, color: 'var(--ink-4)', marginTop: 4 }}>
-            {isAnnuel ? 'Bulletin Annuel' : `Trimestre ${detail.periode}`}
+            {isAnnuel ? t('bulletin.bulletin_annuel') : t('bulletin.trimestre_n', { n: detail.periode })}
           </div>
         </div>
       </div>
@@ -615,21 +617,21 @@ function BulletinDetailContent({
       {/* Infos élève */}
       <div className="grid-3" style={{ fontSize: 13 }}>
         <div style={{ padding: 12, background: 'var(--paper-2)', borderRadius: 'var(--r-md)' }}>
-          <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 2 }}>Élève</div>
+          <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 2 }}>{t('bulletin.col_eleve')}</div>
           <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{detail.eleve.prenom_fr} {detail.eleve.nom_fr}</div>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-4)' }}>{detail.eleve.matricule}</div>
         </div>
         <div style={{ padding: 12, background: 'var(--paper-2)', borderRadius: 'var(--r-md)' }}>
-          <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 2 }}>Classe</div>
+          <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 2 }}>{t('classe.titre')}</div>
           <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{classeNom}</div>
           <div style={{ marginTop: 4 }}>{filiereChip(detail.filiere)}</div>
         </div>
         <div style={{ padding: 12, background: 'var(--paper-2)', borderRadius: 'var(--r-md)' }}>
-          <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 2 }}>Année scolaire</div>
+          <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 2 }}>{t('classe.annee_scolaire')}</div>
           <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{detail.annee_scolaire.libelle}</div>
           {detail.generated_at && (
             <div style={{ fontSize: 12, color: 'var(--ink-4)', marginTop: 4 }}>
-              Généré le {new Date(detail.generated_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+              {t('bulletin.genere_le', 'Généré le {{date}}', { date: new Date(detail.generated_at).toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' }) })}
             </div>
           )}
         </div>
@@ -660,31 +662,31 @@ function BulletinDetailContent({
       {/* Observations */}
       <div className="card" style={{ overflow: 'hidden' }}>
         <div style={{ padding: '8px 16px', fontSize: 12, fontWeight: 600, borderBottom: '1px solid var(--rule)', background: 'var(--paper-2)', color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          Observations
+          {t('bulletin.observations', 'Observations')}
         </div>
         <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--ink-3)', marginBottom: 4 }}>Observation du directeur (Français)</label>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--ink-3)', marginBottom: 4 }}>{t('bulletin.obs_directeur_fr', 'Observation du directeur')}</label>
             <textarea
               value={obsFr}
               onChange={e => setObsFr(e.target.value)}
               readOnly={!canEditObs}
               rows={2}
               maxLength={500}
-              placeholder={canEditObs ? "Saisir une observation…" : "Aucune observation"}
+              placeholder={canEditObs ? t('bulletin.obs_placeholder_fr') : t('bulletin.obs_aucune_fr')}
               className="input"
               style={{ width: '100%', resize: 'none' }}
             />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--ink-3)', marginBottom: 4 }}>Observation du professeur</label>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--ink-3)', marginBottom: 4 }}>{t('bulletin.obs_professeur')}</label>
             <textarea
               value={obsProf}
               onChange={e => setObsProf(e.target.value)}
               readOnly={!canEditObs}
               rows={2}
               maxLength={500}
-              placeholder={canEditObs ? "Saisir une observation du professeur…" : "Aucune observation"}
+              placeholder={canEditObs ? t('bulletin.obs_placeholder_prof') : t('bulletin.obs_aucune_fr')}
               className="input"
               style={{ width: '100%', resize: 'none' }}
             />
@@ -692,7 +694,7 @@ function BulletinDetailContent({
           {canEditObs && (
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <Button size="sm" onClick={saveObservations} loading={savingObs}>
-                Enregistrer les observations
+                {t('bulletin.obs_enregistrer')}
               </Button>
             </div>
           )}
@@ -701,9 +703,9 @@ function BulletinDetailContent({
 
       {/* Actions */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingTop: 4 }}>
-        <Button variant="secondary" onClick={onClose}>Fermer</Button>
+        <Button variant="secondary" onClick={onClose}>{t('bulletin.fermer')}</Button>
         <Button onClick={() => onDownload(detail)} loading={downloading === detail.id}>
-          ⬇ Télécharger PDF
+          {t('bulletin.telecharger_pdf')}
         </Button>
       </div>
     </div>

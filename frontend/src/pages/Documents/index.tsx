@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -319,6 +320,7 @@ function TemplateEditor({ type, templates, onSaved }: {
   templates: TemplateInfo[];
   onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const api = useApi();
   const canEdit = useAuthStore(s => ['admin', 'directeur'].includes(s.user?.role ?? ''));
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -334,7 +336,7 @@ function TemplateEditor({ type, templates, onSaved }: {
     setDirty(false);
     api.get<{ contenu_html: string }>(`/api/v1/documents/${type}`)
       .then(d => setHtml(d.contenu_html))
-      .catch(() => toast.error('Impossible de charger le template'))
+      .catch(() => toast.error(t('document.template_charger_err')))
       .finally(() => setLoading(false));
   }, [type]);
 
@@ -366,7 +368,7 @@ function TemplateEditor({ type, templates, onSaved }: {
     setSaving(true);
     try {
       await api.put(`/api/v1/documents/${type}`, { nom: LABELS[type], contenu_html: html });
-      toast.success('Template sauvegardé');
+      toast.success(t('document.template_sauve'));
       setDirty(false);
       onSaved();
     } catch (err) { toast.error((err as Error).message); }
@@ -378,7 +380,7 @@ function TemplateEditor({ type, templates, onSaved }: {
     setResetting(true);
     try {
       await api.delete(`/api/v1/documents/${type}/reset`);
-      toast.success('Template réinitialisé');
+      toast.success(t('document.template_reset'));
       setDirty(false);
       onSaved();
       // Reload default
@@ -399,7 +401,7 @@ function TemplateEditor({ type, templates, onSaved }: {
           {dirty && <span style={{ fontSize: 11, marginInlineStart: 8, color: 'var(--warning)' }}>● Non sauvegardé</span>}
           {hasCustom && !dirty && <span style={{ fontSize: 11, marginInlineStart: 8, padding: '1px 7px', borderRadius: 4, background: 'var(--success-soft)', color: 'var(--success-text)' }}>✓ Template personnalisé</span>}
         </div>
-        <button className="btn btn-ghost btn-sm" onClick={handlePreview} title="Aperçu dans un nouvel onglet">
+        <button className="btn btn-ghost btn-sm" onClick={handlePreview} title={t('document.apercu_nouvel_onglet')}>
           <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: 5 }}>
             <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
           </svg>
@@ -480,6 +482,7 @@ function TemplateEditor({ type, templates, onSaved }: {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export function DocumentsPage() {
+  const { t } = useTranslation();
   const api = useApi();
   const [tab, setTab] = useState<'generer' | 'historique' | 'modeles'>('generer');
 
@@ -588,7 +591,7 @@ export function DocumentsPage() {
       const a = document.createElement('a');
       a.href = url; a.download = result.filename; a.click();
       URL.revokeObjectURL(url);
-      toast.success('Document téléchargé');
+      toast.success(t('document.doc_telecharge'));
     } catch (err) { toast.error((err as Error).message); }
     finally { setDownloading(false); }
   };
@@ -601,13 +604,13 @@ export function DocumentsPage() {
       if (!result) return;
       const url = URL.createObjectURL(result.blob);
       const win = window.open(url, '_blank');
-      if (!win) { toast.error('Autorisez les popups pour imprimer'); URL.revokeObjectURL(url); return; }
+      if (!win) { toast.error(t('document.popups_autoriser')); URL.revokeObjectURL(url); return; }
       win.addEventListener('load', () => {
         win.focus();
         win.print();
       });
       setTimeout(() => URL.revokeObjectURL(url), 120000);
-      toast.success('Document ouvert — utilisez Ctrl+P pour imprimer');
+      toast.success(t('document.doc_ouvert_print'));
     } catch (err) { toast.error((err as Error).message); }
     finally { setPrinting(false); }
   };
@@ -636,12 +639,12 @@ export function DocumentsPage() {
 
   return (
     <>
-      <PageHeader title="Documents administratifs" />
+      <PageHeader title={t('document.titre')} />
 
       <div className="tabs" style={{ marginBottom: 20 }}>
-        <button className={`tab${tab === 'generer' ? ' active' : ''}`} onClick={() => setTab('generer')}>Générer</button>
-        <button className={`tab${tab === 'historique' ? ' active' : ''}`} onClick={() => setTab('historique')}>Historique</button>
-        <button className={`tab${tab === 'modeles' ? ' active' : ''}`} onClick={() => setTab('modeles')}>Modèles</button>
+        <button className={`tab${tab === 'generer' ? ' active' : ''}`} onClick={() => setTab('generer')}>{t('document.tab_generer')}</button>
+        <button className={`tab${tab === 'historique' ? ' active' : ''}`} onClick={() => setTab('historique')}>{t('document.tab_historique')}</button>
+        <button className={`tab${tab === 'modeles' ? ' active' : ''}`} onClick={() => setTab('modeles')}>{t('document.tab_modeles')}</button>
       </div>
 
       {/* ── Onglet Générer ── */}
@@ -654,7 +657,7 @@ export function DocumentsPage() {
                 <svg width={48} height={48} viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.3, display: 'block', margin: '0 auto 12px' }}>
                   <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
                 </svg>
-                <p style={{ fontSize: 14 }}>Sélectionnez un type de document</p>
+                <p style={{ fontSize: 14 }}>{t('document.selectionner_type')}</p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -677,18 +680,18 @@ export function DocumentsPage() {
 
                 {destType === 'eleve' && (
                   <div>
-                    <div className="field-label" style={{ marginBottom: 6 }}>Élève</div>
+                    <div className="field-label" style={{ marginBottom: 6 }}>{t('document.eleve_label')}</div>
                     {selectedEleve ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', border: '1px solid var(--rule)', borderRadius: 'var(--r-md)', background: 'var(--paper-2)' }}>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 14, fontWeight: 600 }}>{selectedEleve.prenom_fr} {selectedEleve.nom_fr}</div>
                           <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{selectedEleve.matricule}</div>
                         </div>
-                        <button className="btn btn-ghost btn-sm" onClick={() => { setSelectedEleve(null); setEleveSearch(''); }}>Changer</button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => { setSelectedEleve(null); setEleveSearch(''); }}>{t('document.changer')}</button>
                       </div>
                     ) : (
                       <div style={{ position: 'relative' }}>
-                        <Input placeholder="Rechercher par nom ou matricule..." value={eleveSearch} onChange={e => setEleveSearch(e.target.value)} />
+                        <Input placeholder={t('document.rechercher_eleve_ph')} value={eleveSearch} onChange={e => setEleveSearch(e.target.value)} />
                         {(elevesFound.length > 0 || searchLoading) && (
                           <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--paper)', border: '1px solid var(--rule)', borderRadius: 'var(--r-md)', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', marginTop: 4 }}>
                             {searchLoading && <div style={{ padding: 10, fontSize: 13, color: 'var(--ink-3)', textAlign: 'center' }}>Recherche…</div>}
@@ -707,7 +710,7 @@ export function DocumentsPage() {
 
                 {destType === 'professeur' && (
                   <div className="field">
-                    <label className="field-label">Professeur</label>
+                    <label className="field-label">{t('document.professeur_label')}</label>
                     <select className="input" value={selectedProfId} onChange={e => setSelectedProfId(e.target.value)}>
                       <option value="">Sélectionner un professeur…</option>
                       {professeurs.map(p => <option key={p.id} value={p.id}>{[p.prenom_fr, p.nom_fr].filter(Boolean).join(' ')}</option>)}
@@ -718,14 +721,14 @@ export function DocumentsPage() {
                 {destType === 'classe' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <div className="field">
-                      <label className="field-label">Classe</label>
+                      <label className="field-label">{t('document.classe_label')}</label>
                       <select className="input" value={selectedClasseId} onChange={e => setSelectedClasseId(e.target.value)}>
                         <option value="">Sélectionner une classe…</option>
                         {classes.map(c => <option key={c.id} value={c.id}>{c.nom_fr} ({c.filiere})</option>)}
                       </select>
                     </div>
                     <div className="field">
-                      <label className="field-label">Année scolaire</label>
+                      <label className="field-label">{t('document.annee_scolaire')}</label>
                       <select className="input" value={extraParams.annee_scolaire_id ?? ''} onChange={e => setExtraParams(p => ({ ...p, annee_scolaire_id: e.target.value }))}>
                         <option value="">Sélectionner…</option>
                         {annees.map(a => <option key={a.id} value={a.id}>{a.libelle}{a.active ? ' (active)' : ''}</option>)}
@@ -736,7 +739,7 @@ export function DocumentsPage() {
 
                 {EXTRA_PARAMS[selectedType]?.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Paramètres du document</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('document.parametres_document')}</div>
                     <div className="grid-2" style={{ gap: 10 }}>
                       {EXTRA_PARAMS[selectedType].map(p => (
                         <div key={p.key} className={p.type === 'textarea' ? 'grid-span-2' : ''}>
@@ -804,7 +807,7 @@ export function DocumentsPage() {
           {histLoading ? (
             <div style={{ padding: 40, textAlign: 'center', color: 'var(--ink-3)', fontSize: 14 }}>Chargement…</div>
           ) : historique.length === 0 ? (
-            <div style={{ padding: 40, textAlign: 'center', color: 'var(--ink-3)', fontSize: 14 }}>Aucun document généré</div>
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--ink-3)', fontSize: 14 }}>{t('document.aucun_doc_genere')}</div>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
@@ -841,7 +844,7 @@ export function DocumentsPage() {
                 <svg width={48} height={48} viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.3, display: 'block', margin: '0 auto 12px' }}>
                   <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
                 </svg>
-                <p style={{ fontSize: 14 }}>Sélectionnez un type pour éditer son modèle</p>
+                <p style={{ fontSize: 14 }}>{t('document.selectionner_type_editer')}</p>
                 <p style={{ fontSize: 12, color: 'var(--ink-4)', maxWidth: 300, margin: '4px auto 0' }}>
                   Les modèles utilisent des variables <code style={{ fontSize: 11 }}>{'{{VARIABLE}}'}</code> remplacées automatiquement à la génération.
                 </p>
