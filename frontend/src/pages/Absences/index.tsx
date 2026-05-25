@@ -80,7 +80,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
   }, [anneeId]);
 
   const charger = async () => {
-    if (!classeId || !anneeId) { toast.error('Sélectionnez une classe et une année'); return; }
+    if (!classeId || !anneeId) { toast.error(t('absences.err_select_classe')); return; }
     setLoading(true);
     try {
       const data = await api.get<EleveJour[]>(`/api/v1/absences/jour?classe_id=${classeId}&annee_scolaire_id=${anneeId}&date=${date}`);
@@ -96,7 +96,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
       }
       setSaisie(init);
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur de chargement');
+      toast.error((err as Error).message || t('absences.err_chargement'));
     } finally { setLoading(false); }
   };
 
@@ -114,7 +114,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
         };
       });
 
-    if (absences.length === 0) { toast.error('Aucune présence à enregistrer'); return; }
+    if (absences.length === 0) { toast.error(t('absences.err_aucune_presence')); return; }
     setSaving(true);
     try {
       const res = await api.post<{ saved: number }>('/api/v1/absences/bulk', {
@@ -123,10 +123,10 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
         date,
         absences,
       });
-      toast.success(`${res.saved} enregistrement(s) sauvegardé(s)`);
+      toast.success(t('absences.ok_saved', { count: res.saved }));
       charger();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message || t('absences.err_chargement'));
     } finally { setSaving(false); }
   };
 
@@ -152,15 +152,15 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
       <div className="filter-row">
         <Select value={anneeId} onChange={e => setAnneeId(e.target.value)}
           options={annees.map(a => ({ value: a.id, label: a.libelle }))}
-          placeholder="Année scolaire..." />
+          placeholder={t('absences.annee_placeholder')} />
         <Select value={classeId} onChange={e => setClasseId(e.target.value)}
           options={classes.map(c => ({ value: c.id, label: c.nom_fr }))}
-          placeholder="Classe..." />
+          placeholder={t('absences.classe_placeholder')} />
         <div className="row">
           <label style={{ fontSize: 13, color: 'var(--ink-3)', flexShrink: 0 }}>Date :</label>
           <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
         </div>
-        <Button variant="secondary" onClick={charger} loading={loading}>Charger</Button>
+        <Button variant="secondary" onClick={charger} loading={loading}>{t('absences.charger')}</Button>
         <Button onClick={handleSave} loading={saving} disabled={nbSaisis === 0}>
           Enregistrer ({nbSaisis})
         </Button>
@@ -192,7 +192,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
       {eleves.length === 0 ? (
         <div className="card empty" style={{ flexDirection: 'column', gap: 8, padding: 48 }}>
           <span style={{ fontSize: 36 }}>🎓</span>
-          <p>Sélectionnez une classe et chargez les élèves</p>
+          <p>{t('absences.selectionner_classe')}</p>
         </div>
       ) : (
         <div className="card">
@@ -252,7 +252,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
                       </td>
                       <td>
                         {needMotif && (
-                          <input type="text" value={s.motif} placeholder="Motif…"
+                          <input type="text" value={s.motif} placeholder={t('absences.motif_placeholder')}
                             onChange={ev => setSaisie(prev => ({ ...prev, [e.eleve_id]: { ...prev[e.eleve_id], motif: ev.target.value } }))}
                             className="input" style={{ width: '100%', padding: '4px 8px' }} />
                         )}
@@ -272,6 +272,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
 // ── Historique ────────────────────────────────────────────────────────────────
 
 function Historique({ api }: { api: ReturnType<typeof useApi> }) {
+  const { t } = useTranslation();
   const now = new Date();
   const [records, setRecords] = useState<AbsenceHisto[]>([]);
   const [total, setTotal] = useState(0);
@@ -289,7 +290,7 @@ function Historique({ api }: { api: ReturnType<typeof useApi> }) {
       const res = await api.get<{ data: AbsenceHisto[]; total: number }>(`/api/v1/absences?${params}`);
       setRecords(res.data ?? []);
       setTotal(res.total ?? 0);
-    } catch { toast.error('Erreur de chargement'); }
+    } catch { toast.error(t('absences.err_chargement')); }
     finally { setLoading(false); }
   };
 
@@ -317,7 +318,7 @@ function Historique({ api }: { api: ReturnType<typeof useApi> }) {
 
       <div className="card">
         {loading ? <div className="empty">Chargement…</div> :
-        records.length === 0 ? <div className="empty">Aucun enregistrement</div> : (
+        records.length === 0 ? <div className="empty">{t('absences.aucun_enregistrement')}</div> : (
           <div className="tbl-wrap">
             <table className="tbl">
               <thead>
@@ -358,6 +359,7 @@ function Historique({ api }: { api: ReturnType<typeof useApi> }) {
 // ── Statistiques ──────────────────────────────────────────────────────────────
 
 function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
+  const { t } = useTranslation();
   const now = new Date();
   const [annees, setAnnees] = useState<AnneeScolaire[]>([]);
   const [classes, setClasses] = useState<Classe[]>([]);
@@ -393,7 +395,7 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
       if (classeId) params.set('classe_id', classeId);
       const data = await api.get<StatEleve[]>(`/api/v1/absences/stats?${params}`);
       setStats(data);
-    } catch { toast.error('Erreur'); }
+    } catch { toast.error(t('absences.err_chargement')); }
     finally { setLoading(false); }
   };
 
@@ -411,13 +413,13 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
       <div className="filter-row">
         <Select value={anneeId} onChange={e => setAnneeId(e.target.value)}
           options={annees.map(a => ({ value: a.id, label: a.libelle }))}
-          placeholder="Année scolaire..." />
+          placeholder={t('absences.annee_placeholder')} />
         <Select value={classeId} onChange={e => setClasseId(e.target.value)}
           options={[{ value: '', label: 'Toutes les classes' }, ...classes.map(c => ({ value: c.id, label: c.nom_fr }))]} />
         <Select value={mois} onChange={e => setMois(e.target.value)}
           options={MOIS_LABELS.map((m, i) => ({ value: String(i + 1), label: m }))} />
         <Input type="number" value={annee} onChange={e => setAnnee(e.target.value)} />
-        <Button variant="secondary" onClick={charger} loading={loading}>Actualiser</Button>
+        <Button variant="secondary" onClick={charger} loading={loading}>{t('absences.actualiser')}</Button>
       </div>
 
       {stats.length > 0 && (
@@ -438,7 +440,7 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
 
       <div className="card">
         {loading ? <div className="empty">Chargement…</div> :
-        stats.length === 0 ? <div className="empty">Aucune donnée pour cette période</div> : (
+        stats.length === 0 ? <div className="empty">{t('absences.aucune_donnee_periode')}</div> : (
           <div className="tbl-wrap">
             <table className="tbl">
               <thead>
@@ -487,18 +489,19 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
 // ── Page principale ───────────────────────────────────────────────────────────
 
 export function AbsencesPage() {
+  const { t } = useTranslation();
   const api = useApi();
   const [tab, setTab] = useState<'saisie' | 'historique' | 'stats'>('saisie');
 
   const TABS = [
-    { key: 'saisie'     as const, label: 'Saisie du jour' },
-    { key: 'historique' as const, label: 'Historique' },
-    { key: 'stats'      as const, label: 'Statistiques' },
+    { key: 'saisie'     as const, label: t('absences.tab_saisie') },
+    { key: 'historique' as const, label: t('absences.tab_historique') },
+    { key: 'stats'      as const, label: t('absences.tab_stats') },
   ];
 
   return (
     <>
-      <PageHeader eyebrow="Suivi pédagogique" title="Absences des élèves" />
+      <PageHeader eyebrow={t('absences.suivi_pedagogique')} title={t('absences.titre')} />
 
       <div className="tabs" style={{ marginBottom: 16 }}>
         {TABS.map(tb => (
