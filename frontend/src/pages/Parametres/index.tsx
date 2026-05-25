@@ -166,12 +166,13 @@ function SectionIcon({ path }: { path: string }) {
 }
 
 function LogoUploader({ value, onChange }: { value: string | undefined; onChange: (v: string | undefined) => void }) {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
 
   const handleFile = (file: File) => {
-    if (!file.type.startsWith('image/')) { toast.error('Format invalide — image uniquement (PNG, JPG, SVG…)'); return; }
-    if (file.size > 512 * 1024) { toast.error('Fichier trop volumineux — maximum 512 Ko'); return; }
+    if (!file.type.startsWith('image/')) { toast.error(t('parametre.format_invalide_image')); return; }
+    if (file.size > 512 * 1024) { toast.error(t('parametre.fichier_trop_volumineux')); return; }
     const reader = new FileReader();
     reader.onload = e => onChange(e.target?.result as string);
     reader.readAsDataURL(file);
@@ -274,10 +275,11 @@ function LogoUploader({ value, onChange }: { value: string | undefined; onChange
 }
 
 function ImageFieldUploader({ label, value, onChange }: { label: string; value: string | undefined; onChange: (v: string | undefined) => void }) {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const handleFile = (file: File) => {
-    if (!file.type.startsWith('image/')) { toast.error('Format invalide — image uniquement'); return; }
-    if (file.size > 512 * 1024) { toast.error('Fichier trop volumineux — maximum 512 Ko'); return; }
+    if (!file.type.startsWith('image/')) { toast.error(t('parametre.format_invalide_image_simple')); return; }
+    if (file.size > 512 * 1024) { toast.error(t('parametre.fichier_trop_volumineux')); return; }
     const reader = new FileReader();
     reader.onload = e => onChange(e.target?.result as string);
     reader.readAsDataURL(file);
@@ -418,10 +420,10 @@ export function ParametresPage() {
       const body = { libelle: niveauLibelle.trim(), ordre: Number(niveauOrdre) || 0 };
       if (editNiveau) {
         await api.put(`/api/v1/niveaux/${editNiveau.id}`, body);
-        toast.success('Niveau modifié');
+        toast.success(t('parametre.niveau_modifie'));
       } else {
         await api.post('/api/v1/niveaux', body);
-        toast.success('Niveau ajouté');
+        toast.success(t('parametre.niveau_ajoute'));
       }
       setNiveauLibelle(''); setNiveauOrdre(''); setEditNiveau(null);
       fetchNiveaux();
@@ -433,7 +435,7 @@ export function ParametresPage() {
   const handleDeleteNiveau = async (n: Niveau) => {
     try {
       await api.delete(`/api/v1/niveaux/${n.id}`);
-      toast.success('Niveau supprimé');
+      toast.success(t('parametre.niveau_supprime'));
       fetchNiveaux();
     } catch (err) {
       toast.error((err as Error).message || 'Erreur');
@@ -455,16 +457,16 @@ export function ParametresPage() {
           libelle_fr: fonctionLibelle.trim(),
           ordre,
         });
-        toast.success('Fonction modifiée');
+        toast.success(t('parametre.fonction_modifiee'));
       } else {
         const code = fonctionCode.trim().toUpperCase().replace(/[^A-Z_]/g, '_');
-        if (!code) { toast.error('Code requis (lettres et underscores)'); return; }
+        if (!code) { toast.error(t('parametre.code_requis_lettres')); return; }
         await api.post('/api/v1/fonctions', {
           code,
           libelle_fr: fonctionLibelle.trim(),
           ordre,
         });
-        toast.success('Fonction ajoutée');
+        toast.success(t('parametre.fonction_ajoutee'));
       }
       resetFonctionForm();
       fetchFonctions();
@@ -478,7 +480,7 @@ export function ParametresPage() {
     setDeletingFonction(true);
     try {
       await api.delete(`/api/v1/fonctions/${confirmDeleteFonction.id}`);
-      toast.success('Fonction supprimée');
+      toast.success(t('parametre.fonction_supprimee'));
       setConfirmDeleteFonction(null);
       fetchFonctions();
     } catch (err) {
@@ -494,9 +496,9 @@ export function ParametresPage() {
   };
 
   const handleSaveTarif = async () => {
-    if (!tarifForm.libelle_fr.trim()) { toast.error('Libellé requis'); return; }
+    if (!tarifForm.libelle_fr.trim()) { toast.error(t('parametre.libelle_requis')); return; }
     const montant = parseFloat(tarifForm.montant_defaut);
-    if (isNaN(montant) || montant < 0) { toast.error('Montant invalide'); return; }
+    if (isNaN(montant) || montant < 0) { toast.error(t('parametre.montant_invalide')); return; }
     setSavingTarif(true);
     try {
       const ordre = Number(tarifForm.ordre) || 0;
@@ -509,16 +511,16 @@ export function ParametresPage() {
           actif: tarifForm.actif,
           ordre,
         });
-        toast.success('Tarif modifié');
+        toast.success(t('parametre.tarif_modifie'));
       } else {
         const code = tarifForm.code.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_');
-        if (!code) { toast.error('Code requis'); return; }
+        if (!code) { toast.error(t('parametre.code_requis')); return; }
         await api.post('/api/v1/tarifs', {
           code, libelle_fr: tarifForm.libelle_fr.trim(),
           montant_defaut: montant, periodicite: tarifForm.periodicite,
           obligatoire: tarifForm.obligatoire, actif: tarifForm.actif, ordre,
         });
-        toast.success('Tarif ajouté');
+        toast.success(t('parametre.tarif_ajoute'));
       }
       resetTarifForm();
       fetchTarifs();
@@ -534,7 +536,7 @@ export function ParametresPage() {
     setDeletingTarif(true);
     try {
       await api.delete(`/api/v1/tarifs/${confirmDeleteTarif.id}`);
-      toast.success('Tarif supprimé');
+      toast.success(t('parametre.tarif_supprime'));
       setConfirmDeleteTarif(null);
       fetchTarifs();
     } catch (err) {
@@ -581,9 +583,9 @@ export function ParametresPage() {
   };
 
   const saveCompte = async () => {
-    if (!profilNom.trim()) { toast.error('Le nom est requis'); return; }
+    if (!profilNom.trim()) { toast.error(t('parametre.nom_requis')); return; }
     if (profilEmail.trim() && !/^\S+@\S+\.\S+$/.test(profilEmail.trim())) {
-      toast.error('Email invalide'); return;
+      toast.error(t('parametre.email_invalide')); return;
     }
     setSaving('compte');
     try {
@@ -608,9 +610,9 @@ export function ParametresPage() {
   };
 
   const savePassword = async () => {
-    if (!ancienMdp || !nouveauMdp) { toast.error('Tous les champs sont requis'); return; }
-    if (nouveauMdp !== confirmMdp) { toast.error('Les mots de passe ne correspondent pas'); return; }
-    if (nouveauMdp.length < 8) { toast.error('Minimum 8 caractères'); return; }
+    if (!ancienMdp || !nouveauMdp) { toast.error(t('parametre.tous_champs_requis')); return; }
+    if (nouveauMdp !== confirmMdp) { toast.error(t('parametre.mdp_mismatch')); return; }
+    if (nouveauMdp.length < 8) { toast.error(t('parametre.mdp_min_8')); return; }
     setSaving('mdp');
     try {
       await api.put('/api/v1/auth/change-password', {
@@ -750,7 +752,7 @@ export function ParametresPage() {
                   />
                   <Input
                     label="Nom du/de la Directeur(trice)"
-                    placeholder="Ex : Adama NDIAYE"
+                    placeholder={t('parametre.ex_directeur')}
                     value={etab.nom_directeur ?? ''}
                     onChange={e => setEtab(p => p ? { ...p, nom_directeur: e.target.value } : p)}
                   />
@@ -931,7 +933,7 @@ export function ParametresPage() {
               label="Libellé"
               value={niveauLibelle}
               onChange={e => setNiveauLibelle(e.target.value)}
-              placeholder="Ex: CM1"
+              placeholder={t('parametre.ex_niveau')}
             />
             <Input
               label="Ordre d'affichage"

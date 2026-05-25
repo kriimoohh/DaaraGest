@@ -70,6 +70,7 @@ interface EleveSearchPickerProps {
 }
 
 function EleveSearchPicker({ eleves, selected, onChange }: EleveSearchPickerProps) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -133,7 +134,7 @@ function EleveSearchPicker({ eleves, selected, onChange }: EleveSearchPickerProp
           value={query}
           onChange={e => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
-          placeholder="Rechercher par nom ou matricule…"
+          placeholder={t('finance.rechercher_nom_matricule')}
           className="input"
           style={{ width: '100%' }}
         />
@@ -199,7 +200,7 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
   useEffect(() => { charger(); }, [page, moisF, anneeF]);
 
   const handleSave = async () => {
-    if (!form.personnel_id || !form.montant_brut) { toast.error('Personnel et montant requis'); return; }
+    if (!form.personnel_id || !form.montant_brut) { toast.error(t('finance.personnel_montant_requis')); return; }
     setSaving(true);
     try {
       await api.post('/api/v1/finances/paiements-personnel', {
@@ -209,7 +210,7 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
         retenues: parseFloat(form.retenues) || 0,
         net_a_payer: parseFloat(form.net_a_payer) || parseFloat(form.montant_brut),
       });
-      toast.success('Paiement enregistré');
+      toast.success(t('finance.paiement_enregistre'));
       setModal(false);
       charger();
     } catch (err) {
@@ -301,7 +302,7 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
           {parseFloat(form.retenues) > 0 && (
             <Input label={t('finance.motif_retenue')} value={form.motif_retenue}
               onChange={(e) => setForm(f => ({ ...f, motif_retenue: e.target.value }))}
-              placeholder="Ex: Absence non justifiée, avance récupérée…" />
+              placeholder={t('finance.motif_retenue_placeholder')} />
           )}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
             <Button variant="secondary" onClick={() => setModal(false)}>{t('actions.annuler')}</Button>
@@ -416,7 +417,7 @@ export function FinancesPage() {
 
   const handleSave = async () => {
     if (selectedEleves.length === 0 || !form.montant) {
-      toast.error('Sélectionnez au moins un élève et saisissez un montant');
+      toast.error(t('finance.selection_eleve_montant'));
       return;
     }
     setSaving(true);
@@ -462,7 +463,7 @@ export function FinancesPage() {
         annee: editForm.annee ? parseInt(editForm.annee) : undefined,
         statut: editForm.statut,
       });
-      toast.success('Paiement modifié');
+      toast.success(t('finance.paiement_modifie'));
       setEditTarget(null);
       charger();
       api.get<Stats>('/api/v1/finances/stats').then(setStats).catch(() => {});
@@ -515,7 +516,7 @@ export function FinancesPage() {
     setDeleting(true);
     try {
       await api.delete(`/api/v1/finances/paiements-eleves/${deleteTarget.id}`);
-      toast.success('Paiement supprimé');
+      toast.success(t('finance.paiement_supprime'));
       setDeleteTarget(null);
       charger();
       api.get<Stats>('/api/v1/finances/stats').then(setStats).catch(() => {});
@@ -526,7 +527,7 @@ export function FinancesPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Comptabilité" title={t('finance.titre')} />
+      <PageHeader eyebrow={t('finance.eyebrow')} title={t('finance.titre')} />
 
       {/* Stats */}
       {stats && (
@@ -611,7 +612,7 @@ export function FinancesPage() {
                             <Button size="sm" variant="secondary" onClick={() => {
                               const tel = (r as Reliquat & { parent_telephone?: string }).parent_telephone;
                               if (tel) { window.open('tel:' + tel); }
-                              else { toast.info('Aucun téléphone parent enregistré'); }
+                              else { toast.info(t('finance.aucun_tel_parent')); }
                             }}>
                               {t('finance.relancer')}
                             </Button>
@@ -655,7 +656,7 @@ export function FinancesPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div className="filter-row">
             <div style={{ flex: 1 }}>
-              <SearchInput value={search} onChange={setSearch} placeholder="Rechercher un élève..." />
+              <SearchInput value={search} onChange={setSearch} placeholder={t('finance.rechercher_eleve', 'Rechercher un élève...')} />
             </div>
             <Button variant="secondary" onClick={() => { setQrError(null); setQrScanModal(true); }}>📷 Scanner QR</Button>
             <Button onClick={openModal}>+ Paiement</Button>
@@ -772,7 +773,7 @@ export function FinancesPage() {
             <textarea
               value={form.notes}
               onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-              placeholder="Remarques, référence chèque…"
+              placeholder={t('finance.remarques_placeholder')}
               rows={2}
               className="input"
               style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit' }}
@@ -824,12 +825,12 @@ export function FinancesPage() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
         loading={deleting}
-        title="Supprimer le paiement"
+        title={t('finance.supprimer_paiement')}
         message={deleteTarget ? `Supprimer le paiement de ${formatMontant(deleteTarget.montant)} pour ${deleteTarget.eleve.prenom_fr} ${deleteTarget.eleve.nom_fr} ? Cette action est irréversible.` : ''}
       />
 
       {/* Modal Scanner QR élève */}
-      <Modal isOpen={qrScanModal} onClose={async () => { await stopQrScanner(); setQrScanModal(false); }} title="Scanner la carte élève" size="sm">
+      <Modal isOpen={qrScanModal} onClose={async () => { await stopQrScanner(); setQrScanModal(false); }} title={t('finance.scanner_carte_eleve')} size="sm">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <p style={{ fontSize: 13, color: 'var(--ink-3)', margin: 0 }}>
             Pointez la caméra sur le QR code de la carte scolaire de l'élève.
