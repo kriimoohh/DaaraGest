@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -78,6 +79,7 @@ interface NouvelleConvProps {
 }
 
 function NouvelleConversationModal({ isOpen, onClose, onCreated, api }: NouvelleConvProps) {
+  const { t } = useTranslation();
   const [sujet, setSujet] = useState('');
   const [corps, setCorps] = useState('');
   const [type, setType] = useState<'individuel' | 'broadcast'>('individuel');
@@ -118,10 +120,10 @@ function NouvelleConversationModal({ isOpen, onClose, onCreated, api }: Nouvelle
   };
 
   const handleSend = async () => {
-    if (!sujet.trim()) { toast.error('Le sujet est requis'); return; }
-    if (!corps.trim()) { toast.error('Le message est requis'); return; }
-    if (type === 'individuel' && selectedUsers.size === 0) { toast.error('Sélectionnez au moins un destinataire'); return; }
-    if (type === 'broadcast' && selectedRoles.size === 0) { toast.error('Sélectionnez au moins un rôle'); return; }
+    if (!sujet.trim()) { toast.error(t('messagerie.sujet_requis')); return; }
+    if (!corps.trim()) { toast.error(t('messagerie.message_requis')); return; }
+    if (type === 'individuel' && selectedUsers.size === 0) { toast.error(t('messagerie.destinataire_requis')); return; }
+    if (type === 'broadcast' && selectedRoles.size === 0) { toast.error(t('messagerie.role_requis')); return; }
     setSaving(true);
     try {
       const payload: { sujet: string; corps: string; destinataire_ids?: string[]; cibles_roles?: string[] } = {
@@ -141,13 +143,13 @@ function NouvelleConversationModal({ isOpen, onClose, onCreated, api }: Nouvelle
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Nouveau message" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('messagerie.nouveau')} size="lg">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <Input label="Sujet" value={sujet} onChange={e => setSujet(e.target.value)} placeholder="Sujet du message..." />
+        <Input label={t('messagerie.sujet')} value={sujet} onChange={e => setSujet(e.target.value)} placeholder={t('messagerie.sujet_placeholder')} />
 
         {/* Type toggle */}
         <div>
-          <label style={{ fontSize: 12, color: 'var(--ink-3)', fontWeight: 600, display: 'block', marginBottom: 6 }}>Type</label>
+          <label style={{ fontSize: 12, color: 'var(--ink-3)', fontWeight: 600, display: 'block', marginBottom: 6 }}>{t('messagerie.type')}</label>
           <div style={{ display: 'flex', gap: 8 }}>
             {(['individuel', 'broadcast'] as const).map(t => (
               <button key={t} onClick={() => setType(t)}
@@ -170,10 +172,10 @@ function NouvelleConversationModal({ isOpen, onClose, onCreated, api }: Nouvelle
             <label style={{ fontSize: 12, color: 'var(--ink-3)', fontWeight: 600, display: 'block', marginBottom: 6 }}>
               Destinataires {selectedUsers.size > 0 && <span style={{ color: 'var(--terra)' }}>({selectedUsers.size} sélectionné{selectedUsers.size > 1 ? 's' : ''})</span>}
             </label>
-            <Input value={searchUser} onChange={e => setSearchUser(e.target.value)} placeholder="Rechercher un utilisateur..." />
+            <Input value={searchUser} onChange={e => setSearchUser(e.target.value)} placeholder={t('messagerie.rechercher_user')} />
             <div style={{ marginTop: 8, border: '1px solid var(--rule)', borderRadius: 'var(--r-md)', maxHeight: 200, overflowY: 'auto' }}>
               {filteredUsers.length === 0 ? (
-                <div style={{ padding: '16px', textAlign: 'center', fontSize: 13, color: 'var(--ink-4)' }}>Aucun utilisateur</div>
+                <div style={{ padding: '16px', textAlign: 'center', fontSize: 13, color: 'var(--ink-4)' }}>{t('messagerie.aucun_user')}</div>
               ) : filteredUsers.map(u => (
                 <label key={u.id}
                   style={{
@@ -208,11 +210,11 @@ function NouvelleConversationModal({ isOpen, onClose, onCreated, api }: Nouvelle
 
         {/* Message */}
         <div>
-          <label style={{ fontSize: 12, color: 'var(--ink-3)', fontWeight: 600, display: 'block', marginBottom: 6 }}>Message</label>
+          <label style={{ fontSize: 12, color: 'var(--ink-3)', fontWeight: 600, display: 'block', marginBottom: 6 }}>{t('messagerie.corps')}</label>
           <textarea
             value={corps}
             onChange={e => setCorps(e.target.value)}
-            placeholder="Écrire votre message..."
+            placeholder={t('messagerie.ecrire')}
             rows={4}
             className="input"
             style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit', fontSize: 13 }}
@@ -220,8 +222,8 @@ function NouvelleConversationModal({ isOpen, onClose, onCreated, api }: Nouvelle
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 4 }}>
-          <Button variant="secondary" onClick={onClose}>Annuler</Button>
-          <Button onClick={handleSend} loading={saving}>Envoyer</Button>
+          <Button variant="secondary" onClick={onClose}>{t('actions.annuler')}</Button>
+          <Button onClick={handleSend} loading={saving}>{t('messagerie.envoyer')}</Button>
         </div>
       </div>
     </Modal>
@@ -231,6 +233,7 @@ function NouvelleConversationModal({ isOpen, onClose, onCreated, api }: Nouvelle
 // ── Page principale ────────────────────────────────────────────────────────────
 
 export function MessageriePage() {
+  const { t } = useTranslation();
   const api = useApi();
   const userId = useAuthStore(s => s.user?.id ?? '');
 
@@ -251,7 +254,7 @@ export function MessageriePage() {
     try {
       const data = await api.get<Conversation[]>('/api/v1/messagerie');
       setConversations(data ?? []);
-    } catch { toast.error('Erreur de chargement'); }
+    } catch { toast.error(t('messagerie.err_chargement')); }
     finally { setLoadingConvs(false); }
   };
 
@@ -267,7 +270,7 @@ export function MessageriePage() {
       setSelected(detail);
       // Mark as read locally
       setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, non_lu: false } : c));
-    } catch { toast.error('Erreur de chargement'); }
+    } catch { toast.error(t('messagerie.err_chargement')); }
     finally { setLoadingDetail(false); }
   };
 
@@ -306,7 +309,7 @@ export function MessageriePage() {
 
   return (
     <>
-      <PageHeader title="Messagerie" />
+      <PageHeader title={t('messagerie.titre')} />
 
       <NouvelleConversationModal
         isOpen={newConvOpen}
@@ -324,11 +327,11 @@ export function MessageriePage() {
         <div style={{ width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column', borderInlineEnd: '1px solid var(--rule)' }}>
           {/* Header */}
           <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--rule)' }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', marginBottom: 10 }}>Conversations</h3>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', marginBottom: 10 }}>{t('messagerie.conversations')}</h3>
             <Input
               value={searchConv}
               onChange={e => setSearchConv(e.target.value)}
-              placeholder="Rechercher..."
+              placeholder={t('messagerie.rechercher')}
             />
           </div>
 
@@ -337,7 +340,7 @@ export function MessageriePage() {
             {loadingConvs ? (
               <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--ink-4)' }}>Chargement…</div>
             ) : filteredConvs.length === 0 ? (
-              <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--ink-4)' }}>Aucune conversation</div>
+              <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--ink-4)' }}>{t('messagerie.aucune_conversation')}</div>
             ) : filteredConvs.map(conv => {
               const isActive = selected?.id === conv.id;
               const otherParticipants = conv.participants.filter(p => p.id !== userId);
@@ -420,7 +423,7 @@ export function MessageriePage() {
               {/* Messages */}
               <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {selected.messages.length === 0 ? (
-                  <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--ink-4)', paddingTop: 32 }}>Aucun message</div>
+                  <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--ink-4)', paddingTop: 32 }}>{t('messagerie.aucun_message')}</div>
                 ) : selected.messages.map(msg => {
                   const isOwn = msg.expediteur.id === userId;
                   return (
