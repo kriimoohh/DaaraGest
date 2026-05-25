@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -39,6 +40,7 @@ type Tab = 'inscriptions' | 'seances' | 'evaluations';
 // ── Composant principal ────────────────────────────────────────────────────────
 
 export function ActivitesPage() {
+  const { t } = useTranslation();
   const api  = useApi();
   const role = useAuthStore(s => s.user?.role ?? '');
   const canEdit   = ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'].includes(role);
@@ -143,16 +145,16 @@ export function ActivitesPage() {
   };
 
   const submitAct = async () => {
-    if (!actForm.nom_fr) { toast.error('Le nom est requis'); return; }
+    if (!actForm.nom_fr) { toast.error(t('activite.err_nom')); return; }
     setSubmitting(true);
     try {
       const body = { nom_fr: actForm.nom_fr, description: actForm.description || undefined, capacite_max: actForm.capacite_max ? parseInt(actForm.capacite_max) : undefined };
       if (editAct) {
         await api.put(`/api/v1/activites/${editAct.id}`, body);
-        toast.success('Activité modifiée');
+        toast.success(t('activite.ok_modifiee'));
       } else {
         await api.post('/api/v1/activites', body);
-        toast.success('Activité créée');
+        toast.success(t('activite.ok_creee'));
       }
       setActModal(false); loadActivites();
     } catch (err) { toast.error((err as Error).message); }
@@ -161,14 +163,14 @@ export function ActivitesPage() {
 
   const deleteAct = async (a: Activite) => {
     if (!confirm(`Supprimer "${a.nom_fr}" et toutes ses données ?`)) return;
-    try { await api.delete(`/api/v1/activites/${a.id}`); toast.success('Activité supprimée'); loadActivites(); }
+    try { await api.delete(`/api/v1/activites/${a.id}`); toast.success(t('activite.ok_supprimee')); loadActivites(); }
     catch (err) { toast.error((err as Error).message); }
   };
 
   // ── Actions inscriptions ──────────────────────────────────────────────────────
 
   const inscrireEleve = async (eleve: Eleve) => {
-    if (!activeAct || !anneeId) { toast.error('Sélectionnez une année scolaire'); return; }
+    if (!activeAct || !anneeId) { toast.error(t('activite.err_annee')); return; }
     try {
       await api.post(`/api/v1/activites/${activeAct.id}/inscriptions`, { eleve_id: eleve.id, annee_scolaire_id: anneeId });
       toast.success(`${eleve.prenom_fr} ${eleve.nom_fr} inscrit(e)`);
@@ -181,14 +183,14 @@ export function ActivitesPage() {
     if (!confirm(`Désinscrire ${insc.eleve.prenom_fr} ${insc.eleve.nom_fr} ?`)) return;
     try {
       await api.delete(`/api/v1/activites/${activeAct.id}/inscriptions/${insc.eleve.id}?annee_scolaire_id=${anneeId}`);
-      toast.success('Désinscription effectuée'); loadInscriptions(); loadActivites();
+      toast.success(t('activite.ok_desinscription')); loadInscriptions(); loadActivites();
     } catch (err) { toast.error((err as Error).message); }
   };
 
   // ── Actions séances ───────────────────────────────────────────────────────────
 
   const creerSeance = async () => {
-    if (!activeAct || !seanceForm.date) { toast.error('La date est requise'); return; }
+    if (!activeAct || !seanceForm.date) { toast.error(t('activite.date_obligatoire')); return; }
     setSavingSeance(true);
     try {
       await api.post(`/api/v1/activites/${activeAct.id}/seances`, {
@@ -196,7 +198,7 @@ export function ActivitesPage() {
         duree_min: seanceForm.duree_min ? parseInt(seanceForm.duree_min) : undefined,
         notes: seanceForm.notes || undefined,
       });
-      toast.success('Séance créée'); setSeanceModal(false); setSeanceForm({ date: '', duree_min: '', notes: '' }); loadSeances();
+      toast.success(t('activite.ok_seance_creee')); setSeanceModal(false); setSeanceForm({ date: '', duree_min: '', notes: '' }); loadSeances();
     } catch (err) { toast.error((err as Error).message); }
     finally { setSavingSeance(false); }
   };
@@ -206,7 +208,7 @@ export function ActivitesPage() {
     if (!confirm('Supprimer cette séance et ses présences ?')) return;
     try {
       await api.delete(`/api/v1/activites/${activeAct.id}/seances/${s.id}`);
-      toast.success('Séance supprimée');
+      toast.success(t('activite.ok_seance_supprimee'));
       if (activeSeance?.id === s.id) { setActiveSeance(null); setPresencesMap({}); }
       loadSeances();
     } catch (err) { toast.error((err as Error).message); }
@@ -229,7 +231,7 @@ export function ActivitesPage() {
     try {
       const presencesList = inscriptions.map(i => ({ eleve_id: i.eleve.id, statut: presencesMap[i.eleve.id] ?? 'present' }));
       await api.post(`/api/v1/activites/${activeAct.id}/seances/${activeSeance.id}/presences/bulk`, { presences: presencesList });
-      toast.success('Présences enregistrées'); setActiveSeance(null); loadSeances();
+      toast.success(t('activite.ok_presences')); setActiveSeance(null); loadSeances();
     } catch (err) { toast.error((err as Error).message); }
     finally { setSavingPresences(false); }
   };
@@ -251,7 +253,7 @@ export function ActivitesPage() {
         appreciation: evalForm.appreciation || undefined,
         note: evalForm.note ? parseFloat(evalForm.note) : undefined,
       });
-      toast.success('Évaluation enregistrée'); setEvalModal(null); loadInscriptions();
+      toast.success(t('activite.ok_evaluation')); setEvalModal(null); loadInscriptions();
     } catch (err) { toast.error((err as Error).message); }
     finally { setSavingEval(false); }
   };
@@ -293,8 +295,8 @@ export function ActivitesPage() {
                   <Select label="Année scolaire" value={anneeId} onChange={e => setAnneeId(e.target.value)}
                     options={[{ value: '', label: 'Sélectionner...' }, ...annees.map(a => ({ value: a.id, label: a.libelle }))]} />
                   <div className="field">
-                    <label className="field-label">Rechercher un élève</label>
-                    <input className="input" value={eleveSearch} onChange={e => setEleveSearch(e.target.value)} placeholder="Nom ou matricule..." />
+                    <label className="field-label">{t('activite.rechercher_eleve')}</label>
+                    <input className="input" value={eleveSearch} onChange={e => setEleveSearch(e.target.value)} placeholder={t('activite.rechercher_eleve_placeholder')} />
                   </div>
                 </div>
                 {searchLoading && <div style={{ fontSize: 12, color: 'var(--ink-4)', marginTop: 8 }}>Recherche...</div>}
@@ -303,7 +305,7 @@ export function ActivitesPage() {
                     {elevesFound.map(e => (
                       <div key={e.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderBottom: '1px solid var(--rule)', fontSize: 13 }}>
                         <span>{e.prenom_fr} {e.nom_fr} <span style={{ color: 'var(--ink-4)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>{e.matricule}</span></span>
-                        <Button size="sm" onClick={() => inscrireEleve(e)}>Inscrire</Button>
+                        <Button size="sm" onClick={() => inscrireEleve(e)}>{t('activite.inscrire')}</Button>
                       </div>
                     ))}
                   </div>
@@ -311,7 +313,7 @@ export function ActivitesPage() {
               </div>
             )}
             <div className="card">
-              {inscriptions.length === 0 ? <div className="empty">Aucun élève inscrit</div> : (
+              {inscriptions.length === 0 ? <div className="empty">{t('activite.aucun_inscrit')}</div> : (
                 <div className="tbl-wrap">
                   <table className="tbl">
                     <thead><tr><th>Élève</th><th>Matricule</th><th>Inscrit le</th><th style={{ width: 80 }} /></tr></thead>
@@ -338,7 +340,7 @@ export function ActivitesPage() {
             {/* Liste séances */}
             <div style={{ width: 280, flexShrink: 0 }}>
               <div className="card">
-                {seances.length === 0 ? <div className="empty" style={{ padding: 16 }}>Aucune séance</div> : (
+                {seances.length === 0 ? <div className="empty" style={{ padding: 16 }}>{t('activite.aucune_seance')}</div> : (
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     {seances.map(s => (
                       <div key={s.id} onClick={() => openPresences(s)}
