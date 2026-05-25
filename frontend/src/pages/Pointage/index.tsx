@@ -59,6 +59,7 @@ function dateAujourdHui() {
 // ── Composant saisie journalière ───────────────────────────────────────────────
 
 function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
+  const { t } = useTranslation();
   const [date, setDate] = useState(dateAujourdHui());
   const [profs, setProfs] = useState<ProfJour[]>([]);
   const [saisie, setSaisie] = useState<Record<string, {
@@ -130,7 +131,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
         };
       });
 
-    if (presences.length === 0) { toast.error('Aucune présence à enregistrer'); return; }
+    if (presences.length === 0) { toast.error(t('pointage.aucune_presence_a_enregistrer')); return; }
     setSaving(true);
     try {
       const res = await api.post<{ saved: number }>('/api/v1/pointage/bulk', { date, presences });
@@ -253,7 +254,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
                         {needMotif && (
                           <input type="text" value={s.motif}
                             onChange={e => setField(p.personnel_id, 'motif', e.target.value)}
-                            placeholder="Raison…"
+                            placeholder={t('pointage.raison_placeholder')}
                             className="input" style={{ width: '100%', padding: '4px 8px' }} />
                         )}
                       </td>
@@ -272,6 +273,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
 // ── Historique ────────────────────────────────────────────────────────────────
 
 function Historique({ api }: { api: ReturnType<typeof useApi> }) {
+  const { t } = useTranslation();
   const now = new Date();
   const [records, setRecords] = useState<PresenceHistorique[]>([]);
   const [total, setTotal] = useState(0);
@@ -289,7 +291,7 @@ function Historique({ api }: { api: ReturnType<typeof useApi> }) {
       const res = await api.get<{ data: PresenceHistorique[]; total: number }>(`/api/v1/pointage?${params}`);
       setRecords(res.data ?? []);
       setTotal(res.total ?? 0);
-    } catch { toast.error('Erreur de chargement'); }
+    } catch { toast.error(t('pointage.err_chargement')); }
     finally { setLoading(false); }
   };
 
@@ -361,6 +363,7 @@ function Historique({ api }: { api: ReturnType<typeof useApi> }) {
 // ── Statistiques ──────────────────────────────────────────────────────────────
 
 function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
+  const { t } = useTranslation();
   const now = new Date();
   const [stats, setStats] = useState<StatProf[]>([]);
   const [mois, setMois] = useState(String(now.getMonth() + 1));
@@ -372,7 +375,7 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
     try {
       const data = await api.get<StatProf[]>(`/api/v1/pointage/stats?mois=${mois}&annee=${annee}`);
       setStats(data);
-    } catch { toast.error('Erreur'); }
+    } catch { toast.error(t('pointage.err_chargement')); }
     finally { setLoading(false); }
   };
 
@@ -475,7 +478,7 @@ export function PointagePage() {
   return (
     <>
       <PageHeader
-        eyebrow="Présence du personnel"
+        eyebrow={t('pointage.eyebrow')}
         title={t('pointage.titre')}
         action={
           <Button
