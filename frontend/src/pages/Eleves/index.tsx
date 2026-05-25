@@ -122,18 +122,18 @@ const PAGE_SIZE_OPTIONS = [
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function validate(form: EleveFormData, isEdit: boolean): FormErrors {
+function validate(form: EleveFormData, isEdit: boolean, t: (key: string) => string): FormErrors {
   const errors: FormErrors = {};
-  if (isEdit && !form.matricule.trim()) errors.matricule = 'Le matricule est requis';
-  if (!form.nom_fr.trim()) errors.nom_fr = 'Le nom (FR) est requis';
-  if (!form.prenom_fr.trim()) errors.prenom_fr = 'Le prénom (FR) est requis';
-  if (!form.sexe) errors.sexe = 'Le sexe est requis';
+  if (isEdit && !form.matricule.trim()) errors.matricule = t('eleve.err_matricule_req');
+  if (!form.nom_fr.trim()) errors.nom_fr = t('eleve.err_nom_req');
+  if (!form.prenom_fr.trim()) errors.prenom_fr = t('eleve.err_prenom_req');
+  if (!form.sexe) errors.sexe = t('eleve.err_sexe_req');
   return errors;
 }
 
-function formatDate(iso: string | undefined): string {
+function formatDate(iso: string | undefined, locale: string): string {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('fr-FR');
+  return new Date(iso).toLocaleDateString(locale);
 }
 
 // ── QR Code modal (élève) ──────────────────────────────────────────────────────
@@ -144,13 +144,14 @@ function QRCodeEleveModal({ eleveId, nom, onClose, api }: {
   eleveId: string; nom: string; onClose: () => void;
   api: ReturnType<typeof useApi>;
 }) {
+  const { t } = useTranslation();
   const [qrData, setQrData] = useState<EleveQRData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api.get<EleveQRData>(`/api/v1/eleves/${eleveId}/qr`)
       .then(setQrData)
-      .catch(() => toast.error('Impossible de charger le QR'))
+      .catch(() => toast.error(t('eleve.qr_err_impossible')))
       .finally(() => setLoading(false));
   }, [eleveId]);
 
@@ -179,10 +180,10 @@ function QRCodeEleveModal({ eleveId, nom, onClose, api }: {
   }
 
   return (
-    <Modal isOpen onClose={onClose} title={`QR Code — ${nom}`} size="sm">
+    <Modal isOpen onClose={onClose} title={t('eleve.qr_titre', { nom })} size="sm">
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
         {loading ? (
-          <div style={{ padding: 40, color: 'var(--ink-3)' }}>Chargement…</div>
+          <div style={{ padding: 40, color: 'var(--ink-3)' }}>{t('eleve.qr_chargement')}</div>
         ) : qrData ? (
           <>
             <div style={{ padding: 12, background: 'var(--card)', borderRadius: 12, border: '1px solid var(--rule)', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
@@ -194,15 +195,15 @@ function QRCodeEleveModal({ eleveId, nom, onClose, api }: {
               <div style={{ fontWeight: 600, fontSize: 15 }}>{qrData.nom}</div>
               <div style={{ fontSize: 12, color: 'var(--ink-3)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>{qrData.matricule}</div>
               <div style={{ marginTop: 6, fontSize: 11, color: 'var(--ink-4)', background: 'var(--paper-2)', borderRadius: 6, padding: '4px 10px', display: 'inline-block' }}>
-                Identification &amp; paiement
+                {t('eleve.qr_identification')}
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <Button variant="secondary" size="sm" onClick={handleDownload}>⬇ Télécharger</Button>
-              <Button variant="secondary" size="sm" onClick={handlePrint}>🖨 Imprimer</Button>
+              <Button variant="secondary" size="sm" onClick={handleDownload}>{t('eleve.qr_telecharger')}</Button>
+              <Button variant="secondary" size="sm" onClick={handlePrint}>{t('eleve.qr_imprimer')}</Button>
             </div>
           </>
-        ) : <div style={{ color: 'var(--danger-text)' }}>Erreur de chargement</div>}
+        ) : <div style={{ color: 'var(--danger-text)' }}>{t('eleve.qr_err_load')}</div>}
       </div>
     </Modal>
   );
@@ -222,7 +223,8 @@ function FicheRow({ label, value }: { label: string; value: React.ReactNode }) {
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export function ElevesPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'ar' ? 'ar-SN' : 'fr-FR';
   const isAdmin = useAuthStore(s => s.user?.role === 'admin');
   const isGestion = useAuthStore(s => ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'].includes(s.user?.role ?? ''));
   const canInscrire = useAuthStore(s => ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'].includes(s.user?.role ?? ''));
@@ -345,7 +347,7 @@ export function ElevesPage() {
       setEleves(res.data);
       setTotal(res.total);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors du chargement';
+      const msg = err instanceof Error ? err.message : t('eleve.err_chargement');
       setError(msg);
       toast.error(msg);
     } finally {
@@ -393,12 +395,12 @@ export function ElevesPage() {
     setBulkDeleting(true);
     try {
       const res = await api.post<{ count: number }>('/api/v1/eleves/bulk-desactiver', { ids: [...selectedIds] });
-      toast.success(`${res.count} élève(s) désactivé(s)`);
+      toast.success(t('eleve.bulk_desactives', { count: res.count }));
       setSelectedIds(new Set());
       setConfirmBulkDelete(false);
       fetchEleves();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur lors de la désactivation');
+      toast.error((err as Error).message || t('eleve.err_desactivation'));
     } finally {
       setBulkDeleting(false);
     }
@@ -408,12 +410,12 @@ export function ElevesPage() {
     setBulkSupprimant(true);
     try {
       const res = await api.post<{ count: number }>('/api/v1/eleves/bulk-supprimer', { ids: [...selectedIds] });
-      toast.success(`${res.count} élève(s) supprimé(s) définitivement`);
+      toast.success(t('eleve.bulk_supprimes', { count: res.count }));
       setSelectedIds(new Set());
       setConfirmBulkSupprimer(false);
       fetchEleves();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur lors de la suppression');
+      toast.error((err as Error).message || t('eleve.err_suppression'));
     } finally {
       setBulkSupprimant(false);
     }
@@ -600,7 +602,7 @@ export function ElevesPage() {
   }
 
   async function handleSubmit() {
-    const errors = validate(form, !!editTarget);
+    const errors = validate(form, !!editTarget, t);
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
@@ -687,7 +689,7 @@ export function ElevesPage() {
       key: 'date_naissance',
       header: 'Date de naissance',
       sortable: true,
-      render: (row) => formatDate((row as unknown as Eleve).date_naissance),
+      render: (row) => formatDate((row as unknown as Eleve).date_naissance, locale),
     },
     {
       key: 'classe_fr',
@@ -1204,7 +1206,7 @@ export function ElevesPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 24, rowGap: 12 }}>
                 <FicheRow label="Nom" value={ficheModal.nom_fr} />
                 <FicheRow label="Prénom" value={ficheModal.prenom_fr} />
-                <FicheRow label="Date de naissance" value={formatDate(ficheModal.date_naissance)} />
+                <FicheRow label={t('eleve.date_naissance')} value={formatDate(ficheModal.date_naissance, locale)} />
                 <FicheRow label="Lieu de naissance" value={ficheModal.lieu_naissance || '—'} />
                 <FicheRow label="Sexe" value={ficheModal.sexe === 'M' ? 'Masculin' : 'Féminin'} />
                 <FicheRow label="Matricule" value={<span className="font-mono text-sm">{ficheModal.matricule}</span>} />

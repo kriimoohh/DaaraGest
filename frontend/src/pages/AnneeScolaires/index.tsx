@@ -22,7 +22,8 @@ interface AnneeScolaire {
 const EMPTY = { libelle: '', date_debut: '', date_fin: '' };
 
 export function AnneeScolairesPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'ar' ? 'ar-SN' : 'fr-FR';
   const api = useApi();
   const isAdmin = useAuthStore(s => s.user?.role === 'admin');
   const [annees, setAnnees] = useState<AnneeScolaire[]>([]);
@@ -41,7 +42,7 @@ export function AnneeScolairesPage() {
       const data = await api.get<AnneeScolaire[]>('/api/v1/annees-scolaires');
       setAnnees(data);
     } catch {
-      toast.error('Erreur lors du chargement des années scolaires');
+      toast.error(t('annee_scolaire.err_chargement'));
     } finally {
       setLoading(false);
     }
@@ -62,22 +63,22 @@ export function AnneeScolairesPage() {
 
   const handleSave = async () => {
     if (!form.libelle || !form.date_debut || !form.date_fin) {
-      toast.error('Tous les champs sont requis');
+      toast.error(t('annee_scolaire.err_champs_requis'));
       return;
     }
     setSaving(true);
     try {
       if (edit) {
         await api.put(`/api/v1/annees-scolaires/${edit.id}`, form);
-        toast.success('Année scolaire modifiée');
+        toast.success(t('annee_scolaire.ok_modifiee'));
       } else {
         await api.post('/api/v1/annees-scolaires', form);
-        toast.success('Année scolaire créée');
+        toast.success(t('annee_scolaire.ok_creee'));
       }
       setModal(false);
       charger();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur lors de l\'enregistrement');
+      toast.error((err as Error).message || t('annee_scolaire.err_enregistrement'));
     } finally {
       setSaving(false);
     }
@@ -87,10 +88,10 @@ export function AnneeScolairesPage() {
     setActivating(a.id);
     try {
       await api.put(`/api/v1/annees-scolaires/${a.id}/activer`, {});
-      toast.success(`"${a.libelle}" est maintenant l'année active`);
+      toast.success(t('annee_scolaire.ok_activee', { libelle: a.libelle }));
       charger();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message);
     } finally {
       setActivating(null);
     }
@@ -101,43 +102,46 @@ export function AnneeScolairesPage() {
     setDeleting(true);
     try {
       await api.delete(`/api/v1/annees-scolaires/${confirm.id}`);
-      toast.success('Année scolaire supprimée');
+      toast.success(t('annee_scolaire.ok_supprimee'));
       setConfirm(null);
       charger();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur lors de la suppression');
+      toast.error((err as Error).message || t('annee_scolaire.err_suppression'));
     } finally {
       setDeleting(false);
     }
   };
 
-  const fmt = (d: string) => new Date(d).toLocaleDateString('fr-FR');
+  const fmt = (d: string) => new Date(d).toLocaleDateString(locale);
 
   return (
     <>
       <PageHeader
-        eyebrow="Administration"
-        title="Années scolaires"
-        subtitle="Gérer les années scolaires de l'établissement"
-        action={<Button onClick={openAdd}>+ Ajouter une année</Button>}
+        eyebrow={t('annee_scolaire.administration')}
+        title={t('annee_scolaire.titre')}
+        subtitle={t('annee_scolaire.subtitle')}
+        action={<Button onClick={openAdd}>{t('annee_scolaire.ajouter_btn')}</Button>}
       />
 
       <div className="card">
         {loading ? (
-          <div className="empty">Chargement...</div>
+          <div className="empty">{t('common.chargement')}</div>
         ) : annees.length === 0 ? (
           <div className="empty" style={{ flexDirection: 'column', gap: 8 }}>
             <span style={{ fontSize: 36 }}>📅</span>
-            <p>Aucune année scolaire. Commencez par en créer une.</p>
+            <p>{t('annee_scolaire.aucune')}</p>
           </div>
         ) : (
           <div className="tbl-wrap">
             <table className="tbl">
               <thead>
                 <tr>
-                  {['Libellé', 'Début', 'Fin', 'Élèves', 'Statut', 'Actions'].map((h) => (
-                    <th key={h}>{h}</th>
-                  ))}
+                  <th>{t('annee_scolaire.col_libelle')}</th>
+                  <th>{t('annee_scolaire.col_debut')}</th>
+                  <th>{t('annee_scolaire.col_fin')}</th>
+                  <th>{t('annee_scolaire.col_eleves')}</th>
+                  <th>{t('annee_scolaire.col_statut')}</th>
+                  <th>{t('annee_scolaire.col_actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -150,7 +154,7 @@ export function AnneeScolairesPage() {
                       {a.nb_eleves != null ? a.nb_eleves : <span style={{ color: 'var(--ink-4)' }}>—</span>}
                     </td>
                     <td>
-                      <Badge label={a.active ? 'Active' : 'Archivée'} variant={a.active ? 'success' : 'neutral'} />
+                      <Badge label={a.active ? t('annee_scolaire.active') : t('annee_scolaire.archivee')} variant={a.active ? 'success' : 'neutral'} />
                     </td>
                     <td>
                       <div className="row">
@@ -161,7 +165,7 @@ export function AnneeScolairesPage() {
                             onClick={() => handleActiver(a)}
                             loading={activating === a.id}
                           >
-                            Activer
+                            {t('actions.activer')}
                           </Button>
                         )}
                         <Button size="sm" variant="ghost" onClick={() => openEdit(a)}>{t('actions.modifier')}</Button>
@@ -176,13 +180,13 @@ export function AnneeScolairesPage() {
         )}
       </div>
 
-      <Modal isOpen={modal} onClose={() => setModal(false)} title={edit ? 'Modifier l\'année' : 'Nouvelle année scolaire'} size="md">
+      <Modal isOpen={modal} onClose={() => setModal(false)} title={edit ? t('annee_scolaire.modifier_titre') : t('annee_scolaire.nouvelle_titre')} size="md">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <Input
             label={t('annee_scolaire.libelle')}
             value={form.libelle}
             onChange={(e) => setForm((f) => ({ ...f, libelle: e.target.value }))}
-            placeholder="2025-2026"
+            placeholder={t('annee_scolaire.libelle_placeholder')}
           />
           <div className="grid-2">
             <Input
@@ -210,7 +214,7 @@ export function AnneeScolairesPage() {
         onClose={() => setConfirm(null)}
         onConfirm={handleDelete}
         loading={deleting}
-        message={`Supprimer l'année "${confirm?.libelle}" ?`}
+        message={t('annee_scolaire.confirm_supprimer', { libelle: confirm?.libelle ?? '' })}
       />
     </>
   );
