@@ -162,10 +162,13 @@ export async function getProgressionEleve(id: string, etablissement_id: string) 
 }
 
 async function genererMatricule(etablissement_id: string): Promise<string> {
-  const annee = new Date().getFullYear();
-  // La séquence par établissement+année garantit l'unicité sans race condition.
-  // ON CONFLICT ignore la création si elle existe déjà (idempotent).
-  const seqName = `seq_matricule_${etablissement_id.replace(/-/g, '_')}_${annee}`;
+  const etab = await prisma.etablissement.findUniqueOrThrow({
+    where: { id: etablissement_id },
+    select: { code: true },
+  });
+  const yy = String(new Date().getFullYear()).slice(-2);
+  // Séquence par établissement+année : atomique, sans race condition.
+  const seqName = `seq_mat_e_${etablissement_id.replace(/-/g, '_')}_${yy}`;
   await prisma.$executeRawUnsafe(
     `CREATE SEQUENCE IF NOT EXISTS "${seqName}" START 1 INCREMENT 1`
   );
@@ -173,7 +176,7 @@ async function genererMatricule(etablissement_id: string): Promise<string> {
     `SELECT nextval('"${seqName}"')`
   );
   const num = String(result[0].nextval).padStart(3, '0');
-  return `DG-${annee}-${num}`;
+  return `${etab.code}-E-${yy}-${num}`;
 }
 
 export async function creerEleve(etablissement_id: string, data: EleveInput, acteurId: string) {

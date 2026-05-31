@@ -98,6 +98,7 @@ async function main() {
     create: {
       id: ID.etab,
       nom_fr: 'F.I.C.A.A.M. — École Franco-Arabe Cheikh Abdoul Ahad Mbacké',
+      code: 'FIC',
       adresse: 'Cité AKF Guédiawaye',
       telephone: '33 877 76 30',
       devise: 'FCFA',
@@ -226,13 +227,13 @@ async function main() {
 
   // Personnel (anciennement Professeur — refactor unifié)
   const profsData = [
-    { id: ID.profs.p1, utilisateur_id: ID.users.prof1, specialite_fr: 'Français & Mathématiques', type_contrat: 'permanent', salaire_base: new Prisma.Decimal(250000), date_embauche: new Date('2020-09-01') },
-    { id: ID.profs.p2, utilisateur_id: ID.users.prof2, specialite_fr: 'Sciences Naturelles',      type_contrat: 'permanent', salaire_base: new Prisma.Decimal(220000), date_embauche: new Date('2019-09-01') },
-    { id: ID.profs.p3, utilisateur_id: ID.users.prof3, specialite_fr: 'Coran & Fiqh',             type_contrat: 'permanent', salaire_base: new Prisma.Decimal(230000), date_embauche: new Date('2021-09-01') },
-    { id: ID.profs.p4, utilisateur_id: ID.users.prof4, specialite_fr: 'Langue Arabe & Nahw',      type_contrat: 'vacataire', salaire_base: new Prisma.Decimal(180000), date_embauche: new Date('2022-01-15') },
+    { id: ID.profs.p1, utilisateur_id: ID.users.prof1, matricule: 'FIC-P-24-001', specialite_fr: 'Français & Mathématiques', type_contrat: 'permanent', salaire_base: new Prisma.Decimal(250000), date_embauche: new Date('2020-09-01') },
+    { id: ID.profs.p2, utilisateur_id: ID.users.prof2, matricule: 'FIC-P-24-002', specialite_fr: 'Sciences Naturelles',      type_contrat: 'permanent', salaire_base: new Prisma.Decimal(220000), date_embauche: new Date('2019-09-01') },
+    { id: ID.profs.p3, utilisateur_id: ID.users.prof3, matricule: 'FIC-P-24-003', specialite_fr: 'Coran & Fiqh',             type_contrat: 'permanent', salaire_base: new Prisma.Decimal(230000), date_embauche: new Date('2021-09-01') },
+    { id: ID.profs.p4, utilisateur_id: ID.users.prof4, matricule: 'FIC-P-24-004', specialite_fr: 'Langue Arabe & Nahw',      type_contrat: 'vacataire', salaire_base: new Prisma.Decimal(180000), date_embauche: new Date('2022-01-15') },
   ];
   for (const p of profsData) {
-    await prisma.personnel.upsert({ where: { utilisateur_id: p.utilisateur_id }, update: {}, create: p });
+    await prisma.personnel.upsert({ where: { utilisateur_id: p.utilisateur_id }, update: { matricule: p.matricule }, create: p });
   }
 
   // Années scolaires
@@ -259,32 +260,32 @@ async function main() {
 
   // Élèves
   const elevesData = [
-    { id: '80000000-0000-4000-a000-000000000001', inscId: '90000000-0000-4000-a000-000000000001', matricule: 'DG-2024-001', nom_fr: 'Diallo',  prenom_fr: 'Oumar',       sexe: 'M', dn: '2013-03-15', cf: ID.classes.cm1fr, ca: null,          parent: { nom: 'Mamadou Diallo',   lien: 'pere',   tel: '+221 77 123 45 01' } },
-    { id: '80000000-0000-4000-a000-000000000002', inscId: '90000000-0000-4000-a000-000000000002', matricule: 'DG-2024-002', nom_fr: 'Ndiaye',  prenom_fr: 'Fatou',       sexe: 'F', dn: '2013-07-22', cf: ID.classes.cm1fr, ca: null,          parent: { nom: 'Rokhaya Ndiaye',   lien: 'mere',   tel: '+221 76 234 56 02' } },
-    { id: '80000000-0000-4000-a000-000000000003', inscId: '90000000-0000-4000-a000-000000000003', matricule: 'DG-2024-003', nom_fr: 'Sall',    prenom_fr: 'Ibrahima',    sexe: 'M', dn: '2012-11-08', cf: ID.classes.cm1fr, ca: null,          parent: { nom: 'Abdou Sall',        lien: 'pere',   tel: '+221 78 345 67 03' } },
-    { id: '80000000-0000-4000-a000-000000000004', inscId: '90000000-0000-4000-a000-000000000004', matricule: 'DG-2024-004', nom_fr: 'Camara',  prenom_fr: 'Mariama',     sexe: 'F', dn: '2013-05-30', cf: ID.classes.cm1fr, ca: null,          parent: { nom: 'Aissatou Camara',   lien: 'mere',   tel: '+221 70 456 78 04' } },
-    { id: '80000000-0000-4000-a000-000000000005', inscId: '90000000-0000-4000-a000-000000000005', matricule: 'DG-2024-005', nom_fr: 'Mbaye',   prenom_fr: 'Cheikh',      sexe: 'M', dn: '2013-01-14', cf: ID.classes.cm1fr, ca: null,          parent: { nom: 'Omar Mbaye',        lien: 'pere',   tel: '+221 77 567 89 05' } },
-    { id: '80000000-0000-4000-a000-000000000006', inscId: '90000000-0000-4000-a000-000000000006', matricule: 'DG-2024-006', nom_fr: 'Thiam',   prenom_fr: 'Modou',       sexe: 'M', dn: '2012-08-19', cf: ID.classes.cm2fr, ca: null,          parent: { nom: 'Lamine Thiam',      lien: 'pere',   tel: '+221 76 678 90 06' } },
-    { id: '80000000-0000-4000-a000-000000000007', inscId: '90000000-0000-4000-a000-000000000007', matricule: 'DG-2024-007', nom_fr: 'Sarr',    prenom_fr: 'Aissatou',    sexe: 'F', dn: '2012-04-03', cf: ID.classes.cm2fr, ca: null,          parent: { nom: 'Bineta Sarr',       lien: 'mere',   tel: '+221 78 789 01 07' } },
-    { id: '80000000-0000-4000-a000-000000000008', inscId: '90000000-0000-4000-a000-000000000008', matricule: 'DG-2024-008', nom_fr: 'Fall',    prenom_fr: 'Babacar',     sexe: 'M', dn: '2012-09-25', cf: ID.classes.cm2fr, ca: null,          parent: { nom: 'Abdoulaye Fall',    lien: 'pere',   tel: '+221 70 890 12 08' } },
-    { id: '80000000-0000-4000-a000-000000000009', inscId: '90000000-0000-4000-a000-000000000009', matricule: 'DG-2024-009', nom_fr: 'Toure',   prenom_fr: 'Ndeye',       sexe: 'F', dn: '2012-12-11', cf: ID.classes.cm2fr, ca: null,          parent: { nom: 'Moussa Toure',      lien: 'pere',   tel: '+221 77 901 23 09' } },
-    { id: '80000000-0000-4000-a000-00000000000a', inscId: '90000000-0000-4000-a000-00000000000a', matricule: 'DG-2024-010', nom_fr: 'Gaye',    prenom_fr: 'Lamine',      sexe: 'M', dn: '2012-06-07', cf: ID.classes.cm2fr, ca: null,          parent: { nom: 'Sokhna Gaye',       lien: 'mere',   tel: '+221 76 012 34 10' } },
-    { id: '80000000-0000-4000-a000-00000000000b', inscId: '90000000-0000-4000-a000-00000000000b', matricule: 'DG-2024-011', nom_fr: 'Baldé',   prenom_fr: 'Kadiatou',    sexe: 'F', dn: '2012-02-28', cf: null,             ca: ID.classes.a5ar, parent: { nom: 'Amadou Baldé',      lien: 'pere',   tel: '+221 78 123 45 11' } },
-    { id: '80000000-0000-4000-a000-00000000000c', inscId: '90000000-0000-4000-a000-00000000000c', matricule: 'DG-2024-012', nom_fr: 'Diop',    prenom_fr: 'Bamba',       sexe: 'M', dn: '2012-10-16', cf: null,             ca: ID.classes.a5ar, parent: { nom: 'Serigne Diop',      lien: 'pere',   tel: '+221 70 234 56 12' } },
-    { id: '80000000-0000-4000-a000-00000000000d', inscId: '90000000-0000-4000-a000-00000000000d', matricule: 'DG-2024-013', nom_fr: 'Kouyaté', prenom_fr: 'Seydina',     sexe: 'M', dn: '2011-07-04', cf: null,             ca: ID.classes.a5ar, parent: { nom: 'Boubacar Kouyaté', lien: 'pere',   tel: '+221 77 345 67 13' } },
-    { id: '80000000-0000-4000-a000-00000000000e', inscId: '90000000-0000-4000-a000-00000000000e', matricule: 'DG-2024-014', nom_fr: 'Ly',      prenom_fr: 'Khady',       sexe: 'F', dn: '2012-03-20', cf: null,             ca: ID.classes.a5ar, parent: { nom: 'Mor Ly',            lien: 'pere',   tel: '+221 76 456 78 14' } },
-    { id: '80000000-0000-4000-a000-00000000000f', inscId: '90000000-0000-4000-a000-00000000000f', matricule: 'DG-2024-015', nom_fr: 'Cissé',   prenom_fr: 'Abdourahman', sexe: 'M', dn: '2011-11-30', cf: null,             ca: ID.classes.a5ar, parent: { nom: 'Issa Cissé',        lien: 'pere',   tel: '+221 78 567 89 15' } },
-    { id: '80000000-0000-4000-a000-000000000010', inscId: '90000000-0000-4000-a000-000000000010', matricule: 'DG-2024-016', nom_fr: 'Kane',    prenom_fr: 'Mariétou',    sexe: 'F', dn: '2011-05-12', cf: null,             ca: ID.classes.a6ar, parent: { nom: 'Alioune Kane',      lien: 'pere',   tel: '+221 70 678 90 16' } },
-    { id: '80000000-0000-4000-a000-000000000011', inscId: '90000000-0000-4000-a000-000000000011', matricule: 'DG-2024-017', nom_fr: 'Sy',      prenom_fr: 'Omar',        sexe: 'M', dn: '2011-08-07', cf: null,             ca: ID.classes.a6ar, parent: { nom: 'El-Hadj Sy',        lien: 'pere',   tel: '+221 77 789 01 17' } },
-    { id: '80000000-0000-4000-a000-000000000012', inscId: '90000000-0000-4000-a000-000000000012', matricule: 'DG-2024-018', nom_fr: 'Diouf',   prenom_fr: 'Rokhaya',     sexe: 'F', dn: '2011-01-25', cf: null,             ca: ID.classes.a6ar, parent: { nom: 'Ibou Diouf',        lien: 'pere',   tel: '+221 76 890 12 18' } },
-    { id: '80000000-0000-4000-a000-000000000013', inscId: '90000000-0000-4000-a000-000000000013', matricule: 'DG-2024-019', nom_fr: 'Bâ',      prenom_fr: 'Hamidou',     sexe: 'M', dn: '2010-09-14', cf: null,             ca: ID.classes.a6ar, parent: { nom: 'Amadou Bâ',         lien: 'pere',   tel: '+221 78 901 23 19' } },
-    { id: '80000000-0000-4000-a000-000000000014', inscId: '90000000-0000-4000-a000-000000000014', matricule: 'DG-2024-020', nom_fr: 'Faye',    prenom_fr: 'Amy',         sexe: 'F', dn: '2011-04-09', cf: null,             ca: ID.classes.a6ar, parent: { nom: 'Bocar Faye',        lien: 'tuteur', tel: '+221 70 012 34 20' } },
+    { id: '80000000-0000-4000-a000-000000000001', inscId: '90000000-0000-4000-a000-000000000001', matricule: 'FIC-E-24-001', nom_fr: 'Diallo',  prenom_fr: 'Oumar',       sexe: 'M', dn: '2013-03-15', cf: ID.classes.cm1fr, ca: null,          parent: { nom: 'Mamadou Diallo',   lien: 'pere',   tel: '+221 77 123 45 01' } },
+    { id: '80000000-0000-4000-a000-000000000002', inscId: '90000000-0000-4000-a000-000000000002', matricule: 'FIC-E-24-002', nom_fr: 'Ndiaye',  prenom_fr: 'Fatou',       sexe: 'F', dn: '2013-07-22', cf: ID.classes.cm1fr, ca: null,          parent: { nom: 'Rokhaya Ndiaye',   lien: 'mere',   tel: '+221 76 234 56 02' } },
+    { id: '80000000-0000-4000-a000-000000000003', inscId: '90000000-0000-4000-a000-000000000003', matricule: 'FIC-E-24-003', nom_fr: 'Sall',    prenom_fr: 'Ibrahima',    sexe: 'M', dn: '2012-11-08', cf: ID.classes.cm1fr, ca: null,          parent: { nom: 'Abdou Sall',        lien: 'pere',   tel: '+221 78 345 67 03' } },
+    { id: '80000000-0000-4000-a000-000000000004', inscId: '90000000-0000-4000-a000-000000000004', matricule: 'FIC-E-24-004', nom_fr: 'Camara',  prenom_fr: 'Mariama',     sexe: 'F', dn: '2013-05-30', cf: ID.classes.cm1fr, ca: null,          parent: { nom: 'Aissatou Camara',   lien: 'mere',   tel: '+221 70 456 78 04' } },
+    { id: '80000000-0000-4000-a000-000000000005', inscId: '90000000-0000-4000-a000-000000000005', matricule: 'FIC-E-24-005', nom_fr: 'Mbaye',   prenom_fr: 'Cheikh',      sexe: 'M', dn: '2013-01-14', cf: ID.classes.cm1fr, ca: null,          parent: { nom: 'Omar Mbaye',        lien: 'pere',   tel: '+221 77 567 89 05' } },
+    { id: '80000000-0000-4000-a000-000000000006', inscId: '90000000-0000-4000-a000-000000000006', matricule: 'FIC-E-24-006', nom_fr: 'Thiam',   prenom_fr: 'Modou',       sexe: 'M', dn: '2012-08-19', cf: ID.classes.cm2fr, ca: null,          parent: { nom: 'Lamine Thiam',      lien: 'pere',   tel: '+221 76 678 90 06' } },
+    { id: '80000000-0000-4000-a000-000000000007', inscId: '90000000-0000-4000-a000-000000000007', matricule: 'FIC-E-24-007', nom_fr: 'Sarr',    prenom_fr: 'Aissatou',    sexe: 'F', dn: '2012-04-03', cf: ID.classes.cm2fr, ca: null,          parent: { nom: 'Bineta Sarr',       lien: 'mere',   tel: '+221 78 789 01 07' } },
+    { id: '80000000-0000-4000-a000-000000000008', inscId: '90000000-0000-4000-a000-000000000008', matricule: 'FIC-E-24-008', nom_fr: 'Fall',    prenom_fr: 'Babacar',     sexe: 'M', dn: '2012-09-25', cf: ID.classes.cm2fr, ca: null,          parent: { nom: 'Abdoulaye Fall',    lien: 'pere',   tel: '+221 70 890 12 08' } },
+    { id: '80000000-0000-4000-a000-000000000009', inscId: '90000000-0000-4000-a000-000000000009', matricule: 'FIC-E-24-009', nom_fr: 'Toure',   prenom_fr: 'Ndeye',       sexe: 'F', dn: '2012-12-11', cf: ID.classes.cm2fr, ca: null,          parent: { nom: 'Moussa Toure',      lien: 'pere',   tel: '+221 77 901 23 09' } },
+    { id: '80000000-0000-4000-a000-00000000000a', inscId: '90000000-0000-4000-a000-00000000000a', matricule: 'FIC-E-24-010', nom_fr: 'Gaye',    prenom_fr: 'Lamine',      sexe: 'M', dn: '2012-06-07', cf: ID.classes.cm2fr, ca: null,          parent: { nom: 'Sokhna Gaye',       lien: 'mere',   tel: '+221 76 012 34 10' } },
+    { id: '80000000-0000-4000-a000-00000000000b', inscId: '90000000-0000-4000-a000-00000000000b', matricule: 'FIC-E-24-011', nom_fr: 'Baldé',   prenom_fr: 'Kadiatou',    sexe: 'F', dn: '2012-02-28', cf: null,             ca: ID.classes.a5ar, parent: { nom: 'Amadou Baldé',      lien: 'pere',   tel: '+221 78 123 45 11' } },
+    { id: '80000000-0000-4000-a000-00000000000c', inscId: '90000000-0000-4000-a000-00000000000c', matricule: 'FIC-E-24-012', nom_fr: 'Diop',    prenom_fr: 'Bamba',       sexe: 'M', dn: '2012-10-16', cf: null,             ca: ID.classes.a5ar, parent: { nom: 'Serigne Diop',      lien: 'pere',   tel: '+221 70 234 56 12' } },
+    { id: '80000000-0000-4000-a000-00000000000d', inscId: '90000000-0000-4000-a000-00000000000d', matricule: 'FIC-E-24-013', nom_fr: 'Kouyaté', prenom_fr: 'Seydina',     sexe: 'M', dn: '2011-07-04', cf: null,             ca: ID.classes.a5ar, parent: { nom: 'Boubacar Kouyaté', lien: 'pere',   tel: '+221 77 345 67 13' } },
+    { id: '80000000-0000-4000-a000-00000000000e', inscId: '90000000-0000-4000-a000-00000000000e', matricule: 'FIC-E-24-014', nom_fr: 'Ly',      prenom_fr: 'Khady',       sexe: 'F', dn: '2012-03-20', cf: null,             ca: ID.classes.a5ar, parent: { nom: 'Mor Ly',            lien: 'pere',   tel: '+221 76 456 78 14' } },
+    { id: '80000000-0000-4000-a000-00000000000f', inscId: '90000000-0000-4000-a000-00000000000f', matricule: 'FIC-E-24-015', nom_fr: 'Cissé',   prenom_fr: 'Abdourahman', sexe: 'M', dn: '2011-11-30', cf: null,             ca: ID.classes.a5ar, parent: { nom: 'Issa Cissé',        lien: 'pere',   tel: '+221 78 567 89 15' } },
+    { id: '80000000-0000-4000-a000-000000000010', inscId: '90000000-0000-4000-a000-000000000010', matricule: 'FIC-E-24-016', nom_fr: 'Kane',    prenom_fr: 'Mariétou',    sexe: 'F', dn: '2011-05-12', cf: null,             ca: ID.classes.a6ar, parent: { nom: 'Alioune Kane',      lien: 'pere',   tel: '+221 70 678 90 16' } },
+    { id: '80000000-0000-4000-a000-000000000011', inscId: '90000000-0000-4000-a000-000000000011', matricule: 'FIC-E-24-017', nom_fr: 'Sy',      prenom_fr: 'Omar',        sexe: 'M', dn: '2011-08-07', cf: null,             ca: ID.classes.a6ar, parent: { nom: 'El-Hadj Sy',        lien: 'pere',   tel: '+221 77 789 01 17' } },
+    { id: '80000000-0000-4000-a000-000000000012', inscId: '90000000-0000-4000-a000-000000000012', matricule: 'FIC-E-24-018', nom_fr: 'Diouf',   prenom_fr: 'Rokhaya',     sexe: 'F', dn: '2011-01-25', cf: null,             ca: ID.classes.a6ar, parent: { nom: 'Ibou Diouf',        lien: 'pere',   tel: '+221 76 890 12 18' } },
+    { id: '80000000-0000-4000-a000-000000000013', inscId: '90000000-0000-4000-a000-000000000013', matricule: 'FIC-E-24-019', nom_fr: 'Bâ',      prenom_fr: 'Hamidou',     sexe: 'M', dn: '2010-09-14', cf: null,             ca: ID.classes.a6ar, parent: { nom: 'Amadou Bâ',         lien: 'pere',   tel: '+221 78 901 23 19' } },
+    { id: '80000000-0000-4000-a000-000000000014', inscId: '90000000-0000-4000-a000-000000000014', matricule: 'FIC-E-24-020', nom_fr: 'Faye',    prenom_fr: 'Amy',         sexe: 'F', dn: '2011-04-09', cf: null,             ca: ID.classes.a6ar, parent: { nom: 'Bocar Faye',        lien: 'tuteur', tel: '+221 70 012 34 20' } },
   ];
 
   for (const e of elevesData) {
     await prisma.eleve.upsert({
-      where: { matricule: e.matricule },
-      update: {},
+      where: { id: e.id },
+      update: { matricule: e.matricule },
       create: {
         id: e.id, etablissement_id: ID.etab,
         matricule: e.matricule, nom_fr: e.nom_fr,

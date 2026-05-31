@@ -6,6 +6,7 @@ export const FONCTION_VALUES = ['ENSEIGNANT', 'DIRECTEUR', 'SURVEILLANT', 'AGENT
 export type Fonction = typeof FONCTION_VALUES[number];
 
 export const personnelSchema = z.object({
+  matricule: z.string().optional(),
   nom_fr: z.string().min(1),
   prenom_fr: z.string().optional(),
   identifiant: z.string().min(1),
