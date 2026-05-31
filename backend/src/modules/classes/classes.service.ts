@@ -28,15 +28,29 @@ const LISTE_CSS = `
 `;
 
 export async function listerClasses(etablissement_id: string, annee_scolaire_id?: string) {
-  return prisma.classe.findMany({
+  const classes = await prisma.classe.findMany({
     where: {
       etablissement_id,
       active: true,
       ...(annee_scolaire_id ? { annee_scolaire_id } : {}),
     },
-    include: { annee_scolaire: true, niveau: true },
+    include: {
+      annee_scolaire: true,
+      niveau: true,
+      _count: {
+        select: {
+          inscriptions_fr: { where: { statut: 'actif' } },
+          inscriptions_ar: { where: { statut: 'actif' } },
+        },
+      },
+    },
     orderBy: [{ filiere: 'asc' }, { niveau: { ordre: 'asc' } }, { nom_fr: 'asc' }],
   });
+
+  return classes.map(({ _count, ...c }) => ({
+    ...c,
+    effectif: c.filiere === 'FR' ? _count.inscriptions_fr : _count.inscriptions_ar,
+  }));
 }
 
 export async function getClasse(id: string, etablissement_id: string) {
