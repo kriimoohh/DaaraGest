@@ -2,6 +2,23 @@ import bcrypt from 'bcryptjs';
 import prisma from '../../config/database';
 import { PersonnelInput } from './personnel.schema';
 
+async function genererMatriculePersonnel(etablissement_id: string): Promise<string> {
+  const etab = await prisma.etablissement.findUniqueOrThrow({
+    where: { id: etablissement_id },
+    select: { code: true },
+  });
+  const yy = String(new Date().getFullYear()).slice(-2);
+  const seqName = `seq_mat_p_${etablissement_id.replace(/-/g, '_')}_${yy}`;
+  await prisma.$executeRawUnsafe(
+    `CREATE SEQUENCE IF NOT EXISTS "${seqName}" START 1 INCREMENT 1`
+  );
+  const result = await prisma.$queryRawUnsafe<[{ nextval: bigint }]>(
+    `SELECT nextval('"${seqName}"')`
+  );
+  const num = String(result[0].nextval).padStart(3, '0');
+  return `${etab.code}-P-${yy}-${num}`;
+}
+
 export async function listerPersonnel(etablissement_id: string, page = 1, search?: string, fonction?: string) {
   const limit = 20;
   const skip = (page - 1) * limit;
@@ -21,6 +38,7 @@ export async function listerPersonnel(etablissement_id: string, page = 1, search
     where.OR = [
       { nom_fr: { contains: search, mode: 'insensitive' } },
       { identifiant: { contains: search, mode: 'insensitive' } },
+      { personnel: { is: { matricule: { contains: search, mode: 'insensitive' } } } },
     ];
   }
 
@@ -58,6 +76,7 @@ export async function creerPersonnel(etablissement_id: string, data: PersonnelIn
   if (!roleProf) throw new Error('Rôle professeur introuvable');
 
   const hashedPassword = await bcrypt.hash(data.mot_de_passe, 10);
+  const matricule = data.matricule || await genererMatriculePersonnel(etablissement_id);
 
   const utilisateur = await prisma.utilisateur.create({
     data: {
@@ -75,6 +94,7 @@ export async function creerPersonnel(etablissement_id: string, data: PersonnelIn
   const professeur = await prisma.personnel.create({
     data: {
       utilisateur_id: utilisateur.id,
+      matricule,
       fonction: data.fonction ?? 'ENSEIGNANT',
       specialite_fr: data.specialite_fr,
       telephone: data.telephone,
@@ -130,6 +150,7 @@ export async function modifierPersonnel(id: string, etablissement_id: string, da
     prisma.personnel.update({
       where: { id: professeur.id },
       data: {
+        matricule: data.matricule,
         fonction: data.fonction,
         specialite_fr: data.specialite_fr,
         telephone: data.telephone,

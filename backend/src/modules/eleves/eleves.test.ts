@@ -1,17 +1,26 @@
 import { describe, it, expect } from 'vitest';
 
-function genererMatricule(annee: number, count: number): string {
-  return `DG-${annee}-${String(count + 1).padStart(3, '0')}`;
+function genererMatricule(code: string, yy: string, count: number): string {
+  return `${code}-E-${yy}-${String(count + 1).padStart(3, '0')}`;
 }
 
-describe('genererMatricule', () => {
-  it('format DG-YYYY-NNN', () => expect(genererMatricule(2025, 0)).toBe('DG-2025-001'));
-  it('padding sur 3 chiffres', () => expect(genererMatricule(2025, 9)).toBe('DG-2025-010'));
-  it('matricule 100+', () => expect(genererMatricule(2025, 99)).toBe('DG-2025-100'));
+function genererMatriculePersonnel(code: string, yy: string, count: number): string {
+  return `${code}-P-${yy}-${String(count + 1).padStart(3, '0')}`;
+}
+
+describe('genererMatricule élève', () => {
+  it('format CODE-E-AA-NNN', () => expect(genererMatricule('FIC', '26', 0)).toBe('FIC-E-26-001'));
+  it('padding sur 3 chiffres', () => expect(genererMatricule('FIC', '26', 9)).toBe('FIC-E-26-010'));
+  it('matricule 100+', () => expect(genererMatricule('FIC', '26', 99)).toBe('FIC-E-26-100'));
   it('incrémente à partir du count', () => {
-    expect(genererMatricule(2025, 5)).toBe('DG-2025-006');
-    expect(genererMatricule(2025, 14)).toBe('DG-2025-015');
+    expect(genererMatricule('FIC', '26', 5)).toBe('FIC-E-26-006');
+    expect(genererMatricule('TBK', '25', 14)).toBe('TBK-E-25-015');
   });
+});
+
+describe('genererMatricule personnel', () => {
+  it('format CODE-P-AA-NNN', () => expect(genererMatriculePersonnel('FIC', '26', 0)).toBe('FIC-P-26-001'));
+  it('type P bien présent', () => expect(genererMatriculePersonnel('FIC', '26', 4)).toBe('FIC-P-26-005'));
 });
 
 describe('validation élève', () => {

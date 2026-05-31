@@ -139,6 +139,7 @@ interface PersonnelRow {
   sexe?: 'M' | 'F' | null;
   photo_url?: string;
   personnel?: {
+    matricule?: string;
     photo_url?: string;
     fonction?: string;
     specialite_fr?: string;

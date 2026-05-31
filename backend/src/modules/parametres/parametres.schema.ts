@@ -11,6 +11,12 @@ const zodDecimalString = z
 
 export const etablissementUpdateSchema = z.object({
   nom_fr: z.string().min(1).optional(),
+  code: z
+    .string()
+    .min(2, 'Minimum 2 caractères')
+    .max(4, 'Maximum 4 caractères')
+    .regex(/^[A-Z0-9]+$/, 'Lettres majuscules et chiffres uniquement')
+    .optional(),
   adresse: z.string().optional(),
   telephone: z.string().optional(),
   nom_directeur:      z.string().optional().nullable(),
