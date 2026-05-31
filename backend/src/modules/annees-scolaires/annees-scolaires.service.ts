@@ -50,7 +50,28 @@ export async function activerAnneeScolaire(id: string, etablissement_id: string)
 
 export async function supprimerAnneeScolaire(id: string, etablissement_id: string) {
   const existing = await prisma.anneeScolaire.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Année scolaire introuvable');
+  if (!existing) throw Object.assign(new Error('Année scolaire introuvable'), { statusCode: 404 });
+
+  // L'année est référencée par de nombreuses tables (Restrict par défaut) : on
+  // refuse la suppression si des données y sont rattachées, avec un message clair
+  // plutôt que de laisser remonter une erreur FK brute (P2003).
+  const [classes, inscriptions, bulletins] = await Promise.all([
+    prisma.classe.count({ where: { annee_scolaire_id: id } }),
+    prisma.inscription.count({ where: { annee_scolaire_id: id } }),
+    prisma.bulletin.count({ where: { annee_scolaire_id: id } }),
+  ]);
+
+  if (classes > 0 || inscriptions > 0 || bulletins > 0) {
+    const details = [
+      classes > 0 && `${classes} classe(s)`,
+      inscriptions > 0 && `${inscriptions} inscription(s)`,
+      bulletins > 0 && `${bulletins} bulletin(s)`,
+    ].filter(Boolean).join(', ');
+    throw Object.assign(
+      new Error(`Impossible de supprimer cette année scolaire : ${details} y sont rattaché(e)s. Désactivez-la plutôt que de la supprimer.`),
+      { statusCode: 409 },
+    );
+  }
 
   return prisma.anneeScolaire.delete({ where: { id } });
 }

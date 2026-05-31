@@ -33,8 +33,11 @@ async function tryRefresh(): Promise<boolean> {
 }
 
 async function request<T>(path: string, options: RequestInit = {}, retried = false): Promise<T> {
+  // Ne définir Content-Type que s'il y a un corps. Sinon Fastify rejette les
+  // requêtes sans body (DELETE, GET) avec 400 FST_ERR_CTP_EMPTY_JSON_BODY
+  // (« Body cannot be empty when content-type is set to 'application/json' »).
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(options.body != null ? { 'Content-Type': 'application/json' } : {}),
     ...(options.headers as Record<string, string>),
   };
 
