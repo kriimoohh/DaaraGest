@@ -23,6 +23,7 @@ interface Fonction {
   libelle_fr: string;
   ordre: number;
   supprimable: boolean;
+  effectif: number;
 }
 
 type Periodicite = 'ponctuel' | 'mensuel' | 'annuel';
@@ -70,6 +71,17 @@ interface ConfigNotes {
   seuil_bien: number;
   seuil_assez_bien: number;
   seuil_passable: number;
+}
+
+type CouleurMention = 'success' | 'info' | 'warning' | 'error';
+
+interface Mention {
+  id: string;
+  libelle_fr: string;
+  seuil_min: number;
+  couleur: CouleurMention;
+  ordre: number;
+  is_system: boolean;
 }
 
 interface ConfigNotifications {
@@ -312,6 +324,7 @@ export function ParametresPage() {
   const { t, i18n } = useTranslation();
   const api = useApi();
   const { user, updatePreferences, updateProfile } = useAuthStore();
+  const canManageFonctions = ['admin', 'directeur', 'gestionnaire'].includes(user?.role ?? '');
 
   const [tab, setTab] = useState<Tab>('etablissement');
   const [etab, setEtab] = useState<Etablissement | null>(null);
@@ -340,6 +353,15 @@ export function ParametresPage() {
   const [savingFonction, setSavingFonction] = useState(false);
   const [confirmDeleteFonction, setConfirmDeleteFonction] = useState<Fonction | null>(null);
   const [deletingFonction, setDeletingFonction] = useState(false);
+
+  const [mentions, setMentions] = useState<Mention[]>([]);
+  const [editMention, setEditMention] = useState<Mention | null>(null);
+  const [mentionForm, setMentionForm] = useState({ libelle_fr: '', seuil_min: '', couleur: 'info' as CouleurMention });
+  const [savingMention, setSavingMention] = useState(false);
+  const [confirmDeleteMention, setConfirmDeleteMention] = useState<Mention | null>(null);
+  const [deletingMention, setDeletingMention] = useState(false);
+  const [showMentionForm, setShowMentionForm] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
 
@@ -370,10 +392,14 @@ export function ParametresPage() {
   const fetchTarifs = () =>
     api.get<Tarif[]>('/api/v1/tarifs').then(setTarifs).catch(() => {});
 
+  const fetchMentions = () =>
+    api.get<Mention[]>('/api/v1/mentions').then(r => setMentions(r.map(m => ({ ...m, seuil_min: Number(m.seuil_min) })))).catch(() => {});
+
   useEffect(() => {
     fetchNiveaux();
     fetchFonctions();
     fetchTarifs();
+    fetchMentions();
     Promise.all([
       api.get<Etablissement>('/api/v1/parametres'),
       api.get<Record<string, unknown>>('/api/v1/parametres/notes'),
@@ -488,6 +514,59 @@ export function ParametresPage() {
       toast.error((err as Error).message || 'Erreur');
     } finally {
       setDeletingFonction(false);
+    }
+  };
+
+  const resetMentionForm = () => {
+    setEditMention(null);
+    setMentionForm({ libelle_fr: '', seuil_min: '', couleur: 'info' });
+    setShowMentionForm(false);
+  };
+
+  const handleSaveMention = async () => {
+    const seuil = parseFloat(mentionForm.seuil_min);
+    if (!mentionForm.libelle_fr.trim()) { toast.error('Le libellé est requis'); return; }
+    if (isNaN(seuil) || seuil < 0) { toast.error('Seuil invalide (doit être ≥ 0)'); return; }
+    if (config && seuil >= config.note_max) { toast.error(`Le seuil doit être inférieur à la note max (${config.note_max})`); return; }
+
+    setSavingMention(true);
+    try {
+      if (editMention) {
+        await api.patch(`/api/v1/mentions/${editMention.id}`, {
+          libelle_fr: mentionForm.libelle_fr,
+          seuil_min:  seuil,
+          couleur:    mentionForm.couleur,
+        });
+        toast.success('Mention modifiée');
+      } else {
+        await api.post('/api/v1/mentions', {
+          libelle_fr: mentionForm.libelle_fr,
+          seuil_min:  seuil,
+          couleur:    mentionForm.couleur,
+        });
+        toast.success('Mention ajoutée');
+      }
+      resetMentionForm();
+      fetchMentions();
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    } finally {
+      setSavingMention(false);
+    }
+  };
+
+  const performDeleteMention = async () => {
+    if (!confirmDeleteMention) return;
+    setDeletingMention(true);
+    try {
+      await api.delete(`/api/v1/mentions/${confirmDeleteMention.id}`);
+      toast.success('Mention supprimée');
+      setConfirmDeleteMention(null);
+      fetchMentions();
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    } finally {
+      setDeletingMention(false);
     }
   };
 
@@ -1009,45 +1088,48 @@ export function ParametresPage() {
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
             Catalogue des fonctions disponibles pour les membres du personnel. Les fonctions
             par défaut (enseignant, directeur, …) sont protégées et ne peuvent pas être supprimées.
+            Une fonction ayant des agents assignés ne peut pas être supprimée.
           </p>
 
-          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 20, flexWrap: 'wrap' }}>
-            {!editFonction && (
+          {canManageFonctions && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 20, flexWrap: 'wrap' }}>
+              {!editFonction && (
+                <Input
+                  label="Code"
+                  value={fonctionCode}
+                  onChange={e => setFonctionCode(e.target.value.toUpperCase())}
+                  placeholder="Ex: VEILLEUR_NUIT"
+                />
+              )}
               <Input
-                label="Code"
-                value={fonctionCode}
-                onChange={e => setFonctionCode(e.target.value.toUpperCase())}
-                placeholder="Ex: VEILLEUR_NUIT"
+                label="Libellé FR"
+                value={fonctionLibelle}
+                onChange={e => setFonctionLibelle(e.target.value)}
+                placeholder="Ex: Veilleur de nuit"
               />
-            )}
-            <Input
-              label="Libellé FR"
-              value={fonctionLibelle}
-              onChange={e => setFonctionLibelle(e.target.value)}
-              placeholder="Ex: Veilleur de nuit"
-            />
-            <Input
-              label="Ordre"
-              type="number"
-              value={fonctionOrdre}
-              onChange={e => setFonctionOrdre(e.target.value)}
-              placeholder="99"
-            />
-            <div style={{ paddingTop: 22 }}>
-              <Button onClick={handleSaveFonction} loading={savingFonction} disabled={!fonctionLibelle.trim()}>
-                {editFonction ? 'Modifier' : 'Ajouter'}
-              </Button>
-            </div>
-            {editFonction && (
+              <Input
+                label="Ordre"
+                type="number"
+                value={fonctionOrdre}
+                onChange={e => setFonctionOrdre(e.target.value)}
+                placeholder="99"
+              />
               <div style={{ paddingTop: 22 }}>
-                <Button variant="ghost" onClick={resetFonctionForm}>Annuler</Button>
+                <Button onClick={handleSaveFonction} loading={savingFonction} disabled={!fonctionLibelle.trim()}>
+                  {editFonction ? 'Modifier' : 'Ajouter'}
+                </Button>
               </div>
-            )}
-          </div>
+              {editFonction && (
+                <div style={{ paddingTop: 22 }}>
+                  <Button variant="ghost" onClick={resetFonctionForm}>Annuler</Button>
+                </div>
+              )}
+            </div>
+          )}
 
           <table className="table">
             <thead>
-              <tr><th>Code</th><th>Libellé FR</th><th>Ordre</th><th></th></tr>
+              <tr><th>Code</th><th>Libellé FR</th><th>Ordre</th><th style={{ textAlign: 'center' }}>Effectif</th>{canManageFonctions && <th></th>}</tr>
             </thead>
             <tbody>
               {fonctions.map(f => (
@@ -1055,46 +1137,76 @@ export function ParametresPage() {
                   <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{f.code}</td>
                   <td>{f.libelle_fr}</td>
                   <td>{f.ordre}</td>
-                  <td style={{ textAlign: 'right' }}>
-                    <span style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
-                      <Button size="sm" variant="ghost" onClick={() => {
-                        setEditFonction(f);
-                        setFonctionCode(f.code);
-                        setFonctionLibelle(f.libelle_fr);
-                        setFonctionOrdre(String(f.ordre));
-                      }}>
-                        Modifier
-                      </Button>
-                      {f.supprimable ? (
-                        <Button
-                          size="sm"
-                          variant="danger"
-                          onClick={() => setConfirmDeleteFonction(f)}
-                        >
-                          Supprimer
-                        </Button>
-                      ) : (
-                        <span
-                          title="Fonction par défaut, non supprimable"
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 4,
-                            fontSize: 12, color: 'var(--ink-3)', fontStyle: 'italic',
-                            padding: '4px 8px',
-                          }}
-                        >
-                          <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                            <rect x={3} y={11} width={18} height={11} rx={2} ry={2}/>
-                            <path d="M7 11V7a5 5 0 0110 0v4"/>
-                          </svg>
-                          Verrouillée
-                        </span>
-                      )}
+                  <td style={{ textAlign: 'center' }}>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      minWidth: 28, height: 22, borderRadius: 11,
+                      fontSize: 12, fontWeight: 600,
+                      background: f.effectif > 0 ? 'var(--info-soft)' : 'var(--paper-2)',
+                      color: f.effectif > 0 ? 'var(--info-text)' : 'var(--ink-4)',
+                      padding: '0 8px',
+                    }}>
+                      {f.effectif}
                     </span>
                   </td>
+                  {canManageFonctions && (
+                    <td style={{ textAlign: 'right' }}>
+                      <span style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
+                        <Button size="sm" variant="ghost" onClick={() => {
+                          setEditFonction(f);
+                          setFonctionCode(f.code);
+                          setFonctionLibelle(f.libelle_fr);
+                          setFonctionOrdre(String(f.ordre));
+                        }}>
+                          Modifier
+                        </Button>
+                        {!f.supprimable ? (
+                          <span
+                            title="Fonction par défaut, non supprimable"
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              fontSize: 12, color: 'var(--ink-3)', fontStyle: 'italic',
+                              padding: '4px 8px',
+                            }}
+                          >
+                            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <rect x={3} y={11} width={18} height={11} rx={2} ry={2}/>
+                              <path d="M7 11V7a5 5 0 0110 0v4"/>
+                            </svg>
+                            Verrouillée
+                          </span>
+                        ) : f.effectif > 0 ? (
+                          <span
+                            title={`${f.effectif} agent(s) assigné(s) — réassignez-les avant de supprimer`}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              fontSize: 12, color: 'var(--ink-3)', fontStyle: 'italic',
+                              padding: '4px 8px', cursor: 'help',
+                            }}
+                          >
+                            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx={12} cy={12} r={10}/>
+                              <line x1={12} y1={8} x2={12} y2={12}/>
+                              <line x1={12} y1={16} x2={12.01} y2={16}/>
+                            </svg>
+                            En usage
+                          </span>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            onClick={() => setConfirmDeleteFonction(f)}
+                          >
+                            Supprimer
+                          </Button>
+                        )}
+                      </span>
+                    </td>
+                  )}
                 </tr>
               ))}
               {fonctions.length === 0 && (
-                <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Aucune fonction définie</td></tr>
+                <tr><td colSpan={canManageFonctions ? 5 : 4} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Aucune fonction définie</td></tr>
               )}
             </tbody>
           </table>
@@ -1250,73 +1362,170 @@ export function ParametresPage() {
       )}
 
       {/* ── Barème des mentions ── */}
-      {!loading && tab === 'bareme' && config && (
-        <div className="card">
-          <div className="card-hd">
-            <div>
-              <h3 style={{ margin: 0 }}>{t('parametre.bareme_mentions')}</h3>
-              <span className="sub">Seuils minimums (sur {config.note_max}) appliqués aux bulletins et aux rapports de classe.</span>
+      {!loading && tab === 'bareme' && config && (() => {
+        const sorted = [...mentions].sort((a, b) => b.seuil_min - a.seuil_min);
+        const COULEUR_OPTIONS: { value: CouleurMention; label: string }[] = [
+          { value: 'success', label: 'Vert (Très bien)' },
+          { value: 'info',    label: 'Bleu (Bien)' },
+          { value: 'warning', label: 'Jaune (Passable)' },
+          { value: 'error',   label: 'Rouge (Insuffisant)' },
+        ];
+        return (
+          <div className="card card-pad">
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20, gap: 16, flexWrap: 'wrap' }}>
+              <div>
+                <h3 style={{ margin: 0 }}>{t('parametre.bareme_mentions')}</h3>
+                <span className="sub">
+                  Mentions appliquées aux bulletins (note max : {config.note_max}). Ajoutez, renommez ou supprimez librement.
+                  La mention «&nbsp;Insuffisant&nbsp;» (seuil 0) est système et non supprimable.
+                </span>
+              </div>
+              {canManageFonctions && !showMentionForm && (
+                <Button onClick={() => { resetMentionForm(); setShowMentionForm(true); }}>
+                  + Ajouter une mention
+                </Button>
+              )}
             </div>
-            <Button onClick={saveConfig} loading={saving === 'notes'}>{t('actions.enregistrer')}</Button>
-          </div>
-          <div className="card-pad">
-            {(() => {
-              const lignes: { key: 'seuil_tres_bien' | 'seuil_bien' | 'seuil_assez_bien' | 'seuil_passable' | null; label: string; variant: string; min: number; max: number | null }[] = [
-                { key: 'seuil_tres_bien',  label: t('parametre.tres_bien'),  variant: 'success', min: config.seuil_tres_bien,  max: config.note_max },
-                { key: 'seuil_bien',       label: t('parametre.bien'),       variant: 'info',    min: config.seuil_bien,       max: config.seuil_tres_bien },
-                { key: 'seuil_assez_bien', label: t('parametre.assez_bien'), variant: 'info',    min: config.seuil_assez_bien, max: config.seuil_bien },
-                { key: 'seuil_passable',   label: t('parametre.passable'),   variant: 'warning', min: config.seuil_passable,   max: config.seuil_assez_bien },
-                { key: null,               label: t('parametre.insuffisant'), variant: 'error',  min: 0,                       max: config.seuil_passable },
-              ];
-              return (
-                <div className="tbl-wrap">
-                  <table className="tbl">
-                    <thead>
-                      <tr>
-                        <th>Mention</th>
-                        <th style={{ width: 160 }}>Seuil min (≥)</th>
-                        <th>Seuil max (&lt;)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {lignes.map(m => (
-                        <tr key={m.label}>
-                          <td><span className={`badge badge-${m.variant}`}>{m.label}</span></td>
-                          <td>
-                            {m.key ? (
-                              <input
-                                className="input"
-                                type="number"
-                                min={0}
-                                max={config.note_max}
-                                step={0.5}
-                                value={m.min}
-                                onChange={e => {
-                                  const v = parseFloat(e.target.value);
-                                  setConfig(p => p ? { ...p, [m.key as string]: isNaN(v) ? 0 : v } : p);
-                                }}
-                                style={{ fontFamily: 'var(--font-mono)' }}
-                              />
-                            ) : (
-                              <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--ink-3)' }}>0</span>
-                            )}
-                          </td>
-                          <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--ink-3)' }}>
-                            {m.max !== null ? m.max : '—'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+
+            {/* Barre de visualisation proportionnelle */}
+            {mentions.length > 0 && (
+              <div style={{ display: 'flex', height: 10, borderRadius: 6, overflow: 'hidden', marginBottom: 20 }}>
+                {sorted.map((m, i) => {
+                  const next = sorted[i + 1];
+                  const seuilMax = i === 0 ? config.note_max : sorted[i - 1].seuil_min;
+                  const width = ((seuilMax - m.seuil_min) / config.note_max) * 100;
+                  const bgMap: Record<string, string> = {
+                    success: 'var(--success-text, #16a34a)',
+                    info:    'var(--info-text, #2563eb)',
+                    warning: 'var(--warning-text, #d97706)',
+                    error:   'var(--danger-text, #dc2626)',
+                  };
+                  void next;
+                  return (
+                    <div
+                      key={m.id}
+                      title={`${m.libelle_fr} : ${m.seuil_min} → ${seuilMax}`}
+                      style={{ width: `${width}%`, background: bgMap[m.couleur] ?? '#888', transition: 'width .3s' }}
+                    />
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Formulaire d'ajout / édition inline */}
+            {canManageFonctions && showMentionForm && (
+              <div style={{
+                display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap',
+                padding: '14px 16px', marginBottom: 16,
+                background: 'var(--paper-2)', borderRadius: 'var(--r-md)',
+                border: '1px solid var(--rule)',
+              }}>
+                <Input
+                  label="Libellé"
+                  value={mentionForm.libelle_fr}
+                  onChange={e => setMentionForm(f => ({ ...f, libelle_fr: e.target.value }))}
+                  placeholder="Ex: Excellent"
+                />
+                <Input
+                  label={`Seuil min (sur ${config.note_max})`}
+                  type="number"
+                  value={mentionForm.seuil_min}
+                  onChange={e => setMentionForm(f => ({ ...f, seuil_min: e.target.value }))}
+                  placeholder="Ex: 18"
+                  disabled={editMention?.is_system}
+                />
+                <Select
+                  label="Couleur"
+                  value={mentionForm.couleur}
+                  onChange={e => setMentionForm(f => ({ ...f, couleur: e.target.value as CouleurMention }))}
+                  options={COULEUR_OPTIONS}
+                />
+                <div style={{ display: 'flex', gap: 8, paddingTop: 22 }}>
+                  <Button onClick={handleSaveMention} loading={savingMention} disabled={!mentionForm.libelle_fr.trim()}>
+                    {editMention ? 'Modifier' : 'Ajouter'}
+                  </Button>
+                  <Button variant="ghost" onClick={resetMentionForm}>Annuler</Button>
                 </div>
-              );
-            })()}
-            <div style={{ marginTop: 16, padding: '12px 14px', background: 'var(--info-soft)', border: '1px solid var(--info-border)', borderRadius: 'var(--r-md)', fontSize: 13, color: 'var(--info-text)' }}>
-              Les seuils doivent être strictement décroissants : Très bien &gt; Bien &gt; Assez bien &gt; Passable. Le seuil « Insuffisant » est implicite (toute moyenne &lt; Passable).
+              </div>
+            )}
+
+            {/* Tableau des mentions */}
+            <div className="tbl-wrap">
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th>Mention</th>
+                    <th style={{ width: 120 }}>Seuil min (≥)</th>
+                    <th style={{ width: 120 }}>Seuil max (&lt;)</th>
+                    <th style={{ width: 100 }}>Couleur</th>
+                    {canManageFonctions && <th></th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sorted.map((m, i) => {
+                    const seuilMax = i === 0 ? config.note_max : sorted[i - 1].seuil_min;
+                    return (
+                      <tr key={m.id}>
+                        <td><span className={`badge badge-${m.couleur}`}>{m.libelle_fr}</span></td>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>
+                          {m.is_system ? (
+                            <span style={{ color: 'var(--ink-3)' }}>0</span>
+                          ) : (
+                            <strong>{m.seuil_min}</strong>
+                          )}
+                        </td>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--ink-3)' }}>
+                          {seuilMax}
+                        </td>
+                        <td>
+                          <span style={{
+                            display: 'inline-block', width: 10, height: 10, borderRadius: '50%', marginRight: 6,
+                            background: { success: '#16a34a', info: '#2563eb', warning: '#d97706', error: '#dc2626' }[m.couleur] ?? '#888',
+                          }} />
+                          {COULEUR_OPTIONS.find(c => c.value === m.couleur)?.label.split(' ')[0]}
+                        </td>
+                        {canManageFonctions && (
+                          <td style={{ textAlign: 'right' }}>
+                            <span style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                              <Button size="sm" variant="ghost" onClick={() => {
+                                setEditMention(m);
+                                setMentionForm({ libelle_fr: m.libelle_fr, seuil_min: String(m.seuil_min), couleur: m.couleur });
+                                setShowMentionForm(true);
+                              }}>
+                                Modifier
+                              </Button>
+                              {m.is_system ? (
+                                <span style={{ fontSize: 12, color: 'var(--ink-3)', fontStyle: 'italic', padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                  <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x={3} y={11} width={18} height={11} rx={2} ry={2}/><path d="M7 11V7a5 5 0 0110 0v4"/>
+                                  </svg>
+                                  Système
+                                </span>
+                              ) : (
+                                <Button size="sm" variant="danger" onClick={() => setConfirmDeleteMention(m)}>
+                                  Supprimer
+                                </Button>
+                              )}
+                            </span>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                  {mentions.length === 0 && (
+                    <tr><td colSpan={canManageFonctions ? 5 : 4} style={{ textAlign: 'center', color: 'var(--ink-3)' }}>Chargement…</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div style={{ marginTop: 14, padding: '10px 14px', background: 'var(--info-soft)', border: '1px solid var(--info-border)', borderRadius: 'var(--r-md)', fontSize: 13, color: 'var(--info-text)' }}>
+              Les mentions sont triées du seuil le plus élevé au plus bas. Chaque mention couvre l'intervalle de son seuil min jusqu'au seuil min de la mention supérieure.
+              Deux mentions ne peuvent pas partager le même seuil.
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── Tarifs ── */}
       {!loading && tab === 'tarifs' && (
@@ -1626,6 +1835,15 @@ export function ParametresPage() {
         loading={deletingTarif}
         title="Supprimer le tarif"
         message={`Supprimer le tarif "${confirmDeleteTarif?.libelle_fr ?? ''}" ? Les paiements déjà enregistrés ne sont pas affectés.`}
+      />
+
+      <ConfirmModal
+        isOpen={!!confirmDeleteMention}
+        onClose={() => setConfirmDeleteMention(null)}
+        onConfirm={performDeleteMention}
+        loading={deletingMention}
+        title="Supprimer la mention"
+        message={`Supprimer la mention "${confirmDeleteMention?.libelle_fr ?? ''}" ? Cette action est irréversible.`}
       />
     </>
   );

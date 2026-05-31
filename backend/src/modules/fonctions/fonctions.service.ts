@@ -2,10 +2,20 @@ import prisma from '../../config/database';
 import { CreerFonctionInput, ModifierFonctionInput } from './fonctions.schema';
 
 export async function listerFonctions(etablissement_id: string) {
-  return prisma.fonction.findMany({
-    where: { etablissement_id },
-    orderBy: [{ ordre: 'asc' }, { libelle_fr: 'asc' }],
-  });
+  const [fonctions, counts] = await Promise.all([
+    prisma.fonction.findMany({
+      where: { etablissement_id },
+      orderBy: [{ ordre: 'asc' }, { libelle_fr: 'asc' }],
+    }),
+    prisma.personnel.groupBy({
+      by: ['fonction'],
+      where: { utilisateur: { etablissement_id } },
+      _count: { id: true },
+    }),
+  ]);
+
+  const countMap = Object.fromEntries(counts.map(c => [c.fonction, c._count.id]));
+  return fonctions.map(f => ({ ...f, effectif: countMap[f.code] ?? 0 }));
 }
 
 export async function creerFonction(etablissement_id: string, data: CreerFonctionInput) {
