@@ -1,5 +1,5 @@
 import prisma from '../../config/database';
-import { ClasseInput, ClasseMatiereInput, ClasseMatiereUpdateInput } from './classes.schema';
+import { ClasseInput, ClasseMatiereInput, ClasseMatiereUpdateInput, DupliquerArInput } from './classes.schema';
 import { renderPdfHtml } from '../../utils/browserPool';
 
 type ListeData = Awaited<ReturnType<typeof listerElevesDeClasse>>;
@@ -196,6 +196,69 @@ export async function listerElevesDeClasse(
       classe_ar: i.classe_ar,
     })),
   };
+}
+
+// ─── Duplication FR → AR ─────────────────────────────────────────────────────
+
+export async function dupliquerClasseFrEnAr(
+  id: string,
+  etablissement_id: string,
+  data: DupliquerArInput
+) {
+  const source = await prisma.classe.findFirst({
+    where: { id, etablissement_id, active: true },
+    include: { annee_scolaire: true, niveau: true },
+  });
+  if (!source) throw new Error('Classe introuvable');
+  if (source.filiere !== 'FR') throw new Error('La classe source doit être de filière française (FR)');
+
+  const inscriptions = await prisma.inscription.findMany({
+    where: {
+      classe_fr_id: id,
+      annee_scolaire_id: source.annee_scolaire_id,
+      statut: 'actif',
+    },
+  });
+
+  return prisma.$transaction(async (tx) => {
+    const nomAr = data.nom_fr ?? `${source.nom_fr} (AR)`;
+
+    const nouvelleClasse = await tx.classe.create({
+      data: {
+        etablissement_id,
+        annee_scolaire_id: source.annee_scolaire_id,
+        nom_fr: nomAr,
+        filiere: 'AR',
+        niveau_id: source.niveau_id ?? null,
+        capacite: source.capacite,
+      },
+      include: { annee_scolaire: true, niveau: true },
+    });
+
+    let eleves_inscrits = 0;
+    let eleves_ignores = 0;
+
+    for (const inscription of inscriptions) {
+      if (inscription.classe_ar_id === null) {
+        await tx.inscription.update({
+          where: { id: inscription.id },
+          data: { classe_ar_id: nouvelleClasse.id },
+        });
+        eleves_inscrits++;
+      } else {
+        eleves_ignores++;
+      }
+    }
+
+    return {
+      classe: nouvelleClasse,
+      stats: {
+        total_eleves_source: inscriptions.length,
+        eleves_inscrits,
+        eleves_ignores,
+      },
+    };
+  });
 }
 
 // ─── PDF liste élèves ────────────────────────────────────────────────────────

@@ -113,7 +113,8 @@ function validate(form: ClasseFormData): FormErrors {
 export function ClassesPage() {
   const { t } = useTranslation();
   const api = useApi();
-  const isAdmin = useAuthStore(s => s.user?.role === 'admin');
+  const isAdmin    = useAuthStore(s => s.user?.role === 'admin');
+  const isGestion  = useAuthStore(s => ['admin', 'directeur', 'gestionnaire'].includes(s.user?.role ?? ''));
 
   const [classes, setClasses] = useState<Classe[]>([]);
   const [total, setTotal] = useState(0);
@@ -150,6 +151,11 @@ export function ClassesPage() {
   const [editProgrammeSaving, setEditProgrammeSaving] = useState(false);
   const [supprimerProgramme, setSupprimerProgramme] = useState<ClasseMatiere | null>(null);
   const [supprimerProgrammeLoading, setSupprimerProgrammeLoading] = useState(false);
+
+  // Duplication FR → AR
+  const [dupliquerModal, setDupliquerModal] = useState<Classe | null>(null);
+  const [dupliquerNom, setDupliquerNom]     = useState('');
+  const [dupliquerLoading, setDupliquerLoading] = useState(false);
 
   // Liste des élèves d'une classe
   const [listeModal, setListeModal] = useState<Classe | null>(null);
@@ -350,6 +356,35 @@ export function ClassesPage() {
       toast.error((err as Error).message || 'Erreur');
     } finally {
       setSupprimerProgrammeLoading(false);
+    }
+  }
+
+  function openDupliquer(classe: Classe) {
+    setDupliquerModal(classe);
+    setDupliquerNom('');
+  }
+
+  async function handleDupliquerAr() {
+    if (!dupliquerModal) return;
+    setDupliquerLoading(true);
+    try {
+      const payload: Record<string, string> = {};
+      if (dupliquerNom.trim()) payload.nom_fr = dupliquerNom.trim();
+      const res = await api.post<{ classe: Classe; stats: { total_eleves_source: number; eleves_inscrits: number; eleves_ignores: number } }>(
+        `/api/v1/classes/${dupliquerModal.id}/dupliquer-ar`,
+        payload
+      );
+      const { stats } = res;
+      const msg = stats.eleves_ignores > 0
+        ? `Classe "${res.classe.nom_fr}" créée — ${stats.eleves_inscrits} élève(s) inscrits, ${stats.eleves_ignores} ignoré(s) (déjà en filière arabe)`
+        : `Classe "${res.classe.nom_fr}" créée — ${stats.eleves_inscrits} élève(s) inscrits en filière arabe`;
+      toast.success(msg);
+      setDupliquerModal(null);
+      fetchClasses();
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur lors de la duplication');
+    } finally {
+      setDupliquerLoading(false);
     }
   }
 
@@ -749,6 +784,15 @@ export function ClassesPage() {
                   <button className="btn btn-secondary btn-sm grow" onClick={() => openListeEleves(c)}>{t('classe.btn_eleves')}</button>
                   <button className="btn btn-secondary btn-sm grow" onClick={() => openProgramme(c)}>{t('classe.btn_programme')}</button>
                 </div>
+                {isGestion && c.filiere === 'FR' && (
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    style={{ fontSize: 11, color: 'var(--ink-3)', borderTop: '1px solid var(--rule)', paddingTop: 8, marginTop: -4 }}
+                    onClick={() => openDupliquer(c)}
+                  >
+                    ⇄ Dupliquer en filière arabe
+                  </button>
+                )}
               </div>
             );
           })}
@@ -982,6 +1026,34 @@ export function ClassesPage() {
     />
 
     {/* ── Modale liste des élèves ──────────────────────────────────────────── */}
+    {/* ── Modale duplication FR → AR ─────────────────────────────────────── */}
+    {dupliquerModal && (
+      <Modal
+        isOpen={!!dupliquerModal}
+        onClose={() => setDupliquerModal(null)}
+        title="Dupliquer en filière arabe"
+        size="sm"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <p style={{ fontSize: 13, color: 'var(--ink-3)', lineHeight: 1.6 }}>
+            Une nouvelle classe <strong>Filière Arabe</strong> sera créée à partir de{' '}
+            <strong>{dupliquerModal.nom_fr}</strong>. Tous les élèves actifs sans classe arabe seront
+            automatiquement inscrits.
+          </p>
+          <Input
+            label="Nom de la nouvelle classe AR (optionnel)"
+            value={dupliquerNom}
+            onChange={e => setDupliquerNom(e.target.value)}
+            placeholder={`${dupliquerModal.nom_fr} (AR)`}
+          />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+            <Button variant="secondary" onClick={() => setDupliquerModal(null)}>Annuler</Button>
+            <Button onClick={handleDupliquerAr} loading={dupliquerLoading}>Dupliquer</Button>
+          </div>
+        </div>
+      </Modal>
+    )}
+
     {listeModal && (
       <Modal
         isOpen={!!listeModal}
