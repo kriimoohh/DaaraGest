@@ -1086,8 +1086,7 @@ export function ParametresPage() {
         <div className="card card-pad">
           <h3 style={{ marginBottom: 8 }}>Fonctions du personnel</h3>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
-            Catalogue des fonctions disponibles pour les membres du personnel. Les fonctions
-            par défaut (enseignant, directeur, …) sont protégées et ne peuvent pas être supprimées.
+            Catalogue des fonctions disponibles pour les membres du personnel.
             Une fonction ayant des agents assignés ne peut pas être supprimée.
           </p>
 
@@ -1160,22 +1159,7 @@ export function ParametresPage() {
                         }}>
                           Modifier
                         </Button>
-                        {!f.supprimable ? (
-                          <span
-                            title="Fonction par défaut, non supprimable"
-                            style={{
-                              display: 'inline-flex', alignItems: 'center', gap: 4,
-                              fontSize: 12, color: 'var(--ink-3)', fontStyle: 'italic',
-                              padding: '4px 8px',
-                            }}
-                          >
-                            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                              <rect x={3} y={11} width={18} height={11} rx={2} ry={2}/>
-                              <path d="M7 11V7a5 5 0 0110 0v4"/>
-                            </svg>
-                            Verrouillée
-                          </span>
-                        ) : f.effectif > 0 ? (
+                        {f.effectif > 0 ? (
                           <span
                             title={`${f.effectif} agent(s) assigné(s) — réassignez-les avant de supprimer`}
                             style={{
@@ -1449,6 +1433,13 @@ export function ParametresPage() {
               </div>
             )}
 
+            {/* Alerte si des mentions ont un seuil_min >= note_max */}
+            {sorted.some(m => !m.is_system && m.seuil_min >= config.note_max) && (
+              <div style={{ marginBottom: 14, padding: '10px 14px', background: 'var(--danger-soft, #fee2e2)', border: '1px solid var(--danger-border, #fca5a5)', borderRadius: 'var(--r-md)', fontSize: 13, color: 'var(--danger-text, #b91c1c)' }}>
+                ⚠️ Certaines mentions ont un seuil supérieur ou égal à la note max ({config.note_max}). Modifiez-les pour qu'elles soient inférieures à {config.note_max}.
+              </div>
+            )}
+
             {/* Tableau des mentions */}
             <div className="tbl-wrap">
               <table className="tbl">
@@ -1456,7 +1447,7 @@ export function ParametresPage() {
                   <tr>
                     <th>Mention</th>
                     <th style={{ width: 120 }}>Seuil min (≥)</th>
-                    <th style={{ width: 120 }}>Seuil max (&lt;)</th>
+                    <th style={{ width: 140 }} title="Calculé automatiquement : seuil min de la mention au-dessus">Seuil max (&lt;) *</th>
                     <th style={{ width: 100 }}>Couleur</th>
                     {canManageFonctions && <th></th>}
                   </tr>
@@ -1464,14 +1455,15 @@ export function ParametresPage() {
                 <tbody>
                   {sorted.map((m, i) => {
                     const seuilMax = i === 0 ? config.note_max : sorted[i - 1].seuil_min;
+                    const invalide = !m.is_system && m.seuil_min >= config.note_max;
                     return (
-                      <tr key={m.id}>
+                      <tr key={m.id} style={invalide ? { background: 'var(--danger-soft, #fee2e2)' } : undefined}>
                         <td><span className={`badge badge-${m.couleur}`}>{m.libelle_fr}</span></td>
                         <td style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>
                           {m.is_system ? (
                             <span style={{ color: 'var(--ink-3)' }}>0</span>
                           ) : (
-                            <strong>{m.seuil_min}</strong>
+                            <strong style={invalide ? { color: 'var(--danger-text, #b91c1c)' } : undefined}>{m.seuil_min}</strong>
                           )}
                         </td>
                         <td style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--ink-3)' }}>
@@ -1520,7 +1512,8 @@ export function ParametresPage() {
             </div>
 
             <div style={{ marginTop: 14, padding: '10px 14px', background: 'var(--info-soft)', border: '1px solid var(--info-border)', borderRadius: 'var(--r-md)', fontSize: 13, color: 'var(--info-text)' }}>
-              Les mentions sont triées du seuil le plus élevé au plus bas. Chaque mention couvre l'intervalle de son seuil min jusqu'au seuil min de la mention supérieure.
+              * Le seuil max est calculé automatiquement : c'est le seuil min de la mention immédiatement supérieure.
+              Pour ajuster le seuil max d'une mention, modifiez le seuil min de la mention au-dessus.
               Deux mentions ne peuvent pas partager le même seuil.
             </div>
           </div>
