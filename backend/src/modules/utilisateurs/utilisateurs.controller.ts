@@ -62,7 +62,8 @@ export async function supprimerHandler(request: FastifyRequest, reply: FastifyRe
     await supprimerUtilisateur(id, etablissement_id, acteurId);
     return reply.status(204).send();
   } catch (err) {
-    return reply.status(404).send({ error: (err as Error).message });
+    const e = err as Error & { statusCode?: number };
+    return reply.status(e.statusCode ?? 404).send({ error: e.message });
   }
 }
 

@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import prisma from '../../config/database';
 import { logAction } from '../../utils/audit';
 import { UtilisateurInput, ResetPasswordInput } from './utilisateurs.schema';
+import { ROLES } from '../../config/roles';
 
 export async function listerRoles() {
   return prisma.role.findMany({ orderBy: { libelle_fr: 'asc' } });
@@ -109,8 +110,34 @@ export async function modifierUtilisateur(
 }
 
 export async function supprimerUtilisateur(id: string, etablissement_id: string, acteurId: string) {
-  const existing = await prisma.utilisateur.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Utilisateur introuvable');
+  const existing = await prisma.utilisateur.findFirst({
+    where: { id, etablissement_id },
+    include: { role: true },
+  });
+  if (!existing) throw Object.assign(new Error('Utilisateur introuvable'), { statusCode: 404 });
+
+  // Empêcher un administrateur de supprimer son propre compte.
+  if (id === acteurId) {
+    throw Object.assign(new Error('Vous ne pouvez pas supprimer votre propre compte.'), { statusCode: 400 });
+  }
+
+  // Empêcher la suppression du dernier administrateur actif (verrouillage hors-admin).
+  if (existing.role.libelle_fr === ROLES.ADMIN) {
+    const autresAdmins = await prisma.utilisateur.count({
+      where: {
+        etablissement_id,
+        actif: true,
+        role: { libelle_fr: ROLES.ADMIN },
+        id: { not: id },
+      },
+    });
+    if (autresAdmins === 0) {
+      throw Object.assign(
+        new Error('Impossible de supprimer le dernier administrateur actif.'),
+        { statusCode: 400 },
+      );
+    }
+  }
 
   // Suffixer l'identifiant pour libérer le slot unique et permettre sa réutilisation
   const identifiantLibere = `${existing.identifiant}_deleted_${Date.now()}`;
