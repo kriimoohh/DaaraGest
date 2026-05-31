@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
-import { classeSchema, classeMatiereSchema, classeMatiereUpdateSchema } from './classes.schema';
-import { listerClasses, getClasse, creerClasse, modifierClasse, supprimerClasse, listerElevesDeClasse, genererPdfListeClasse, genererPdfToutesClasses, listerMatieresDeclasse, ajouterMatiereClasse, modifierMatiereClasse, supprimerMatiereClasse } from './classes.service';
+import { classeSchema, classeMatiereSchema, classeMatiereUpdateSchema, dupliquerArSchema } from './classes.schema';
+import { listerClasses, getClasse, creerClasse, modifierClasse, supprimerClasse, listerElevesDeClasse, genererPdfListeClasse, genererPdfToutesClasses, listerMatieresDeclasse, ajouterMatiereClasse, modifierMatiereClasse, supprimerMatiereClasse, dupliquerClasseFrEnAr } from './classes.service';
 
 export async function listerHandler(
   request: FastifyRequest, reply: FastifyReply
@@ -111,6 +111,25 @@ export async function pdfToutesClassesHandler(
     return reply.send(pdf);
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
+  }
+}
+
+// ─── Duplication FR → AR ─────────────────────────────────────────────────────
+
+export async function dupliquerArHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { id } = request.params as { id: string };
+  const parsed = dupliquerArSchema.safeParse(request.body ?? {});
+  if (!parsed.success) {
+    return reply.status(400).send({ error: parsed.error.errors[0].message });
+  }
+  try {
+    const result = await dupliquerClasseFrEnAr(id, etablissement_id, parsed.data);
+    return reply.status(201).send(result);
+  } catch (err) {
+    const msg = (err as Error).message;
+    const status = msg.includes('introuvable') ? 404 : 400;
+    return reply.status(status).send({ error: msg });
   }
 }
 

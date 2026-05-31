@@ -19,6 +19,11 @@ export const classeMatiereUpdateSchema = z.object({
   ordre_override: z.number().int().min(0).nullable().optional(),
 });
 
+export const dupliquerArSchema = z.object({
+  nom_fr: z.string().min(1).optional(),
+});
+
 export type ClasseInput = z.infer<typeof classeSchema>;
 export type ClasseMatiereInput = z.infer<typeof classeMatiereSchema>;
 export type ClasseMatiereUpdateInput = z.infer<typeof classeMatiereUpdateSchema>;
+export type DupliquerArInput = z.infer<typeof dupliquerArSchema>;
