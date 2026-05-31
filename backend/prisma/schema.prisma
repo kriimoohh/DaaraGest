@@ -28,6 +28,7 @@ model Etablissement {
   nom_directeur      String?
   civilite_directeur String?
   directeur_id       String? // FK vers Personnel (fonction=DIRECTEUR). Si défini, override nom_directeur/civilite_directeur pour les documents.
+  code               String   @unique // Préfixe des matricules, ex: "FIC", "TBK". Configurable dans Paramètres.
   devise             String   @default("FCFA")
   actif              Boolean  @default(true)
   created_at         DateTime @default(now())
@@ -128,6 +129,7 @@ model Personnel {
   type_contrat     String    @default("permanent")
   salaire_base     Decimal?  @db.Decimal(10, 2)
   photo_url        String?
+  matricule        String?   @unique
   qr_token         String?   @unique
   poste_fr         String?
   date_fin_contrat DateTime?

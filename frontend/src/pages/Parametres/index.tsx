@@ -42,6 +42,7 @@ interface Tarif {
 interface Etablissement {
   id: string;
   nom_fr: string;
+  code: string;
   adresse?: string;
   telephone?: string;
   nom_directeur?: string;
@@ -557,7 +558,9 @@ export function ParametresPage() {
     setSaving('etab');
     try {
       await api.put('/api/v1/parametres', {
-        nom_fr: etab.nom_fr, adresse: etab.adresse,
+        nom_fr: etab.nom_fr,
+        code: etab.code.trim().toUpperCase(),
+        adresse: etab.adresse,
         telephone: etab.telephone, devise: etab.devise,
         nom_directeur: etab.nom_directeur || null,
         civilite_directeur: etab.civilite_directeur || null,
@@ -727,6 +730,20 @@ export function ParametresPage() {
                   value={etab.nom_fr}
                   onChange={e => setEtab(p => p ? { ...p, nom_fr: e.target.value } : p)}
                 />
+                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <div style={{ flex: '0 0 120px' }}>
+                    <Input
+                      label="Code matricule"
+                      value={etab.code}
+                      maxLength={4}
+                      placeholder="ex: FIC"
+                      onChange={e => setEtab(p => p ? { ...p, code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') } : p)}
+                    />
+                  </div>
+                  <div style={{ flex: 1, fontSize: 12, color: 'var(--ink-3)', paddingTop: 28, lineHeight: 1.5 }}>
+                    Préfixe des matricules (2-4 maj). Modifier ce code n'affecte pas les matricules déjà générés.
+                  </div>
+                </div>
                 <div className="grid-2">
                   <Input
                     label={t('common.adresse')}

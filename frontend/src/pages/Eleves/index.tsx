@@ -1060,7 +1060,7 @@ export function ElevesPage() {
           )}
           {!editTarget && (
             <p style={{ fontSize: 12, color: 'var(--ink-3)', fontStyle: 'italic', background: 'var(--paper-2)', padding: '8px 12px', borderRadius: 'var(--r-md)' }}>
-              Le matricule sera généré automatiquement (format DG-YYYY-NNN).
+              Le matricule sera généré automatiquement (format CODE-E-AA-NNN, ex : FIC-E-26-001).
             </p>
           )}
           <Select
