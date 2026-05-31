@@ -1,32 +1,51 @@
 import prisma from '../../config/database';
 import { CreerMentionInput, ModifierMentionInput } from './mentions.schema';
 
-const MENTIONS_DEFAUT = [
-  { libelle_fr: 'Très bien',  seuil_min: 16, couleur: 'success', ordre: 1, is_system: false },
-  { libelle_fr: 'Bien',       seuil_min: 14, couleur: 'info',    ordre: 2, is_system: false },
-  { libelle_fr: 'Assez bien', seuil_min: 12, couleur: 'info',    ordre: 3, is_system: false },
-  { libelle_fr: 'Passable',   seuil_min: 10, couleur: 'warning', ordre: 4, is_system: false },
-  { libelle_fr: 'Insuffisant',seuil_min:  0, couleur: 'error',   ordre: 99, is_system: true  },
+// Pourcentages des seuils par défaut, appliqués à note_max (base 20 = 80%, 70%, 60%, 50%)
+const SEUILS_DEFAUT_PCT = [
+  { libelle_fr: 'Très bien',  pct: 0.80, couleur: 'success', ordre: 1 },
+  { libelle_fr: 'Bien',       pct: 0.70, couleur: 'info',    ordre: 2 },
+  { libelle_fr: 'Assez bien', pct: 0.60, couleur: 'info',    ordre: 3 },
+  { libelle_fr: 'Passable',   pct: 0.50, couleur: 'warning', ordre: 4 },
 ];
+
+// Arrondi au 0.5 le plus proche (utile pour les barèmes sur 10 ou 20)
+function arrondir(v: number) { return Math.round(v * 2) / 2; }
 
 async function ensureMentionsExist(etablissement_id: string) {
   const count = await prisma.mention.count({ where: { etablissement_id } });
   if (count > 0) return;
 
-  // Premier accès : on tente de lire les seuils ConfigNotes pour pré-remplir
   const cn = await prisma.configNotes.findUnique({ where: { etablissement_id } });
-  const rows = [
-    { libelle_fr: 'Très bien',  seuil_min: Number(cn?.seuil_tres_bien  ?? 16), couleur: 'success', ordre: 1,  is_system: false },
-    { libelle_fr: 'Bien',       seuil_min: Number(cn?.seuil_bien       ?? 14), couleur: 'info',    ordre: 2,  is_system: false },
-    { libelle_fr: 'Assez bien', seuil_min: Number(cn?.seuil_assez_bien ?? 12), couleur: 'info',    ordre: 3,  is_system: false },
-    { libelle_fr: 'Passable',   seuil_min: Number(cn?.seuil_passable   ?? 10), couleur: 'warning', ordre: 4,  is_system: false },
-    { libelle_fr: 'Insuffisant',seuil_min: 0,                                  couleur: 'error',   ordre: 99, is_system: true  },
-  ];
+  const noteMax = Number(cn?.note_max ?? 20);
 
-  await prisma.mention.createMany({
-    data: rows.map(r => ({ ...r, etablissement_id })),
-    skipDuplicates: true,
-  });
+  // Si ConfigNotes a des seuils configurés ET cohérents avec note_max, on les utilise
+  const tbRaw  = cn ? Number(cn.seuil_tres_bien)  : null;
+  const bRaw   = cn ? Number(cn.seuil_bien)       : null;
+  const abRaw  = cn ? Number(cn.seuil_assez_bien) : null;
+  const pRaw   = cn ? Number(cn.seuil_passable)   : null;
+  const seuilsCoherents = tbRaw !== null && tbRaw < noteMax;
+
+  const seuils = seuilsCoherents
+    ? [tbRaw!, bRaw!, abRaw!, pRaw!]
+    : SEUILS_DEFAUT_PCT.map(s => arrondir(s.pct * noteMax));
+
+  const rows = SEUILS_DEFAUT_PCT.map((s, i) => ({
+    libelle_fr:  s.libelle_fr,
+    seuil_min:   seuils[i],
+    couleur:     s.couleur,
+    ordre:       s.ordre,
+    is_system:   false,
+    etablissement_id,
+  }));
+  rows.push({ libelle_fr: 'Insuffisant', seuil_min: 0, couleur: 'error', ordre: 99, is_system: true, etablissement_id });
+
+  await prisma.mention.createMany({ data: rows, skipDuplicates: true });
+}
+
+async function getNoteMax(etablissement_id: string): Promise<number> {
+  const cn = await prisma.configNotes.findUnique({ where: { etablissement_id }, select: { note_max: true } });
+  return Number(cn?.note_max ?? 20);
 }
 
 export async function listerMentions(etablissement_id: string) {
@@ -38,6 +57,14 @@ export async function listerMentions(etablissement_id: string) {
 }
 
 export async function creerMention(etablissement_id: string, data: CreerMentionInput) {
+  const noteMax = await getNoteMax(etablissement_id);
+  if (data.seuil_min >= noteMax) {
+    throw Object.assign(
+      new Error(`Le seuil (${data.seuil_min}) doit être inférieur à la note max (${noteMax})`),
+      { statusCode: 400 },
+    );
+  }
+
   const conflit = await prisma.mention.findFirst({
     where: { etablissement_id, seuil_min: data.seuil_min },
   });
@@ -69,6 +96,16 @@ export async function modifierMention(id: string, etablissement_id: string, data
       new Error('Le seuil de la mention "Insuffisant" doit rester à 0'),
       { statusCode: 400 },
     );
+  }
+
+  if (data.seuil_min !== undefined && !mention.is_system) {
+    const noteMax = await getNoteMax(etablissement_id);
+    if (data.seuil_min >= noteMax) {
+      throw Object.assign(
+        new Error(`Le seuil (${data.seuil_min}) doit être inférieur à la note max (${noteMax})`),
+        { statusCode: 400 },
+      );
+    }
   }
 
   if (data.seuil_min !== undefined && Number(data.seuil_min) !== Number(mention.seuil_min)) {

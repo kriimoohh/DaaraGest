@@ -46,9 +46,6 @@ export async function modifierFonction(id: string, etablissement_id: string, dat
 export async function supprimerFonction(id: string, etablissement_id: string) {
   const fonction = await prisma.fonction.findFirst({ where: { id, etablissement_id } });
   if (!fonction) throw Object.assign(new Error('Fonction introuvable'), { statusCode: 404 });
-  if (!fonction.supprimable) {
-    throw Object.assign(new Error('Cette fonction par défaut ne peut pas être supprimée'), { statusCode: 400 });
-  }
 
   // Refuser la suppression si du personnel utilise encore ce code
   const usage = await prisma.personnel.count({
