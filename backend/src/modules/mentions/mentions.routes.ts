@@ -2,36 +2,36 @@ import { FastifyInstance } from 'fastify';
 import { authMiddleware } from '../../middlewares/auth.middleware';
 import { requireRole } from '../../middlewares/role.middleware';
 import { ROLE_GROUPS } from '../../config/roles';
-import { creerFonctionSchema, modifierFonctionSchema } from './fonctions.schema';
-import { listerFonctions, creerFonction, modifierFonction, supprimerFonction } from './fonctions.service';
+import { creerMentionSchema, modifierMentionSchema } from './mentions.schema';
+import { listerMentions, creerMention, modifierMention, supprimerMention } from './mentions.service';
 
 const lecture = requireRole(...ROLE_GROUPS.GESTION);
 const gestion = requireRole(...ROLE_GROUPS.GESTION);
 
-export async function fonctionsRoutes(fastify: FastifyInstance) {
-  fastify.get('/', { preHandler: [authMiddleware, lecture] }, async (req, _reply) => {
+export async function mentionsRoutes(fastify: FastifyInstance) {
+  fastify.get('/', { preHandler: [authMiddleware, lecture] }, async (req) => {
     const { etablissement_id } = req.user as { etablissement_id: string };
-    return listerFonctions(etablissement_id);
+    return listerMentions(etablissement_id);
   });
 
   fastify.post('/', { preHandler: [authMiddleware, gestion] }, async (req, reply) => {
     const { etablissement_id } = req.user as { etablissement_id: string };
-    const body = creerFonctionSchema.parse(req.body);
-    const result = await creerFonction(etablissement_id, body);
+    const body = creerMentionSchema.parse(req.body);
+    const result = await creerMention(etablissement_id, body);
     return reply.status(201).send(result);
   });
 
-  fastify.patch('/:id', { preHandler: [authMiddleware, gestion] }, async (req, _reply) => {
+  fastify.patch('/:id', { preHandler: [authMiddleware, gestion] }, async (req) => {
     const { etablissement_id } = req.user as { etablissement_id: string };
     const { id } = req.params as { id: string };
-    const body = modifierFonctionSchema.parse(req.body);
-    return modifierFonction(id, etablissement_id, body);
+    const body = modifierMentionSchema.parse(req.body);
+    return modifierMention(id, etablissement_id, body);
   });
 
   fastify.delete('/:id', { preHandler: [authMiddleware, gestion] }, async (req, reply) => {
     const { etablissement_id } = req.user as { etablissement_id: string };
     const { id } = req.params as { id: string };
-    await supprimerFonction(id, etablissement_id);
+    await supprimerMention(id, etablissement_id);
     return reply.status(204).send();
   });
 }
