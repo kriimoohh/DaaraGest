@@ -226,13 +226,11 @@ export async function dupliquerClasseFrEnAr(
   if (!source) throw new Error('Classe introuvable');
   if (source.filiere !== 'FR') throw new Error('La classe source doit être de filière française (FR)');
 
-  const inscriptions = await prisma.inscription.findMany({
-    where: {
-      classe_fr_id: id,
-      annee_scolaire_id: source.annee_scolaire_id,
-      statut: 'actif',
-    },
-  });
+  const whereInscriptions = {
+    classe_fr_id: id,
+    annee_scolaire_id: source.annee_scolaire_id,
+    statut: 'actif',
+  };
 
   return prisma.$transaction(async (tx) => {
     const nomAr = data.nom_fr ?? `${source.nom_fr} (AR)`;
@@ -249,27 +247,20 @@ export async function dupliquerClasseFrEnAr(
       include: { annee_scolaire: true, niveau: true },
     });
 
-    let eleves_inscrits = 0;
-    let eleves_ignores = 0;
+    // Un seul UPDATE pour tous les élèves sans classe arabe
+    const updated = await tx.inscription.updateMany({
+      where: { ...whereInscriptions, classe_ar_id: null },
+      data: { classe_ar_id: nouvelleClasse.id },
+    });
 
-    for (const inscription of inscriptions) {
-      if (inscription.classe_ar_id === null) {
-        await tx.inscription.update({
-          where: { id: inscription.id },
-          data: { classe_ar_id: nouvelleClasse.id },
-        });
-        eleves_inscrits++;
-      } else {
-        eleves_ignores++;
-      }
-    }
+    const total = await tx.inscription.count({ where: whereInscriptions });
 
     return {
       classe: nouvelleClasse,
       stats: {
-        total_eleves_source: inscriptions.length,
-        eleves_inscrits,
-        eleves_ignores,
+        total_eleves_source: total,
+        eleves_inscrits: updated.count,
+        eleves_ignores: total - updated.count,
       },
     };
   });
