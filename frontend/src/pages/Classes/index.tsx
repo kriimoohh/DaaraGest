@@ -72,6 +72,7 @@ interface Classe {
   capacite: number;
   annee_scolaire_id: string;
   annee_scolaire?: { id: string; libelle: string } | string;
+  effectif?: number;
 }
 
 interface ClasseFormData {
@@ -739,7 +740,7 @@ export function ClassesPage() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
           {classes.map(c => {
-            const effectif = (c as Classe & { effectif?: number }).effectif ?? 0;
+            const effectif = c.effectif ?? 0;
             const capacite = c.capacite ?? 1;
             const ratio = capacite > 0 ? effectif / capacite : 0;
             const ratioColor = ratio > 0.95 ? 'var(--danger)' : ratio > 0.85 ? 'var(--warning)' : 'var(--success)';
