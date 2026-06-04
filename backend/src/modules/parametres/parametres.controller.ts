@@ -2,6 +2,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
 import { etablissementUpdateSchema, configNotesSchema, configNotificationsSchema } from './parametres.schema';
 import { getParametres, updateEtablissement, getConfigNotes, updateConfigNotes, getConfigNotifications, updateConfigNotifications } from './parametres.service';
+import { getPolitiqueSaisieNotes } from '../../utils/teachingPolicy';
 
 export async function getParametresHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
@@ -45,6 +46,12 @@ export async function updateConfigNotesHandler(request: FastifyRequest, reply: F
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
   }
+}
+
+export async function getPolitiqueSaisieNotesHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const politique = await getPolitiqueSaisieNotes(etablissement_id);
+  return reply.send(politique);
 }
 
 export async function getConfigNotificationsHandler(request: FastifyRequest, reply: FastifyReply) {
