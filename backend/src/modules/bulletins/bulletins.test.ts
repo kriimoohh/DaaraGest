@@ -43,6 +43,45 @@ describe('calculerMoyenne', () => {
   });
 });
 
+// Moyenne avec notes saisies sur des barèmes variables (ex: RLC /60, CLC /40),
+// normalisées sur l'échelle de l'établissement (base) avant pondération.
+function contributionNote(valeur: number, noteMax: number, base: number, coeff: number): number {
+  return noteMax > 0 ? (valeur / noteMax) * base * coeff : 0;
+}
+function moyenneNormalisee(
+  notes: { valeur: number; note_max: number; coeff: number }[], base: number,
+): number | null {
+  let totalP = 0, totalC = 0;
+  for (const n of notes) { totalP += contributionNote(n.valeur, n.note_max, base, n.coeff); totalC += n.coeff; }
+  if (totalC === 0) return null;
+  return Math.round((totalP / totalC) * 100) / 100;
+}
+
+describe('moyenne normalisée par barème', () => {
+  it('rétro-compatible : note_max == base → moyenne pondérée classique', () => {
+    const notes = [{ valeur: 15, note_max: 20, coeff: 3 }, { valeur: 12, note_max: 20, coeff: 2 }];
+    expect(moyenneNormalisee(notes, 20)).toBe(13.8);
+  });
+
+  it('barèmes variables = Σnotes/Σcoeff (cas réel CE1 sur /10)', () => {
+    // RLC 59/60 (coeff 6), Ang 10/10 (coeff 1) — barème = coeff×10, base 10
+    const notes = [
+      { valeur: 59, note_max: 60, coeff: 6 },
+      { valeur: 10, note_max: 10, coeff: 1 },
+    ];
+    // Σnotes=69, Σbarème=70 → 69/70×10 = 9.86 ; et Σnotes/Σcoeff = 69/7 = 9.86
+    expect(moyenneNormalisee(notes, 10)).toBe(9.86);
+  });
+
+  it('une note /60 pleine sur base 10 vaut 10', () => {
+    expect(moyenneNormalisee([{ valeur: 60, note_max: 60, coeff: 6 }], 10)).toBe(10);
+  });
+
+  it('note_max 0 ignorée (pas de division par zéro)', () => {
+    expect(contributionNote(5, 0, 10, 2)).toBe(0);
+  });
+});
+
 describe('classement', () => {
   it('tri décroissant par moyenne', () => {
     const moyennes = [

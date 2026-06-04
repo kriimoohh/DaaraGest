@@ -60,8 +60,16 @@ export function appreciation(m: number, filiere: Filiere = 'FR', seuils: SeuilsM
 type MatiereAvecCoeff = {
   id: string; nom_fr: string; nom_ar: string | null; filiere: string;
   coeff_defaut: unknown; coeff_effectif: unknown;
-  note_max: unknown; note_min: unknown; ordre_bulletin: number;
+  note_max: unknown; note_max_effectif: unknown; note_min: unknown; ordre_bulletin: number;
 };
+
+// Contribution d'une note à la moyenne pondérée. Les notes sont saisies sur le
+// barème de la matière (ex: 59/60) ; on les ramène d'abord sur l'échelle de
+// l'établissement (ConfigNotes.note_max, ex: /10 ou /20) puis on pondère par le
+// coefficient. Rétro-compatible : si note_max == base, on retrouve valeur×coeff.
+function contributionNote(valeur: number, noteMax: number, base: number, coeff: number): number {
+  return noteMax > 0 ? (valeur / noteMax) * base * coeff : 0;
+}
 
 async function getMatieresDeclasse(classe_id: string, filiere: 'FR' | 'AR'): Promise<MatiereAvecCoeff[]> {
   const rows = await prisma.classeMatiere.findMany({
@@ -72,6 +80,7 @@ async function getMatieresDeclasse(classe_id: string, filiere: 'FR' | 'AR'): Pro
   return rows.map(r => ({
     ...r.matiere,
     coeff_effectif: r.coeff_override ?? r.matiere.coeff_defaut,
+    note_max_effectif: r.note_max_override ?? r.matiere.note_max,
     ordre_bulletin: r.ordre_override ?? r.matiere.ordre_bulletin,
   }));
 }
@@ -118,7 +127,9 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
   const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
   if (!classe) throw new Error('Classe introuvable');
   const inscriptions = await getElevesClasse(classe_id, annee_scolaire_id);
-  const seuils = extractSeuilsMentions(await prisma.configNotes.findUnique({ where: { etablissement_id } }));
+  const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
+  const seuils = extractSeuilsMentions(config);
+  const baseNote = Number(config?.note_max ?? 20);
   if (inscriptions.length === 0) return { message: 'Aucun élève inscrit', bulletins: [] };
 
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
@@ -138,9 +149,12 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
     notesByEleve.get(n.eleve_id)!.push(n);
   }
 
-  // Map matiere_id → coeff_effectif (override prioritaire)
+  // Map matiere_id → coeff_effectif / note_max_effectif (override prioritaire)
   const coeffMap = new Map<string, number>(
     filieres.flatMap(f => matMap[f].map(m => [m.id, Number(m.coeff_effectif)]))
+  );
+  const noteMaxMap = new Map<string, number>(
+    filieres.flatMap(f => matMap[f].map(m => [m.id, Number(m.note_max_effectif)]))
   );
 
   const moyennes: { eleve_id: string; moyenne: number }[] = [];
@@ -148,7 +162,8 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
     let totalP = 0, totalC = 0;
     for (const n of notesByEleve.get(eleve_id) ?? []) {
       const c = coeffMap.get(n.matiere_id) ?? Number(n.matiere.coeff_defaut);
-      totalP += Number(n.valeur) * c;
+      const nm = noteMaxMap.get(n.matiere_id) ?? Number(n.matiere.note_max);
+      totalP += contributionNote(Number(n.valeur), nm, baseNote, c);
       totalC += c;
     }
     if (totalC === 0) continue;
@@ -205,13 +220,18 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
   const coeffMapAnnuel = new Map<string, number>(
     filieres.flatMap(f => matMapAnnuel[f].map(m => [m.id, Number(m.coeff_effectif)]))
   );
+  const noteMaxMapAnnuel = new Map<string, number>(
+    filieres.flatMap(f => matMapAnnuel[f].map(m => [m.id, Number(m.note_max_effectif)]))
+  );
+  const baseNote = Number(config?.note_max ?? 20);
 
   const moyennes: { eleve_id: string; moyenne: number }[] = [];
   for (const { eleve_id } of inscriptions) {
     let totalP = 0, totalC = 0;
     for (const n of notesByEleveAnnuel.get(eleve_id) ?? []) {
       const c = coeffMapAnnuel.get(n.matiere_id) ?? Number(n.matiere.coeff_defaut);
-      totalP += Number(n.valeur) * c;
+      const nm = noteMaxMapAnnuel.get(n.matiere_id) ?? Number(n.matiere.note_max);
+      totalP += contributionNote(Number(n.valeur), nm, baseNote, c);
       totalC += c;
     }
     if (totalC === 0) continue;
@@ -421,6 +441,11 @@ export async function genererPdfClasse(
   const matMap: Record<string, MatiereAvecCoeff[]> = {};
   for (const f of filieres) matMap[f] = await getMatieresDeclasse(classe_id, f);
 
+  // Coeff/barème effectifs par matière (override de classe prioritaire) pour l'affichage.
+  const effMap = new Map<string, { coeff: number; note_max: number }>(
+    filieres.flatMap(f => matMap[f].map(m => [m.id, { coeff: Number(m.coeff_effectif), note_max: Number(m.note_max_effectif) }]))
+  );
+
   const { generateBulletinHtml } = await import('./bulletin.template');
   const pages: string[] = [];
 
@@ -432,13 +457,16 @@ export async function genererPdfClasse(
         include: { matiere: true }, orderBy: { matiere: { ordre_bulletin: 'asc' } },
       });
     }
-    type NoteRaw = { valeur: unknown; matiere: { nom_fr: string; nom_ar: string | null; coeff_defaut: unknown } };
+    type NoteRaw = { matiere_id: string; valeur: unknown; matiere: { nom_fr: string; nom_ar: string | null; coeff_defaut: unknown; note_max?: unknown } };
     const toRows = (f: 'FR' | 'AR') =>
-      ((notesByFiliere[f] ?? []) as NoteRaw[]).map(n => ({
-        nom_fr: n.matiere.nom_fr, nom_ar: n.matiere.nom_ar ?? n.matiere.nom_fr,
-        coeff: Number(n.matiere.coeff_defaut), valeur: n.valeur !== null ? Number(n.valeur) : null,
-        note_max: Number((n.matiere as {note_max?: unknown}).note_max ?? 20),
-      }));
+      ((notesByFiliere[f] ?? []) as NoteRaw[]).map(n => {
+        const eff = effMap.get(n.matiere_id);
+        return {
+          nom_fr: n.matiere.nom_fr, nom_ar: n.matiere.nom_ar ?? n.matiere.nom_fr,
+          coeff: eff?.coeff ?? Number(n.matiere.coeff_defaut), valeur: n.valeur !== null ? Number(n.valeur) : null,
+          note_max: eff?.note_max ?? Number(n.matiere.note_max ?? 20),
+        };
+      });
 
     pages.push(generateBulletinHtml({
       type: filiere as 'FR' | 'AR' | 'COMBINE', periode: bulletin.periode,
