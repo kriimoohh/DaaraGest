@@ -1,5 +1,6 @@
 import prisma from '../config/database';
 import { ROLES } from '../config/roles';
+import { configNotesCache } from './cache';
 
 class ForbiddenError extends Error {
   statusCode = 403;
@@ -25,6 +26,25 @@ async function getProfesseurId(utilisateur_id: string): Promise<string> {
   });
   if (!prof) throw new ForbiddenError('Compte professeur introuvable');
   return prof.id;
+}
+
+export type PolitiqueSaisieNotes = {
+  autoriser_toutes_matieres: boolean;
+  autoriser_toutes_classes: boolean;
+};
+
+export async function getPolitiqueSaisieNotes(etablissement_id: string): Promise<PolitiqueSaisieNotes> {
+  const config = await configNotesCache.getOrLoad(etablissement_id, async () => {
+    return prisma.configNotes.findUnique({ where: { etablissement_id } });
+  }) as { autoriser_toutes_matieres?: boolean; autoriser_toutes_classes?: boolean } | null;
+  return {
+    autoriser_toutes_matieres: config?.autoriser_toutes_matieres ?? false,
+    autoriser_toutes_classes: config?.autoriser_toutes_classes ?? false,
+  };
+}
+
+export function estModeStrict(politique: PolitiqueSaisieNotes): boolean {
+  return !politique.autoriser_toutes_matieres && !politique.autoriser_toutes_classes;
 }
 
 /**
@@ -72,5 +92,72 @@ export async function assertProfPeutAccederClasse(
   });
   if (!lien) {
     throw new ForbiddenError('Vous n\'enseignez pas dans cette classe');
+  }
+}
+
+/**
+ * Politique de saisie des notes : applique la branche correspondante
+ * aux deux booléens ConfigNotes.autoriser_toutes_matieres/_classes.
+ *
+ *                       autoriser_toutes_matieres
+ *                          false                 true
+ * toutes_classes false | strict (actuel)    | classe-libre
+ * toutes_classes true  | matiere-libre      | total
+ *
+ * Le garde-fou universel reste : etablissement_id du prof = celui de la
+ * classe/matière (déjà appliqué via les filtres en amont).
+ */
+export async function assertProfPeutSaisirNotes(
+  role: string,
+  utilisateur_id: string,
+  classe_id: string,
+  matiere_ids: string[],
+  etablissement_id: string,
+): Promise<void> {
+  if (isAdminLike(role)) return;
+  if (!isProfesseur(role)) throw new ForbiddenError();
+  if (matiere_ids.length === 0) return;
+
+  const politique = await getPolitiqueSaisieNotes(etablissement_id);
+
+  // Strict (défaut) : chacun ses matières dans ses classes.
+  if (!politique.autoriser_toutes_matieres && !politique.autoriser_toutes_classes) {
+    return assertProfPeutModifierNotes(role, utilisateur_id, classe_id, matiere_ids);
+  }
+
+  const personnel_id = await getProfesseurId(utilisateur_id);
+
+  // Total : il suffit d'être prof de l'établissement (vérifié via une
+  // affectation quelconque pour confirmer son rattachement).
+  if (politique.autoriser_toutes_matieres && politique.autoriser_toutes_classes) {
+    const lien = await prisma.personnelMatiereClasse.findFirst({
+      where: { personnel_id },
+      select: { id: true },
+    });
+    if (!lien) throw new ForbiddenError('Vous n\'avez aucune affectation dans cet établissement');
+    return;
+  }
+
+  // Cross-matieres uniquement : prof peut noter toutes matières,
+  // mais seulement dans une classe où il enseigne déjà ≥ 1 matière.
+  if (politique.autoriser_toutes_matieres && !politique.autoriser_toutes_classes) {
+    const lien = await prisma.personnelMatiereClasse.findFirst({
+      where: { personnel_id, classe_id },
+      select: { id: true },
+    });
+    if (!lien) throw new ForbiddenError('Vous n\'enseignez pas dans cette classe');
+    return;
+  }
+
+  // Cross-classes uniquement : prof peut noter ses matières partout,
+  // mais doit enseigner CHAQUE matière concernée (dans n'importe quelle classe).
+  const affectations = await prisma.personnelMatiereClasse.findMany({
+    where: { personnel_id, matiere_id: { in: matiere_ids } },
+    select: { matiere_id: true },
+  });
+  const matieresEnseignees = new Set(affectations.map(a => a.matiere_id));
+  const manquantes = matiere_ids.filter(id => !matieresEnseignees.has(id));
+  if (manquantes.length > 0) {
+    throw new ForbiddenError('Vous n\'enseignez pas toutes les matières concernées');
   }
 }

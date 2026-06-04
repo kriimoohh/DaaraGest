@@ -1,6 +1,6 @@
 import prisma from '../../config/database';
 import { logAction } from '../../utils/audit';
-import { assertProfPeutModifierNotes } from '../../utils/teachingPolicy';
+import { assertProfPeutSaisirNotes, getPolitiqueSaisieNotes, estModeStrict } from '../../utils/teachingPolicy';
 import { NoteItem } from './notes.schema';
 
 export async function listerNotes(
@@ -32,7 +32,7 @@ export async function listerNotes(
 
 export async function bulkUpsertNotes(
   notes: NoteItem[],
-  insertOnly = false,
+  insertOnlyHint = false,
   acteurId?: string,
   etablissement_id?: string,
   classe_id?: string,
@@ -43,10 +43,17 @@ export async function bulkUpsertNotes(
   // Précharger toutes les matières concernées en une seule requête (élimine le N+1)
   const matiereIds = [...new Set(notes.map(n => n.matiere_id))];
 
-  // Policy : un professeur ne peut modifier que les notes des classes/matières
-  // où il a une affectation PersonnelMatiereClasse.
-  if (role && acteurId && classe_id) {
-    await assertProfPeutModifierNotes(role, acteurId, classe_id, matiereIds);
+  // Politique de saisie : strict (chacun ses matières/classes) ou variantes
+  // libérées définies par ConfigNotes.autoriser_toutes_matieres/_classes.
+  let insertOnly = insertOnlyHint;
+  let politiqueAppliquee = { autoriser_toutes_matieres: false, autoriser_toutes_classes: false };
+  if (role && acteurId && classe_id && etablissement_id) {
+    await assertProfPeutSaisirNotes(role, acteurId, classe_id, matiereIds, etablissement_id);
+    politiqueAppliquee = await getPolitiqueSaisieNotes(etablissement_id);
+    // insertOnly couplé : seul le mode strict conserve le verrou anti-modification.
+    if (insertOnlyHint && !estModeStrict(politiqueAppliquee)) {
+      insertOnly = false;
+    }
   }
 
   // Si classe_id fourni, vérifier que toutes les matières sont dans le programme de la classe
@@ -114,7 +121,10 @@ export async function bulkUpsertNotes(
 
   if (results.length > 0 && acteurId && etablissement_id) {
     await logAction(etablissement_id, acteurId, insertOnly ? 'CREATE' : 'UPDATE', 'Note', 'bulk', {
-      count: results.length, insertOnly,
+      count: results.length,
+      insertOnly,
+      matiere_ids: matiereIds,
+      politique: politiqueAppliquee,
     });
   }
   return results;

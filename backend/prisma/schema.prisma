@@ -290,6 +290,14 @@ model ConfigNotes {
   notif_absences_eleves   Boolean  @default(true)
   notif_messages          Boolean  @default(true)
   notif_inscriptions      Boolean  @default(false)
+  // Politique de saisie des notes par les professeurs.
+  // false/false = strict (chacun ses matières dans ses classes, insertOnly actif).
+  // true/false  = prof peut noter toutes matières, mais classes où il enseigne ≥ 1 matière.
+  // false/true  = prof peut noter ses matières dans toutes les classes de l'établissement.
+  // true/true   = prof peut tout noter dans toute l'école.
+  // Dès qu'au moins un des deux est true, insertOnly est levé (le prof peut modifier).
+  autoriser_toutes_matieres Boolean  @default(false)
+  autoriser_toutes_classes  Boolean  @default(false)
   updated_at              DateTime @updatedAt
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])

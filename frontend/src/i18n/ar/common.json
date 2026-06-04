@@ -497,7 +497,12 @@
     "note_verrouillee": "الدرجة مسجلة مسبقاً — التعديل غير مسموح",
     "programme_vide": "هذا القسم لا يحتوي على برنامج مواد بعد. توجه إلى الأقسام ← البرنامج لإسناد المواد.",
     "err_chargement": "خطأ في التحميل",
-    "err_enregistrement": "خطأ أثناء الحفظ"
+    "err_enregistrement": "خطأ أثناء الحفظ",
+    "mode_matiere": "حسب المادة",
+    "mode_eleve": "حسب التلميذ",
+    "eleve": "التلميذ",
+    "col_matiere": "المادة",
+    "aucune_saisie": "لا توجد علامات للحفظ"
   },
   "bulletin": {
     "titre": "شهادات النتائج",
@@ -842,6 +847,12 @@
     "jour_vendredi": "الجمعة",
     "jour_samedi": "السبت",
     "chiffres_arabes_desc": "٠١٢٣٤٥٦٧٨٩ بدلاً من 0123456789 على الشهادات",
+    "politique_saisie_notes": "سياسة إدخال العلامات",
+    "autoriser_toutes_matieres": "السماح بإدخال العلامات لجميع المواد",
+    "autoriser_toutes_matieres_desc": "يمكن للأستاذ إدخال علامات جميع المواد، وليس فقط المواد التي يُدرّسها",
+    "autoriser_toutes_classes": "السماح بإدخال العلامات لجميع الأقسام",
+    "autoriser_toutes_classes_desc": "يمكن للأستاذ إدخال العلامات في جميع أقسام المؤسسة، وليس فقط الأقسام التي يُدرّس فيها",
+    "politique_saisie_notes_modif_active": "التعديل مفعّل: يمكن للأساتذة أيضًا تعديل العلامات الموجودة (تم رفع قفل منع التعديل)",
     "periode_fr": "{{label}} {{n}} — فرنسي",
     "periode_ar": "الفصل {{n}} — عربي",
     "trimestres_label": "{{n}} {{periodes}} — فصول",

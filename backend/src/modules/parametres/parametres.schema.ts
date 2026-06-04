@@ -42,6 +42,8 @@ export const configNotesSchema = z.object({
   seuil_bien:       zodSeuil.optional(),
   seuil_assez_bien: zodSeuil.optional(),
   seuil_passable:   zodSeuil.optional(),
+  autoriser_toutes_matieres: z.boolean().optional(),
+  autoriser_toutes_classes:  z.boolean().optional(),
 }).refine(
   (d) => {
     // Si on touche aux seuils, ils doivent être dans l'ordre décroissant strict
