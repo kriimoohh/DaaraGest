@@ -40,6 +40,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: '/classes',                     key: 'classes',            roles: ['admin', 'directeur', 'gestionnaire', 'professeur'], inNav: true },
   { path: '/annees-scolaires',            key: 'annees_scolaires',   roles: DIRECTION_LIKE,                  inNav: true },
   { path: '/matieres',                    key: 'matieres',           roles: DIRECTION_LIKE,                  inNav: true },
+  { path: '/domaines',                    key: 'domaines',           roles: DIRECTION_LIKE,                  inNav: true },
   { path: '/notes',                       key: 'notes',              roles: ['admin', 'directeur', 'gestionnaire', 'professeur'], inNav: true },
   { path: '/evaluations',                 key: 'evaluations',        roles: ['admin', 'directeur', 'gestionnaire', 'professeur'], inNav: true },
   { path: '/bulletins',                   key: 'bulletins',          roles: ['admin', 'directeur', 'gestionnaire', 'professeur'], inNav: true },

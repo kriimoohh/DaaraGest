@@ -11,6 +11,13 @@ import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 
+interface Domaine {
+  id: string;
+  nom_fr: string;
+  code: string;
+  ordre: number;
+}
+
 interface Matiere {
   id: string;
   nom_fr: string;
@@ -21,16 +28,35 @@ interface Matiere {
   note_min: number;
   ordre_bulletin: number;
   active: boolean;
+  domaine_id: string | null;
+  domaine: Domaine | null;
+  type_note: 'SIMPLE' | 'RESSOURCE' | 'COMPETENCE';
+  code_court: string | null;
 }
 
-const EMPTY = { nom_fr: '', nom_ar: '', filiere: 'FR', coeff_defaut: '1', note_max: '20', note_min: '0', ordre_bulletin: '0' };
+const TYPE_NOTES = ['SIMPLE', 'RESSOURCE', 'COMPETENCE'] as const;
+
+const EMPTY = {
+  nom_fr: '',
+  nom_ar: '',
+  filiere: 'FR',
+  coeff_defaut: '1',
+  note_max: '20',
+  note_min: '0',
+  ordre_bulletin: '0',
+  domaine_id: '',
+  type_note: 'SIMPLE',
+  code_court: '',
+};
 
 export function MatieresPage() {
   const { t } = useTranslation();
   const api = useApi();
   const isAdmin = useAuthStore(s => s.user?.role === 'admin');
   const [matieres, setMatieres] = useState<Matiere[]>([]);
+  const [domaines, setDomaines] = useState<Domaine[]>([]);
   const [filiere, setFiliere] = useState('');
+  const [filtreDomaine, setFiltreDomaine] = useState('');
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState(false);
   const [edit, setEdit] = useState<Matiere | null>(null);
@@ -52,7 +78,17 @@ export function MatieresPage() {
     }
   };
 
+  const chargerDomaines = async () => {
+    try {
+      const data = await api.get<Domaine[]>('/api/v1/domaines');
+      setDomaines(data);
+    } catch {
+      // Pas bloquant : on continue sans liste de domaines.
+    }
+  };
+
   useEffect(() => { charger(); }, [filiere]);
+  useEffect(() => { chargerDomaines(); }, []);
 
   const openAdd = () => { setEdit(null); setForm(EMPTY); setModal(true); };
   const openEdit = (m: Matiere) => {
@@ -65,6 +101,9 @@ export function MatieresPage() {
       note_max: String(m.note_max),
       note_min: String(m.note_min),
       ordre_bulletin: String(m.ordre_bulletin),
+      domaine_id: m.domaine_id ?? '',
+      type_note: m.type_note ?? 'SIMPLE',
+      code_court: m.code_court ?? '',
     });
     setModal(true);
   };
@@ -84,6 +123,9 @@ export function MatieresPage() {
         note_max: parseFloat(form.note_max) || 20,
         note_min: parseFloat(form.note_min) || 0,
         ordre_bulletin: parseInt(form.ordre_bulletin) || 0,
+        domaine_id: form.domaine_id || null,
+        type_note: form.type_note,
+        code_court: form.code_court || null,
       };
       if (edit) {
         await api.put(`/api/v1/matieres/${edit.id}`, payload);
@@ -116,6 +158,22 @@ export function MatieresPage() {
     }
   };
 
+  // Filtre client : le backend ne filtre que sur la filière, le domaine est appliqué ici.
+  const matieresAffichees = filtreDomaine
+    ? matieres.filter(m => (filtreDomaine === '__none__' ? !m.domaine_id : m.domaine_id === filtreDomaine))
+    : matieres;
+
+  const domaineOptions = [
+    { value: '', label: t('matiere.domaine_aucun') },
+    ...domaines.map(d => ({ value: d.id, label: d.nom_fr })),
+  ];
+
+  const filtreDomaineOptions = [
+    { value: '', label: t('matiere.filtre_domaine_tous') },
+    { value: '__none__', label: t('matiere.filtre_domaine_sans') },
+    ...domaines.map(d => ({ value: d.id, label: d.nom_fr })),
+  ];
+
   return (
     <>
       <PageHeader
@@ -146,10 +204,19 @@ export function MatieresPage() {
         </button>
       </div>
 
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, maxWidth: 320 }}>
+        <Select
+          label={t('matiere.filtre_domaine')}
+          value={filtreDomaine}
+          onChange={(e) => setFiltreDomaine(e.target.value)}
+          options={filtreDomaineOptions}
+        />
+      </div>
+
       <div className="card">
         {loading ? (
           <div className="empty">{t('common.chargement')}</div>
-        ) : matieres.length === 0 ? (
+        ) : matieresAffichees.length === 0 ? (
           <div className="empty" style={{ flexDirection: 'column', gap: 8 }}>
             <span style={{ fontSize: 36 }}>📚</span>
             <p>{t('matiere.aucune_trouvee')}</p>
@@ -162,6 +229,7 @@ export function MatieresPage() {
                   <th>{t('matiere.nom_fr')}</th>
                   <th>{t('matiere.nom_ar')}</th>
                   <th>{t('matiere.col_filiere')}</th>
+                  <th>{t('matiere.col_domaine')}</th>
                   <th>{t('note.coefficient')}</th>
                   <th>{t('parametre.note_max')}</th>
                   <th>{t('parametre.note_min')}</th>
@@ -169,12 +237,19 @@ export function MatieresPage() {
                 </tr>
               </thead>
               <tbody>
-                {matieres.map((m) => (
+                {matieresAffichees.map((m) => (
                   <tr key={m.id}>
                     <td>{m.nom_fr}</td>
                     <td dir="rtl">{m.nom_ar}</td>
                     <td>
                       <Badge label={m.filiere} variant={m.filiere === 'FR' ? 'info' : 'warning'} />
+                    </td>
+                    <td>
+                      {m.domaine ? (
+                        <Badge label={m.domaine.nom_fr} variant="neutral" />
+                      ) : (
+                        <span style={{ color: 'var(--muted)', fontSize: 12 }}>—</span>
+                      )}
                     </td>
                     <td>{m.coeff_defaut}</td>
                     <td>{m.note_max}</td>
@@ -208,6 +283,20 @@ export function MatieresPage() {
               onChange={(e) => setForm((f) => ({ ...f, nom_ar: e.target.value }))}
               placeholder={t('matiere.placeholder_ar')}
               dir="rtl"
+            />
+          </div>
+          <div className="grid-2">
+            <Select
+              label={t('matiere.col_domaine')}
+              value={form.domaine_id}
+              onChange={(e) => setForm((f) => ({ ...f, domaine_id: e.target.value }))}
+              options={domaineOptions}
+            />
+            <Select
+              label={t('matiere.type_note')}
+              value={form.type_note}
+              onChange={(e) => setForm((f) => ({ ...f, type_note: e.target.value }))}
+              options={TYPE_NOTES.map(tn => ({ value: tn, label: t(`matiere.type_note_${tn}`) }))}
             />
           </div>
           <div className="grid-4">
@@ -248,6 +337,13 @@ export function MatieresPage() {
               min="0"
               value={form.ordre_bulletin}
               onChange={(e) => setForm((f) => ({ ...f, ordre_bulletin: e.target.value }))}
+            />
+            <Input
+              label={t('matiere.code_court')}
+              maxLength={16}
+              value={form.code_court}
+              onChange={(e) => setForm((f) => ({ ...f, code_court: e.target.value }))}
+              placeholder="Lect"
             />
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>

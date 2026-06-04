@@ -10,6 +10,7 @@ import { checkBrowser } from './utils/browserPool';
 import { authRoutes } from './modules/auth/auth.routes';
 import { anneeScolaireRoutes } from './modules/annees-scolaires/annees-scolaires.routes';
 import { matiereRoutes } from './modules/matieres/matieres.routes';
+import { domainesRoutes } from './modules/domaines/domaines.routes';
 import { classeRoutes } from './modules/classes/classes.routes';
 import { eleveRoutes } from './modules/eleves/eleves.routes';
 import { personnelRoutes } from './modules/personnel/personnel.routes';
@@ -131,6 +132,7 @@ async function build() {
       await api.register(authRoutes, { prefix: '/auth' });
       await api.register(anneeScolaireRoutes, { prefix: '/annees-scolaires' });
       await api.register(matiereRoutes, { prefix: '/matieres' });
+      await api.register(domainesRoutes, { prefix: '/domaines' });
       await api.register(classeRoutes, { prefix: '/classes' });
       await api.register(eleveRoutes, { prefix: '/eleves' });
       await api.register(personnelRoutes, { prefix: '/personnel' });
