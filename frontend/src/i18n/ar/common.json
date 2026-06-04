@@ -497,7 +497,12 @@
     "note_verrouillee": "الدرجة مسجلة مسبقاً — التعديل غير مسموح",
     "programme_vide": "هذا القسم لا يحتوي على برنامج مواد بعد. توجه إلى الأقسام ← البرنامج لإسناد المواد.",
     "err_chargement": "خطأ في التحميل",
-    "err_enregistrement": "خطأ أثناء الحفظ"
+    "err_enregistrement": "خطأ أثناء الحفظ",
+    "mode_matiere": "حسب المادة",
+    "mode_eleve": "حسب التلميذ",
+    "eleve": "التلميذ",
+    "col_matiere": "المادة",
+    "aucune_saisie": "لا توجد علامات للحفظ"
   },
   "bulletin": {
     "titre": "شهادات النتائج",

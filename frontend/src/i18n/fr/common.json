@@ -497,7 +497,12 @@
     "note_verrouillee": "Note déjà saisie — modification non autorisée",
     "programme_vide": "Cette classe n'a pas encore de programme de matières. Rendez-vous dans Classes → Programme pour assigner les matières.",
     "err_chargement": "Erreur de chargement",
-    "err_enregistrement": "Erreur lors de l'enregistrement"
+    "err_enregistrement": "Erreur lors de l'enregistrement",
+    "mode_matiere": "Par matière",
+    "mode_eleve": "Par élève",
+    "eleve": "Élève",
+    "col_matiere": "Matière",
+    "aucune_saisie": "Aucune note à enregistrer"
   },
   "bulletin": {
     "titre": "Bulletins",
