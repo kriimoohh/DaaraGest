@@ -47,6 +47,7 @@ const FinancesPage       = lazyWithReload(() => import('./pages/Finances').then(
 const ParametresPage     = lazyWithReload(() => import('./pages/Parametres').then(m => ({ default: m.ParametresPage })));
 const AnneeScolairesPage = lazyWithReload(() => import('./pages/AnneeScolaires').then(m => ({ default: m.AnneeScolairesPage })));
 const MatieresPage       = lazyWithReload(() => import('./pages/Matieres').then(m => ({ default: m.MatieresPage })));
+const DomainesPage       = lazyWithReload(() => import('./pages/Domaines').then(m => ({ default: m.DomainesPage })));
 const UtilisateursPage   = lazyWithReload(() => import('./pages/Utilisateurs').then(m => ({ default: m.UtilisateursPage })));
 const PointagePage       = lazyWithReload(() => import('./pages/Pointage').then(m => ({ default: m.PointagePage })));
 const ScannerPage        = lazyWithReload(() => import('./pages/Pointage/Scanner').then(m => ({ default: m.ScannerPage })));
@@ -106,6 +107,9 @@ export default function App() {
             } />
             <Route path="/matieres" element={
               <ProtectedRoute roles={['admin', 'directeur', 'gestionnaire']}><MatieresPage /></ProtectedRoute>
+            } />
+            <Route path="/domaines" element={
+              <ProtectedRoute roles={['admin', 'directeur', 'gestionnaire']}><DomainesPage /></ProtectedRoute>
             } />
             <Route path="/notes" element={
               <ProtectedRoute roles={ROLES.academique}><NotesPage /></ProtectedRoute>
