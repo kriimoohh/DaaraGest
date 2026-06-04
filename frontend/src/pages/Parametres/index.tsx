@@ -71,6 +71,8 @@ interface ConfigNotes {
   seuil_bien: number;
   seuil_assez_bien: number;
   seuil_passable: number;
+  autoriser_toutes_matieres: boolean;
+  autoriser_toutes_classes: boolean;
 }
 
 type CouleurMention = 'success' | 'info' | 'warning' | 'error';
@@ -423,6 +425,8 @@ export function ParametresPage() {
             seuil_bien:       Number(rawNotes.seuil_bien       ?? 14),
             seuil_assez_bien: Number(rawNotes.seuil_assez_bien ?? 12),
             seuil_passable:   Number(rawNotes.seuil_passable   ?? 10),
+            autoriser_toutes_matieres: Boolean(rawNotes.autoriser_toutes_matieres),
+            autoriser_toutes_classes:  Boolean(rawNotes.autoriser_toutes_classes),
           });
         }
         if (rawNotif) {
@@ -937,6 +941,33 @@ export function ParametresPage() {
                 checked={config.chiffres_arabes}
                 onChange={v => setConfig(p => p ? { ...p, chiffres_arabes: v } : p)}
               />
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}>
+                  {t('parametre.politique_saisie_notes')}
+                </div>
+                <Toggle
+                  label={t('parametre.autoriser_toutes_matieres')}
+                  description={t('parametre.autoriser_toutes_matieres_desc')}
+                  checked={config.autoriser_toutes_matieres}
+                  onChange={v => setConfig(p => p ? { ...p, autoriser_toutes_matieres: v } : p)}
+                />
+                <Toggle
+                  label={t('parametre.autoriser_toutes_classes')}
+                  description={t('parametre.autoriser_toutes_classes_desc')}
+                  checked={config.autoriser_toutes_classes}
+                  onChange={v => setConfig(p => p ? { ...p, autoriser_toutes_classes: v } : p)}
+                />
+                {(config.autoriser_toutes_matieres || config.autoriser_toutes_classes) && (
+                  <div style={{
+                    fontSize: 12, color: 'var(--warning-text)',
+                    background: 'var(--warning-soft)', border: '1px solid var(--warning-border)',
+                    padding: '8px 12px', borderRadius: 'var(--r-md)',
+                  }}>
+                    ⓘ {t('parametre.politique_saisie_notes_modif_active')}
+                  </div>
+                )}
+              </div>
 
               {/* Jours de cours */}
               <div style={{ padding: '12px 16px', background: 'var(--paper-2)', border: '1px solid var(--rule)', borderRadius: 'var(--r-md)' }}>
