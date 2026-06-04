@@ -400,6 +400,10 @@ model ClasseMatiere {
   matiere_id     String
   coeff_override Decimal? @db.Decimal(4, 2)
   ordre_override Int?
+  // Barème de la matière spécifique à cette classe (ex: RLC /60 en CE, /40 en CM).
+  // Si null, on retombe sur Matiere.note_max. Sert à normaliser les notes brutes
+  // (saisies sur leur barème) avant le calcul de la moyenne du bulletin.
+  note_max_override Decimal? @db.Decimal(5, 2)
 
   classe  Classe  @relation(fields: [classe_id], references: [id])
   matiere Matiere @relation(fields: [matiere_id], references: [id])
