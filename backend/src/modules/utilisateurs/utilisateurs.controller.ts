@@ -7,6 +7,8 @@ import {
   creerUtilisateur,
   modifierUtilisateur,
   supprimerUtilisateur,
+  reactiverUtilisateur,
+  supprimerDefinitivement,
   resetPassword,
 } from './utilisateurs.service';
 
@@ -16,12 +18,13 @@ export async function rolesHandler(_request: FastifyRequest, reply: FastifyReply
 
 export async function listerHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
-  const { page, search, role } = request.query as Record<string, string | undefined>;
+  const { page, search, role, inactifs } = request.query as Record<string, string | undefined>;
   const data = await listerUtilisateurs(
     etablissement_id,
     page ? parseInt(page) : 1,
     search,
-    role
+    role,
+    inactifs === 'true' || inactifs === '1'
   );
   return reply.send(data);
 }
@@ -60,6 +63,30 @@ export async function supprimerHandler(request: FastifyRequest, reply: FastifyRe
   const { id } = request.params as { id: string };
   try {
     await supprimerUtilisateur(id, etablissement_id, acteurId);
+    return reply.status(204).send();
+  } catch (err) {
+    const e = err as Error & { statusCode?: number };
+    return reply.status(e.statusCode ?? 404).send({ error: e.message });
+  }
+}
+
+export async function reactiverHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id, id: acteurId } = request.user as JwtPayload;
+  const { id } = request.params as { id: string };
+  try {
+    const data = await reactiverUtilisateur(id, etablissement_id, acteurId);
+    return reply.send(data);
+  } catch (err) {
+    const e = err as Error & { statusCode?: number };
+    return reply.status(e.statusCode ?? 404).send({ error: e.message });
+  }
+}
+
+export async function supprimerDefinitivementHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id, id: acteurId } = request.user as JwtPayload;
+  const { id } = request.params as { id: string };
+  try {
+    await supprimerDefinitivement(id, etablissement_id, acteurId);
     return reply.status(204).send();
   } catch (err) {
     const e = err as Error & { statusCode?: number };

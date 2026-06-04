@@ -955,7 +955,13 @@
     "ok_cree": "تم إنشاء المستخدم",
     "ok_modifie": "تم تعديل المستخدم",
     "ok_desactive": "تم تعطيل المستخدم",
-    "ok_mdp_reinit": "تمت إعادة تعيين كلمة المرور"
+    "ok_mdp_reinit": "تمت إعادة تعيين كلمة المرور",
+    "afficher_desactives": "إظهار المعطّلين",
+    "reactiver": "إعادة التفعيل",
+    "ok_reactive": "تمت إعادة تفعيل المستخدم",
+    "supprimer_definitif": "حذف نهائي",
+    "confirm_supprimer_definitif_msg": "حذف الحساب \"{{id}}\" نهائيًا؟ هذا الإجراء لا رجعة فيه.",
+    "ok_supprime_definitif": "تم حذف المستخدم نهائيًا"
   },
   "tb": {
     "search": "البحث عن تلاميذ، أقسام، مدفوعات…"

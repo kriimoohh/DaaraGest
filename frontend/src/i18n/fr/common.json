@@ -955,7 +955,13 @@
     "ok_cree": "Utilisateur créé",
     "ok_modifie": "Utilisateur modifié",
     "ok_desactive": "Utilisateur désactivé",
-    "ok_mdp_reinit": "Mot de passe réinitialisé"
+    "ok_mdp_reinit": "Mot de passe réinitialisé",
+    "afficher_desactives": "Afficher les désactivés",
+    "reactiver": "Réactiver",
+    "ok_reactive": "Utilisateur réactivé",
+    "supprimer_definitif": "Supprimer définitivement",
+    "confirm_supprimer_definitif_msg": "Supprimer DÉFINITIVEMENT le compte \"{{id}}\" ? Cette action est irréversible.",
+    "ok_supprime_definitif": "Utilisateur supprimé définitivement"
   },
   "tb": {
     "search": "Rechercher élèves, classes, paiements…"
