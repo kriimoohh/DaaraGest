@@ -35,6 +35,7 @@ export function UtilisateursPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+  const [showInactifs, setShowInactifs] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const [modal, setModal] = useState(false);
@@ -50,6 +51,10 @@ export function UtilisateursPage() {
   const [confirm, setConfirm] = useState<Utilisateur | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  const [hardConfirm, setHardConfirm] = useState<Utilisateur | null>(null);
+  const [hardDeleting, setHardDeleting] = useState(false);
+  const [reactivatingId, setReactivatingId] = useState<string | null>(null);
+
   useEffect(() => {
     api.get<Role[]>('/api/v1/utilisateurs/roles').then(setRoles).catch(() => {});
   }, []);
@@ -60,6 +65,7 @@ export function UtilisateursPage() {
       const params = new URLSearchParams({ page: String(page), limit: '20' });
       if (search) params.set('search', search);
       if (roleFilter) params.set('role', roleFilter);
+      if (showInactifs) params.set('inactifs', 'true');
       const res = await api.get<{ data: Utilisateur[]; total: number }>(
         `/api/v1/utilisateurs?${params}`
       );
@@ -72,7 +78,7 @@ export function UtilisateursPage() {
     }
   };
 
-  useEffect(() => { charger(); }, [page, search, roleFilter]);
+  useEffect(() => { charger(); }, [page, search, roleFilter, showInactifs]);
 
   const openAdd = () => { setEdit(null); setForm(EMPTY_FORM); setModal(true); };
   const openEdit = (u: Utilisateur) => {
@@ -164,6 +170,34 @@ export function UtilisateursPage() {
     }
   };
 
+  const handleReactivate = async (u: Utilisateur) => {
+    setReactivatingId(u.id);
+    try {
+      await api.put(`/api/v1/utilisateurs/${u.id}/reactiver`, {});
+      toast.success(t('utilisateur.ok_reactive'));
+      charger();
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setReactivatingId(null);
+    }
+  };
+
+  const handleHardDelete = async () => {
+    if (!hardConfirm) return;
+    setHardDeleting(true);
+    try {
+      await api.delete(`/api/v1/utilisateurs/${hardConfirm.id}/definitif`);
+      toast.success(t('utilisateur.ok_supprime_definitif'));
+      setHardConfirm(null);
+      charger();
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setHardDeleting(false);
+    }
+  };
+
   const roleVariant = (r: string) => {
     const map: Record<string, 'success' | 'info' | 'warning' | 'neutral'> = {
       admin: 'success', directeur: 'info', gestionnaire: 'info', 'agent de scolarité': 'warning', professeur: 'neutral',
@@ -192,6 +226,14 @@ export function UtilisateursPage() {
             ...roles.map((r) => ({ value: r.libelle_fr, label: r.libelle_fr.charAt(0).toUpperCase() + r.libelle_fr.slice(1) })),
           ]}
         />
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--ink-2)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={showInactifs}
+            onChange={(e) => { setPage(1); setShowInactifs(e.target.checked); }}
+          />
+          {t('utilisateur.afficher_desactives')}
+        </label>
       </div>
 
       <div className="card">
@@ -231,9 +273,18 @@ export function UtilisateursPage() {
                     </td>
                     <td>
                       <div className="row">
-                        <Button size="sm" variant="ghost" onClick={() => openEdit(u)}>{t('actions.modifier')}</Button>
-                        <Button size="sm" variant="secondary" onClick={() => { setResetModal(u); setNewPwd(''); }}>{t('utilisateur.btn_mdp')}</Button>
-                        <Button size="sm" variant="danger" onClick={() => setConfirm(u)}>{t('actions.desactiver')}</Button>
+                        {u.actif ? (
+                          <>
+                            <Button size="sm" variant="ghost" onClick={() => openEdit(u)}>{t('actions.modifier')}</Button>
+                            <Button size="sm" variant="secondary" onClick={() => { setResetModal(u); setNewPwd(''); }}>{t('utilisateur.btn_mdp')}</Button>
+                            <Button size="sm" variant="danger" onClick={() => setConfirm(u)}>{t('actions.desactiver')}</Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button size="sm" variant="secondary" loading={reactivatingId === u.id} onClick={() => handleReactivate(u)}>{t('utilisateur.reactiver')}</Button>
+                            <Button size="sm" variant="danger" onClick={() => setHardConfirm(u)}>{t('utilisateur.supprimer_definitif')}</Button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -307,6 +358,15 @@ export function UtilisateursPage() {
         loading={deleting}
         title={t('utilisateur.desactiver')}
         message={t('utilisateur.confirm_desactiver_msg', { id: confirm?.identifiant ?? '' })}
+      />
+
+      <ConfirmModal
+        isOpen={!!hardConfirm}
+        onClose={() => setHardConfirm(null)}
+        onConfirm={handleHardDelete}
+        loading={hardDeleting}
+        title={t('utilisateur.supprimer_definitif')}
+        message={t('utilisateur.confirm_supprimer_definitif_msg', { id: hardConfirm?.identifiant ?? '' })}
       />
 
       <ConfirmModal

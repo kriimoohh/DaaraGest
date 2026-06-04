@@ -12,12 +12,17 @@ export async function listerUtilisateurs(
   etablissement_id: string,
   page = 1,
   search?: string,
-  role?: string
+  role?: string,
+  inclureInactifs = false
 ) {
   const limit = 20;
   const skip = (page - 1) * limit;
 
   const where: Record<string, unknown> = { etablissement_id };
+
+  // Par défaut, on masque les comptes désactivés (soft delete) : ils ne sont
+  // visibles que si l'admin demande explicitement à les afficher.
+  if (!inclureInactifs) where.actif = true;
 
   if (search) {
     where.OR = [
@@ -143,6 +148,106 @@ export async function supprimerUtilisateur(id: string, etablissement_id: string,
   const identifiantLibere = `${existing.identifiant}_deleted_${Date.now()}`;
   await logAction(etablissement_id, acteurId, 'DELETE', 'Utilisateur', id, { identifiant: existing.identifiant });
   return prisma.utilisateur.update({ where: { id }, data: { actif: false, identifiant: identifiantLibere } });
+}
+
+// Réactive un compte désactivé (soft delete) et restaure son identifiant d'origine
+// si le suffixe `_deleted_<timestamp>` est présent et que le slot est de nouveau libre.
+export async function reactiverUtilisateur(id: string, etablissement_id: string, acteurId: string) {
+  const existing = await prisma.utilisateur.findFirst({ where: { id, etablissement_id } });
+  if (!existing) throw Object.assign(new Error('Utilisateur introuvable'), { statusCode: 404 });
+  if (existing.actif) throw Object.assign(new Error('Ce compte est déjà actif.'), { statusCode: 400 });
+
+  let identifiantRestaure = existing.identifiant;
+  const match = existing.identifiant.match(/^(.*)_deleted_\d+$/);
+  if (match) {
+    const original = match[1];
+    const collision = await prisma.utilisateur.findFirst({ where: { identifiant: original } });
+    if (!collision) identifiantRestaure = original;
+  }
+
+  const utilisateur = await prisma.utilisateur.update({
+    where: { id },
+    data: { actif: true, identifiant: identifiantRestaure },
+    include: { role: true },
+  });
+
+  await logAction(etablissement_id, acteurId, 'UPDATE', 'Utilisateur', id, {
+    action: 'reactivate', identifiant: identifiantRestaure,
+  });
+
+  const { mot_de_passe: _, ...result } = utilisateur;
+  return result;
+}
+
+// Suppression DÉFINITIVE (hard delete). Refusée si le compte porte de l'historique
+// métier (contenu créé impossible à orphaniser proprement). Les rattachements
+// « techniques » (notifications reçues, participations aux conversations, refresh
+// tokens) sont nettoyés dans la transaction.
+export async function supprimerDefinitivement(id: string, etablissement_id: string, acteurId: string) {
+  const existing = await prisma.utilisateur.findFirst({
+    where: { id, etablissement_id },
+    include: { role: true },
+  });
+  if (!existing) throw Object.assign(new Error('Utilisateur introuvable'), { statusCode: 404 });
+
+  if (id === acteurId) {
+    throw Object.assign(new Error('Vous ne pouvez pas supprimer votre propre compte.'), { statusCode: 400 });
+  }
+
+  if (existing.role.libelle_fr === ROLES.ADMIN) {
+    const autresAdmins = await prisma.utilisateur.count({
+      where: { etablissement_id, actif: true, role: { libelle_fr: ROLES.ADMIN }, id: { not: id } },
+    });
+    if (autresAdmins === 0) {
+      throw Object.assign(
+        new Error('Impossible de supprimer le dernier administrateur actif.'),
+        { statusCode: 400 },
+      );
+    }
+  }
+
+  // Relations « historiques » qui bloquent une suppression définitive : on ne veut
+  // pas perdre / orphaniser ce contenu. Si l'une est non vide → on refuse et on
+  // recommande la désactivation.
+  const [personnel, messages, activites, documents, evenements, demandes] = await Promise.all([
+    prisma.personnel.count({ where: { utilisateur_id: id } }),
+    prisma.messageConversation.count({ where: { expediteur_id: id } }),
+    prisma.activite.count({ where: { responsable_id: id } }),
+    prisma.documentGenere.count({ where: { genere_par: id } }),
+    prisma.evenementCalendrier.count({ where: { createur_id: id } }),
+    prisma.demandeAbsencePersonnel.count({ where: { traite_par: id } }),
+  ]);
+
+  const blocages: string[] = [];
+  if (personnel > 0) blocages.push('fiche personnel liée');
+  if (messages > 0) blocages.push(`${messages} message(s) envoyé(s)`);
+  if (activites > 0) blocages.push(`${activites} activité(s) dont il est responsable`);
+  if (documents > 0) blocages.push(`${documents} document(s) généré(s)`);
+  if (evenements > 0) blocages.push(`${evenements} événement(s) de calendrier créé(s)`);
+  if (demandes > 0) blocages.push(`${demandes} demande(s) d'absence traitée(s)`);
+
+  if (blocages.length > 0) {
+    throw Object.assign(
+      new Error(
+        `Suppression définitive impossible : ce compte a de l'historique (${blocages.join(', ')}). Désactivez-le plutôt.`,
+      ),
+      { statusCode: 409 },
+    );
+  }
+
+  await logAction(etablissement_id, acteurId, 'DELETE', 'Utilisateur', id, {
+    action: 'hard_delete', identifiant: existing.identifiant,
+  });
+
+  // RefreshToken est en onDelete: Cascade ; on nettoie explicitement les rattachements
+  // en Restrict avant de supprimer l'utilisateur.
+  await prisma.$transaction([
+    prisma.notification.deleteMany({ where: { destinataire_id: id } }),
+    prisma.conversationParticipant.deleteMany({ where: { utilisateur_id: id } }),
+    prisma.utilisateur.delete({ where: { id } }),
+  ]);
+
+  return { message: 'Utilisateur supprimé définitivement' };
 }
 
 export async function resetPassword(id: string, etablissement_id: string, data: ResetPasswordInput, acteurId: string) {
