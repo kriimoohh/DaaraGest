@@ -222,7 +222,8 @@ async function getFinancesEvolution(etablissement_id: string) {
 async function getAlertes(etablissement_id: string, annee_scolaire_id?: string) {
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
   const seuilAbsences  = config?.seuil_absences_alerte   ?? 3;
-  const seuilNote      = Number(config?.seuil_note_insuffisante ?? 10);
+  const baseNote       = Number(config?.note_max ?? 20);
+  const seuilReussite  = baseNote / 2; // moitié de l'échelle (ex: 5 sur /10)
 
   const annee = annee_scolaire_id ?? (await prisma.anneeScolaire.findFirst({
     where: { etablissement_id, active: true },
@@ -258,26 +259,19 @@ async function getAlertes(etablissement_id: string, annee_scolaire_id?: string) 
     }
   }
 
-  // Notes insuffisantes
+  // Notes insuffisantes — basées sur la MOYENNE du bulletin (pondérée/normalisée),
+  // et non sur une moyenne brute des notes (barèmes variables). Seuil = base/2.
   if (annee) {
-    const notesInsuff = await prisma.note.groupBy({
-      by: ['eleve_id'],
-      where: { eleve: { etablissement_id }, annee_scolaire_id: annee },
-      _avg: { valeur: true },
-      having: { valeur: { _avg: { lt: seuilNote } } },
+    const bulletins = await prisma.bulletin.findMany({
+      where: { annee_scolaire_id: annee, periode: { gt: 0 }, moyenne: { lt: seuilReussite }, eleve: { etablissement_id } },
+      select: { eleve_id: true, moyenne: true, eleve: { select: { nom_fr: true, prenom_fr: true, matricule: true } } },
+      orderBy: { moyenne: 'asc' },
     });
-
-    if (notesInsuff.length > 0) {
-      const eleveIds = notesInsuff.map(n => n.eleve_id);
-      const eleves = await prisma.eleve.findMany({
-        where: { id: { in: eleveIds } },
-        select: { id: true, nom_fr: true, prenom_fr: true, matricule: true },
-      });
-      const eleveMap = new Map(eleves.map(e => [e.id, e]));
-      for (const n of notesInsuff) {
-        const e = eleveMap.get(n.eleve_id);
-        if (e) alertes.push({ type: 'note_insuffisante', eleve_id: e.id, nom: `${e.nom_fr} ${e.prenom_fr}`, matricule: e.matricule, valeur: Math.round(Number(n._avg.valeur ?? 0) * 100) / 100 });
-      }
+    const vus = new Set<string>();
+    for (const b of bulletins) {
+      if (vus.has(b.eleve_id)) continue;
+      vus.add(b.eleve_id);
+      alertes.push({ type: 'note_insuffisante', eleve_id: b.eleve_id, nom: `${b.eleve.nom_fr} ${b.eleve.prenom_fr}`, matricule: b.eleve.matricule, valeur: Math.round(Number(b.moyenne ?? 0) * 100) / 100 });
     }
   }
 
