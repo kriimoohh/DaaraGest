@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { login, getMe, changePassword, updateProfil, creerRefreshToken, validerRefreshToken, revoquerRefreshToken, revoquerTousTokens } from './auth.service';
+import { login, getMe, changePassword, updateProfil, creerRefreshToken, validerRefreshToken, revoquerRefreshToken, revoquerTousTokens, CompteVerrouilleError } from './auth.service';
 import { loginSchema } from './auth.schema';
 import { JwtPayload } from '../../utils/jwt';
 import { env, isProd } from '../../config/env';
@@ -34,6 +34,9 @@ export async function loginHandler(request: FastifyRequest, reply: FastifyReply)
     // cookie httpOnly. Aucun chemin javascript n'a besoin d'y accéder.
     return reply.send({ user });
   } catch (err) {
+    if (err instanceof CompteVerrouilleError) {
+      return reply.status(429).send({ error: err.message });
+    }
     return reply.status(401).send({ error: (err as Error).message });
   }
 }

@@ -48,6 +48,10 @@ if (isProd && !env.COOKIE_DOMAIN) {
 }
 
 const fastify = Fastify({
+  // Derrière le proxy Railway : on fait confiance au X-Forwarded-For pour que
+  // request.ip reflète la vraie IP cliente (sinon le rate-limit clé sur l'IP du
+  // proxy, qui varie selon l'edge → plafonnement inefficace).
+  trustProxy: true,
   logger: {
     redact: {
       paths: [

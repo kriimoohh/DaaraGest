@@ -84,6 +84,8 @@ model Utilisateur {
   actif                Boolean   @default(true)
   must_change_password Boolean   @default(false)
   last_login           DateTime?
+  tentatives_connexion Int       @default(0)
+  verrouille_jusqu     DateTime?
   created_at           DateTime  @default(now())
   updated_at           DateTime  @updatedAt
 
