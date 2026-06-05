@@ -43,6 +43,20 @@ export function extractSeuilsMentions(config: { seuil_tres_bien?: unknown; seuil
   };
 }
 
+export type MentionDef = { libelle_fr: string; seuil_min: number };
+
+/** Mentions configurables de l'établissement (table Mention), triées par seuil décroissant. */
+async function getMentions(etablissement_id: string): Promise<MentionDef[]> {
+  const rows = await prisma.mention.findMany({ where: { etablissement_id }, orderBy: { seuil_min: 'desc' } });
+  return rows.map(r => ({ libelle_fr: r.libelle_fr, seuil_min: Number(r.seuil_min) }));
+}
+
+/** Libellé de mention pour une moyenne (sur l'échelle de l'établissement). */
+export function mentionPour(m: number, mentions: MentionDef[]): string {
+  for (const mention of mentions) if (m + 1e-9 >= mention.seuil_min) return mention.libelle_fr;
+  return mentions.length ? mentions[mentions.length - 1].libelle_fr : '';
+}
+
 export function appreciation(m: number, filiere: Filiere = 'FR', seuils: SeuilsMentions = SEUILS_DEFAUT): string {
   // COMBINE renvoie les deux versions séparées par un retour à la ligne
   // pour préserver les deux entêtes du bulletin bilingue.
@@ -128,8 +142,8 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
   if (!classe) throw new Error('Classe introuvable');
   const inscriptions = await getElevesClasse(classe_id, annee_scolaire_id);
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
-  const seuils = extractSeuilsMentions(config);
   const baseNote = Number(config?.note_max ?? 20);
+  const mentions = await getMentions(etablissement_id);
   if (inscriptions.length === 0) return { message: 'Aucun élève inscrit', bulletins: [] };
 
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
@@ -176,8 +190,8 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
     const { eleve_id, moyenne } = moyennes[i];
     const b = await prisma.bulletin.upsert({
       where: { eleve_id_annee_scolaire_id_filiere_periode: { eleve_id, annee_scolaire_id, filiere, periode } },
-      create: { eleve_id, annee_scolaire_id, filiere, periode, moyenne, rang: i + 1, appreciation: appreciation(moyenne, filiere as Filiere, seuils), generated_at: new Date() },
-      update: { moyenne, rang: i + 1, appreciation: appreciation(moyenne, filiere as Filiere, seuils), generated_at: new Date() },
+      create: { eleve_id, annee_scolaire_id, filiere, periode, moyenne, rang: i + 1, appreciation: mentionPour(moyenne, mentions), generated_at: new Date() },
+      update: { moyenne, rang: i + 1, appreciation: mentionPour(moyenne, mentions), generated_at: new Date() },
     });
     bulletins.push(b);
   }
@@ -198,7 +212,7 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
   const nbPeriodes = config?.nb_periodes ?? 3;
   const periodesAnnuelles = Array.from({ length: nbPeriodes }, (_, i) => i + 1);
-  const seuils = extractSeuilsMentions(config);
+  const mentions = await getMentions(etablissement_id);
 
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
   const matMapAnnuel: Record<string, MatiereAvecCoeff[]> = {};
@@ -244,8 +258,8 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
     const { eleve_id, moyenne } = moyennes[i];
     const b = await prisma.bulletin.upsert({
       where: { eleve_id_annee_scolaire_id_filiere_periode: { eleve_id, annee_scolaire_id, filiere, periode: 0 } },
-      create: { eleve_id, annee_scolaire_id, filiere, periode: 0, moyenne, rang: i + 1, appreciation: appreciation(moyenne, filiere as Filiere, seuils), generated_at: new Date() },
-      update: { moyenne, rang: i + 1, appreciation: appreciation(moyenne, filiere as Filiere, seuils), generated_at: new Date() },
+      create: { eleve_id, annee_scolaire_id, filiere, periode: 0, moyenne, rang: i + 1, appreciation: mentionPour(moyenne, mentions), generated_at: new Date() },
+      update: { moyenne, rang: i + 1, appreciation: mentionPour(moyenne, mentions), generated_at: new Date() },
     });
     bulletins.push(b);
   }
@@ -426,6 +440,9 @@ export async function genererPdfClasse(
 ): Promise<Buffer> {
   const etab = await prisma.etablissement.findUnique({ where: { id: etablissement_id } });
   if (!etab) throw new Error('Établissement introuvable');
+  const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
+  const baseNote = Number(config?.note_max ?? 20);
+  const mentions = await getMentions(etablissement_id);
 
   const bulletins = await prisma.bulletin.findMany({
     where: {
@@ -475,6 +492,7 @@ export async function genererPdfClasse(
       eleve_matricule: bulletin.eleve.matricule, annee_libelle: bulletin.annee_scolaire.libelle,
       moyenne: bulletin.moyenne !== null ? Number(bulletin.moyenne) : null,
       rang: bulletin.rang, appreciation: bulletin.appreciation, devise: etab.devise,
+      note_max_etab: baseNote, mentions,
       notes_fr: filiere !== 'AR' ? toRows('FR') : undefined,
       notes_ar: filiere !== 'FR' ? toRows('AR') : undefined,
     }));

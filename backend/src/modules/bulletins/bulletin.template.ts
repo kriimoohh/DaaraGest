@@ -28,6 +28,30 @@ interface BulletinBaseData {
   rang: number | null;
   appreciation: string | null;
   devise: string;
+  note_max_etab?: number;
+  mentions?: { libelle_fr: string; seuil_min: number }[];
+}
+
+// Échelle de l'établissement (ex: 10) + mentions configurées, fixées au début du rendu.
+let RENDER_BASE = 20;
+let RENDER_MENTIONS: { libelle_fr: string; seuil_min: number }[] = [];
+function setRenderContext(d: { note_max_etab?: number; mentions?: { libelle_fr: string; seuil_min: number }[] }) {
+  RENDER_BASE = d.note_max_etab ?? 20;
+  RENDER_MENTIONS = (d.mentions ?? []).slice().sort((a, b) => b.seuil_min - a.seuil_min);
+}
+// Mention pour une valeur ramenée sur l'échelle établissement (RENDER_BASE).
+function mentionFor(scaled: number | null): string {
+  if (scaled === null) return '';
+  for (const m of RENDER_MENTIONS) if (scaled + 1e-9 >= m.seuil_min) return m.libelle_fr;
+  return RENDER_MENTIONS.length ? RENDER_MENTIONS[RENDER_MENTIONS.length - 1].libelle_fr : '';
+}
+// Moyenne pondérée normalisée sur l'échelle établissement (notes saisies sur leur barème).
+function moyenneNorm(notes: { valeur: number | null; coeff: number; note_max?: number }[]): number | null {
+  const withVal = notes.filter(n => n.valeur !== null);
+  const totalCoeff = withVal.reduce((s, n) => s + n.coeff, 0);
+  if (totalCoeff === 0) return null;
+  const pts = withVal.reduce((s, n) => s + (n.valeur! / (n.note_max || RENDER_BASE)) * RENDER_BASE * n.coeff, 0);
+  return pts / totalCoeff;
 }
 
 export interface BulletinTrimestreData extends BulletinBaseData {
@@ -259,7 +283,7 @@ function tableFR(notes: NoteRow[], headerTitle = 'Évaluation des acquis — Fil
   const withVal = notes.filter(n => n.valeur !== null);
   const totalCoeff = withVal.reduce((s, n) => s + n.coeff, 0);
   const totalPoints = withVal.reduce((s, n) => s + (n.valeur! * n.coeff), 0);
-  const moy = totalCoeff > 0 ? totalPoints / totalCoeff : null;
+  const moy = moyenneNorm(notes);
 
   const rows = notes.map(n => {
     const nmax = n.note_max ?? 20;
@@ -299,7 +323,7 @@ function tableFR(notes: NoteRow[], headerTitle = 'Évaluation des acquis — Fil
           <td>Résultats</td>
           <td class="center">Coef: ${cfStr}</td>
           <td class="center" colspan="2">Total: ${ptStr}</td>
-          <td class="center">Moyenne: ${moyStr} / ${notes[0]?.note_max ?? 20}</td>
+          <td class="center">Moyenne: ${moyStr} / ${RENDER_BASE}</td>
         </tr>
       </tbody>
     </table>
@@ -312,7 +336,7 @@ function tableAR(notes: NoteRow[], headerTitle = 'تقييم المكتسبات 
   const withVal = notes.filter(n => n.valeur !== null);
   const totalCoeff = withVal.reduce((s, n) => s + n.coeff, 0);
   const totalPoints = withVal.reduce((s, n) => s + (n.valeur! * n.coeff), 0);
-  const moy = totalCoeff > 0 ? totalPoints / totalCoeff : null;
+  const moy = moyenneNorm(notes);
 
   const rows = notes.map(n => {
     const nmax = n.note_max ?? 20;
@@ -352,7 +376,7 @@ function tableAR(notes: NoteRow[], headerTitle = 'تقييم المكتسبات 
           <td class="ar-td">النتائج</td>
           <td class="center">م: ${cfStr}</td>
           <td class="center" colspan="2">المجموع: ${ptStr}</td>
-          <td class="center">المعدل: ${moyStr} / ${notes[0]?.note_max ?? 20}</td>
+          <td class="center">المعدل: ${moyStr} / ${RENDER_BASE}</td>
         </tr>
       </tbody>
     </table>
@@ -427,11 +451,7 @@ function tableAnnuelAR(matieres: TrimestreRow[]): string {
 
 function getMention(moyenne: number | null): string {
   if (moyenne === null) return '—';
-  if (moyenne >= 16) return 'Très Bien';
-  if (moyenne >= 14) return 'Bien';
-  if (moyenne >= 12) return 'Assez Bien';
-  if (moyenne >= 10) return 'Passable';
-  return 'Insuffisant';
+  return mentionFor(moyenne) || '—';
 }
 
 function combinedSummaryHtml(data: BulletinBaseData, frMoy: number | null, arMoy: number | null): string {
@@ -448,11 +468,7 @@ function combinedSummaryHtml(data: BulletinBaseData, frMoy: number | null, arMoy
         <th>Moy. AR</th>
         <th>Moyenne Générale</th>
         <th>Rang</th>
-        <th>Très Bien</th>
-        <th>Bien</th>
-        <th>Assez Bien</th>
-        <th>Passable</th>
-        <th>Insuffisant</th>
+        <th>Mention</th>
       </tr>
     </thead>
     <tbody>
@@ -460,13 +476,9 @@ function combinedSummaryHtml(data: BulletinBaseData, frMoy: number | null, arMoy
         <td style="font-weight:600">${escapeHtml(data.annee_libelle)}</td>
         <td>${frMoy !== null ? Number(frMoy).toFixed(2) : '—'}</td>
         <td>${arMoy !== null ? Number(arMoy).toFixed(2) : '—'}</td>
-        <td style="font-weight:700;font-size:13px;color:${mentionColor}">${globalMoy !== null ? Number(globalMoy).toFixed(2) : '—'}</td>
+        <td style="font-weight:700;font-size:13px;color:${mentionColor}">${globalMoy !== null ? `${Number(globalMoy).toFixed(2)} / ${RENDER_BASE}` : '—'}</td>
         <td>${data.rang ?? '—'}</td>
-        <td class="mention-cell">${mention === 'Très Bien' ? '✓' : ''}</td>
-        <td class="mention-cell">${mention === 'Bien' ? '✓' : ''}</td>
-        <td class="mention-cell">${mention === 'Assez Bien' ? '✓' : ''}</td>
-        <td class="mention-cell">${mention === 'Passable' ? '✓' : ''}</td>
-        <td class="mention-cell">${mention === 'Insuffisant' ? '✓' : ''}</td>
+        <td class="mention-cell" style="color:${mentionColor}">${mention}</td>
       </tr>
     </tbody>
   </table>`;
@@ -484,6 +496,7 @@ function observationHtml(appr: string | null): string {
 // ─── Exports principaux ─────────────────────────────────────────────────────
 
 export function generateBulletinHtml(data: BulletinTrimestreData): string {
+  setRenderContext(data);
   const periodeStr = periodeLabel(data.periode);
   const ecole = data.etablissement_nom_fr;
 
@@ -512,12 +525,8 @@ export function generateBulletinHtml(data: BulletinTrimestreData): string {
   // COMBINE — compute sub-moyennes
   const notesFR = data.notes_fr ?? [];
   const notesAR = data.notes_ar ?? [];
-  const frWithVal = notesFR.filter(n => n.valeur !== null);
-  const arWithVal = notesAR.filter(n => n.valeur !== null);
-  const frCoeff = frWithVal.reduce((s, n) => s + n.coeff, 0);
-  const arCoeff = arWithVal.reduce((s, n) => s + n.coeff, 0);
-  const frMoy = frCoeff > 0 ? frWithVal.reduce((s, n) => s + n.valeur! * n.coeff, 0) / frCoeff : null;
-  const arMoy = arCoeff > 0 ? arWithVal.reduce((s, n) => s + n.valeur! * n.coeff, 0) / arCoeff : null;
+  const frMoy = moyenneNorm(notesFR);
+  const arMoy = moyenneNorm(notesAR);
 
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><style>${CSS}</style></head><body>
     ${headerHtml(data)}
@@ -532,6 +541,7 @@ export function generateBulletinHtml(data: BulletinTrimestreData): string {
 }
 
 export function generateBulletinAnnuelHtml(data: BulletinAnnuelData): string {
+  setRenderContext(data);
   const isCombine = data.type === 'ANNUEL_COMBINE';
   const isAR = data.type === 'ANNUEL_AR';
   const ecole = data.etablissement_nom_fr;
