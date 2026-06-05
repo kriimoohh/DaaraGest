@@ -372,6 +372,202 @@ async function buildPlanningCours(prof_id: string): Promise<string> {
   return html;
 }
 
+// ─── Build relevé de notes classe (rempli ou vierge) ────────────────────────
+//
+// Construit le bloc {{TABLEAU_NOTES_CLASSE}} pour les deux types :
+//   - RELEVE_NOTES_CLASSE : pré-remplie depuis la base, avec stats par matière
+//   - RELEVE_NOTES_VIERGE : grille vide, mêmes en-têtes de matières,
+//                          lignes des élèves laissées blanches pour remplir.
+async function buildTableauNotesClasse(
+  classe_id: string,
+  annee_scolaire_id: string,
+  periode: number | null,
+  vierge: boolean,
+): Promise<{
+  html: string;
+  effectif: number;
+  titulaire: string;
+  classeNom: string;
+  anneeLabel: string;
+}> {
+  const [classeRaw, classeMatieres, inscriptions] = await Promise.all([
+    prisma.classe.findUnique({
+      where: { id: classe_id },
+      include: { annee_scolaire: { select: { libelle: true } } },
+    }),
+    prisma.classeMatiere.findMany({
+      where: { classe_id },
+      include: {
+        matiere: {
+          select: { id: true, nom_fr: true, code_court: true, note_max: true, ordre_bulletin: true, active: true },
+        },
+      },
+      orderBy: [{ ordre_override: 'asc' }, { matiere: { ordre_bulletin: 'asc' } }],
+    }),
+    prisma.inscription.findMany({
+      where: {
+        annee_scolaire_id,
+        statut: 'actif',
+        OR: [{ classe_fr_id: classe_id }, { classe_ar_id: classe_id }],
+      },
+      include: { eleve: { select: { id: true, nom_fr: true, prenom_fr: true, matricule: true } } },
+      orderBy: { eleve: { nom_fr: 'asc' } },
+    }),
+  ]);
+
+  if (!classeRaw) throw Object.assign(new Error('Classe introuvable'), { statusCode: 404 });
+
+  const matieres = classeMatieres
+    .map(cm => ({
+      id: cm.matiere.id,
+      nom_fr: cm.matiere.nom_fr,
+      code_court: cm.matiere.code_court,
+      note_max: Number(cm.note_max_override ?? cm.matiere.note_max),
+    }))
+    .filter(m => classeMatieres.find(cm => cm.matiere.id === m.id)?.matiere.active !== false);
+
+  // Récupérer un éventuel titulaire (premier prof de la classe)
+  const titulaireRow = await prisma.personnelMatiereClasse.findFirst({
+    where: { classe_id, annee_scolaire_id },
+    include: { personnel: { include: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } } } },
+  });
+  const titulaire = titulaireRow
+    ? `${titulaireRow.personnel.utilisateur.prenom_fr ?? ''} ${titulaireRow.personnel.utilisateur.nom_fr}`.trim()
+    : '—';
+
+  const effectif = inscriptions.length;
+
+  if (matieres.length === 0) {
+    return {
+      html: `<p style="font-size:11px;color:#777;text-align:center;margin:14px 0;">
+        Aucune matière n'est rattachée au programme de cette classe.
+        Configurez le programme dans <strong>Classes → Programme</strong>.
+      </p>`,
+      effectif, titulaire,
+      classeNom: classeRaw.nom_fr,
+      anneeLabel: classeRaw.annee_scolaire.libelle,
+    };
+  }
+
+  // Pour RELEVE_NOTES_CLASSE : charger les notes
+  type NoteRow = { eleve_id: string; matiere_id: string; valeur: number };
+  const notesByEleve = new Map<string, Map<string, number>>();
+  if (!vierge) {
+    const noteWhere: Record<string, unknown> = {
+      eleve_id: { in: inscriptions.map(i => i.eleve_id) },
+      annee_scolaire_id,
+      matiere_id: { in: matieres.map(m => m.id) },
+    };
+    if (periode && periode > 0) noteWhere.periode = periode;
+    const notes = await prisma.note.findMany({
+      where: noteWhere,
+      select: { eleve_id: true, matiere_id: true, valeur: true },
+    });
+    for (const n of notes as { eleve_id: string; matiere_id: string; valeur: unknown }[]) {
+      const v = Number(n.valeur);
+      if (!notesByEleve.has(n.eleve_id)) notesByEleve.set(n.eleve_id, new Map());
+      // Si plusieurs périodes confondues (periode = 0 → annuel), on moyenne
+      const prev = notesByEleve.get(n.eleve_id)!.get(n.matiere_id);
+      notesByEleve.get(n.eleve_id)!.set(n.matiere_id, prev !== undefined ? (prev + v) / 2 : v);
+    }
+  }
+
+  // Calcul rangs + moyennes (normalisation sur /20 — chaque note est ramenée
+  // sur l'échelle de sa propre matière avant la moyenne arithmétique).
+  const rowsRaw = inscriptions.map(insc => {
+    const nm = notesByEleve.get(insc.eleve_id);
+    const vals: (number | null)[] = matieres.map(m => {
+      const v = nm?.get(m.id);
+      return v === undefined ? null : v;
+    });
+    let totalNorm = 0, count = 0;
+    for (let i = 0; i < vals.length; i++) {
+      const v = vals[i];
+      if (v === null) continue;
+      const max = matieres[i].note_max || 20;
+      totalNorm += (v / max) * 20;
+      count++;
+    }
+    const moy = count > 0 ? totalNorm / count : null;
+    return { eleve: insc.eleve, vals, moy };
+  });
+
+  const rowsSorted = vierge
+    ? rowsRaw
+    : [...rowsRaw].sort((a, b) => (b.moy ?? -1) - (a.moy ?? -1));
+  const rowsRanked = rowsSorted.map((r, idx) => ({ ...r, rang: r.moy !== null ? idx + 1 : '—' as const }));
+
+  const fmt = (v: number | null) => v === null ? '' : v.toFixed(2);
+  const cellEmpty = '&nbsp;';
+
+  // Stats par matière (uniquement pour RELEVE_NOTES_CLASSE)
+  const matStats = vierge ? null : matieres.map((m, mi) => {
+    const vals = rowsRaw.map(r => r.vals[mi]).filter((v): v is number => v !== null);
+    if (!vals.length) return { comp: 0, ontMoy: 0, max: null, min: null, moy: null, txR: 0 };
+    const moy = vals.reduce((s, v) => s + v, 0) / vals.length;
+    const demi = m.note_max / 2;
+    const ontMoy = vals.filter(v => v >= demi).length;
+    return {
+      comp: vals.length,
+      ontMoy,
+      max: Math.max(...vals),
+      min: Math.min(...vals),
+      moy,
+      txR: Math.round((ontMoy / vals.length) * 1000) / 10,
+    };
+  });
+
+  const htmlHeader = `
+    <table class="notes">
+      <thead>
+        <tr>
+          <th style="width:22px;">N°</th>
+          <th style="min-width:130px;">Prénom &amp; Nom</th>
+          ${matieres.map(m => {
+            const titre = m.code_court ?? m.nom_fr.slice(0, 12);
+            return `<th title="${escapeHtml(m.nom_fr)}">${escapeHtml(titre)}<br><span style="font-weight:400;font-size:6.5px;">/${m.note_max}</span></th>`;
+          }).join('')}
+          ${vierge
+            ? '<th style="width:42px;">Moy</th><th style="width:42px;">Rang</th><th style="min-width:90px;">Observations</th>'
+            : '<th style="width:42px;">Moy/20</th><th style="width:38px;">Rang</th>'}
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  const htmlRows = rowsRanked.map((r, i) => {
+    const cellNotes = r.vals.map(v => `<td>${vierge ? cellEmpty : fmt(v)}</td>`).join('');
+    const cellMoy   = vierge ? `<td>${cellEmpty}</td>` : `<td>${r.moy === null ? '' : r.moy.toFixed(2)}</td>`;
+    const cellRang  = vierge ? `<td>${cellEmpty}</td>` : `<td>${r.rang}</td>`;
+    const cellObs   = vierge ? `<td>${cellEmpty}</td>` : '';
+    return `<tr>
+      <td>${i + 1}</td>
+      <td class="lbl">${escapeHtml(r.eleve.prenom_fr ?? '')} ${escapeHtml(r.eleve.nom_fr)}</td>
+      ${cellNotes}
+      ${cellMoy}
+      ${cellRang}
+      ${cellObs}
+    </tr>`;
+  }).join('');
+
+  const htmlStats = !vierge && matStats ? `
+    <tr class="stat-row"><td colspan="2" class="lbl">Ont composé</td>${matStats.map(s => `<td>${s.comp}</td>`).join('')}<td colspan="2"></td></tr>
+    <tr class="stat-row"><td colspan="2" class="lbl">Ont la moyenne</td>${matStats.map(s => `<td>${s.ontMoy}</td>`).join('')}<td colspan="2"></td></tr>
+    <tr class="stat-row"><td colspan="2" class="lbl">Plus forte note</td>${matStats.map(s => `<td>${fmt(s.max)}</td>`).join('')}<td colspan="2"></td></tr>
+    <tr class="stat-row"><td colspan="2" class="lbl">Plus faible note</td>${matStats.map(s => `<td>${fmt(s.min)}</td>`).join('')}<td colspan="2"></td></tr>
+    <tr class="stat-row"><td colspan="2" class="lbl">Moyenne classe</td>${matStats.map(s => `<td>${fmt(s.moy)}</td>`).join('')}<td colspan="2"></td></tr>
+    <tr class="stat-row"><td colspan="2" class="lbl">Taux réussite</td>${matStats.map(s => `<td>${s.txR}%</td>`).join('')}<td colspan="2"></td></tr>
+  ` : '';
+
+  return {
+    html: htmlHeader + htmlRows + htmlStats + '</tbody></table>',
+    effectif,
+    titulaire,
+    classeNom: classeRaw.nom_fr,
+    anneeLabel: classeRaw.annee_scolaire.libelle,
+  };
+}
+
 // ─── Build liste classe ───────────────────────────────────────────────────────
 
 async function buildListeClasse(classe_id: string, annee_scolaire_id: string, _etablissement_id: string): Promise<string> {
@@ -431,6 +627,7 @@ const HTML_KEYS = new Set([
   'QR_CODE_ELEVE', 'QR_CODE_PROF',
   'TABLEAU_NOTES', 'TABLEAU_EMPLOI_DU_TEMPS',
   'TABLEAU_PLANNING', 'TABLEAU_ELEVES',
+  'TABLEAU_NOTES_CLASSE',
   'LISTE_MATIERES',
 ]);
 
@@ -717,6 +914,38 @@ async function buildA4DocumentHtml(
         vars.ANNEE_SCOLAIRE = vars.ANNEE_SCOLAIRE || classe.annee_scolaire.libelle;
       }
     }
+
+    if (type === 'RELEVE_NOTES_CLASSE' || type === 'RELEVE_NOTES_VIERGE') {
+      // L'année scolaire utilisée pour récupérer les inscriptions :
+      // 1) parametres.annee_scolaire_id si fourni ;
+      // 2) sinon l'année scolaire associée à la classe (relation Classe.annee_scolaire).
+      let annee_scolaire_id = parametres?.annee_scolaire_id ?? '';
+      if (!annee_scolaire_id) {
+        const cl = await prisma.classe.findUnique({
+          where: { id: destinataire_id },
+          select: { annee_scolaire_id: true },
+        });
+        annee_scolaire_id = cl?.annee_scolaire_id ?? '';
+      }
+      const periodeRaw = parametres?.periode ? Number(parametres.periode) : 0;
+      const periode = Number.isFinite(periodeRaw) && periodeRaw > 0 ? periodeRaw : null;
+
+      const tbl = await buildTableauNotesClasse(
+        destinataire_id,
+        annee_scolaire_id,
+        periode,
+        type === 'RELEVE_NOTES_VIERGE',
+      );
+
+      vars.TABLEAU_NOTES_CLASSE = tbl.html;
+      vars.CLASSE_FR = vars.CLASSE_FR || tbl.classeNom;
+      vars.ANNEE_SCOLAIRE = vars.ANNEE_SCOLAIRE || tbl.anneeLabel;
+      vars.EFFECTIF = String(tbl.effectif);
+      vars.TITULAIRE = tbl.titulaire;
+      vars.PERIODE_LABEL = !periode
+        ? 'Annuel (toutes périodes)'
+        : `${periode}${periode === 1 ? 'er' : 'ème'} Trimestre`;
+    }
   }
 
   applyCheckboxes(vars);
@@ -750,11 +979,17 @@ export async function genererDocument(
 
   const { html, customTplId } = await buildA4DocumentHtml(etablissement_id, body);
 
+  // Relevés de notes au niveau classe : paysage + marges réduites pour faire
+  // tenir la grille des matières en largeur sans tronquer.
+  const landscape = type === 'RELEVE_NOTES_CLASSE' || type === 'RELEVE_NOTES_VIERGE';
   const { renderPdfHtml } = await import('../../utils/browserPool');
   const pdf = await renderPdfHtml(html, {
     format: 'A4',
+    landscape,
     printBackground: true,
-    margin: { top: '15mm', bottom: '15mm', left: '15mm', right: '15mm' },
+    margin: landscape
+      ? { top: '8mm', bottom: '8mm', left: '8mm', right: '8mm' }
+      : { top: '15mm', bottom: '15mm', left: '15mm', right: '15mm' },
   });
 
   if (!previewMode) {
