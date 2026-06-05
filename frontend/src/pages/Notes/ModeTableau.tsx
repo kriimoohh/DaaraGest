@@ -1,9 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
-import { AnneeScolaire, Classe, Matiere, ClasseMatiere, Eleve, Note, appreciation } from './shared';
+import {
+  AnneeScolaire, Classe, Matiere, ClasseMatiere, Eleve, Note,
+  PolitiqueSaisieNotes, appreciation, estModeStrict,
+} from './shared';
 
 interface Props {
   annees: AnneeScolaire[];
@@ -14,14 +18,20 @@ interface Props {
   setAnneeId: (v: string) => void;
   setClasseId: (v: string) => void;
   setPeriode: (v: string) => void;
+  canEdit: boolean;
+  isProfesseur: boolean;
+  politique: PolitiqueSaisieNotes | null;
 }
 
-// Vue synthèse en lecture seule : toutes les notes saisies sur la plateforme
-// pour une classe × période (ou annuel), affichées sous forme de grille
-// élèves × matières — sans passer par la génération des bulletins.
+// Vue synthèse classe × période : grille élèves × matières.
+// - Édition inline quand une période précise est sélectionnée.
+// - Lecture seule en vue annuelle (toutes périodes confondues), car les
+//   cellules y agrègent plusieurs trimestres.
+// - Moyenne globale par élève normalisée sur /10.
 export function ModeTableau({
   annees, classes, anneeId, classeId, periode,
   setAnneeId, setClasseId, setPeriode,
+  canEdit, isProfesseur, politique,
 }: Props) {
   const { t } = useTranslation();
   const api = useApi();
@@ -30,9 +40,17 @@ export function ModeTableau({
   const [matieres, setMatieres] = useState<Matiere[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [programmeSansMatiere, setProgrammeSansMatiere] = useState(false);
 
-  // Période = '' → annuel (toutes périodes confondues)
+  // Édition : map "eleveId|matiereId" → valeur saisie (string pour gérer le champ vide)
+  const [edits, setEdits] = useState<Record<string, string>>({});
+  // Verrou insertOnly = mode strict uniquement (cohérent avec ModeMatiere/ModeEleve)
+  const insertOnlyActif = isProfesseur && estModeStrict(politique);
+  const modeAnnuel = periode === '';
+  const editable = (canEdit || isProfesseur) && !modeAnnuel;
+
   useEffect(() => {
     if (!classeId) { setEleves([]); setMatieres([]); return; }
     setProgrammeSansMatiere(false);
@@ -53,6 +71,7 @@ export function ModeTableau({
   useEffect(() => {
     if (!classeId || !anneeId) { setNotes([]); return; }
     setLoading(true);
+    setEdits({});
     const params = new URLSearchParams({ classe_id: classeId, annee_scolaire_id: anneeId });
     if (periode) params.set('periode', periode);
     api.get<Note[]>(`/api/v1/notes?${params.toString()}`)
@@ -74,46 +93,137 @@ export function ModeTableau({
     return idx;
   }, [notes]);
 
+  // Marque les couples (eleve, matiere) déjà notés pour la période courante.
+  // Sert au verrou insertOnly (professeur en mode strict).
+  const existeIdx = useMemo(() => {
+    const idx = new Map<string, Set<string>>();
+    if (modeAnnuel) return idx;
+    for (const n of notes) {
+      if (!idx.has(n.eleve_id)) idx.set(n.eleve_id, new Set());
+      idx.get(n.eleve_id)!.add(n.matiere_id);
+    }
+    return idx;
+  }, [notes, modeAnnuel]);
+
+  const cleKey = (eleveId: string, matiereId: string) => `${eleveId}|${matiereId}`;
+
   const getNoteAffichee = (eleveId: string, matiereId: string): number | null => {
     const acc = noteIdx.get(eleveId)?.get(matiereId);
     if (!acc || acc.count === 0) return null;
     return acc.sum / acc.count;
   };
 
-  // Moyenne normalisée sur /20 par élève (ramène chaque note sur l'échelle de
-  // la matière puis simple moyenne arithmétique — la pondération par
-  // coefficient reste l'affaire des bulletins).
+  // Récupère la valeur de saisie courante (édition prioritaire sur la persistée).
+  const getValeurSaisie = (eleveId: string, matiereId: string): string => {
+    const k = cleKey(eleveId, matiereId);
+    if (edits[k] !== undefined) return edits[k];
+    const v = getNoteAffichee(eleveId, matiereId);
+    return v === null ? '' : String(v);
+  };
+
+  // Valeur numérique courante (saisie en cours sinon persistée) — pour les moyennes
+  const getValeurNumerique = (eleveId: string, matiereId: string): number | null => {
+    const k = cleKey(eleveId, matiereId);
+    if (edits[k] !== undefined) {
+      if (edits[k] === '') return null;
+      const v = parseFloat(edits[k]);
+      return isNaN(v) ? null : v;
+    }
+    return getNoteAffichee(eleveId, matiereId);
+  };
+
+  // Moyenne normalisée sur /10 par élève : chaque note ramenée à l'échelle /10
+  // puis simple moyenne arithmétique. La pondération par coefficient reste
+  // l'affaire des bulletins.
   const moyenneEleve = (eleveId: string): number | null => {
     let total = 0, count = 0;
     for (const m of matieres) {
-      const v = getNoteAffichee(eleveId, m.id);
+      const v = getValeurNumerique(eleveId, m.id);
       if (v === null) continue;
       const max = m.note_max || 20;
-      total += (v / max) * 20;
+      total += (v / max) * 10;
       count++;
     }
     return count > 0 ? total / count : null;
   };
 
-  // Stats classe (par matière) — sur la base brute
+  // Stats classe (par matière) — sur la base brute (échelle de la matière)
   const matStats = useMemo(() => matieres.map(m => {
     const vals: number[] = [];
     for (const e of eleves) {
-      const v = getNoteAffichee(e.id, m.id);
+      const v = getValeurNumerique(e.id, m.id);
       if (v !== null) vals.push(v);
     }
     if (vals.length === 0) return { saisi: 0, moy: null as number | null };
     const moy = vals.reduce((s, v) => s + v, 0) / vals.length;
     return { saisi: vals.length, moy };
-  }), [matieres, eleves, noteIdx]);
+  }), [matieres, eleves, noteIdx, edits]);
 
   // Stats classe globale : nombre de notes / nombre attendu
   const totalAttendu = eleves.length * matieres.length;
   const totalSaisi = matStats.reduce((s, ms) => s + ms.saisi, 0);
   const tauxRemplissage = totalAttendu > 0 ? Math.round((totalSaisi / totalAttendu) * 100) : 0;
 
+  const handleChange = (eleveId: string, matiereId: string, valeur: string) => {
+    setEdits(prev => ({ ...prev, [cleKey(eleveId, matiereId)]: valeur }));
+  };
+
+  const handleSave = async () => {
+    if (!classeId || !anneeId || !periode) return;
+    // Construit le payload à partir des seules cellules modifiées et non vides
+    const matMap = new Map(matieres.map(m => [m.id, m]));
+    const aEnregistrer: Array<{
+      eleve_id: string; matiere_id: string; periode: number;
+      annee_scolaire_id: string; valeur: number;
+    }> = [];
+
+    for (const [k, raw] of Object.entries(edits)) {
+      if (raw === '') continue;
+      const [eleve_id, matiere_id] = k.split('|');
+      const v = parseFloat(raw);
+      if (isNaN(v)) continue;
+      const mat = matMap.get(matiere_id);
+      if (mat) {
+        if (v < mat.note_min || v > mat.note_max) {
+          toast.error(`${mat.nom_fr} : la note doit être entre ${mat.note_min} et ${mat.note_max}`);
+          return;
+        }
+      }
+      aEnregistrer.push({
+        eleve_id, matiere_id,
+        periode: parseInt(periode),
+        annee_scolaire_id: anneeId,
+        valeur: v,
+      });
+    }
+
+    if (aEnregistrer.length === 0) {
+      toast.error(t('note.aucune_saisie'));
+      return;
+    }
+
+    setSaving(true);
+    setSuccess(false);
+    try {
+      await api.post('/api/v1/notes/bulk', { notes: aEnregistrer, classe_id: classeId });
+      // Recharger pour récupérer les ids et synchroniser l'index
+      const params = new URLSearchParams({ classe_id: classeId, annee_scolaire_id: anneeId, periode });
+      const fresh = await api.get<Note[]>(`/api/v1/notes?${params.toString()}`);
+      setNotes(fresh);
+      setEdits({});
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      toast.error((err as Error).message || t('note.err_enregistrement'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const nbModifs = Object.values(edits).filter(v => v !== '').length;
+
   const periodeOptions = [
-    { value: '',  label: 'Annuel (toutes périodes)' },
+    { value: '',  label: t('note.annuel_toutes_periodes') },
     { value: '1', label: t('common.trimestre_1') },
     { value: '2', label: t('common.trimestre_2') },
     { value: '3', label: t('common.trimestre_3') },
@@ -162,11 +272,33 @@ export function ModeTableau({
                 · {matieres.length} matière(s)
               </span>
             </span>
-            <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>
-              <strong style={{ color: tauxRemplissage === 100 ? 'var(--success-text)' : tauxRemplissage > 50 ? 'var(--ink)' : 'var(--warning-text)' }}>
-                {totalSaisi} / {totalAttendu}
-              </strong> note(s) saisie(s) — {tauxRemplissage}%
-            </span>
+            <div className="row" style={{ gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+                <strong style={{ color: tauxRemplissage === 100 ? 'var(--success-text)' : tauxRemplissage > 50 ? 'var(--ink)' : 'var(--warning-text)' }}>
+                  {totalSaisi} / {totalAttendu}
+                </strong> note(s) — {tauxRemplissage}%
+              </span>
+              {modeAnnuel && (canEdit || isProfesseur) && (
+                <span style={{ fontSize: 12, color: 'var(--info-text)', background: 'var(--info-soft)', border: '1px solid var(--info-border)', padding: '4px 10px', borderRadius: 'var(--r-md)' }}>
+                  {t('note.tableau_lecture_seule_annuel')}
+                </span>
+              )}
+              {editable && insertOnlyActif && (
+                <span style={{ fontSize: 12, color: 'var(--info-text)', background: 'var(--info-soft)', border: '1px solid var(--info-border)', padding: '4px 10px', borderRadius: 'var(--r-md)' }}>
+                  {t('note.prof_ajout_only')}
+                </span>
+              )}
+              {success && (
+                <span style={{ fontSize: 13, color: 'var(--success)', fontWeight: 500 }}>
+                  ✓ {t('note.notes_enregistrees')}
+                </span>
+              )}
+              {editable && (
+                <Button onClick={handleSave} loading={saving} disabled={nbModifs === 0}>
+                  {nbModifs > 0 ? t('note.enregistrer_modifs', { count: nbModifs }) : t('note.enregistrer_tout')}
+                </Button>
+              )}
+            </div>
           </div>
 
           {loading ? (
@@ -186,8 +318,8 @@ export function ModeTableau({
                         <div style={{ fontSize: 10, fontWeight: 400, color: 'var(--ink-4)' }}>/{m.note_max}</div>
                       </th>
                     ))}
-                    <th style={{ textAlign: 'center', background: 'var(--paper-2)' }}>Moy / 20</th>
-                    <th style={{ textAlign: 'center' }}>Apprec.</th>
+                    <th style={{ textAlign: 'center', background: 'var(--paper-2)' }}>{t('note.moy_10')}</th>
+                    <th style={{ textAlign: 'center' }}>{t('note.col_appreciation_court')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -202,10 +334,45 @@ export function ModeTableau({
                           {eleve.prenom_fr} {eleve.nom_fr}
                         </td>
                         {matieres.map(m => {
-                          const v = getNoteAffichee(eleve.id, m.id);
+                          const valeurAffichee = getValeurSaisie(eleve.id, m.id);
+                          const valNum = getValeurNumerique(eleve.id, m.id);
+                          if (!editable) {
+                            return (
+                              <td key={m.id} style={{ textAlign: 'center', fontSize: 12, fontVariantNumeric: 'tabular-nums', color: valNum === null ? 'var(--ink-4)' : 'var(--ink)' }}>
+                                {valNum === null ? '—' : valNum.toFixed(2)}
+                              </td>
+                            );
+                          }
+                          const noteExisteDeja = existeIdx.get(eleve.id)?.has(m.id) ?? false;
+                          const fieldReadOnly = insertOnlyActif && noteExisteDeja;
+                          const dirty = edits[cleKey(eleve.id, m.id)] !== undefined;
                           return (
-                            <td key={m.id} style={{ textAlign: 'center', fontSize: 12, fontVariantNumeric: 'tabular-nums', color: v === null ? 'var(--ink-4)' : 'var(--ink)' }}>
-                              {v === null ? '—' : v.toFixed(2)}
+                            <td key={m.id} style={{ textAlign: 'center', padding: '4px 6px' }}>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <input
+                                  type="number"
+                                  min={m.note_min}
+                                  max={m.note_max}
+                                  step="0.25"
+                                  value={valeurAffichee}
+                                  onChange={(e) => !fieldReadOnly && handleChange(eleve.id, m.id, e.target.value)}
+                                  readOnly={fieldReadOnly}
+                                  className="input"
+                                  placeholder="—"
+                                  style={{
+                                    width: 60, padding: '3px 6px',
+                                    fontSize: 12, textAlign: 'center',
+                                    fontVariantNumeric: 'tabular-nums',
+                                    cursor: fieldReadOnly ? 'not-allowed' : undefined,
+                                    opacity: fieldReadOnly ? 0.6 : 1,
+                                    borderColor: dirty ? 'var(--terra)' : undefined,
+                                    background: dirty ? 'var(--terra-soft, var(--paper-2))' : undefined,
+                                  }}
+                                />
+                                {fieldReadOnly && (
+                                  <span title={t('note.note_verrouillee')} style={{ fontSize: 10, color: 'var(--ink-4)' }}>🔒</span>
+                                )}
+                              </div>
                             </td>
                           );
                         })}
@@ -214,7 +381,7 @@ export function ModeTableau({
                         </td>
                         <td style={{ textAlign: 'center', fontSize: 11 }}>
                           {moy !== null && (() => {
-                            const app = appreciation(moy, 20);
+                            const app = appreciation(moy, 10);
                             return <span style={{ color: app.color, fontWeight: 500 }}>{t(app.key)}</span>;
                           })()}
                         </td>
@@ -224,7 +391,7 @@ export function ModeTableau({
                   {/* Ligne stats : moyenne classe par matière */}
                   <tr style={{ borderTop: '2px solid var(--rule)', background: 'var(--paper-2)' }}>
                     <td colSpan={2} style={{ position: 'sticky', insetInlineStart: 0, background: 'var(--paper-2)', zIndex: 1, fontWeight: 600, fontSize: 12, fontStyle: 'italic' }}>
-                      Moyenne classe
+                      {t('note.moyenne_classe')}
                     </td>
                     {matStats.map((ms, i) => (
                       <td key={i} style={{ textAlign: 'center', fontWeight: 600, fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
@@ -236,7 +403,7 @@ export function ModeTableau({
                   </tr>
                   <tr style={{ background: 'var(--paper-2)' }}>
                     <td colSpan={2} style={{ position: 'sticky', insetInlineStart: 0, background: 'var(--paper-2)', zIndex: 1, fontWeight: 600, fontSize: 12, fontStyle: 'italic' }}>
-                      Notes saisies
+                      {t('note.notes_saisies')}
                     </td>
                     {matStats.map((ms, i) => (
                       <td key={i} style={{ textAlign: 'center', fontSize: 11, color: ms.saisi === eleves.length ? 'var(--success-text)' : 'var(--ink-3)' }}>
@@ -257,9 +424,9 @@ export function ModeTableau({
           <svg width={40} height={40} viewBox="0 0 24 24" fill="currentColor" style={{ opacity: 0.3, display: 'block', margin: '0 auto 10px' }}>
             <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z" />
           </svg>
-          <p style={{ fontSize: 13, margin: 0 }}>Sélectionnez une année et une classe pour visualiser la grille de notes.</p>
+          <p style={{ fontSize: 13, margin: 0 }}>{t('note.tableau_choisir_classe')}</p>
           <p style={{ fontSize: 12, margin: '4px 0 0', color: 'var(--ink-4)' }}>
-            Cette vue affiche toutes les notes saisies sans générer les bulletins.
+            {t('note.tableau_description')}
           </p>
         </div>
       )}

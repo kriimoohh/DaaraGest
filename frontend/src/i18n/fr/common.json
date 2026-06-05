@@ -545,7 +545,16 @@
     "mode_tableau": "Tableau de synthèse",
     "eleve": "Élève",
     "col_matiere": "Matière",
-    "aucune_saisie": "Aucune note à enregistrer"
+    "aucune_saisie": "Aucune note à enregistrer",
+    "moy_10": "Moy / 10",
+    "col_appreciation_court": "Apprec.",
+    "moyenne_classe": "Moyenne classe",
+    "notes_saisies": "Notes saisies",
+    "annuel_toutes_periodes": "Annuel (toutes périodes)",
+    "tableau_lecture_seule_annuel": "Lecture seule en vue annuelle — choisissez un trimestre pour modifier",
+    "enregistrer_modifs": "Enregistrer ({{count}})",
+    "tableau_choisir_classe": "Sélectionnez une année et une classe pour visualiser la grille de notes.",
+    "tableau_description": "Cette vue affiche toutes les notes saisies et permet une édition directe."
   },
   "bulletin": {
     "titre": "Bulletins",
