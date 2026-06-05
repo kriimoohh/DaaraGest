@@ -42,7 +42,8 @@ export async function listerProgressions(
 
 export async function genererProgressions(etablissement_id: string, annee_scolaire_id: string) {
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
-  const seuil  = config ? Number(config.seuil_note_insuffisante) : 10;
+  const baseNote = Number(config?.note_max ?? 20);
+  const seuil  = baseNote / 2; // seuil de passage = moitié de l'échelle (ex: 5 sur /10)
 
   // Récupérer tous les élèves inscrits cette année
   const inscriptions = await prisma.inscription.findMany({
@@ -52,18 +53,18 @@ export async function genererProgressions(etablissement_id: string, annee_scolai
 
   const eleve_ids = inscriptions.map(i => i.eleve_id);
 
-  // Charger toutes les notes + matières en une seule requête (élimine le N+1)
-  const toutesLesNotes = await prisma.note.findMany({
-    where: { eleve_id: { in: eleve_ids }, annee_scolaire_id },
-    include: { matiere: { select: { coeff_defaut: true } } },
+  // Décision basée sur la MOYENNE ANNUELLE du bulletin (pondérée + normalisée).
+  // Une moyenne brute des notes serait fausse (barèmes variables + coeff par trimestre).
+  const annuels = await prisma.bulletin.findMany({
+    where: { annee_scolaire_id, periode: 0, eleve_id: { in: eleve_ids } },
+    select: { eleve_id: true, moyenne: true },
   });
-
-  // Grouper les notes par élève
-  const notesByEleve = new Map<string, typeof toutesLesNotes>();
-  for (const note of toutesLesNotes) {
-    const bucket = notesByEleve.get(note.eleve_id) ?? [];
-    bucket.push(note);
-    notesByEleve.set(note.eleve_id, bucket);
+  const moyByEleve = new Map<string, number[]>();
+  for (const b of annuels) {
+    if (b.moyenne == null) continue;
+    const arr = moyByEleve.get(b.eleve_id) ?? [];
+    arr.push(Number(b.moyenne));
+    moyByEleve.set(b.eleve_id, arr);
   }
 
   // Charger les progressions existantes en une seule requête
@@ -76,19 +77,11 @@ export async function genererProgressions(etablissement_id: string, annee_scolai
 
   for (const inscription of inscriptions) {
     const eleve_id = inscription.eleve_id;
-    const notes    = notesByEleve.get(eleve_id) ?? [];
 
-    let moyenne: number | null = null;
-    if (notes.length > 0) {
-      let totalPondere = 0;
-      let totalCoeff   = 0;
-      for (const note of notes) {
-        const coeff = Number(note.matiere.coeff_defaut);
-        totalPondere += Number(note.valeur) * coeff;
-        totalCoeff   += coeff;
-      }
-      moyenne = totalCoeff > 0 ? Math.round((totalPondere / totalCoeff) * 100) / 100 : null;
-    }
+    const moys = moyByEleve.get(eleve_id) ?? [];
+    const moyenne: number | null = moys.length
+      ? Math.round((moys.reduce((s, v) => s + v, 0) / moys.length) * 100) / 100
+      : null;
 
     const decision_auto = moyenne === null ? 'admis' : (moyenne >= seuil ? 'admis' : 'redoublant');
 

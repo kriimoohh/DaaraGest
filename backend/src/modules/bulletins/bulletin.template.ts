@@ -75,9 +75,14 @@ const periodeLabel = (p: number) =>
 const periodeLabelAR = (p: number) =>
   ({ 1: 'الفصل الأول', 2: 'الفصل الثاني', 3: 'الفصل الثالث' }[p] ?? `الفصل ${p}`);
 
+// Appréciation par matière = mentions configurées de l'établissement (mêmes bandes
+// que la moyenne, ex /10 : Très bien≥10, Bien≥8…), appliquées à la note ramenée
+// sur l'échelle établissement. Les relevés officiels affichent ces mentions en
+// français même côté arabe → getApprNomAR délègue à getApprNom.
 function getApprNom(note: number | null, noteMax: number): string {
   if (note === null) return '';
-  const pct = note / noteMax;
+  if (RENDER_MENTIONS.length) return mentionFor(noteMax > 0 ? (note / noteMax) * RENDER_BASE : 0);
+  const pct = noteMax > 0 ? note / noteMax : 0; // fallback si aucune mention configurée
   if (pct >= 0.8) return 'Très bien';
   if (pct >= 0.7) return 'Bien';
   if (pct >= 0.6) return 'Assez bien';
@@ -86,13 +91,7 @@ function getApprNom(note: number | null, noteMax: number): string {
 }
 
 function getApprNomAR(note: number | null, noteMax: number): string {
-  if (note === null) return '';
-  const pct = note / noteMax;
-  if (pct >= 0.8) return 'ممتاز';
-  if (pct >= 0.7) return 'جيد جداً';
-  if (pct >= 0.6) return 'جيد';
-  if (pct >= 0.5) return 'مقبول';
-  return 'ضعيف';
+  return getApprNom(note, noteMax);
 }
 
 function apprClass(note: number | null, noteMax: number): string {

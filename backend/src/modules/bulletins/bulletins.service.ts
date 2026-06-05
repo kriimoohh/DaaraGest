@@ -122,6 +122,82 @@ async function getElevesClasse(classe_id: string, annee_scolaire_id: string) {
   });
 }
 
+/**
+ * Moyenne(s) pondérée(s) et normalisées d'une classe — SOURCE UNIQUE de calcul,
+ * réutilisée par les bulletins ET les rapports/stats pour garantir la cohérence.
+ * Chaque note est ramenée sur l'échelle établissement (ConfigNotes.note_max) via
+ * son barème effectif, pondérée par le coefficient (override de période prioritaire).
+ * `periodes` : [p] pour un trimestre, [1,2,3] pour l'annuel.
+ * Retourne eleve_id → moyenne (arrondie 2 déc.).
+ */
+export async function calculerMoyennesClasse(
+  etablissement_id: string, classe_id: string, annee_scolaire_id: string,
+  periodes: number[], filieres: ('FR' | 'AR')[] = ['FR', 'AR'],
+): Promise<Map<string, number>> {
+  const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
+  const baseNote = Number(config?.note_max ?? 20);
+  const inscriptions = await getElevesClasse(classe_id, annee_scolaire_id);
+  if (inscriptions.length === 0) return new Map();
+
+  // Coeff/barème par période (gère les coefficients qui changent de trimestre)
+  const coefByP = new Map<number, Map<string, number>>();
+  const nmByP = new Map<number, Map<string, number>>();
+  const matIds = new Set<string>();
+  for (const p of periodes) {
+    const cM = new Map<string, number>(), nM = new Map<string, number>();
+    for (const f of filieres) for (const m of await getMatieresDeclasse(classe_id, f, p)) {
+      cM.set(m.id, Number(m.coeff_effectif)); nM.set(m.id, Number(m.note_max_effectif)); matIds.add(m.id);
+    }
+    coefByP.set(p, cM); nmByP.set(p, nM);
+  }
+
+  const notes = await prisma.note.findMany({
+    where: { eleve_id: { in: inscriptions.map(i => i.eleve_id) }, annee_scolaire_id, periode: { in: periodes }, matiere_id: { in: [...matIds] } },
+    include: { matiere: true },
+  });
+  const byEleve = new Map<string, typeof notes>();
+  for (const n of notes) {
+    if (!byEleve.has(n.eleve_id)) byEleve.set(n.eleve_id, []);
+    byEleve.get(n.eleve_id)!.push(n);
+  }
+
+  const res = new Map<string, number>();
+  for (const { eleve_id } of inscriptions) {
+    let tp = 0, tc = 0;
+    for (const n of byEleve.get(eleve_id) ?? []) {
+      const c = coefByP.get(n.periode)?.get(n.matiere_id) ?? Number(n.matiere.coeff_defaut);
+      const nm = nmByP.get(n.periode)?.get(n.matiere_id) ?? Number(n.matiere.note_max);
+      if (c === 0) continue;
+      tp += contributionNote(Number(n.valeur), nm, baseNote, c); tc += c;
+    }
+    if (tc > 0) res.set(eleve_id, Math.round((tp / tc) * 100) / 100);
+  }
+  return res;
+}
+
+/** Mentions configurables de l'établissement (réutilisable par les rapports). */
+export async function getMentionsEtab(etablissement_id: string): Promise<MentionDef[]> {
+  return getMentions(etablissement_id);
+}
+
+/**
+ * Barème + coefficient EFFECTIFS par (matière, période) pour une classe.
+ * Indispensable pour normaliser correctement une note brute (saisie sur son
+ * barème, ex: 56/60) — les rapports doivent l'utiliser au lieu de Matiere.note_max.
+ * Clé de la map : `${matiere_id}|${periode}`.
+ */
+export async function getBaremesClasse(
+  classe_id: string, periodes: number[], filieres: ('FR' | 'AR')[] = ['FR', 'AR'],
+): Promise<Map<string, { coeff: number; note_max: number }>> {
+  const map = new Map<string, { coeff: number; note_max: number }>();
+  for (const p of periodes) for (const f of filieres) {
+    for (const m of await getMatieresDeclasse(classe_id, f, p)) {
+      map.set(`${m.id}|${p}`, { coeff: Number(m.coeff_effectif), note_max: Number(m.note_max_effectif) });
+    }
+  }
+  return map;
+}
+
 // ─── Lister ─────────────────────────────────────────────────────────────────
 
 export async function listerBulletins(
