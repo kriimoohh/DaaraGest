@@ -85,18 +85,27 @@ function contributionNote(valeur: number, noteMax: number, base: number, coeff: 
   return noteMax > 0 ? (valeur / noteMax) * base * coeff : 0;
 }
 
-async function getMatieresDeclasse(classe_id: string, filiere: 'FR' | 'AR'): Promise<MatiereAvecCoeff[]> {
+async function getMatieresDeclasse(classe_id: string, filiere: 'FR' | 'AR', periode?: number): Promise<MatiereAvecCoeff[]> {
   const rows = await prisma.classeMatiere.findMany({
     where: { classe_id, matiere: { filiere, active: true } },
     include: { matiere: true },
     orderBy: [{ ordre_override: 'asc' }, { matiere: { ordre_bulletin: 'asc' } }],
   });
-  return rows.map(r => ({
-    ...r.matiere,
-    coeff_effectif: r.coeff_override ?? r.matiere.coeff_defaut,
-    note_max_effectif: r.note_max_override ?? r.matiere.note_max,
-    ordre_bulletin: r.ordre_override ?? r.matiere.ordre_bulletin,
-  }));
+  // Overrides par trimestre (coeff/barème spécifiques à une période) — prioritaires.
+  const overrides = new Map<string, { coeff: number; note_max: number }>();
+  if (periode != null) {
+    const ov = await prisma.classeMatierePeriode.findMany({ where: { classe_id, periode } });
+    for (const o of ov) overrides.set(o.matiere_id, { coeff: Number(o.coeff), note_max: Number(o.note_max) });
+  }
+  return rows.map(r => {
+    const o = overrides.get(r.matiere_id);
+    return {
+      ...r.matiere,
+      coeff_effectif: o ? o.coeff : (r.coeff_override ?? r.matiere.coeff_defaut),
+      note_max_effectif: o ? o.note_max : (r.note_max_override ?? r.matiere.note_max),
+      ordre_bulletin: r.ordre_override ?? r.matiere.ordre_bulletin,
+    };
+  });
 }
 
 async function getMatieres(etablissement_id: string, filiere: 'FR' | 'AR') {
@@ -148,7 +157,7 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
 
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
   const matMap: Record<string, MatiereAvecCoeff[]> = {};
-  for (const f of filieres) matMap[f] = await getMatieresDeclasse(classe_id, f);
+  for (const f of filieres) matMap[f] = await getMatieresDeclasse(classe_id, f, periode);
 
   // Fetch toutes les notes d'un coup (évite N+1)
   const tousMatIds = filieres.flatMap(f => matMap[f].map(m => m.id));
@@ -231,20 +240,27 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
     notesByEleveAnnuel.get(n.eleve_id)!.push(n);
   }
 
-  const coeffMapAnnuel = new Map<string, number>(
-    filieres.flatMap(f => matMapAnnuel[f].map(m => [m.id, Number(m.coeff_effectif)]))
-  );
-  const noteMaxMapAnnuel = new Map<string, number>(
-    filieres.flatMap(f => matMapAnnuel[f].map(m => [m.id, Number(m.note_max_effectif)]))
-  );
+  // Coeff/barème PAR PÉRIODE (les coefficients peuvent changer d'un trimestre à
+  // l'autre, surtout en arabe). On bâtit une carte par période.
+  const coeffParPeriode = new Map<number, Map<string, number>>();
+  const noteMaxParPeriode = new Map<number, Map<string, number>>();
+  for (const p of periodesAnnuelles) {
+    const cMap = new Map<string, number>(), nmMap = new Map<string, number>();
+    for (const f of filieres) {
+      for (const m of await getMatieresDeclasse(classe_id, f, p)) {
+        cMap.set(m.id, Number(m.coeff_effectif)); nmMap.set(m.id, Number(m.note_max_effectif));
+      }
+    }
+    coeffParPeriode.set(p, cMap); noteMaxParPeriode.set(p, nmMap);
+  }
   const baseNote = Number(config?.note_max ?? 20);
 
   const moyennes: { eleve_id: string; moyenne: number }[] = [];
   for (const { eleve_id } of inscriptions) {
     let totalP = 0, totalC = 0;
     for (const n of notesByEleveAnnuel.get(eleve_id) ?? []) {
-      const c = coeffMapAnnuel.get(n.matiere_id) ?? Number(n.matiere.coeff_defaut);
-      const nm = noteMaxMapAnnuel.get(n.matiere_id) ?? Number(n.matiere.note_max);
+      const c = coeffParPeriode.get(n.periode)?.get(n.matiere_id) ?? Number(n.matiere.coeff_defaut);
+      const nm = noteMaxParPeriode.get(n.periode)?.get(n.matiere_id) ?? Number(n.matiere.note_max);
       totalP += contributionNote(Number(n.valeur), nm, baseNote, c);
       totalC += c;
     }
@@ -456,7 +472,7 @@ export async function genererPdfClasse(
 
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
   const matMap: Record<string, MatiereAvecCoeff[]> = {};
-  for (const f of filieres) matMap[f] = await getMatieresDeclasse(classe_id, f);
+  for (const f of filieres) matMap[f] = await getMatieresDeclasse(classe_id, f, periode);
 
   // Coeff/barème effectifs par matière (override de classe prioritaire) pour l'affichage.
   const effMap = new Map<string, { coeff: number; note_max: number }>(
