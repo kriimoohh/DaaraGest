@@ -464,12 +464,8 @@ export async function rapportGrilleIef(
   ]);
   if (!classeRaw) throw new Error('Classe introuvable');
 
-  const [inscriptions, domaines, titulaireNom] = await Promise.all([
+  const [inscriptions, titulaireNom] = await Promise.all([
     fetchInscriptions(classe_id, annee_scolaire_id),
-    prisma.domaine.findMany({
-      where: { etablissement_id, actif: true, code: { in: ['LANGUE_COMMUNICATION', 'MATHEMATIQUES', 'ESVS', 'EPSA'] } },
-      orderBy: { ordre: 'asc' },
-    }),
     getTitulaire(classe_id, annee_scolaire_id),
   ]);
 
@@ -650,12 +646,8 @@ export async function rapportGrillePerformance(
   // Domaines (seulement 3 : pas d'EPSA dans ces grilles)
   const domCodes3 = ['LANGUE_COMMUNICATION', 'MATHEMATIQUES', 'ESVS'];
 
-  const [inscriptions, domaines, titulaireNom] = await Promise.all([
+  const [inscriptions, titulaireNom] = await Promise.all([
     fetchInscriptions(classe_id, annee_scolaire_id),
-    prisma.domaine.findMany({
-      where: { etablissement_id, actif: true, code: { in: domCodes3 } },
-      orderBy: { ordre: 'asc' },
-    }),
     getTitulaire(classe_id, annee_scolaire_id),
   ]);
 
@@ -749,7 +741,7 @@ export async function rapportGrillePerformance(
           return `<td>${g}</td><td>${f}</td><td>${t}</td>`;
         } else {
           // Avec split Ressources / Compétence
-          function cell(type: 'res' | 'comp') {
+          const cell = (type: 'res' | 'comp') => {
             const denom = (sub: Inscrip[]) => sub.filter(i => domScores.get(i.eleve_id)?.get(dc)?.[type] !== null).length;
             const g = countBande(garcons, dc, type, low, high);
             const f = countBande(filles,  dc, type, low, high);
@@ -759,7 +751,7 @@ export async function rapportGrillePerformance(
               return `<td>${dg ? (g / dg * 100).toFixed(1) + '%' : '-'}</td><td>${df ? (f / df * 100).toFixed(1) + '%' : '-'}</td><td>${dt ? (t / dt * 100).toFixed(1) + '%' : '-'}</td>`;
             }
             return `<td>${g}</td><td>${f}</td><td>${t}</td>`;
-          }
+          };
           return cell('res') + cell('comp');
         }
       }).join('');
@@ -772,13 +764,9 @@ export async function rapportGrillePerformance(
     const nbCols = isCI_CP ? 3 : 6;
     return `<th colspan="${nbCols}" class="th-h">${esc(DOM_LABELS[dc] ?? dc)}</th>`;
   }).join('');
-  const thSubCols = domCodes3.map(dc => {
+  const thSubCols = domCodes3.map(() => {
     if (isCI_CP) return '<th>G</th><th>F</th><th>T</th>';
     return '<th colspan="3">Ressources</th><th colspan="3">Compétence</th>';
-  }).join('');
-  const thGFT = domCodes3.map(() => {
-    if (isCI_CP) return '';
-    return '<th>G</th><th>F</th><th>T</th><th>G</th><th>F</th><th>T</th>';
   }).join('');
 
   const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">

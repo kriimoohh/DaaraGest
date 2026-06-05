@@ -33,8 +33,10 @@ export function Login() {
     setLoading(true);
     try {
       await signIn(identifiant, password);
-    } catch {
-      setError(t('auth.error'));
+    } catch (err) {
+      // Remonter le message serveur quand il existe (ex. compte verrouillé après
+      // trop de tentatives), sinon message générique traduit.
+      setError(err instanceof Error && err.message ? err.message : t('auth.error'));
     } finally {
       setLoading(false);
     }
