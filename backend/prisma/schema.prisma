@@ -413,6 +413,23 @@ model ClasseMatiere {
   @@unique([classe_id, matiere_id])
 }
 
+// Override de coefficient/barème SPÉCIFIQUE À UN TRIMESTRE.
+// Certaines matières (surtout en arabe) changent de coefficient entre le T1 et
+// le T2 (ex: CLC arabe CE1/CE2 = coeff 2 au T1, 4 au T2). Le calcul du bulletin
+// d'une période lit ici en priorité ; sinon il retombe sur ClasseMatiere (= défaut).
+model ClasseMatierePeriode {
+  id         String   @id @default(uuid())
+  classe_id  String
+  matiere_id String
+  periode    Int
+  coeff      Decimal  @db.Decimal(4, 2)
+  note_max   Decimal  @db.Decimal(5, 2)
+  created_at DateTime @default(now())
+
+  @@unique([classe_id, matiere_id, periode])
+  @@index([classe_id, periode])
+}
+
 model PersonnelMatiereClasse {
   id                String @id @default(uuid())
   personnel_id      String
