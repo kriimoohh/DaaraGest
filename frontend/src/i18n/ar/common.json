@@ -545,7 +545,16 @@
     "mode_tableau": "جدول التلخيص",
     "eleve": "التلميذ",
     "col_matiere": "المادة",
-    "aucune_saisie": "لا توجد علامات للحفظ"
+    "aucune_saisie": "لا توجد علامات للحفظ",
+    "moy_10": "المعدل / 10",
+    "col_appreciation_court": "ملاحظة",
+    "moyenne_classe": "معدل القسم",
+    "notes_saisies": "الدرجات المسجلة",
+    "annuel_toutes_periodes": "سنوي (كل الفصول)",
+    "tableau_lecture_seule_annuel": "قراءة فقط في العرض السنوي — اختر فصلاً للتعديل",
+    "enregistrer_modifs": "حفظ ({{count}})",
+    "tableau_choisir_classe": "اختر سنة دراسية وقسماً لعرض جدول الدرجات.",
+    "tableau_description": "يعرض هذا الجدول جميع الدرجات المسجلة ويسمح بالتعديل المباشر."
   },
   "bulletin": {
     "titre": "شهادات النتائج",
