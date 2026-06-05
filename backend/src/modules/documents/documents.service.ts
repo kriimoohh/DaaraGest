@@ -120,7 +120,7 @@ async function buildCommonVars(etablissement_id: string): Promise<Record<string,
 
 // ─── Build eleve vars ─────────────────────────────────────────────────────────
 
-async function buildEleveVars(eleve_id: string, etablissement_id: string): Promise<Record<string, string>> {
+async function buildEleveVars(eleve_id: string, _etablissement_id: string): Promise<Record<string, string>> {
   const eleve = await prisma.eleve.findUniqueOrThrow({
     where: { id: eleve_id },
     include: {
@@ -450,7 +450,6 @@ async function buildTableauNotesClasse(
   }
 
   // Pour RELEVE_NOTES_CLASSE : charger les notes
-  type NoteRow = { eleve_id: string; matiere_id: string; valeur: number };
   const notesByEleve = new Map<string, Map<string, number>>();
   if (!vierge) {
     const noteWhere: Record<string, unknown> = {

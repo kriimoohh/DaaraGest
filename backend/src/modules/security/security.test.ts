@@ -45,7 +45,7 @@ function estBcryptHash(hash: string): boolean {
   return /^\$2[aby]\$\d{2}\$/.test(hash);
 }
 
-function respecteRateLimit(tentatives: number, max: number, fenetre: string): boolean {
+function respecteRateLimit(tentatives: number, max: number, _fenetre: string): boolean {
   return tentatives <= max;
 }
 

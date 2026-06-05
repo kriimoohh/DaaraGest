@@ -4,7 +4,7 @@
  * Ces tests exercent la couche HTTP complète (routes → middlewares → controllers)
  * sans base de données réelle. Les services sont mockés au niveau du module Prisma.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import Fastify, { FastifyInstance } from 'fastify';
 import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';

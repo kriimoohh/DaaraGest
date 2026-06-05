@@ -464,12 +464,8 @@ export async function rapportGrilleIef(
   ]);
   if (!classeRaw) throw new Error('Classe introuvable');
 
-  const [inscriptions, domaines, titulaireNom] = await Promise.all([
+  const [inscriptions, titulaireNom] = await Promise.all([
     fetchInscriptions(classe_id, annee_scolaire_id),
-    prisma.domaine.findMany({
-      where: { etablissement_id, actif: true, code: { in: ['LANGUE_COMMUNICATION', 'MATHEMATIQUES', 'ESVS', 'EPSA'] } },
-      orderBy: { ordre: 'asc' },
-    }),
     getTitulaire(classe_id, annee_scolaire_id),
   ]);
 
@@ -650,12 +646,8 @@ export async function rapportGrillePerformance(
   // Domaines (seulement 3 : pas d'EPSA dans ces grilles)
   const domCodes3 = ['LANGUE_COMMUNICATION', 'MATHEMATIQUES', 'ESVS'];
 
-  const [inscriptions, domaines, titulaireNom] = await Promise.all([
+  const [inscriptions, titulaireNom] = await Promise.all([
     fetchInscriptions(classe_id, annee_scolaire_id),
-    prisma.domaine.findMany({
-      where: { etablissement_id, actif: true, code: { in: domCodes3 } },
-      orderBy: { ordre: 'asc' },
-    }),
     getTitulaire(classe_id, annee_scolaire_id),
   ]);
 
@@ -772,13 +764,9 @@ export async function rapportGrillePerformance(
     const nbCols = isCI_CP ? 3 : 6;
     return `<th colspan="${nbCols}" class="th-h">${esc(DOM_LABELS[dc] ?? dc)}</th>`;
   }).join('');
-  const thSubCols = domCodes3.map(dc => {
+  const thSubCols = domCodes3.map(() => {
     if (isCI_CP) return '<th>G</th><th>F</th><th>T</th>';
     return '<th colspan="3">Ressources</th><th colspan="3">Compétence</th>';
-  }).join('');
-  const thGFT = domCodes3.map(() => {
-    if (isCI_CP) return '';
-    return '<th>G</th><th>F</th><th>T</th><th>G</th><th>F</th><th>T</th>';
   }).join('');
 
   const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
