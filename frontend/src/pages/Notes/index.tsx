@@ -7,8 +7,9 @@ import { useAuthStore } from '../../store/authStore';
 import { AnneeScolaire, Classe, PolitiqueSaisieNotes } from './shared';
 import { ModeMatiere } from './ModeMatiere';
 import { ModeEleve } from './ModeEleve';
+import { ModeTableau } from './ModeTableau';
 
-type Mode = 'matiere' | 'eleve';
+type Mode = 'matiere' | 'eleve' | 'tableau';
 
 export function NotesPage() {
   const { t } = useTranslation();
@@ -46,6 +47,7 @@ export function NotesPage() {
   const tabs: { value: Mode; label: string }[] = [
     { value: 'matiere', label: t('note.mode_matiere') },
     { value: 'eleve',   label: t('note.mode_eleve') },
+    { value: 'tableau', label: t('note.mode_tableau') },
   ];
 
   return (
@@ -70,19 +72,27 @@ export function NotesPage() {
         ))}
       </div>
 
-      {mode === 'matiere' ? (
+      {mode === 'matiere' && (
         <ModeMatiere
           annees={annees} classes={classes}
           anneeId={anneeId} classeId={classeId} periode={periode}
           setAnneeId={setAnneeId} setClasseId={setClasseId} setPeriode={setPeriode}
           canEdit={canEdit} isProfesseur={isProfesseur} politique={politique}
         />
-      ) : (
+      )}
+      {mode === 'eleve' && (
         <ModeEleve
           annees={annees} classes={classes}
           anneeId={anneeId} classeId={classeId} periode={periode}
           setAnneeId={setAnneeId} setClasseId={setClasseId} setPeriode={setPeriode}
           canEdit={canEdit} isProfesseur={isProfesseur} politique={politique}
+        />
+      )}
+      {mode === 'tableau' && (
+        <ModeTableau
+          annees={annees} classes={classes}
+          anneeId={anneeId} classeId={classeId} periode={periode}
+          setAnneeId={setAnneeId} setClasseId={setClasseId} setPeriode={setPeriode}
         />
       )}
     </>

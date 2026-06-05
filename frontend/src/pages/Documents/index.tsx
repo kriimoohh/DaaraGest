@@ -14,7 +14,8 @@ type TypeDocument =
   | 'CERTIFICAT_SCOLARITE' | 'ATTESTATION_INSCRIPTION' | 'CONVOCATION_EXAMEN'
   | 'FICHE_TRANSFERT' | 'EMPLOI_DU_TEMPS_ELEVE' | 'RELEVE_NOTES'
   | 'CERTIFICAT_BONNE_CONDUITE' | 'FICHE_RENSEIGNEMENTS' | 'ATTESTATION_RESULTATS'
-  | 'LISTE_CLASSE' | 'ATTESTATION_TRAVAIL' | 'ORDRE_MISSION' | 'FICHE_PAIE' | 'PLANNING_COURS'
+  | 'LISTE_CLASSE' | 'RELEVE_NOTES_CLASSE' | 'RELEVE_NOTES_VIERGE'
+  | 'ATTESTATION_TRAVAIL' | 'ORDRE_MISSION' | 'FICHE_PAIE' | 'PLANNING_COURS'
   | 'CERTIFICAT_TRAVAIL_PERMANENT' | 'CERTIFICAT_TRAVAIL_STAGIAIRE'
   | 'AUTORISATION_ABSENCE_ELEVE' | 'AUTORISATION_ABSENCE_PERSONNEL'
   | 'CONVOCATION_PARENT' | 'BILLET_ENTREE'
@@ -48,6 +49,8 @@ const LABELS: Record<TypeDocument, string> = {
   FICHE_RENSEIGNEMENTS:     'Fiche de renseignements',
   ATTESTATION_RESULTATS:    'Attestation de résultats',
   LISTE_CLASSE:             'Liste de classe',
+  RELEVE_NOTES_CLASSE:      'Relevé de notes (classe)',
+  RELEVE_NOTES_VIERGE:      'Relevé de notes vierge (à remplir)',
   ATTESTATION_TRAVAIL:          'Attestation de travail',
   ORDRE_MISSION:                'Ordre de mission',
   FICHE_PAIE:                   'Fiche de paie',
@@ -73,6 +76,8 @@ const DEST_TYPE: Record<TypeDocument, DestType> = {
   FICHE_RENSEIGNEMENTS:     'eleve',
   ATTESTATION_RESULTATS:    'eleve',
   LISTE_CLASSE:             'classe',
+  RELEVE_NOTES_CLASSE:      'classe',
+  RELEVE_NOTES_VIERGE:      'classe',
   ATTESTATION_TRAVAIL:          'professeur',
   ORDRE_MISSION:                'professeur',
   FICHE_PAIE:                   'professeur',
@@ -96,7 +101,7 @@ const GROUPS: { label: string; icon: string; types: TypeDocument[] }[] = [
   {
     label: 'Documents de classe',
     icon: 'M12 3L1 9l4 2.18V15c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-3.82L21 9 12 3z',
-    types: ['LISTE_CLASSE'],
+    types: ['LISTE_CLASSE', 'RELEVE_NOTES_CLASSE', 'RELEVE_NOTES_VIERGE'],
   },
   {
     label: 'Documents professeurs',
@@ -156,7 +161,12 @@ const EXTRA_PARAMS: Record<TypeDocument, { key: string; label: string; type: 'te
   RELEVE_NOTES: [], CERTIFICAT_BONNE_CONDUITE: [], FICHE_RENSEIGNEMENTS: [],
   LISTE_CLASSE: [], ATTESTATION_TRAVAIL: [], PLANNING_COURS: [],
   CARTE_ELEVE: [], CARTE_PROFESSEUR: [],
+  // La période est sélectionnée via un select dédié (voir bloc destType === 'classe')
+  RELEVE_NOTES_CLASSE: [], RELEVE_NOTES_VIERGE: [],
 };
+
+// Types de documents classe qui exposent un sélecteur de période (T1/T2/T3/Annuel)
+const CLASSE_TYPES_WITH_PERIODE = new Set<TypeDocument>(['RELEVE_NOTES_CLASSE', 'RELEVE_NOTES_VIERGE']);
 
 // ── Variables disponibles pour l'éditeur ──────────────────────────────────────
 
@@ -734,6 +744,32 @@ export function DocumentsPage() {
                         {annees.map(a => <option key={a.id} value={a.id}>{a.libelle}{a.active ? ' (active)' : ''}</option>)}
                       </select>
                     </div>
+                    {selectedType && CLASSE_TYPES_WITH_PERIODE.has(selectedType) && (
+                      <div className="field">
+                        <label className="field-label">Période</label>
+                        <select
+                          className="input"
+                          value={extraParams.periode ?? ''}
+                          onChange={e => setExtraParams(p => ({ ...p, periode: e.target.value }))}
+                        >
+                          <option value="">Annuel (toutes périodes)</option>
+                          <option value="1">1er Trimestre</option>
+                          <option value="2">2ème Trimestre</option>
+                          <option value="3">3ème Trimestre</option>
+                        </select>
+                      </div>
+                    )}
+                    {selectedType === 'RELEVE_NOTES_VIERGE' && (
+                      <div style={{ padding: '10px 14px', background: 'var(--info-soft)', borderRadius: 8, border: '1px solid var(--rule-2)', fontSize: 12, color: 'var(--info-text)', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                        <span style={{ fontSize: 16, flexShrink: 0 }}>📝</span>
+                        <div>
+                          <strong>Relevé vierge à remplir manuellement</strong><br />
+                          La liste des élèves et les colonnes des matières sont pré-imprimées ;
+                          les cases de notes restent blanches pour saisie manuscrite par le titulaire.
+                          Format A4 paysage.
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
