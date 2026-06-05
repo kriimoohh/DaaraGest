@@ -749,7 +749,7 @@ export async function rapportGrillePerformance(
           return `<td>${g}</td><td>${f}</td><td>${t}</td>`;
         } else {
           // Avec split Ressources / Compétence
-          function cell(type: 'res' | 'comp') {
+          const cell = (type: 'res' | 'comp') => {
             const denom = (sub: Inscrip[]) => sub.filter(i => domScores.get(i.eleve_id)?.get(dc)?.[type] !== null).length;
             const g = countBande(garcons, dc, type, low, high);
             const f = countBande(filles,  dc, type, low, high);
@@ -759,7 +759,7 @@ export async function rapportGrillePerformance(
               return `<td>${dg ? (g / dg * 100).toFixed(1) + '%' : '-'}</td><td>${df ? (f / df * 100).toFixed(1) + '%' : '-'}</td><td>${dt ? (t / dt * 100).toFixed(1) + '%' : '-'}</td>`;
             }
             return `<td>${g}</td><td>${f}</td><td>${t}</td>`;
-          }
+          };
           return cell('res') + cell('comp');
         }
       }).join('');

@@ -60,7 +60,11 @@ async function request<T>(path: string, options: RequestInit = {}, retried = fal
     throw new Error('Session expirée. Veuillez vous reconnecter.');
   }
 
-  if (response.status === 401) {
+  // Un 401 sur une route d'auth (login/refresh) n'est PAS une session expirée :
+  // c'est un identifiant/mot de passe incorrect. On laisse le message serveur
+  // remonter (et on ne déconnecte pas l'utilisateur). Idem pour le 429 (compte
+  // temporairement verrouillé), géré par le parsing générique ci-dessous.
+  if (response.status === 401 && !path.includes('/auth/')) {
     useAuthStore.getState().logout();
     throw new Error('Session expirée. Veuillez vous reconnecter.');
   }

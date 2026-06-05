@@ -14,6 +14,7 @@
     "db:check:fix": "tsx prisma/check-coherence.ts --fix-programme",
     "db:studio": "prisma studio",
     "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint 'src/**/*.ts'",

@@ -3,6 +3,31 @@ import prisma from '../../config/database';
 import { JwtPayload } from '../../utils/jwt';
 import { assertMotDePasseValide } from '../../utils/passwordPolicy';
 
+// ─── Verrouillage anti brute-force ──────────────────────────────────────────────
+// Persisté en base (et non en mémoire process) pour rester efficace même quand
+// le backend tourne en plusieurs réplicas derrière le proxy Railway : le store
+// mémoire du rate-limit s'éparpille alors sur plusieurs buckets et ne plafonne
+// jamais réellement les tentatives. Le compteur en base est partagé par tous.
+export const MAX_TENTATIVES = 5;
+export const DUREE_VERROU_MS = 15 * 60 * 1000;
+
+export class CompteVerrouilleError extends Error {
+  constructor(public minutesRestantes: number) {
+    super('Trop de tentatives de connexion. Réessayez dans quelques minutes.');
+    this.name = 'CompteVerrouilleError';
+  }
+}
+
+/** Le compte est-il verrouillé à l'instant `maintenant` ? */
+export function estVerrouille(verrouille_jusqu: Date | null, maintenant: Date = new Date()): boolean {
+  return verrouille_jusqu !== null && verrouille_jusqu.getTime() > maintenant.getTime();
+}
+
+/** Date de fin de verrou si le seuil est atteint après cet échec, sinon null. */
+export function calculerVerrou(tentativesApresEchec: number, maintenant: Date = new Date()): Date | null {
+  return tentativesApresEchec >= MAX_TENTATIVES ? new Date(maintenant.getTime() + DUREE_VERROU_MS) : null;
+}
+
 export async function login(identifiant: string, mot_de_passe: string) {
   const utilisateur = await prisma.utilisateur.findUnique({
     where: { identifiant },
@@ -13,14 +38,30 @@ export async function login(identifiant: string, mot_de_passe: string) {
     throw new Error('Identifiants incorrects');
   }
 
+  if (estVerrouille(utilisateur.verrouille_jusqu)) {
+    const minutes = Math.ceil((utilisateur.verrouille_jusqu!.getTime() - Date.now()) / 60000);
+    throw new CompteVerrouilleError(minutes);
+  }
+
   const valid = await bcrypt.compare(mot_de_passe, utilisateur.mot_de_passe);
   if (!valid) {
+    const tentatives = utilisateur.tentatives_connexion + 1;
+    const verrou = calculerVerrou(tentatives);
+    await prisma.utilisateur.update({
+      where: { id: utilisateur.id },
+      // Au déclenchement du verrou on repart de zéro : la fenêtre de temps
+      // (verrouille_jusqu) prend le relais comme garde-fou.
+      data: verrou
+        ? { tentatives_connexion: 0, verrouille_jusqu: verrou }
+        : { tentatives_connexion: tentatives },
+    });
+    if (verrou) throw new CompteVerrouilleError(Math.ceil(DUREE_VERROU_MS / 60000));
     throw new Error('Identifiants incorrects');
   }
 
   await prisma.utilisateur.update({
     where: { id: utilisateur.id },
-    data: { last_login: new Date() },
+    data: { last_login: new Date(), tentatives_connexion: 0, verrouille_jusqu: null },
   });
 
   const payload: JwtPayload = {
