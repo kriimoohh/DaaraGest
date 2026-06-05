@@ -11,6 +11,8 @@ export const TYPE_DOCUMENT_LABELS: Record<TypeDocument, string> = {
   FICHE_RENSEIGNEMENTS:         'Fiche de renseignements',
   ATTESTATION_RESULTATS:        'Attestation de résultats',
   LISTE_CLASSE:                 'Liste de classe',
+  RELEVE_NOTES_CLASSE:          'Relevé de notes (classe)',
+  RELEVE_NOTES_VIERGE:          'Relevé de notes vierge (à remplir)',
   ATTESTATION_TRAVAIL:          'Attestation de travail',
   ORDRE_MISSION:                'Ordre de mission',
   FICHE_PAIE:                   'Fiche de paie',
@@ -801,6 +803,113 @@ const CARTE_PROFESSEUR_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
+// ─── Relevé de notes — niveau classe (rempli OU vierge) ──────────────────────
+//
+// Format A4 paysage — entêtes communes (école + classe + période).
+// La zone centrale {{TABLEAU_NOTES_CLASSE}} est remplacée :
+//   - par une grille pré-remplie pour RELEVE_NOTES_CLASSE
+//   - par une grille vide (mêmes colonnes, lignes blanches) pour RELEVE_NOTES_VIERGE
+
+const RELEVE_NOTES_CLASSE_TPL = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Relevé de notes — Classe</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:Arial,sans-serif;font-size:8px;color:#000;padding:7mm 8mm;}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+    .etab{font-weight:bold;font-size:11px;color:#1a5276;}
+    .titre{text-align:center;font-size:12px;font-weight:bold;text-decoration:underline;letter-spacing:1px;margin:6px 0 4px;color:#1a5276;}
+    .meta{display:flex;gap:24px;justify-content:center;font-size:9px;margin-bottom:8px;}
+    .meta strong{color:#1a5276;}
+    table.notes{width:100%;border-collapse:collapse;font-size:7.5px;}
+    table.notes th,table.notes td{border:1px solid #444;padding:3px 3px;text-align:center;}
+    table.notes th{background:#1a5276;color:#fff;font-weight:bold;}
+    table.notes td.lbl{text-align:left;padding:3px 6px;}
+    .stat-row{background:#ececec;font-style:italic;font-size:7px;}
+    .sigs{display:flex;justify-content:space-around;margin-top:10mm;font-weight:bold;font-size:9.5px;}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="etab">{{NOM_ETABLISSEMENT}}</div>
+      <div style="font-size:8.5px;color:#555;">{{ADRESSE_ETABLISSEMENT}} · Tél : {{TEL_ETABLISSEMENT}}</div>
+    </div>
+    <div style="text-align:right;font-size:9px;">Année scolaire : <strong>{{ANNEE_SCOLAIRE}}</strong></div>
+  </div>
+
+  <div class="titre">RELEVÉ DE NOTES — {{PERIODE_LABEL}}</div>
+  <div class="meta">
+    <span><strong>Classe :</strong> {{CLASSE_FR}}</span>
+    <span><strong>Effectif :</strong> {{EFFECTIF}}</span>
+    <span><strong>Titulaire :</strong> {{TITULAIRE}}</span>
+  </div>
+
+  {{TABLEAU_NOTES_CLASSE}}
+
+  <div class="sigs">
+    <div>LE TITULAIRE / LA TITULAIRE</div>
+    <div>{{DIRECTEUR_QUALITE}}</div>
+  </div>
+</body>
+</html>`;
+
+const RELEVE_NOTES_VIERGE_TPL = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Relevé de notes vierge — Classe</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:Arial,sans-serif;font-size:8px;color:#000;padding:7mm 8mm;}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+    .etab{font-weight:bold;font-size:11px;color:#1a5276;}
+    .titre{text-align:center;font-size:12px;font-weight:bold;text-decoration:underline;letter-spacing:1px;margin:6px 0 4px;color:#1a5276;}
+    .meta{display:flex;gap:24px;justify-content:center;font-size:9px;margin-bottom:6px;}
+    .meta strong{color:#1a5276;}
+    .meta-fill{display:flex;gap:18px;justify-content:center;font-size:9px;margin-bottom:6px;color:#555;}
+    .meta-fill span{border-bottom:1px solid #999;min-width:120px;display:inline-block;padding:0 4px;}
+    table.notes{width:100%;border-collapse:collapse;font-size:8px;}
+    table.notes th,table.notes td{border:1px solid #444;padding:5px 3px;text-align:center;}
+    table.notes th{background:#1a5276;color:#fff;font-weight:bold;font-size:7.5px;}
+    table.notes td.lbl{text-align:left;padding:5px 6px;font-size:8.5px;}
+    .sigs{display:flex;justify-content:space-around;margin-top:8mm;font-weight:bold;font-size:9.5px;}
+    .legende{font-size:7.5px;font-style:italic;color:#555;text-align:center;margin-top:4px;}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="etab">{{NOM_ETABLISSEMENT}}</div>
+      <div style="font-size:8.5px;color:#555;">{{ADRESSE_ETABLISSEMENT}} · Tél : {{TEL_ETABLISSEMENT}}</div>
+    </div>
+    <div style="text-align:right;font-size:9px;">Année scolaire : <strong>{{ANNEE_SCOLAIRE}}</strong></div>
+  </div>
+
+  <div class="titre">RELEVÉ DE NOTES — À REMPLIR</div>
+  <div class="meta">
+    <span><strong>Classe :</strong> {{CLASSE_FR}}</span>
+    <span><strong>Effectif :</strong> {{EFFECTIF}}</span>
+  </div>
+  <div class="meta-fill">
+    <span>Période : <strong>{{PERIODE_LABEL}}</strong></span>
+    <span>Titulaire : <span style="border-bottom:1px solid #999;display:inline-block;min-width:140px;">&nbsp;</span></span>
+    <span>Date : <span style="border-bottom:1px solid #999;display:inline-block;min-width:80px;">&nbsp;</span></span>
+  </div>
+
+  {{TABLEAU_NOTES_CLASSE}}
+
+  <div class="legende">Notes sur le barème de chaque matière. La moyenne, le rang et les statistiques de classe seront calculés après saisie sur la plateforme.</div>
+
+  <div class="sigs">
+    <div>SIGNATURE DU TITULAIRE</div>
+    <div>SIGNATURE DU DIRECTEUR</div>
+  </div>
+</body>
+</html>`;
+
 // ─── Map ──────────────────────────────────────────────────────────────────────
 
 const TEMPLATES: Record<TypeDocument, string> = {
@@ -814,6 +923,8 @@ const TEMPLATES: Record<TypeDocument, string> = {
   FICHE_RENSEIGNEMENTS:         FICHE_RENSEIGNEMENTS,
   ATTESTATION_RESULTATS:        ATTESTATION_RESULTATS,
   LISTE_CLASSE:                 LISTE_CLASSE,
+  RELEVE_NOTES_CLASSE:          RELEVE_NOTES_CLASSE_TPL,
+  RELEVE_NOTES_VIERGE:          RELEVE_NOTES_VIERGE_TPL,
   ATTESTATION_TRAVAIL:          ATTESTATION_TRAVAIL,
   ORDRE_MISSION:                ORDRE_MISSION,
   FICHE_PAIE:                   FICHE_PAIE,

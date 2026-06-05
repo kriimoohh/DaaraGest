@@ -542,6 +542,7 @@
     "err_enregistrement": "Erreur lors de l'enregistrement",
     "mode_matiere": "Par matière",
     "mode_eleve": "Par élève",
+    "mode_tableau": "Tableau de synthèse",
     "eleve": "Élève",
     "col_matiere": "Matière",
     "aucune_saisie": "Aucune note à enregistrer"
@@ -1697,6 +1698,8 @@
     "type_FICHE_RENSEIGNEMENTS": "Fiche de renseignements",
     "type_ATTESTATION_RESULTATS": "Attestation de résultats",
     "type_LISTE_CLASSE": "Liste de classe",
+    "type_RELEVE_NOTES_CLASSE": "Relevé de notes (classe)",
+    "type_RELEVE_NOTES_VIERGE": "Relevé de notes vierge (à remplir)",
     "type_ATTESTATION_TRAVAIL": "Attestation de travail",
     "type_ORDRE_MISSION": "Ordre de mission",
     "type_FICHE_PAIE": "Fiche de paie",

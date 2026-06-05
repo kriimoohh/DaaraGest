@@ -328,6 +328,20 @@ async function main() {
     pick('Étude du Texte / Arabe', 'AR'),
     pick('Arabe', 'AR'),
   ];
+
+  // Programme : rattacher ces matières aux classes correspondantes (ClasseMatiere).
+  // Sans ces entrées, les bulletins seraient vides et la page Notes refuserait
+  // la saisie via l'API. On utilise skipDuplicates pour rester idempotent.
+  const programme: { classe_id: string; matiere_id: string }[] = [];
+  for (const cId of [ID.classes.cm1fr, ID.classes.cm2fr]) {
+    for (const mId of matFR) programme.push({ classe_id: cId, matiere_id: mId });
+  }
+  for (const cId of [ID.classes.a5ar, ID.classes.a6ar]) {
+    for (const mId of matAR) programme.push({ classe_id: cId, matiere_id: mId });
+  }
+  const cmRes = await prisma.classeMatiere.createMany({ data: programme, skipDuplicates: true });
+  console.log(`✅ Programme classes (ClasseMatiere) : +${cmRes.count}/${programme.length} entrées`);
+
   let noteCount = 0;
   for (const periode of [1, 2]) {
     for (const e of elevesData.filter(e => e.cf)) {

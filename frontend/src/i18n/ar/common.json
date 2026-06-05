@@ -542,6 +542,7 @@
     "err_enregistrement": "خطأ أثناء الحفظ",
     "mode_matiere": "حسب المادة",
     "mode_eleve": "حسب التلميذ",
+    "mode_tableau": "جدول التلخيص",
     "eleve": "التلميذ",
     "col_matiere": "المادة",
     "aucune_saisie": "لا توجد علامات للحفظ"
@@ -1506,6 +1507,8 @@
     "type_FICHE_RENSEIGNEMENTS": "بطاقة معلومات",
     "type_ATTESTATION_RESULTATS": "شهادة النتائج",
     "type_LISTE_CLASSE": "قائمة القسم",
+    "type_RELEVE_NOTES_CLASSE": "كشف الدرجات (القسم)",
+    "type_RELEVE_NOTES_VIERGE": "كشف الدرجات الفارغ (للتعبئة)",
     "type_ATTESTATION_TRAVAIL": "شهادة عمل",
     "type_ORDRE_MISSION": "أمر بمهمة",
     "type_FICHE_PAIE": "كشف راتب",
