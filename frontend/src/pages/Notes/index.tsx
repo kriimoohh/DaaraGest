@@ -18,7 +18,7 @@ export function NotesPage() {
   const canEdit = ['admin', 'directeur', 'gestionnaire'].includes(userRole);
   const isProfesseur = userRole === 'professeur';
 
-  const [mode, setMode] = useState<Mode>('matiere');
+  const [mode, setMode] = useState<Mode>('tableau');
   const [annees, setAnnees] = useState<AnneeScolaire[]>([]);
   const [classes, setClasses] = useState<Classe[]>([]);
   const [politique, setPolitique] = useState<PolitiqueSaisieNotes | null>(null);
@@ -45,9 +45,9 @@ export function NotesPage() {
   }, [anneeId]);
 
   const tabs: { value: Mode; label: string }[] = [
+    { value: 'tableau', label: t('note.mode_tableau') },
     { value: 'matiere', label: t('note.mode_matiere') },
     { value: 'eleve',   label: t('note.mode_eleve') },
-    { value: 'tableau', label: t('note.mode_tableau') },
   ];
 
   return (
@@ -93,6 +93,7 @@ export function NotesPage() {
           annees={annees} classes={classes}
           anneeId={anneeId} classeId={classeId} periode={periode}
           setAnneeId={setAnneeId} setClasseId={setClasseId} setPeriode={setPeriode}
+          canEdit={canEdit} isProfesseur={isProfesseur} politique={politique}
         />
       )}
     </>
