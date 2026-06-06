@@ -18,11 +18,13 @@ const RUN = randomUUID().slice(0, 8);
 const etabId = `itest-etab-${RUN}`;
 const anneeId = `itest-annee-${RUN}`;
 const classeId = `itest-classe-${RUN}`;
+const classeArId = `itest-classe-ar-${RUN}`; // classe arabe distincte (élève bilingue)
 
 const ids = {
   matMath: `itest-mat-math-${RUN}`,
   matFr: `itest-mat-fr-${RUN}`,
   matRlc: `itest-mat-rlc-${RUN}`, // matière avec barème /60 via override de classe
+  matAr: `itest-mat-ar-${RUN}`,   // matière de la filière arabe
   eleveA: `itest-eleve-a-${RUN}`,
   eleveB: `itest-eleve-b-${RUN}`,
 };
@@ -32,7 +34,7 @@ async function nettoyer() {
   await prisma.bulletin.deleteMany({ where: { annee_scolaire_id: anneeId } });
   await prisma.note.deleteMany({ where: { annee_scolaire_id: anneeId } });
   await prisma.inscription.deleteMany({ where: { annee_scolaire_id: anneeId } });
-  await prisma.classeMatiere.deleteMany({ where: { classe_id: classeId } });
+  await prisma.classeMatiere.deleteMany({ where: { classe_id: { in: [classeId, classeArId] } } });
   await prisma.note.deleteMany({ where: { matiere: { etablissement_id: etabId } } });
   await prisma.classe.deleteMany({ where: { etablissement_id: etabId } });
   await prisma.matiere.deleteMany({ where: { etablissement_id: etabId } });
@@ -76,6 +78,11 @@ beforeAll(async () => {
   await prisma.classe.create({
     data: { id: classeId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1 A', filiere: 'FR' },
   });
+  // Classe arabe distincte : l'élève bilingue y suit ses matières AR. Sert à
+  // vérifier que le bulletin COMBINE agrège bien les DEUX classes de l'élève.
+  await prisma.classe.create({
+    data: { id: classeArId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1 Arabe', filiere: 'AR' },
+  });
 
   // Matières FR. Le barème de saisie est porté par la classe (note_max_override) ;
   // sans override, une note est réputée sur l'échelle établissement (ici /20).
@@ -84,6 +91,7 @@ beforeAll(async () => {
       { id: ids.matMath, etablissement_id: etabId, nom_fr: 'Mathématiques', filiere: 'FR', coeff_defaut: 2, ordre_bulletin: 1 },
       { id: ids.matFr, etablissement_id: etabId, nom_fr: 'Français', filiere: 'FR', coeff_defaut: 1, ordre_bulletin: 2 },
       { id: ids.matRlc, etablissement_id: etabId, nom_fr: 'Lecture (RLC)', filiere: 'FR', coeff_defaut: 1, ordre_bulletin: 3 },
+      { id: ids.matAr, etablissement_id: etabId, nom_fr: 'Langue arabe', filiere: 'AR', coeff_defaut: 1, ordre_bulletin: 1 },
     ],
   });
 
@@ -95,6 +103,8 @@ beforeAll(async () => {
       { classe_id: classeId, matiere_id: ids.matFr, note_max_override: 10 },
       // RLC saisie sur /60 dans cette classe.
       { classe_id: classeId, matiere_id: ids.matRlc, note_max_override: 60 },
+      // Matière AR dans la classe arabe (barème /20 = échelle établissement).
+      { classe_id: classeArId, matiere_id: ids.matAr, note_max_override: 20 },
     ],
   });
 
@@ -107,7 +117,9 @@ beforeAll(async () => {
 
   await prisma.inscription.createMany({
     data: [
-      { eleve_id: ids.eleveA, classe_fr_id: classeId, annee_scolaire_id: anneeId, statut: 'actif' },
+      // Élève A : bilingue (classe FR + classe AR sur la même inscription).
+      { eleve_id: ids.eleveA, classe_fr_id: classeId, classe_ar_id: classeArId, annee_scolaire_id: anneeId, statut: 'actif' },
+      // Élève B : FR uniquement (pas de classe AR) — le COMBINE doit alors valoir le FR seul.
       { eleve_id: ids.eleveB, classe_fr_id: classeId, annee_scolaire_id: anneeId, statut: 'actif' },
     ],
   });
@@ -128,6 +140,8 @@ beforeAll(async () => {
       { eleve_id: ids.eleveB, matiere_id: ids.matMath, periode: 1, annee_scolaire_id: anneeId, valeur: 10 },
       { eleve_id: ids.eleveB, matiere_id: ids.matFr, periode: 1, annee_scolaire_id: anneeId, valeur: 5 },
       { eleve_id: ids.eleveB, matiere_id: ids.matRlc, periode: 1, annee_scolaire_id: anneeId, valeur: 30 },
+      // Élève A, filière AR : Langue arabe 10/20 (c1) → (10/20)*20*1 = 10.
+      { eleve_id: ids.eleveA, matiere_id: ids.matAr, periode: 1, annee_scolaire_id: anneeId, valeur: 10 },
     ],
   });
 });
@@ -183,5 +197,27 @@ describe('Bulletins — intégration notes → moyenne (DB réelle)', () => {
     });
     // Seule la période 1 est saisie → la moyenne annuelle = moyenne période 1.
     expect(Number(annuelA!.moyenne)).toBeCloseTo(15.25, 2);
+  });
+
+  it('COMBINE agrège les DEUX classes (FR + AR) de l\'élève bilingue', async () => {
+    const res = await genererBulletins(etabId, {
+      classe_id: classeId, annee_scolaire_id: anneeId, periode: 1, filiere: 'COMBINE',
+    });
+    expect(res.bulletins).toHaveLength(2);
+
+    const bulletins = await prisma.bulletin.findMany({
+      where: { annee_scolaire_id: anneeId, periode: 1, filiere: 'COMBINE' },
+    });
+    const parEleve = Object.fromEntries(bulletins.map(b => [b.eleve_id, b]));
+
+    // Élève A bilingue : FR (30+16+15, coeff 4) + AR (10, coeff 1) = 71/5 = 14.2.
+    // (et NON 15.25 = FR seul, l'ancien bug qui ignorait la filière AR.)
+    expect(Number(parEleve[ids.eleveA].moyenne)).toBeCloseTo(14.2, 2);
+    // Élève B sans classe AR : COMBINE = FR seul = 10.00.
+    expect(Number(parEleve[ids.eleveB].moyenne)).toBeCloseTo(10.0, 2);
+
+    // Classement combiné : A (14.2) devant B (10.0).
+    expect(parEleve[ids.eleveA].rang).toBe(1);
+    expect(parEleve[ids.eleveB].rang).toBe(2);
   });
 });
