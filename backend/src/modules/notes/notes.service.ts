@@ -2,6 +2,7 @@ import prisma from '../../config/database';
 import { logAction } from '../../utils/audit';
 import { assertProfPeutSaisirNotes, getPolitiqueSaisieNotes, estModeStrict } from '../../utils/teachingPolicy';
 import { NoteItem } from './notes.schema';
+import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 
 export async function listerNotes(
   etablissement_id: string,
@@ -72,10 +73,18 @@ export async function bulkUpsertNotes(
   const matieres = await prisma.matiere.findMany({ where: { id: { in: matiereIds } } });
   const matiereMap = new Map(matieres.map(m => [m.id, m]));
 
+  // Échelle de l'établissement : barème de repli quand une matière n'a aucun
+  // override de classe/période (la note est alors réputée sur cette échelle).
+  const etabId = etablissement_id ?? matieres[0]?.etablissement_id;
+  const config = etabId
+    ? await prisma.configNotes.findUnique({ where: { etablissement_id: etabId }, select: { note_max: true } })
+    : null;
+  const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
+
   // Barème EFFECTIF de chaque matière pour cette classe : on valide sur le barème
-  // réellement utilisé (ex: CLC /40 ou /60, Rés.Prob /4), pas sur Matiere.note_max
-  // (échelle plate, ex /20) — sinon on rejette des notes /60 légitimes ET on accepte
-  // des notes hors barème pour les matières < 20. Priorité : période > classe > matière.
+  // réellement utilisé (ex: CLC /40 ou /60, Rés.Prob /4), pas sur l'échelle plate
+  // de l'établissement — sinon on rejette des notes /60 légitimes ET on accepte
+  // des notes hors barème pour les matières < base. Priorité : période > classe > établissement.
   const baremeOverride = new Map<string, number>();     // matiere_id → note_max (défaut classe)
   const baremePeriode  = new Map<string, number>();      // `${matiere_id}|${periode}` → note_max
   if (classe_id) {
@@ -99,7 +108,7 @@ export async function bulkUpsertNotes(
     if (matiere) {
       const noteMax = baremePeriode.get(`${note.matiere_id}|${note.periode}`)
         ?? baremeOverride.get(note.matiere_id)
-        ?? Number(matiere.note_max);
+        ?? baseNote;
       const noteMin = Number(matiere.note_min);
       if (note.valeur > noteMax) {
         throw new Error(`La note ${note.valeur} dépasse le maximum autorisé (${noteMax}) pour "${matiere.nom_fr}"`);

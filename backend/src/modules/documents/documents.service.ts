@@ -6,6 +6,7 @@ import { escapeHtml } from '../../utils/escapeHtml';
 import { TypeDocument, GenererDocumentInput, GenererCartesLotInput, UpsertTemplateInput, TYPE_DOCUMENT_VALUES, CARD_TYPES } from './documents.schema';
 import { getDefaultTemplate, TYPE_DOCUMENT_LABELS, getCardTemplate } from './templates/defaults';
 import { calculerMoyennesClasse } from '../bulletins/bulletins.service';
+import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 
 function signQrPayload(payload: object): string {
   const data = JSON.stringify(payload);
@@ -249,7 +250,7 @@ async function buildProfVars(prof_id: string, _etablissement_id: string): Promis
 
 // ─── Build notes table ────────────────────────────────────────────────────────
 
-function buildNotesTable(notes: Array<{ periode: number; matiere: { nom_fr: string }; valeur: { toNumber(): number } }>): string {
+function buildNotesTable(notes: Array<{ periode: number; matiere: { nom_fr: string }; valeur: { toNumber(): number } }>, baseNote: number = DEFAULT_NOTE_MAX): string {
   if (!notes.length) return '<p style="font-size:13px;color:#777">Aucune note enregistrée.</p>';
 
   // Group by period
@@ -267,7 +268,7 @@ function buildNotesTable(notes: Array<{ periode: number; matiere: { nom_fr: stri
     html += `
     <p style="font-size:13px;font-weight:bold;color:#1a5276;margin:16px 0 6px;">Période ${periode}</p>
     <table class="data-table">
-      <thead><tr><th>Matière</th><th style="text-align:right">Note / 20</th></tr></thead>
+      <thead><tr><th>Matière</th><th style="text-align:right">Note / ${baseNote}</th></tr></thead>
       <tbody>
         ${pNotes.map(n => `<tr><td>${n.matiere.nom_fr}</td><td style="text-align:right">${n.valeur.toNumber().toFixed(2)}</td></tr>`).join('')}
         <tr style="background:#e8f4f8"><td style="font-weight:bold">Moyenne période ${periode}</td><td style="text-align:right;font-weight:bold">${moy}</td></tr>
@@ -400,7 +401,7 @@ async function buildTableauNotesClasse(
       where: { classe_id },
       include: {
         matiere: {
-          select: { id: true, nom_fr: true, code_court: true, note_max: true, ordre_bulletin: true, active: true },
+          select: { id: true, nom_fr: true, code_court: true, ordre_bulletin: true, active: true },
         },
       },
       orderBy: [{ ordre_override: 'asc' }, { matiere: { ordre_bulletin: 'asc' } }],
@@ -418,12 +419,20 @@ async function buildTableauNotesClasse(
 
   if (!classeRaw) throw Object.assign(new Error('Classe introuvable'), { statusCode: 404 });
 
+  // Échelle de l'établissement (ConfigNotes.note_max) : sert de barème par défaut
+  // quand une matière de la classe n'a pas d'override, et d'échelle d'affichage.
+  const cfg = await prisma.configNotes.findUnique({
+    where: { etablissement_id: classeRaw.etablissement_id },
+    select: { note_max: true },
+  });
+  const baseNote = Number(cfg?.note_max ?? DEFAULT_NOTE_MAX);
+
   const matieres = classeMatieres
     .map(cm => ({
       id: cm.matiere.id,
       nom_fr: cm.matiere.nom_fr,
       code_court: cm.matiere.code_court,
-      note_max: Number(cm.note_max_override ?? cm.matiere.note_max),
+      note_max: Number(cm.note_max_override ?? baseNote),
     }))
     .filter(m => classeMatieres.find(cm => cm.matiere.id === m.id)?.matiere.active !== false);
 
@@ -484,8 +493,8 @@ async function buildTableauNotesClasse(
     }
   }
 
-  // Calcul rangs + moyennes (normalisation sur /20 — chaque note est ramenée
-  // sur l'échelle de sa propre matière avant la moyenne arithmétique).
+  // Calcul rangs + moyennes (normalisation sur l'échelle établissement — chaque
+  // note est ramenée sur l'échelle de sa propre matière avant la moyenne arithmétique).
   const rowsRaw = inscriptions.map(insc => {
     const nm = notesByEleve.get(insc.eleve_id);
     const vals: (number | null)[] = matieres.map(m => {
@@ -496,8 +505,8 @@ async function buildTableauNotesClasse(
     for (let i = 0; i < vals.length; i++) {
       const v = vals[i];
       if (v === null) continue;
-      const max = matieres[i].note_max || 20;
-      totalNorm += (v / max) * 20;
+      const max = matieres[i].note_max || baseNote;
+      totalNorm += (v / max) * baseNote;
       count++;
     }
     const moy = count > 0 ? totalNorm / count : null;
@@ -541,7 +550,7 @@ async function buildTableauNotesClasse(
           }).join('')}
           ${vierge
             ? '<th style="width:42px;">Moy</th><th style="width:42px;">Rang</th><th style="min-width:90px;">Observations</th>'
-            : '<th style="width:42px;">Moy/20</th><th style="width:38px;">Rang</th>'}
+            : `<th style="width:42px;">Moy/${baseNote}</th><th style="width:38px;">Rang</th>`}
         </tr>
       </thead>
       <tbody>
@@ -869,7 +878,9 @@ async function buildA4DocumentHtml(
           include: { matiere: true },
           orderBy: [{ periode: 'asc' }, { matiere: { nom_fr: 'asc' } }],
         });
-        vars.TABLEAU_NOTES = buildNotesTable(notes as Parameters<typeof buildNotesTable>[0]);
+        const cfgNotes = await prisma.configNotes.findUnique({ where: { etablissement_id }, select: { note_max: true } });
+        const baseNote = Number(cfgNotes?.note_max ?? DEFAULT_NOTE_MAX);
+        vars.TABLEAU_NOTES = buildNotesTable(notes as Parameters<typeof buildNotesTable>[0], baseNote);
         if (!vars.MOYENNE_ANNUELLE && notes.length > 0) {
           // Moyenne annuelle NORMALISÉE et pondérée (barèmes/coeff effectifs), comme
           // les bulletins — et non une moyenne brute des notes (barèmes variables).

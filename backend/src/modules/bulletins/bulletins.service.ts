@@ -3,6 +3,7 @@ import { GenererBulletinInput, GenererBulletinAnnuelInput, ObservationInput } fr
 import { renderPdfHtml } from '../../utils/browserPool';
 import { assertProfPeutAccederClasse } from '../../utils/teachingPolicy';
 import { logAction } from '../../utils/audit';
+import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 
 type Filiere = 'FR' | 'AR' | 'COMBINE';
 
@@ -74,7 +75,7 @@ export function appreciation(m: number, filiere: Filiere = 'FR', seuils: SeuilsM
 type MatiereAvecCoeff = {
   id: string; nom_fr: string; nom_ar: string | null; filiere: string;
   coeff_defaut: unknown; coeff_effectif: unknown;
-  note_max: unknown; note_max_effectif: unknown; note_min: unknown; ordre_bulletin: number;
+  note_max_effectif: unknown; note_min: unknown; ordre_bulletin: number;
 };
 
 // Contribution d'une note à la moyenne pondérée. Les notes sont saisies sur le
@@ -85,7 +86,12 @@ function contributionNote(valeur: number, noteMax: number, base: number, coeff: 
   return noteMax > 0 ? (valeur / noteMax) * base * coeff : 0;
 }
 
-async function getMatieresDeclasse(classe_id: string, filiere: 'FR' | 'AR', periode?: number): Promise<MatiereAvecCoeff[]> {
+// `baseNote` = échelle de l'établissement (ConfigNotes.note_max). Sert de barème
+// par défaut quand une matière de la classe n'a ni override de période ni override
+// de classe : la note est alors réputée saisie sur l'échelle de l'établissement.
+async function getMatieresDeclasse(
+  classe_id: string, filiere: 'FR' | 'AR', periode?: number, baseNote: number = DEFAULT_NOTE_MAX,
+): Promise<MatiereAvecCoeff[]> {
   const rows = await prisma.classeMatiere.findMany({
     where: { classe_id, matiere: { filiere, active: true } },
     include: { matiere: true },
@@ -102,7 +108,7 @@ async function getMatieresDeclasse(classe_id: string, filiere: 'FR' | 'AR', peri
     return {
       ...r.matiere,
       coeff_effectif: o ? o.coeff : (r.coeff_override ?? r.matiere.coeff_defaut),
-      note_max_effectif: o ? o.note_max : (r.note_max_override ?? r.matiere.note_max),
+      note_max_effectif: o ? o.note_max : (r.note_max_override ?? baseNote),
       ordre_bulletin: r.ordre_override ?? r.matiere.ordre_bulletin,
     };
   });
@@ -135,7 +141,7 @@ export async function calculerMoyennesClasse(
   periodes: number[], filieres: ('FR' | 'AR')[] = ['FR', 'AR'],
 ): Promise<Map<string, number>> {
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
-  const baseNote = Number(config?.note_max ?? 20);
+  const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
   const inscriptions = await getElevesClasse(classe_id, annee_scolaire_id);
   if (inscriptions.length === 0) return new Map();
 
@@ -145,7 +151,7 @@ export async function calculerMoyennesClasse(
   const matIds = new Set<string>();
   for (const p of periodes) {
     const cM = new Map<string, number>(), nM = new Map<string, number>();
-    for (const f of filieres) for (const m of await getMatieresDeclasse(classe_id, f, p)) {
+    for (const f of filieres) for (const m of await getMatieresDeclasse(classe_id, f, p, baseNote)) {
       cM.set(m.id, Number(m.coeff_effectif)); nM.set(m.id, Number(m.note_max_effectif)); matIds.add(m.id);
     }
     coefByP.set(p, cM); nmByP.set(p, nM);
@@ -166,7 +172,7 @@ export async function calculerMoyennesClasse(
     let tp = 0, tc = 0;
     for (const n of byEleve.get(eleve_id) ?? []) {
       const c = coefByP.get(n.periode)?.get(n.matiere_id) ?? Number(n.matiere.coeff_defaut);
-      const nm = nmByP.get(n.periode)?.get(n.matiere_id) ?? Number(n.matiere.note_max);
+      const nm = nmByP.get(n.periode)?.get(n.matiere_id) ?? baseNote;
       if (c === 0) continue;
       tp += contributionNote(Number(n.valeur), nm, baseNote, c); tc += c;
     }
@@ -188,10 +194,11 @@ export async function getMentionsEtab(etablissement_id: string): Promise<Mention
  */
 export async function getBaremesClasse(
   classe_id: string, periodes: number[], filieres: ('FR' | 'AR')[] = ['FR', 'AR'],
+  baseNote: number = DEFAULT_NOTE_MAX,
 ): Promise<Map<string, { coeff: number; note_max: number }>> {
   const map = new Map<string, { coeff: number; note_max: number }>();
   for (const p of periodes) for (const f of filieres) {
-    for (const m of await getMatieresDeclasse(classe_id, f, p)) {
+    for (const m of await getMatieresDeclasse(classe_id, f, p, baseNote)) {
       map.set(`${m.id}|${p}`, { coeff: Number(m.coeff_effectif), note_max: Number(m.note_max_effectif) });
     }
   }
@@ -227,13 +234,13 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
   if (!classe) throw new Error('Classe introuvable');
   const inscriptions = await getElevesClasse(classe_id, annee_scolaire_id);
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
-  const baseNote = Number(config?.note_max ?? 20);
+  const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
   const mentions = await getMentions(etablissement_id);
   if (inscriptions.length === 0) return { message: 'Aucun élève inscrit', bulletins: [] };
 
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
   const matMap: Record<string, MatiereAvecCoeff[]> = {};
-  for (const f of filieres) matMap[f] = await getMatieresDeclasse(classe_id, f, periode);
+  for (const f of filieres) matMap[f] = await getMatieresDeclasse(classe_id, f, periode, baseNote);
 
   // Fetch toutes les notes d'un coup (évite N+1)
   const tousMatIds = filieres.flatMap(f => matMap[f].map(m => m.id));
@@ -261,7 +268,7 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
     let totalP = 0, totalC = 0;
     for (const n of notesByEleve.get(eleve_id) ?? []) {
       const c = coeffMap.get(n.matiere_id) ?? Number(n.matiere.coeff_defaut);
-      const nm = noteMaxMap.get(n.matiere_id) ?? Number(n.matiere.note_max);
+      const nm = noteMaxMap.get(n.matiere_id) ?? baseNote;
       totalP += contributionNote(Number(n.valeur), nm, baseNote, c);
       totalC += c;
     }
@@ -296,12 +303,13 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
   // 3 = trimestres, 6 = bimestres). Par défaut 3 si non défini.
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
   const nbPeriodes = config?.nb_periodes ?? 3;
+  const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
   const periodesAnnuelles = Array.from({ length: nbPeriodes }, (_, i) => i + 1);
   const mentions = await getMentions(etablissement_id);
 
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
   const matMapAnnuel: Record<string, MatiereAvecCoeff[]> = {};
-  for (const f of filieres) matMapAnnuel[f] = await getMatieresDeclasse(classe_id, f);
+  for (const f of filieres) matMapAnnuel[f] = await getMatieresDeclasse(classe_id, f, undefined, baseNote);
 
   // Fetch toutes les notes annuelles d'un coup (évite N+1)
   const tousMatIdsAnnuel = filieres.flatMap(f => matMapAnnuel[f].map(m => m.id));
@@ -323,20 +331,19 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
   for (const p of periodesAnnuelles) {
     const cMap = new Map<string, number>(), nmMap = new Map<string, number>();
     for (const f of filieres) {
-      for (const m of await getMatieresDeclasse(classe_id, f, p)) {
+      for (const m of await getMatieresDeclasse(classe_id, f, p, baseNote)) {
         cMap.set(m.id, Number(m.coeff_effectif)); nmMap.set(m.id, Number(m.note_max_effectif));
       }
     }
     coeffParPeriode.set(p, cMap); noteMaxParPeriode.set(p, nmMap);
   }
-  const baseNote = Number(config?.note_max ?? 20);
 
   const moyennes: { eleve_id: string; moyenne: number }[] = [];
   for (const { eleve_id } of inscriptions) {
     let totalP = 0, totalC = 0;
     for (const n of notesByEleveAnnuel.get(eleve_id) ?? []) {
       const c = coeffParPeriode.get(n.periode)?.get(n.matiere_id) ?? Number(n.matiere.coeff_defaut);
-      const nm = noteMaxParPeriode.get(n.periode)?.get(n.matiere_id) ?? Number(n.matiere.note_max);
+      const nm = noteMaxParPeriode.get(n.periode)?.get(n.matiere_id) ?? baseNote;
       totalP += contributionNote(Number(n.valeur), nm, baseNote, c);
       totalC += c;
     }
@@ -376,6 +383,7 @@ export async function getBulletin(id: string, etablissement_id: string) {
   // ne dépend plus de [1,2,3] hardcodé pour les bulletins annuels.
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
   const nbPeriodes = config?.nb_periodes ?? 3;
+  const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
 
   // Chercher la classe de l'élève pour l'année scolaire du bulletin
   const inscription = bulletin.eleve.inscriptions.find(
@@ -388,16 +396,23 @@ export async function getBulletin(id: string, etablissement_id: string) {
   for (const f of filieres) {
     const classeId = f === 'FR' ? classeIdFR : classeIdAR;
     const matieres = classeId
-      ? await getMatieresDeclasse(classeId, f)
+      ? await getMatieresDeclasse(classeId, f, undefined, baseNote)
       : await getMatieres(etablissement_id, f);
+    const baremeMap = new Map(matieres.map(m => [m.id, 'note_max_effectif' in m ? Number(m.note_max_effectif) : baseNote]));
     const periodes = bulletin.periode === 0
       ? Array.from({ length: nbPeriodes }, (_, i) => i + 1)
       : [bulletin.periode];
-    notesByFiliere[f] = await prisma.note.findMany({
+    const notesRaw = await prisma.note.findMany({
       where: { eleve_id: bulletin.eleve_id, annee_scolaire_id: bulletin.annee_scolaire_id, periode: { in: periodes }, matiere_id: { in: matieres.map(m => m.id) } },
       include: { matiere: true },
       orderBy: { matiere: { ordre_bulletin: 'asc' } },
     });
+    // Exposer le barème effectif sur la matière (note_max) pour l'affichage : la note
+    // est saisie sur ce barème, pas sur un défaut plat.
+    notesByFiliere[f] = notesRaw.map(n => ({
+      ...n,
+      matiere: { ...n.matiere, note_max: baremeMap.get(n.matiere_id) ?? baseNote },
+    }));
   }
   return { ...bulletin, notesByFiliere };
 }
@@ -533,7 +548,7 @@ export async function genererPdfClasse(
   const etab = await prisma.etablissement.findUnique({ where: { id: etablissement_id } });
   if (!etab) throw new Error('Établissement introuvable');
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
-  const baseNote = Number(config?.note_max ?? 20);
+  const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
   const mentions = await getMentions(etablissement_id);
 
   const bulletins = await prisma.bulletin.findMany({
@@ -548,7 +563,7 @@ export async function genererPdfClasse(
 
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
   const matMap: Record<string, MatiereAvecCoeff[]> = {};
-  for (const f of filieres) matMap[f] = await getMatieresDeclasse(classe_id, f, periode);
+  for (const f of filieres) matMap[f] = await getMatieresDeclasse(classe_id, f, periode, baseNote);
 
   // Coeff/barème effectifs par matière (override de classe prioritaire) pour l'affichage.
   const effMap = new Map<string, { coeff: number; note_max: number }>(
@@ -566,14 +581,14 @@ export async function genererPdfClasse(
         include: { matiere: true }, orderBy: { matiere: { ordre_bulletin: 'asc' } },
       });
     }
-    type NoteRaw = { matiere_id: string; valeur: unknown; matiere: { nom_fr: string; nom_ar: string | null; coeff_defaut: unknown; note_max?: unknown } };
+    type NoteRaw = { matiere_id: string; valeur: unknown; matiere: { nom_fr: string; nom_ar: string | null; coeff_defaut: unknown } };
     const toRows = (f: 'FR' | 'AR') =>
       ((notesByFiliere[f] ?? []) as NoteRaw[]).map(n => {
         const eff = effMap.get(n.matiere_id);
         return {
           nom_fr: n.matiere.nom_fr, nom_ar: n.matiere.nom_ar ?? n.matiere.nom_fr,
           coeff: eff?.coeff ?? Number(n.matiere.coeff_defaut), valeur: n.valeur !== null ? Number(n.valeur) : null,
-          note_max: eff?.note_max ?? Number(n.matiere.note_max ?? 20),
+          note_max: eff?.note_max ?? baseNote,
         };
       });
 

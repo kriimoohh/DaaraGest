@@ -21,7 +21,6 @@ interface Matiere {
   nom_ar: string;
   filiere: 'FR' | 'AR';
   coeff_defaut: number;
-  note_max: number;
   note_min: number;
   ordre_bulletin: number;
 }

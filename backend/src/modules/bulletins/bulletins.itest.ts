@@ -77,20 +77,23 @@ beforeAll(async () => {
     data: { id: classeId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1 A', filiere: 'FR' },
   });
 
-  // Matières FR. RLC est notée sur /60 (barème brut), normalisée via override.
+  // Matières FR. Le barème de saisie est porté par la classe (note_max_override) ;
+  // sans override, une note est réputée sur l'échelle établissement (ici /20).
   await prisma.matiere.createMany({
     data: [
-      { id: ids.matMath, etablissement_id: etabId, nom_fr: 'Mathématiques', filiere: 'FR', coeff_defaut: 2, note_max: 20, ordre_bulletin: 1 },
-      { id: ids.matFr, etablissement_id: etabId, nom_fr: 'Français', filiere: 'FR', coeff_defaut: 1, note_max: 10, ordre_bulletin: 2 },
-      { id: ids.matRlc, etablissement_id: etabId, nom_fr: 'Lecture (RLC)', filiere: 'FR', coeff_defaut: 1, note_max: 20, ordre_bulletin: 3 },
+      { id: ids.matMath, etablissement_id: etabId, nom_fr: 'Mathématiques', filiere: 'FR', coeff_defaut: 2, ordre_bulletin: 1 },
+      { id: ids.matFr, etablissement_id: etabId, nom_fr: 'Français', filiere: 'FR', coeff_defaut: 1, ordre_bulletin: 2 },
+      { id: ids.matRlc, etablissement_id: etabId, nom_fr: 'Lecture (RLC)', filiere: 'FR', coeff_defaut: 1, ordre_bulletin: 3 },
     ],
   });
 
   await prisma.classeMatiere.createMany({
     data: [
+      // Math : pas d'override → barème = échelle établissement (/20).
       { classe_id: classeId, matiere_id: ids.matMath },
-      { classe_id: classeId, matiere_id: ids.matFr },
-      // Barème par classe : RLC est saisie sur /60 dans cette classe.
+      // Français saisi sur /10 dans cette classe (barème par classe).
+      { classe_id: classeId, matiere_id: ids.matFr, note_max_override: 10 },
+      // RLC saisie sur /60 dans cette classe.
       { classe_id: classeId, matiere_id: ids.matRlc, note_max_override: 60 },
     ],
   });

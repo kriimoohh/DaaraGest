@@ -102,7 +102,6 @@ async function main() {
       nom_ar: m.nom_ar,
       filiere: m.filiere,
       coeff_defaut: new Prisma.Decimal(1),
-      note_max: new Prisma.Decimal(20),
       note_min: new Prisma.Decimal(0),
       ordre_bulletin: m.ordre_bulletin,
       code_court: m.code_court,
