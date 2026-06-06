@@ -8,6 +8,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Badge } from '../../components/ui/Badge';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
+import { useNoteMax } from '../../store/noteScaleStore';
 import { useAuthStore } from '../../store/authStore';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -45,6 +46,7 @@ export function ActivitesPage() {
   const role = useAuthStore(s => s.user?.role ?? '');
   const canEdit   = ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'].includes(role);
   const canDelete = ['admin', 'directeur'].includes(role);
+  const noteMax   = useNoteMax(); // échelle de l'établissement (ex: 10)
 
   // Liste activités
   const [activites, setActivites]   = useState<Activite[]>([]);
@@ -412,7 +414,7 @@ export function ActivitesPage() {
                         <tr key={insc.id}>
                           <td style={{ fontWeight: 500 }}>{insc.eleve.prenom_fr} {insc.eleve.nom_fr}</td>
                           <td style={{ fontSize: 12, color: 'var(--ink-3)' }}>{ev?.periode ? `P${ev.periode}` : '—'}</td>
-                          <td style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>{ev?.note !== undefined ? `${ev.note}/20` : '—'}</td>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>{ev?.note !== undefined ? `${ev.note}/${noteMax}` : '—'}</td>
                           <td style={{ fontSize: 12, color: 'var(--ink-2)', fontStyle: ev?.appreciation ? 'normal' : 'italic' }}>{ev?.appreciation ?? '—'}</td>
                           <td>{canEdit && <button className="tb-btn" onClick={() => openEval(insc)} title="Évaluer"><svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/></svg></button>}</td>
                         </tr>
@@ -441,7 +443,7 @@ export function ActivitesPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <Select label="Période (optionnel)" value={evalForm.periode} onChange={e => setEvalForm(f => ({ ...f, periode: e.target.value }))}
               options={[{ value: '', label: '—' }, ...Array.from({ length: 3 }, (_, i) => ({ value: String(i + 1), label: `Période ${i + 1}` }))]} />
-            <Input label="Note /20" type="number" min="0" max="20" step="0.5" value={evalForm.note} onChange={e => setEvalForm(f => ({ ...f, note: e.target.value }))} placeholder="—" />
+            <Input label={`Note /${noteMax}`} type="number" min="0" max={noteMax} step="0.5" value={evalForm.note} onChange={e => setEvalForm(f => ({ ...f, note: e.target.value }))} placeholder="—" />
             <div className="field"><label className="field-label">Appréciation</label><textarea className="input" rows={3} value={evalForm.appreciation} onChange={e => setEvalForm(f => ({ ...f, appreciation: e.target.value }))} placeholder="Ex : Très bonne participation, esprit d'équipe remarquable…" style={{ resize: 'vertical' }} /></div>
           </div>
         </Modal>
