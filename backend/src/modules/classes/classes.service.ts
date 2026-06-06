@@ -27,12 +27,13 @@ const LISTE_CSS = `
   @page { size: A4; margin: 0; }
 `;
 
-export async function listerClasses(etablissement_id: string, annee_scolaire_id?: string) {
+export async function listerClasses(etablissement_id: string, annee_scolaire_id?: string, filiere?: string) {
   const classes = await prisma.classe.findMany({
     where: {
       etablissement_id,
       active: true,
       ...(annee_scolaire_id ? { annee_scolaire_id } : {}),
+      ...(filiere === 'FR' || filiere === 'AR' ? { filiere } : {}),
     },
     include: {
       annee_scolaire: true,
