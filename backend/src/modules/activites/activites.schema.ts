@@ -33,7 +33,9 @@ export const bulkPresencesSchema = z.object({
 export const evaluationActiviteSchema = z.object({
   periode:      z.number().int().min(1).optional(),
   appreciation: z.string().max(1000).optional(),
-  note:         z.number().min(0).max(20).optional(),
+  // Plafond fin validé côté service contre l'échelle de l'établissement
+  // (ConfigNotes.note_max) ; borne large ici pour ne pas figer un /20.
+  note:         z.number().min(0).max(100).optional(),
 });
 
 export type ActiviteInput             = z.infer<typeof activiteSchema>;

@@ -3,6 +3,7 @@ import {
   ActiviteInput, InscriptionActiviteInput, SeanceInput,
   PresenceActiviteItem, EvaluationActiviteInput,
 } from './activites.schema';
+import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 
 // ─── Activités ───────────────────────────────────────────────────────────────
 
@@ -185,6 +186,17 @@ export async function upsertEvaluationActivite(
   });
   if (!inscription || inscription.activite.etablissement_id !== etablissement_id) {
     throw new Error('Inscription introuvable');
+  }
+
+  // La note d'activité est sur l'échelle de l'établissement (ConfigNotes.note_max).
+  if (data.note != null) {
+    const config = await prisma.configNotes.findUnique({
+      where: { etablissement_id }, select: { note_max: true },
+    });
+    const noteMax = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
+    if (data.note > noteMax) {
+      throw Object.assign(new Error(`La note ${data.note} dépasse le maximum autorisé (${noteMax}).`), { statusCode: 400 });
+    }
   }
 
   const existing = await prisma.evaluationActivite.findFirst({

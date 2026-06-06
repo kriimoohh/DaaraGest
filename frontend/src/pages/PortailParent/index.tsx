@@ -410,7 +410,7 @@ function EvaluationsFormativesTab({ evaluations }: { evaluations: PortailData['e
   );
 }
 
-function ActivitesTab({ activites }: { activites: PortailData['activites'] }) {
+function ActivitesTab({ activites, base }: { activites: PortailData['activites']; base: number }) {
   const { t } = useTranslation();
   if (activites.length === 0) {
     return <div style={{ padding: 24, textAlign: 'center', color: '#6b7280', fontSize: 14 }}>{t('portail_parent.aucune_activite')}</div>;
@@ -434,7 +434,7 @@ function ActivitesTab({ activites }: { activites: PortailData['activites'] }) {
                 <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 12, color: '#6b7280', minWidth: 100 }}>{PERIODE_LABEL[ev.periode] ?? `Période ${ev.periode}`}</span>
                   {ev.note !== null && (
-                    <span style={{ fontSize: 14, fontWeight: 700, color: '#2563eb' }}>{parseFloat(ev.note).toFixed(1)}/20</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: '#2563eb' }}>{parseFloat(ev.note).toFixed(1)}/{base}</span>
                   )}
                   {ev.appreciation && (
                     <span style={{ fontSize: 13, color: '#374151', fontStyle: 'italic' }}>{ev.appreciation}</span>
@@ -588,7 +588,7 @@ export function PortailParentPage() {
             {tab === 'evaluations' && <EvaluationsFormativesTab evaluations={data.evaluations_formatives} />}
             {tab === 'paiements' && <PaiementsTab paiements={data.paiements} />}
             {tab === 'absences' && <AbsencesTab absences={data.absences} />}
-            {tab === 'activites' && <ActivitesTab activites={data.activites} />}
+            {tab === 'activites' && <ActivitesTab activites={data.activites} base={data.note_max_base ?? 20} />}
             {tab === 'infos' && <InfosTab data={data} />}
           </div>
         </div>
