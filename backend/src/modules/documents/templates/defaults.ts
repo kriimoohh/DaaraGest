@@ -261,7 +261,7 @@ const ATTESTATION_RESULTATS = wrapPage('Attestation de résultats', `
       <tr><td>Matricule</td><td>{{MATRICULE}}</td></tr>
       <tr><td>Classe</td><td>{{CLASSE_FR}}</td></tr>
       <tr><td>Année scolaire</td><td>{{ANNEE_SCOLAIRE}}</td></tr>
-      <tr><td>Moyenne annuelle</td><td><strong>{{MOYENNE_ANNUELLE}} / 20</strong></td></tr>
+      <tr><td>Moyenne annuelle</td><td><strong>{{MOYENNE_ANNUELLE}} / {{NOTE_MAX_BASE}}</strong></td></tr>
       <tr><td>Décision</td><td><strong>{{DECISION}}</strong></td></tr>
     </table>
     <p>a obtenu les résultats mentionnés ci-dessus au terme de l'année scolaire <strong>{{ANNEE_SCOLAIRE}}</strong>.</p>
