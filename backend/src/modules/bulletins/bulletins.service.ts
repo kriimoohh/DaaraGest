@@ -508,6 +508,27 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
   // Nb de périodes dynamique (cf. genererBulletinsAnnuels + getBulletin)
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
   const nbPeriodes = config?.nb_periodes ?? 3;
+  const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
+
+  const mentions = await getMentions(etablissement_id);
+
+  // Barème + coefficient EFFECTIFS par matière (override de classe/période prioritaire),
+  // résolus depuis les classes FR et AR de l'élève. Sans ça, l'affichage retombe sur un
+  // défaut plat (/20), avec des appréciations et des moyennes par filière fausses.
+  const insc = data.eleve.inscriptions.find(
+    i => i.annee_scolaire_id === data.annee_scolaire_id
+  ) as { classe_fr_id?: string | null; classe_ar_id?: string | null } | undefined;
+  const periodeForBareme = data.periode === 0 ? undefined : data.periode;
+  const effMap = new Map<string, { coeff: number; note_max: number }>();
+  for (const [cid, f] of [
+    [insc?.classe_fr_id, 'FR'] as const,
+    [insc?.classe_ar_id, 'AR'] as const,
+  ]) {
+    if (!cid) continue;
+    for (const m of await getMatieresDeclasse(cid, f, periodeForBareme, baseNote)) {
+      effMap.set(m.id, { coeff: Number(m.coeff_effectif), note_max: Number(m.note_max_effectif) });
+    }
+  }
 
   const { generateBulletinHtml, generateBulletinAnnuelHtml } = await import('./bulletin.template');
 
@@ -517,20 +538,28 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
     eleve_matricule: data.eleve.matricule, annee_libelle: data.annee_scolaire.libelle,
     moyenne: data.moyenne !== null ? Number(data.moyenne) : null, rang: data.rang,
     appreciation: data.appreciation, devise: etab.devise,
+    note_max_etab: baseNote, mentions,
   };
 
-  type NoteRaw = { valeur: unknown; periode: number; matiere: { nom_fr: string; nom_ar: string | null; coeff_defaut: unknown } };
+  type NoteRaw = { matiere_id: string; valeur: unknown; periode: number; matiere: { nom_fr: string; nom_ar: string | null; coeff_defaut: unknown } };
 
   const toRows = (f: 'FR' | 'AR') =>
-    ((data.notesByFiliere[f] ?? []) as NoteRaw[]).map(n => ({
-      nom_fr: n.matiere.nom_fr, nom_ar: n.matiere.nom_ar ?? n.matiere.nom_fr,
-      coeff: Number(n.matiere.coeff_defaut), valeur: n.valeur !== null ? Number(n.valeur) : null,
-    }));
+    ((data.notesByFiliere[f] ?? []) as NoteRaw[]).map(n => {
+      const eff = effMap.get(n.matiere_id);
+      return {
+        nom_fr: n.matiere.nom_fr, nom_ar: n.matiere.nom_ar ?? n.matiere.nom_fr,
+        coeff: eff?.coeff ?? Number(n.matiere.coeff_defaut), valeur: n.valeur !== null ? Number(n.valeur) : null,
+        note_max: eff?.note_max ?? baseNote,
+      };
+    });
 
   const toAnnuelRows = (f: 'FR' | 'AR') => {
-    const map = new Map<string, { nom_fr: string; nom_ar: string; coeff: number; vals: Record<number, number | null> }>();
+    const map = new Map<string, { nom_fr: string; nom_ar: string; coeff: number; note_max: number; vals: Record<number, number | null> }>();
     for (const n of (data.notesByFiliere[f] ?? []) as NoteRaw[]) {
-      if (!map.has(n.matiere.nom_fr)) map.set(n.matiere.nom_fr, { nom_fr: n.matiere.nom_fr, nom_ar: n.matiere.nom_ar ?? n.matiere.nom_fr, coeff: Number(n.matiere.coeff_defaut), vals: {} });
+      if (!map.has(n.matiere.nom_fr)) {
+        const eff = effMap.get(n.matiere_id);
+        map.set(n.matiere.nom_fr, { nom_fr: n.matiere.nom_fr, nom_ar: n.matiere.nom_ar ?? n.matiere.nom_fr, coeff: eff?.coeff ?? Number(n.matiere.coeff_defaut), note_max: eff?.note_max ?? baseNote, vals: {} });
+      }
       map.get(n.matiere.nom_fr)!.vals[n.periode] = n.valeur !== null ? Number(n.valeur) : null;
     }
     return Array.from(map.values()).map(m => {
