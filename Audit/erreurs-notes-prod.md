@@ -94,10 +94,13 @@ base = `ConfigNotes.note_max` (= 10). **rapports** et **progression** sont confo
 - Relevé de classe : applique désormais `ClasseMatierePeriode.note_max` quand une période précise est demandée (matières dont le barème change T1→T2 : CLC arabe, RER…).
 - Relevé individuel `RELEVE_NOTES` : `MOYENNE_ANNUELLE` était une **moyenne brute** des notes → désormais moyenne normalisée/pondérée via `calculerMoyennesClasse` (moy FR+AR)/2.
 
-## CODE-5 ⏳ RESTE À FAIRE — labels `/20` en dur dans le frontend (hors dashboard)
-- L'établissement est en `/10` (`ConfigNotes.note_max = 10`) mais l'UI affiche `/20` en dur dans **Bulletins** (`frontend/src/pages/Bulletins/index.tsx`), **Eleves** (`.../Eleves/index.tsx:1312`) et plusieurs clés i18n (`fr/ar common.json` : `moyenne_sur_20`, `valeur "Note /20"`, `col_note "/20"`).
-- Les bulletins/moyennes sont calculés sur `/10` côté backend → ces écrans affichent une échelle fausse.
-- À traiter : faire dériver l'échelle de `ConfigNotes.note_max` (comme le dashboard via `note_max_base`) plutôt que `/20` codé en dur.
+## CODE-5 ✅ CORRIGÉ — labels `/20` en dur dans le frontend
+- Nouveau store `frontend/src/store/noteScaleStore.ts` (`useNoteMax()`) : charge `ConfigNotes.note_max` une fois et l'expose à l'UI.
+- **Bulletins** : `moyenneColor`/`moyenneVariant` paramétrés par la base (seuils 0,7 et 0,5 de l'échelle) ; labels `/20` → `/{noteMax}` (cartes, table, détail, stats classe).
+- **Eleves** : moyenne du bulletin `/20` → `/{noteMax}`, seuil couleur sur `base*0.5`.
+- **Dashboard** : barres + seuils sur `note_max_base` ; alerte i18n `moyenne_sur_20` → `moyenne_sur` avec `{{max}}`.
+- **PortailParent** (public) : avait en plus une `calcMoyenne` **brute** (val×coeff sans normalisation) → désormais normalisée via barème effectif renvoyé par l'API (`note_max_effectif`/`coeff_effectif`) + base (`note_max_base`) ; labels et seuils alignés.
+- Restant mineur : 3 clés i18n mortes « Note /20 » (`note.valeur`, `portail_parent.col_note`, `activite.col_note`) non rendues — laissées telles quelles. Les notes d'**activités parascolaires** restent en `/20` (sous-système sans barème défini).
 
 ---
 

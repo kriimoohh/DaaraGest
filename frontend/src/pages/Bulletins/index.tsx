@@ -7,6 +7,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
+import { useNoteMax } from '../../store/noteScaleStore';
 import { toast } from '../../store/toastStore';
 
 interface AnneeScolaire { id: string; libelle: string; }
@@ -51,17 +52,19 @@ const PERIODES = [
   { value: '3', label: '3ème Trimestre' },
 ];
 
-function moyenneVariant(m: number | null): 'success' | 'error' | 'warning' | 'neutral' {
+// Seuils relatifs à l'échelle de l'établissement (base, ex: 10) : 0.7 = "bien"
+// (14/20), 0.5 = "moyenne" (10/20). Évite les seuils /20 codés en dur.
+function moyenneVariant(m: number | null, base = 20): 'success' | 'error' | 'warning' | 'neutral' {
   if (m === null) return 'neutral';
-  if (m >= 14) return 'success';
-  if (m >= 10) return 'warning';
+  if (m >= base * 0.7) return 'success';
+  if (m >= base * 0.5) return 'warning';
   return 'error';
 }
 
-function moyenneColor(m: number | null): string {
+function moyenneColor(m: number | null, base = 20): string {
   if (m === null) return 'var(--ink-4)';
-  if (m >= 14) return 'var(--success)';
-  if (m >= 10) return 'var(--warning)';
+  if (m >= base * 0.7) return 'var(--success)';
+  if (m >= base * 0.5) return 'var(--warning)';
   return 'var(--danger)';
 }
 
@@ -87,19 +90,19 @@ function RangMedal({ rang }: { rang: number | null }) {
   return <span style={{ fontWeight: 600, color: 'var(--ink-2)' }}>{rang}ème</span>;
 }
 
-function ClasseStats({ bulletins, t }: { bulletins: Bulletin[]; t: (k: string) => string }) {
+function ClasseStats({ bulletins, t, noteMax }: { bulletins: Bulletin[]; t: (k: string) => string; noteMax: number }) {
   if (bulletins.length === 0) return null;
   const avecMoy = bulletins.filter(b => b.moyenne !== null);
   if (avecMoy.length === 0) return null;
   const moyennes = avecMoy.map(b => Number(b.moyenne!));
   const moyClasse = moyennes.reduce((a, b) => a + b, 0) / moyennes.length;
   const meilleur = bulletins.reduce((best, b) => (b.rang === 1 ? b : best), null as Bulletin | null);
-  const reussite = avecMoy.filter(b => Number(b.moyenne!) >= 10).length;
+  const reussite = avecMoy.filter(b => Number(b.moyenne!) >= noteMax * 0.5).length;
 
   return (
     <div className="grid-4" style={{ marginBottom: 16 }}>
       <div className="card" style={{ padding: 16, textAlign: 'center' }}>
-        <div style={{ fontSize: 22, fontWeight: 700, color: moyenneColor(moyClasse) }}>
+        <div style={{ fontSize: 22, fontWeight: 700, color: moyenneColor(moyClasse, noteMax) }}>
           {moyClasse.toFixed(2)}
         </div>
         <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>{t('bulletin.stats_moyenne_classe')}</div>
@@ -127,6 +130,7 @@ function ClasseStats({ bulletins, t }: { bulletins: Bulletin[]; t: (k: string) =
 export function BulletinsPage() {
   const { t } = useTranslation();
   const api = useApi();
+  const noteMax = useNoteMax();
   const [annees, setAnnees] = useState<AnneeScolaire[]>([]);
   const [classes, setClasses] = useState<Classe[]>([]);
   const [bulletins, setBulletins] = useState<Bulletin[]>([]);
@@ -327,14 +331,14 @@ export function BulletinsPage() {
       </div>
 
       {/* Stats de classe */}
-      {bulletins.length > 0 && <ClasseStats bulletins={bulletins} t={t} />}
+      {bulletins.length > 0 && <ClasseStats bulletins={bulletins} t={t} noteMax={noteMax} />}
 
       {/* Vue cartes */}
       {bulletins.length > 0 && view === 'cards' && (
         <div className="grid-4">
           {sortedBulletins.map(b => {
             const moy = b.moyenne !== null ? Number(b.moyenne) : null;
-            const barColor = moy === null ? 'var(--rule)' : moy >= 14 ? 'var(--success)' : moy >= 10 ? 'var(--warning)' : 'var(--danger)';
+            const barColor = moy === null ? 'var(--rule)' : moyenneColor(moy, noteMax);
             return (
               <div key={b.id} className="card" style={{ overflow: 'hidden' }}>
                 {/* Barre de couleur selon la moyenne */}
@@ -363,10 +367,10 @@ export function BulletinsPage() {
                   {/* Moyenne */}
                   <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
                     <div>
-                      <div style={{ fontSize: 28, fontWeight: 700, color: moyenneColor(moy) }}>
+                      <div style={{ fontSize: 28, fontWeight: 700, color: moyenneColor(moy, noteMax) }}>
                         {moy !== null ? moy.toFixed(2) : 'N/A'}
                       </div>
-                      <div style={{ fontSize: 12, color: 'var(--ink-4)' }}>/20</div>
+                      <div style={{ fontSize: 12, color: 'var(--ink-4)' }}>/{noteMax}</div>
                     </div>
                     {b.appreciation && (
                       <div style={{ fontSize: 12, color: 'var(--ink-3)', textAlign: 'end', maxWidth: 120, lineHeight: 1.4, fontStyle: 'italic' }}>
@@ -423,8 +427,8 @@ export function BulletinsPage() {
                     </td>
                     <td>
                       <Badge
-                        label={moy !== null ? `${moy.toFixed(2)}/20` : 'N/A'}
-                        variant={moyenneVariant(moy)}
+                        label={moy !== null ? `${moy.toFixed(2)}/${noteMax}` : 'N/A'}
+                        variant={moyenneVariant(moy, noteMax)}
                       />
                     </td>
                     <td style={{ fontSize: 12, color: 'var(--ink-3)', fontStyle: 'italic', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -566,6 +570,7 @@ function BulletinDetailContent({
 }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ar' ? 'ar-SN' : 'fr-FR';
+  const noteMax = useNoteMax();
   const { user } = useAuthStore();
   const [obsFr, setObsFr] = useState(detail.observation_fr ?? '');
   const [obsProf, setObsProf] = useState(detail.observation_prof ?? '');
@@ -591,16 +596,16 @@ function BulletinDetailContent({
   const insc = detail.eleve.inscriptions?.[0];
   const classeNom = insc?.classe_fr?.nom_fr ?? insc?.classe_ar?.nom_fr ?? '—';
 
-  const bandeauBg = moy === null ? 'var(--paper-2)' : moy >= 14 ? 'var(--success-soft)' : moy >= 10 ? 'var(--warning-soft)' : 'var(--danger-soft)';
+  const bandeauBg = moy === null ? 'var(--paper-2)' : moy >= noteMax * 0.7 ? 'var(--success-soft)' : moy >= noteMax * 0.5 ? 'var(--warning-soft)' : 'var(--danger-soft)';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Bandeau moyenne + rang */}
       <div style={{ borderRadius: 'var(--r-lg)', padding: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, background: bandeauBg }}>
         <div>
-          <div style={{ fontSize: 36, fontWeight: 700, color: moyenneColor(moy) }}>
+          <div style={{ fontSize: 36, fontWeight: 700, color: moyenneColor(moy, noteMax) }}>
             {moy !== null ? moy.toFixed(2) : 'N/A'}
-            <span style={{ fontSize: 16, fontWeight: 400, color: 'var(--ink-4)', marginInlineStart: 4 }}>/20</span>
+            <span style={{ fontSize: 16, fontWeight: 400, color: 'var(--ink-4)', marginInlineStart: 4 }}>/{noteMax}</span>
           </div>
           {detail.appreciation && (
             <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--ink-2)', marginTop: 4 }}>{detail.appreciation}</div>

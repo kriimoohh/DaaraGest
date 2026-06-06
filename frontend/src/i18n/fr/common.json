@@ -86,7 +86,7 @@
     "absences_repetees": "Absences répétées",
     "note_insuffisante": "Note insuffisante",
     "absences_count": "{{count}} absences",
-    "moyenne_sur_20": "moy. {{valeur}}/20",
+    "moyenne_sur": "moy. {{valeur}}/{{max}}",
     "encaissements_6_mois": "Encaissements — 6 derniers mois",
     "total_label": "Total :",
     "vs_mois_prec": "{{pct}}% vs mois préc.",

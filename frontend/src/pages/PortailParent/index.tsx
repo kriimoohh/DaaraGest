@@ -12,8 +12,10 @@ interface PortailData {
     classe_fr: { id: string; nom_fr: string; filiere: string } | null
     classe_ar: { id: string; nom_fr: string; filiere: string } | null
   } | null
+  note_max_base: number
   notes: Array<{
     id: string; periode: number; valeur: string;
+    note_max_effectif: number; coeff_effectif: number;
     matiere: { nom_fr: string; nom_ar: string; filiere: string; coeff_defaut: string }
   }>
   bulletins: Array<{
@@ -62,15 +64,20 @@ const PERIODE_LABEL: Record<number, string> = {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function calcMoyenne(notes: PortailData['notes']): string {
+// Moyenne NORMALISÉE et pondérée (comme les bulletins) : chaque note est ramenée
+// sur l'échelle de l'établissement (base) via son barème effectif, puis pondérée
+// par le coefficient effectif. (Avant : moyenne brute val×coeff, fausse pour les
+// barèmes /40-/60.)
+function calcMoyenne(notes: PortailData['notes'], base: number): string {
   if (notes.length === 0) return '—';
   let total = 0;
   let totalCoeff = 0;
   for (const n of notes) {
     const val = parseFloat(n.valeur);
-    const coeff = parseFloat(n.matiere.coeff_defaut);
-    if (!isNaN(val) && !isNaN(coeff) && coeff > 0) {
-      total += val * coeff;
+    const nm = Number(n.note_max_effectif);
+    const coeff = Number(n.coeff_effectif);
+    if (!isNaN(val) && nm > 0 && coeff > 0) {
+      total += (val / nm) * base * coeff;
       totalCoeff += coeff;
     }
   }
@@ -110,7 +117,7 @@ function Badge({ label, color }: { label: string; color: 'green' | 'red' | 'oran
 
 // ── Tab components ─────────────────────────────────────────────────────────────
 
-function NotesTab({ notes, bulletins }: { notes: PortailData['notes']; bulletins: PortailData['bulletins'] }) {
+function NotesTab({ notes, bulletins, base }: { notes: PortailData['notes']; bulletins: PortailData['bulletins']; base: number }) {
   const { t } = useTranslation();
   const periodes = [...new Set(notes.map(n => n.periode))].sort();
 
@@ -122,7 +129,7 @@ function NotesTab({ notes, bulletins }: { notes: PortailData['notes']; bulletins
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {periodes.map(periode => {
         const notesP = notes.filter(n => n.periode === periode);
-        const moyenneCalc = calcMoyenne(notesP);
+        const moyenneCalc = calcMoyenne(notesP, base);
         const bulletin = bulletins.find(b => b.periode === periode);
 
         return (
@@ -135,12 +142,12 @@ function NotesTab({ notes, bulletins }: { notes: PortailData['notes']; bulletins
               <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                 {bulletin?.moyenne && (
                   <span style={{ fontSize: 13, color: '#374151' }}>
-                    Moyenne bulletin : <strong style={{ color: parseFloat(bulletin.moyenne) >= 10 ? '#16a34a' : '#dc2626' }}>{parseFloat(bulletin.moyenne).toFixed(2)}/20</strong>
+                    Moyenne bulletin : <strong style={{ color: parseFloat(bulletin.moyenne) >= base * 0.5 ? '#16a34a' : '#dc2626' }}>{parseFloat(bulletin.moyenne).toFixed(2)}/{base}</strong>
                   </span>
                 )}
                 {!bulletin?.moyenne && moyenneCalc !== '—' && (
                   <span style={{ fontSize: 13, color: '#374151' }}>
-                    Moyenne calculée : <strong style={{ color: parseFloat(moyenneCalc) >= 10 ? '#16a34a' : '#dc2626' }}>{moyenneCalc}/20</strong>
+                    Moyenne calculée : <strong style={{ color: parseFloat(moyenneCalc) >= base * 0.5 ? '#16a34a' : '#dc2626' }}>{moyenneCalc}/{base}</strong>
                   </span>
                 )}
                 {bulletin?.rang && (
@@ -172,18 +179,19 @@ function NotesTab({ notes, bulletins }: { notes: PortailData['notes']; bulletins
                 <thead>
                   <tr style={{ background: '#f3f4f6' }}>
                     <th style={{ padding: '8px 16px', textAlign: 'start', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb' }}>{t('portail_parent.col_matiere')}</th>
-                    <th style={{ padding: '8px 16px', textAlign: 'center', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb', width: 100 }}>Note /20</th>
+                    <th style={{ padding: '8px 16px', textAlign: 'center', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb', width: 100 }}>Note</th>
                     <th style={{ padding: '8px 16px', textAlign: 'center', fontWeight: 600, color: '#374151', borderBottom: '1px solid #e5e7eb', width: 80 }}>Coeff.</th>
                   </tr>
                 </thead>
                 <tbody>
                   {notesP.map(note => {
                     const val = parseFloat(note.valeur);
+                    const nm = Number(note.note_max_effectif);
                     return (
                       <tr key={note.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                         <td style={{ padding: '10px 16px', color: '#111827', fontWeight: 500 }}>{note.matiere.nom_fr}</td>
-                        <td style={{ padding: '10px 16px', textAlign: 'center', fontWeight: 700, color: !isNaN(val) ? (val >= 10 ? '#16a34a' : '#dc2626') : '#6b7280' }}>
-                          {note.valeur}
+                        <td style={{ padding: '10px 16px', textAlign: 'center', fontWeight: 700, color: !isNaN(val) ? (nm > 0 && val >= nm * 0.5 ? '#16a34a' : '#dc2626') : '#6b7280' }}>
+                          {note.valeur}{nm > 0 ? <span style={{ color: '#9ca3af', fontWeight: 400, fontSize: 12 }}>/{nm}</span> : null}
                         </td>
                         <td style={{ padding: '10px 16px', textAlign: 'center', color: '#6b7280', fontSize: 12 }}>
                           {note.matiere.coeff_defaut}
@@ -576,7 +584,7 @@ export function PortailParentPage() {
 
           {/* Tab content */}
           <div style={{ padding: 20 }}>
-            {tab === 'notes' && <NotesTab notes={data.notes} bulletins={data.bulletins} />}
+            {tab === 'notes' && <NotesTab notes={data.notes} bulletins={data.bulletins} base={data.note_max_base ?? 20} />}
             {tab === 'evaluations' && <EvaluationsFormativesTab evaluations={data.evaluations_formatives} />}
             {tab === 'paiements' && <PaiementsTab paiements={data.paiements} />}
             {tab === 'absences' && <AbsencesTab absences={data.absences} />}

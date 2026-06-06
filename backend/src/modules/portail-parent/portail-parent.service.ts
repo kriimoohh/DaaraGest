@@ -1,4 +1,5 @@
 import prisma from '../../config/database';
+import { getBaremesClasse } from '../bulletins/bulletins.service';
 
 // Fallback : si pas d'année scolaire active, expire dans 90 jours (au lieu de 365).
 const TOKEN_FALLBACK_DUREE_MS = 90 * 24 * 60 * 60 * 1000;
@@ -53,12 +54,39 @@ export async function getPortailData(token: string) {
     orderBy: { created_at: 'desc' },
   });
 
+  // Échelle de l'établissement + barèmes/coefficients EFFECTIFS par classe (override
+  // de période prioritaire), pour normaliser les notes comme les bulletins.
+  const config = await prisma.configNotes.findUnique({
+    where: { etablissement_id: record.etablissement_id },
+    select: { note_max: true, nb_periodes: true },
+  });
+  const noteMaxBase = Number(config?.note_max ?? 20);
+  const periodes = Array.from({ length: config?.nb_periodes ?? 3 }, (_, i) => i + 1);
+
+  const baremes = new Map<string, { coeff: number; note_max: number }>();
+  if (inscription?.classe_fr_id) {
+    for (const [k, v] of await getBaremesClasse(inscription.classe_fr_id, periodes, ['FR'])) baremes.set(k, v);
+  }
+  if (inscription?.classe_ar_id) {
+    for (const [k, v] of await getBaremesClasse(inscription.classe_ar_id, periodes, ['AR'])) baremes.set(k, v);
+  }
+
   // Get notes
-  const notes = inscription ? await prisma.note.findMany({
+  const notesRaw = inscription ? await prisma.note.findMany({
     where: { eleve_id: eleve.id, annee_scolaire_id: inscription.annee_scolaire_id },
-    include: { matiere: { select: { nom_fr: true, nom_ar: true, filiere: true, coeff_defaut: true } } },
+    include: { matiere: { select: { nom_fr: true, nom_ar: true, filiere: true, coeff_defaut: true, note_max: true } } },
     orderBy: [{ periode: 'asc' }, { matiere: { nom_fr: 'asc' } }],
   }) : [];
+
+  // Enrichir chaque note de son barème/coefficient effectif (sinon valeurs matière).
+  const notes = notesRaw.map(n => {
+    const b = baremes.get(`${n.matiere_id}|${n.periode}`);
+    return {
+      ...n,
+      note_max_effectif: b?.note_max ?? Number(n.matiere.note_max),
+      coeff_effectif: b?.coeff ?? Number(n.matiere.coeff_defaut),
+    };
+  });
 
   // Get bulletins
   const bulletins = inscription ? await prisma.bulletin.findMany({
@@ -114,6 +142,7 @@ export async function getPortailData(token: string) {
       sexe: eleve.sexe,
     },
     inscription,
+    note_max_base: noteMaxBase,
     notes,
     bulletins,
     paiements,

@@ -289,7 +289,7 @@ export function Dashboard() {
                             <td className="mono">
                               {a.type === 'absences_repetees'
                                 ? t('dashboard.absences_count', { count: a.valeur })
-                                : t('dashboard.moyenne_sur_20', { valeur: a.valeur })}
+                                : t('dashboard.moyenne_sur', { valeur: a.valeur, max: tdb.note_max_base ?? 20 })}
                             </td>
                           </tr>
                         ))}
