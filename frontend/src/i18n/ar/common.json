@@ -86,7 +86,7 @@
     "absences_repetees": "غيابات متكررة",
     "note_insuffisante": "درجة ضعيفة",
     "absences_count": "{{count}} غياب",
-    "moyenne_sur_20": "معدل {{valeur}}/20",
+    "moyenne_sur": "معدل {{valeur}}/{{max}}",
     "encaissements_6_mois": "المداخيل — آخر 6 أشهر",
     "total_label": "المجموع:",
     "vs_mois_prec": "{{pct}}% مقارنة بالشهر السابق",

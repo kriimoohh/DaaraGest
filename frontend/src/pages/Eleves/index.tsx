@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import Papa from 'papaparse';
 import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
+import { useNoteMax } from '../../store/noteScaleStore';
 import { toast } from '../../store/toastStore';
 import { API_BASE } from '../../lib/api';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
@@ -239,6 +240,7 @@ export function ElevesPage() {
     { value: 'tuteur', label: t('eleve.tuteur') },
   ];
   const api = useApi();
+  const noteMax = useNoteMax();
 
   // List state
   const [eleves, setEleves] = useState<Eleve[]>([]);
@@ -1308,8 +1310,8 @@ export function ElevesPage() {
                         {p.bulletins.map((b, j) => (
                           <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                             <span style={{ fontWeight: 500 }}>{b.filiere} :</span>
-                            <span style={{ fontWeight: 700, color: b.moyenne !== null && b.moyenne >= 10 ? 'var(--success)' : 'var(--danger)' }}>
-                              {b.moyenne !== null ? Number(b.moyenne).toFixed(2) : '—'}/20
+                            <span style={{ fontWeight: 700, color: b.moyenne !== null && b.moyenne >= noteMax * 0.5 ? 'var(--success)' : 'var(--danger)' }}>
+                              {b.moyenne !== null ? Number(b.moyenne).toFixed(2) : '—'}/{noteMax}
                             </span>
                             {b.rang && <span style={{ color: 'var(--ink-4)' }}>(rang {b.rang})</span>}
                           </div>
