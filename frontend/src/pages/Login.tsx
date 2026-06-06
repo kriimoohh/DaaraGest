@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { useAuthStore } from '../store/authStore';
 import { LogoMark } from '../components/ui/LogoMark';
+import { Input } from '../components/ui/Input';
 
 export function Login() {
   const { t, i18n } = useTranslation();
@@ -93,19 +94,16 @@ export function Login() {
             />
           </div>
 
-          <div className="field">
-            <label className="field-label" htmlFor="password">{t('auth.password', 'Mot de passe')}</label>
-            <input
-              id="password"
-              type="password"
-              className="input"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-              placeholder="••••••••"
-            />
-          </div>
+          <Input
+            id="password"
+            label={t('auth.password', 'Mot de passe')}
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+            autoComplete="current-password"
+            placeholder="••••••••"
+          />
 
           {error && (
             <div style={{ padding: '10px 14px', background: 'var(--danger-soft)', borderRadius: 'var(--r-md)', fontSize: 13, color: 'var(--danger-text)' }}>
