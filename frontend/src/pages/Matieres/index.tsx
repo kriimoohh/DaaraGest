@@ -24,7 +24,6 @@ interface Matiere {
   nom_ar: string | null;
   filiere: 'FR' | 'AR';
   coeff_defaut: number;
-  note_max: number;
   note_min: number;
   ordre_bulletin: number;
   active: boolean;
@@ -41,7 +40,6 @@ const EMPTY = {
   nom_ar: '',
   filiere: 'FR',
   coeff_defaut: '1',
-  note_max: '20',
   note_min: '0',
   ordre_bulletin: '0',
   domaine_id: '',
@@ -98,7 +96,6 @@ export function MatieresPage() {
       nom_ar: m.nom_ar ?? '',
       filiere: m.filiere,
       coeff_defaut: String(m.coeff_defaut),
-      note_max: String(m.note_max),
       note_min: String(m.note_min),
       ordre_bulletin: String(m.ordre_bulletin),
       domaine_id: m.domaine_id ?? '',
@@ -120,7 +117,6 @@ export function MatieresPage() {
         nom_ar: form.nom_ar,
         filiere: form.filiere,
         coeff_defaut: parseFloat(form.coeff_defaut) || 1,
-        note_max: parseFloat(form.note_max) || 20,
         note_min: parseFloat(form.note_min) || 0,
         ordre_bulletin: parseInt(form.ordre_bulletin) || 0,
         domaine_id: form.domaine_id || null,
@@ -231,7 +227,6 @@ export function MatieresPage() {
                   <th>{t('matiere.col_filiere')}</th>
                   <th>{t('matiere.col_domaine')}</th>
                   <th>{t('note.coefficient')}</th>
-                  <th>{t('parametre.note_max')}</th>
                   <th>{t('parametre.note_min')}</th>
                   <th>{t('matiere.col_actions')}</th>
                 </tr>
@@ -252,7 +247,6 @@ export function MatieresPage() {
                       )}
                     </td>
                     <td>{m.coeff_defaut}</td>
-                    <td>{m.note_max}</td>
                     <td>{m.note_min}</td>
                     <td>
                       <div className="row">
@@ -313,15 +307,6 @@ export function MatieresPage() {
               min="0.25"
               value={form.coeff_defaut}
               onChange={(e) => setForm((f) => ({ ...f, coeff_defaut: e.target.value }))}
-            />
-            <Input
-              label={t('parametre.note_max')}
-              type="number"
-              step="1"
-              min="1"
-              max="100"
-              value={form.note_max}
-              onChange={(e) => setForm((f) => ({ ...f, note_max: e.target.value }))}
             />
             <Input
               label={t('parametre.note_min')}

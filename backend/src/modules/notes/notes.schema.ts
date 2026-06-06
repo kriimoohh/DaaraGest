@@ -5,9 +5,9 @@ export const noteItemSchema = z.object({
   matiere_id: z.string().uuid(),
   periode: z.number().int().min(1),
   annee_scolaire_id: z.string().uuid(),
-  // Validation du plafond déléguée à bulkUpsertNotes (vérifie contre
-  // matiere.note_max). Une matière peut être /20, /100, /40 selon les
-  // établissements — le plafond fixe ici bloquait inutilement.
+  // Validation du plafond déléguée à bulkUpsertNotes (vérifie contre le barème
+  // effectif : ClasseMatierePeriode/ClasseMatiere, sinon échelle établissement).
+  // Une matière peut être /20, /100, /40 — le plafond fixe ici bloquait inutilement.
   valeur: z.number().min(0),
   commentaire: z.string().optional(),
 });

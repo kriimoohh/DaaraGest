@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { getBaremesClasse } from '../bulletins/bulletins.service';
+import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 
 // Fallback : si pas d'année scolaire active, expire dans 90 jours (au lieu de 365).
 const TOKEN_FALLBACK_DUREE_MS = 90 * 24 * 60 * 60 * 1000;
@@ -60,30 +61,30 @@ export async function getPortailData(token: string) {
     where: { etablissement_id: record.etablissement_id },
     select: { note_max: true, nb_periodes: true },
   });
-  const noteMaxBase = Number(config?.note_max ?? 20);
+  const noteMaxBase = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
   const periodes = Array.from({ length: config?.nb_periodes ?? 3 }, (_, i) => i + 1);
 
   const baremes = new Map<string, { coeff: number; note_max: number }>();
   if (inscription?.classe_fr_id) {
-    for (const [k, v] of await getBaremesClasse(inscription.classe_fr_id, periodes, ['FR'])) baremes.set(k, v);
+    for (const [k, v] of await getBaremesClasse(inscription.classe_fr_id, periodes, ['FR'], noteMaxBase)) baremes.set(k, v);
   }
   if (inscription?.classe_ar_id) {
-    for (const [k, v] of await getBaremesClasse(inscription.classe_ar_id, periodes, ['AR'])) baremes.set(k, v);
+    for (const [k, v] of await getBaremesClasse(inscription.classe_ar_id, periodes, ['AR'], noteMaxBase)) baremes.set(k, v);
   }
 
   // Get notes
   const notesRaw = inscription ? await prisma.note.findMany({
     where: { eleve_id: eleve.id, annee_scolaire_id: inscription.annee_scolaire_id },
-    include: { matiere: { select: { nom_fr: true, nom_ar: true, filiere: true, coeff_defaut: true, note_max: true } } },
+    include: { matiere: { select: { nom_fr: true, nom_ar: true, filiere: true, coeff_defaut: true } } },
     orderBy: [{ periode: 'asc' }, { matiere: { nom_fr: 'asc' } }],
   }) : [];
 
-  // Enrichir chaque note de son barème/coefficient effectif (sinon valeurs matière).
+  // Enrichir chaque note de son barème/coefficient effectif (sinon échelle établissement).
   const notes = notesRaw.map(n => {
     const b = baremes.get(`${n.matiere_id}|${n.periode}`);
     return {
       ...n,
-      note_max_effectif: b?.note_max ?? Number(n.matiere.note_max),
+      note_max_effectif: b?.note_max ?? noteMaxBase,
       coeff_effectif: b?.coeff ?? Number(n.matiere.coeff_defaut),
     };
   });

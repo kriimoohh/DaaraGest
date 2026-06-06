@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { calculerMoyennesClasse } from '../bulletins/bulletins.service';
+import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 
 function dateDebutSemaine(): Date {
   const d = new Date();
@@ -93,7 +94,7 @@ async function calculerStatsNotes(etablissement_id: string, annee: string) {
   const config = await prisma.configNotes.findUnique({
     where: { etablissement_id }, select: { nb_periodes: true, note_max: true },
   });
-  const baseNote = Number(config?.note_max ?? 20);
+  const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
   const periodes = Array.from({ length: config?.nb_periodes ?? 3 }, (_, i) => i + 1);
 
   const classes = await prisma.classe.findMany({
@@ -202,7 +203,7 @@ async function getFinancesEvolution(etablissement_id: string) {
 async function getAlertes(etablissement_id: string, annee: string | undefined, parEleve: ParEleve) {
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
   const seuilAbsences  = config?.seuil_absences_alerte   ?? 3;
-  const baseNote       = Number(config?.note_max ?? 20);
+  const baseNote       = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
   const seuilReussite  = baseNote / 2; // moitié de l'échelle (ex: 5 sur /10)
 
   const alertes: Array<{
@@ -267,7 +268,7 @@ export async function getTableauDeBord(etablissement_id: string, annee_scolaire_
   // classement top/bottom et les alertes.
   const statsNotes = annee
     ? await calculerStatsNotes(etablissement_id, annee)
-    : { baseNote: Number((await prisma.configNotes.findUnique({ where: { etablissement_id }, select: { note_max: true } }))?.note_max ?? 20), moyennesClasses: [] as Array<{ classe_id: string; classe_nom: string; filiere: string; nb_eleves: number; moyenne: number | null }>, parEleve: new Map() as ParEleve };
+    : { baseNote: Number((await prisma.configNotes.findUnique({ where: { etablissement_id }, select: { note_max: true } }))?.note_max ?? DEFAULT_NOTE_MAX), moyennesClasses: [] as Array<{ classe_id: string; classe_nom: string; filiere: string; nb_eleves: number; moyenne: number | null }>, parEleve: new Map() as ParEleve };
 
   const [presenceEleves, presencePersonnel, topBottom, finances, alertes] = await Promise.all([
     getTauxPresenceEleves(etablissement_id),

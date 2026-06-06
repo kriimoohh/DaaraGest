@@ -3,6 +3,7 @@ import type { PDFOptions } from 'puppeteer';
 import prisma from '../../config/database';
 import { renderPdfHtml as _renderPdfHtmlReal } from '../../utils/browserPool';
 import { calculerMoyennesClasse, getMentionsEtab, mentionPour, getBaremesClasse } from '../bulletins/bulletins.service';
+import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 
 // Mode aperçu : on intercepte renderPdfHtml pour capturer le HTML sans
 // passer par Puppeteer. AsyncLocalStorage isole les appels concurrents.
@@ -200,7 +201,7 @@ export async function rapportResultatsClasse(
   if (!classe) throw new Error('Classe introuvable');
 
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
-  const baseNote = Number(config?.note_max ?? 20);
+  const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
   const nbPeriodes = config?.nb_periodes ?? 3;
   const mentions = await getMentionsEtab(etablissement_id);
   const periodes = periode !== undefined && periode > 0 ? [periode] : Array.from({ length: nbPeriodes }, (_, i) => i + 1);
@@ -460,7 +461,7 @@ export async function rapportGrilleIef(
   ]);
 
   const eleveIds = inscriptions.map(i => i.eleve_id);
-  const baseNote = Number(config?.note_max ?? 20);
+  const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
   const nbPeriodes = config?.nb_periodes ?? 3;
   const periodes = periode && periode > 0 ? [periode] : Array.from({ length: nbPeriodes }, (_, i) => i + 1);
   const seuilMoyenne = baseNote / 2; // seuil de réussite = moitié de l'échelle (ex: 5 sur /10)
@@ -483,14 +484,14 @@ export async function rapportGrilleIef(
   const moyGen = await calculerMoyennesClasse(etablissement_id, classe_id, annee_scolaire_id, periodes, ['FR', 'AR']);
 
   // Moyennes par domaine, chaque note ramenée sur l'échelle établissement via son barème effectif.
-  const baremes = await getBaremesClasse(classe_id, periodes, ['FR', 'AR']);
+  const baremes = await getBaremesClasse(classe_id, periodes, ['FR', 'AR'], baseNote);
   const norm = (v: number, nm: number) => (nm > 0 ? (v / nm) * baseNote : 0);
   const domMoy = new Map<string, Map<string, number>>();
   const dnb = new Map<string, Map<string, number[]>>();
   for (const note of notes) {
     const dCode = note.matiere.domaine?.code;
     if (!dCode) continue;
-    const nm = baremes.get(`${note.matiere_id}|${note.periode}`)?.note_max ?? Number(note.matiere.note_max);
+    const nm = baremes.get(`${note.matiere_id}|${note.periode}`)?.note_max ?? baseNote;
     if (!dnb.has(note.eleve_id)) dnb.set(note.eleve_id, new Map());
     const dm = dnb.get(note.eleve_id)!;
     if (!dm.has(dCode)) dm.set(dCode, []);
@@ -642,9 +643,11 @@ export async function rapportGrillePerformance(
   ]);
 
   const eleveIds = inscriptions.map(i => i.eleve_id);
-  const nbPeriodes = (await prisma.configNotes.findUnique({ where: { etablissement_id }, select: { nb_periodes: true } }))?.nb_periodes ?? 3;
+  const cfg = await prisma.configNotes.findUnique({ where: { etablissement_id }, select: { nb_periodes: true, note_max: true } });
+  const nbPeriodes = cfg?.nb_periodes ?? 3;
+  const baseNote = Number(cfg?.note_max ?? DEFAULT_NOTE_MAX);
   const periodes = periode && periode > 0 ? [periode] : Array.from({ length: nbPeriodes }, (_, i) => i + 1);
-  const baremes = await getBaremesClasse(classe_id, periodes, ['FR', 'AR']);
+  const baremes = await getBaremesClasse(classe_id, periodes, ['FR', 'AR'], baseNote);
   const noteWhere: Record<string, unknown> = { eleve_id: { in: eleveIds }, annee_scolaire_id };
   if (periode && periode > 0) noteWhere.periode = periode;
 
@@ -662,7 +665,7 @@ export async function rapportGrillePerformance(
   for (const note of notes) {
     const dCode   = note.matiere.domaine?.code;
     const typeNote = note.matiere.type_note;
-    const noteMax  = baremes.get(`${note.matiere_id}|${note.periode}`)?.note_max ?? Number(note.matiere.note_max);
+    const noteMax  = baremes.get(`${note.matiere_id}|${note.periode}`)?.note_max ?? baseNote;
     const valNorm  = n10(Number(note.valeur), noteMax);
     if (!dCode || !domCodes3.includes(dCode)) continue;
 
@@ -857,9 +860,11 @@ export async function rapportPerformanceDomaine(
   ]);
 
   const eleveIds = inscriptions.map(i => i.eleve_id);
-  const nbPeriodes = (await prisma.configNotes.findUnique({ where: { etablissement_id }, select: { nb_periodes: true } }))?.nb_periodes ?? 3;
+  const cfg = await prisma.configNotes.findUnique({ where: { etablissement_id }, select: { nb_periodes: true, note_max: true } });
+  const nbPeriodes = cfg?.nb_periodes ?? 3;
+  const baseNote = Number(cfg?.note_max ?? DEFAULT_NOTE_MAX);
   const periodes = periode && periode > 0 ? [periode] : Array.from({ length: nbPeriodes }, (_, i) => i + 1);
-  const baremes = await getBaremesClasse(classe_id, periodes, ['FR', 'AR']);
+  const baremes = await getBaremesClasse(classe_id, periodes, ['FR', 'AR'], baseNote);
   const noteWhere: Record<string, unknown> = { eleve_id: { in: eleveIds }, annee_scolaire_id };
   if (periode && periode > 0) noteWhere.periode = periode;
 
@@ -874,7 +879,7 @@ export async function rapportPerformanceDomaine(
   for (const note of notes) {
     const dc = note.matiere.domaine?.code;
     if (!dc || !domCodes.includes(dc)) continue;
-    const bar = baremes.get(`${note.matiere_id}|${note.periode}`)?.note_max ?? Number(note.matiere.note_max);
+    const bar = baremes.get(`${note.matiere_id}|${note.periode}`)?.note_max ?? baseNote;
     const nm = n10(Number(note.valeur), bar);
     if (!acc.has(note.eleve_id)) acc.set(note.eleve_id, new Map());
     const dm = acc.get(note.eleve_id)!;
@@ -1031,16 +1036,18 @@ export async function rapportReleveNotes(
     fetchInscriptions(classe_id, annee_scolaire_id),
     prisma.classeMatiere.findMany({
       where: { classe_id },
-      include: { matiere: { select: { id: true, nom_fr: true, code_court: true, note_max: true, ordre_bulletin: true } } },
+      include: { matiere: { select: { id: true, nom_fr: true, code_court: true, ordre_bulletin: true } } },
       orderBy: { matiere: { ordre_bulletin: 'asc' } },
     }),
     getTitulaire(classe_id, annee_scolaire_id),
   ]);
 
-  // Barème effectif par matière = override de classe si présent, sinon barème matière.
-  const matieres = classeMatieres.map(cm => ({ ...cm.matiere, note_max_eff: Number(cm.note_max_override ?? cm.matiere.note_max) }));
+  const cfg = await prisma.configNotes.findUnique({ where: { etablissement_id }, select: { nb_periodes: true, note_max: true } });
+  const baseNote = Number(cfg?.note_max ?? DEFAULT_NOTE_MAX);
+  // Barème effectif par matière = override de classe si présent, sinon échelle établissement.
+  const matieres = classeMatieres.map(cm => ({ ...cm.matiere, note_max_eff: Number(cm.note_max_override ?? baseNote) }));
   const eleveIds = inscriptions.map(i => i.eleve_id);
-  const nbPeriodes = (await prisma.configNotes.findUnique({ where: { etablissement_id }, select: { nb_periodes: true } }))?.nb_periodes ?? 3;
+  const nbPeriodes = cfg?.nb_periodes ?? 3;
   const periodes = periode && periode > 0 ? [periode] : Array.from({ length: nbPeriodes }, (_, i) => i + 1);
   const moyennes = await calculerMoyennesClasse(etablissement_id, classe_id, annee_scolaire_id, periodes, ['FR', 'AR']);
   const noteWhere: Record<string, unknown> = {
