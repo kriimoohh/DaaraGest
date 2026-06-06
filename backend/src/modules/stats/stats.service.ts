@@ -1,4 +1,5 @@
 import prisma from '../../config/database';
+import { calculerMoyennesClasse } from '../bulletins/bulletins.service';
 
 function dateDebutSemaine(): Date {
   const d = new Date();
@@ -82,109 +83,88 @@ async function getTauxPresenceProfesseurs(etablissement_id: string) {
   return { semaine: calcTaux(semaine), mois: calcTaux(mois) };
 }
 
-async function getMoyennesClasses(etablissement_id: string, annee_scolaire_id?: string) {
-  const annee = annee_scolaire_id ?? (await prisma.anneeScolaire.findFirst({
-    where: { etablissement_id, active: true },
-    select: { id: true },
-  }))?.id;
-
-  if (!annee) return [];
+// Source UNIQUE des moyennes du tableau de bord : normalisées sur l'échelle de
+// l'établissement (ConfigNotes.note_max) et pondérées par les barèmes/coefficients
+// EFFECTIFS (override de période prioritaire), via `calculerMoyennesClasse` du
+// module bulletins. Remplace l'ancienne moyenne brute des notes (_avg valeur) qui,
+// avec des barèmes variables (/10../60) et le mélange FR+AR, donnait des moyennes
+// incohérentes avec les bulletins.
+async function calculerStatsNotes(etablissement_id: string, annee: string) {
+  const config = await prisma.configNotes.findUnique({
+    where: { etablissement_id }, select: { nb_periodes: true, note_max: true },
+  });
+  const baseNote = Number(config?.note_max ?? 20);
+  const periodes = Array.from({ length: config?.nb_periodes ?? 3 }, (_, i) => i + 1);
 
   const classes = await prisma.classe.findMany({
     where: { etablissement_id, annee_scolaire_id: annee, active: true },
     select: { id: true, nom_fr: true, filiere: true },
   });
 
-  const results = await Promise.all(classes.map(async (c) => {
+  const moyennesClasses: Array<{
+    classe_id: string; classe_nom: string; filiere: string; nb_eleves: number; moyenne: number | null;
+  }> = [];
+  // eleve_id → cumul des moyennes par filière (moyenne globale = (moy FR + moy AR) / 2)
+  const parEleve = new Map<string, { somme: number; n: number; classe: string }>();
+
+  for (const c of classes) {
     const inscriptions = await prisma.inscription.findMany({
-      where: {
-        annee_scolaire_id: annee,
-        statut: 'actif',
-        OR: [{ classe_fr_id: c.id }, { classe_ar_id: c.id }],
-      },
+      where: { annee_scolaire_id: annee, statut: 'actif', OR: [{ classe_fr_id: c.id }, { classe_ar_id: c.id }] },
       select: { eleve_id: true },
     });
-    const eleveIds = inscriptions.map(i => i.eleve_id);
-    if (eleveIds.length === 0) return { ...c, moyenne: null, nb_eleves: 0 };
+    if (inscriptions.length === 0) {
+      moyennesClasses.push({ classe_id: c.id, classe_nom: c.nom_fr, filiere: c.filiere, nb_eleves: 0, moyenne: null });
+      continue;
+    }
 
-    const agg = await prisma.note.aggregate({
-      where: { eleve_id: { in: eleveIds }, annee_scolaire_id: annee },
-      _avg: { valeur: true },
-      _count: { id: true },
-    });
+    const moys = await calculerMoyennesClasse(etablissement_id, c.id, annee, periodes, [c.filiere as 'FR' | 'AR']);
+    const vals = [...moys.values()];
+    const moyenne = vals.length ? Math.round((vals.reduce((s, v) => s + v, 0) / vals.length) * 100) / 100 : null;
+    moyennesClasses.push({ classe_id: c.id, classe_nom: c.nom_fr, filiere: c.filiere, nb_eleves: inscriptions.length, moyenne });
 
-    return {
-      classe_id: c.id,
-      classe_nom: c.nom_fr,
-      filiere: c.filiere,
-      nb_eleves: eleveIds.length,
-      moyenne: agg._avg.valeur ? Math.round(Number(agg._avg.valeur) * 100) / 100 : null,
-    };
-  }));
+    for (const [eleve_id, moy] of moys) {
+      const cur = parEleve.get(eleve_id) ?? { somme: 0, n: 0, classe: c.nom_fr };
+      cur.somme += moy; cur.n += 1;
+      if (c.filiere === 'FR') cur.classe = c.nom_fr; // libellé : classe FR de préférence
+      parEleve.set(eleve_id, cur);
+    }
+  }
 
-  return results.filter(r => r.moyenne !== null).sort((a, b) => (b.moyenne ?? 0) - (a.moyenne ?? 0));
+  moyennesClasses.sort((a, b) => (b.moyenne ?? -1) - (a.moyenne ?? -1));
+  return { baseNote, moyennesClasses, parEleve };
 }
 
-async function getTopBottomEleves(etablissement_id: string, annee_scolaire_id?: string) {
-  const annee = annee_scolaire_id ?? (await prisma.anneeScolaire.findFirst({
-    where: { etablissement_id, active: true },
-    select: { id: true },
-  }))?.id;
+type ParEleve = Map<string, { somme: number; n: number; classe: string }>;
 
-  if (!annee) return { top5: [], bottom5: [] };
+function moyenneGlobale(v: { somme: number; n: number }): number {
+  return Math.round((v.somme / v.n) * 100) / 100;
+}
 
-  const notes = await prisma.note.groupBy({
-    by: ['eleve_id'],
-    where: {
-      eleve: { etablissement_id },
-      annee_scolaire_id: annee,
-    },
-    _avg: { valeur: true },
-    _count: { id: true },
-    having: { valeur: { _count: { gte: 3 } } },
-  });
+async function getTopBottomEleves(parEleve: ParEleve) {
+  const arr = [...parEleve.entries()]
+    .map(([eleve_id, v]) => ({ eleve_id, moyenne: moyenneGlobale(v), classe: v.classe }))
+    .sort((a, b) => b.moyenne - a.moyenne);
 
-  notes.sort((a, b) => Number(b._avg.valeur ?? 0) - Number(a._avg.valeur ?? 0));
-
-  const top5Ids    = notes.slice(0, 5).map(n => n.eleve_id);
-  const bottom5Ids = notes.slice(-5).reverse().map(n => n.eleve_id);
-  const allIds     = [...new Set([...top5Ids, ...bottom5Ids])];
-
+  const top5    = arr.slice(0, 5);
+  const bottom5 = arr.slice(-5).reverse();
+  const allIds  = [...new Set([...top5, ...bottom5].map(x => x.eleve_id))];
   if (allIds.length === 0) return { top5: [], bottom5: [] };
 
   const eleves = await prisma.eleve.findMany({
     where: { id: { in: allIds } },
-    include: {
-      inscriptions: {
-        where: { annee_scolaire_id: annee, statut: 'actif' },
-        include: {
-          classe_fr: { select: { nom_fr: true } },
-          classe_ar: { select: { nom_fr: true } },
-        },
-      },
-    },
+    select: { id: true, nom_fr: true, prenom_fr: true, matricule: true },
   });
-
   const eleveMap = new Map(eleves.map(e => [e.id, e]));
-  const moyenneMap = new Map(notes.map(n => [n.eleve_id, Math.round(Number(n._avg.valeur ?? 0) * 100) / 100]));
 
-  function format(id: string) {
-    const e = eleveMap.get(id);
+  function format(x: { eleve_id: string; moyenne: number; classe: string }) {
+    const e = eleveMap.get(x.eleve_id);
     if (!e) return null;
-    const insc = e.inscriptions[0];
-    const classe = insc?.classe_fr?.nom_fr ?? insc?.classe_ar?.nom_fr ?? '—';
-    return {
-      eleve_id: e.id,
-      nom: `${e.nom_fr} ${e.prenom_fr}`,
-      matricule: e.matricule,
-      moyenne: moyenneMap.get(id) ?? 0,
-      classe,
-    };
+    return { eleve_id: e.id, nom: `${e.nom_fr} ${e.prenom_fr}`, matricule: e.matricule, moyenne: x.moyenne, classe: x.classe };
   }
 
   return {
-    top5:    top5Ids.map(format).filter(Boolean),
-    bottom5: bottom5Ids.map(format).filter(Boolean),
+    top5:    top5.map(format).filter(Boolean),
+    bottom5: bottom5.map(format).filter(Boolean),
   };
 }
 
@@ -219,16 +199,11 @@ async function getFinancesEvolution(etablissement_id: string) {
   return { mois_courant: mc, mois_precedent: mp, evolution_pct };
 }
 
-async function getAlertes(etablissement_id: string, annee_scolaire_id?: string) {
+async function getAlertes(etablissement_id: string, annee: string | undefined, parEleve: ParEleve) {
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
   const seuilAbsences  = config?.seuil_absences_alerte   ?? 3;
   const baseNote       = Number(config?.note_max ?? 20);
   const seuilReussite  = baseNote / 2; // moitié de l'échelle (ex: 5 sur /10)
-
-  const annee = annee_scolaire_id ?? (await prisma.anneeScolaire.findFirst({
-    where: { etablissement_id, active: true },
-    select: { id: true },
-  }))?.id;
 
   const alertes: Array<{
     type: string; eleve_id: string; nom: string; matricule: string; valeur: number; classe?: string;
@@ -259,19 +234,23 @@ async function getAlertes(etablissement_id: string, annee_scolaire_id?: string) 
     }
   }
 
-  // Notes insuffisantes — basées sur la MOYENNE du bulletin (pondérée/normalisée),
-  // et non sur une moyenne brute des notes (barèmes variables). Seuil = base/2.
-  if (annee) {
-    const bulletins = await prisma.bulletin.findMany({
-      where: { annee_scolaire_id: annee, periode: { gt: 0 }, moyenne: { lt: seuilReussite }, eleve: { etablissement_id } },
-      select: { eleve_id: true, moyenne: true, eleve: { select: { nom_fr: true, prenom_fr: true, matricule: true } } },
-      orderBy: { moyenne: 'asc' },
+  // Notes insuffisantes — moyenne globale (moy FR+AR)/2 NORMALISÉE et pondérée,
+  // calculée à la volée (cf. calculerStatsNotes) et NON lue depuis la table
+  // Bulletin : les alertes ne dépendent plus de la génération des bulletins.
+  const faibles = [...parEleve.entries()]
+    .map(([eleve_id, v]) => ({ eleve_id, moyenne: moyenneGlobale(v) }))
+    .filter(m => m.moyenne < seuilReussite)
+    .sort((a, b) => a.moyenne - b.moyenne);
+
+  if (faibles.length > 0) {
+    const eleves = await prisma.eleve.findMany({
+      where: { id: { in: faibles.map(f => f.eleve_id) } },
+      select: { id: true, nom_fr: true, prenom_fr: true, matricule: true },
     });
-    const vus = new Set<string>();
-    for (const b of bulletins) {
-      if (vus.has(b.eleve_id)) continue;
-      vus.add(b.eleve_id);
-      alertes.push({ type: 'note_insuffisante', eleve_id: b.eleve_id, nom: `${b.eleve.nom_fr} ${b.eleve.prenom_fr}`, matricule: b.eleve.matricule, valeur: Math.round(Number(b.moyenne ?? 0) * 100) / 100 });
+    const em = new Map(eleves.map(e => [e.id, e]));
+    for (const f of faibles) {
+      const e = em.get(f.eleve_id);
+      if (e) alertes.push({ type: 'note_insuffisante', eleve_id: e.id, nom: `${e.nom_fr} ${e.prenom_fr}`, matricule: e.matricule, valeur: f.moyenne });
     }
   }
 
@@ -279,13 +258,23 @@ async function getAlertes(etablissement_id: string, annee_scolaire_id?: string) 
 }
 
 export async function getTableauDeBord(etablissement_id: string, annee_scolaire_id?: string) {
-  const [presenceEleves, presencePersonnel, moyennesClasses, topBottom, finances, alertes] = await Promise.all([
+  const annee = annee_scolaire_id ?? (await prisma.anneeScolaire.findFirst({
+    where: { etablissement_id, active: true },
+    select: { id: true },
+  }))?.id;
+
+  // Moyennes (classes + par élève) calculées une seule fois, partagées par le
+  // classement top/bottom et les alertes.
+  const statsNotes = annee
+    ? await calculerStatsNotes(etablissement_id, annee)
+    : { baseNote: Number((await prisma.configNotes.findUnique({ where: { etablissement_id }, select: { note_max: true } }))?.note_max ?? 20), moyennesClasses: [] as Array<{ classe_id: string; classe_nom: string; filiere: string; nb_eleves: number; moyenne: number | null }>, parEleve: new Map() as ParEleve };
+
+  const [presenceEleves, presencePersonnel, topBottom, finances, alertes] = await Promise.all([
     getTauxPresenceEleves(etablissement_id),
     getTauxPresenceProfesseurs(etablissement_id),
-    getMoyennesClasses(etablissement_id, annee_scolaire_id),
-    getTopBottomEleves(etablissement_id, annee_scolaire_id),
+    getTopBottomEleves(statsNotes.parEleve),
     getFinancesEvolution(etablissement_id),
-    getAlertes(etablissement_id, annee_scolaire_id),
+    getAlertes(etablissement_id, annee, statsNotes.parEleve),
   ]);
 
   return {
@@ -294,7 +283,10 @@ export async function getTableauDeBord(etablissement_id: string, annee_scolaire_
     // Alias rétro-compat — frontend Dashboard lit encore presence_professeurs.
     // À supprimer après mise à jour des consommateurs.
     presence_professeurs: presencePersonnel,
-    moyennes_classes:     moyennesClasses,
+    // Échelle des moyennes (ConfigNotes.note_max, ex: 10) — le frontend doit
+    // s'y référer au lieu de supposer /20.
+    note_max_base:        statsNotes.baseNote,
+    moyennes_classes:     statsNotes.moyennesClasses.filter(r => r.moyenne !== null),
     top5_eleves:          topBottom.top5,
     bottom5_eleves:       topBottom.bottom5,
     finances,

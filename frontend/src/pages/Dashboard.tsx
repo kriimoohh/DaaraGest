@@ -18,6 +18,8 @@ interface TableauDeBord {
   presence_personnel:   TauxPresence;
   // Alias rétro-compat (le backend renvoie aussi presence_professeurs)
   presence_professeurs?: TauxPresence;
+  // Échelle des moyennes (ConfigNotes.note_max, ex: 10). Défaut 20 si absent.
+  note_max_base?:       number;
   moyennes_classes:     MoyenneClasse[];
   top5_eleves:          EleveRanked[];
   bottom5_eleves:       EleveRanked[];
@@ -206,8 +208,9 @@ export function Dashboard() {
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {tdb.moyennes_classes.slice(0, 8).map(c => {
-                          const pct = (c.moyenne / 20) * 100;
-                          const col = c.moyenne >= 14 ? 'var(--success-text)' : c.moyenne >= 10 ? 'var(--terra)' : 'var(--danger)';
+                          const base = tdb.note_max_base ?? 20;
+                          const pct = Math.min(100, (c.moyenne / base) * 100);
+                          const col = c.moyenne >= base * 0.7 ? 'var(--success-text)' : c.moyenne >= base * 0.5 ? 'var(--terra)' : 'var(--danger)';
                           return (
                             <div key={c.classe_id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                               <div style={{ fontSize: 11, fontWeight: 500, width: 80, color: 'var(--ink-2)', flexShrink: 0 }}>{c.classe_nom}</div>

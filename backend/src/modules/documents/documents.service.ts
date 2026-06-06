@@ -5,6 +5,7 @@ import { getQrSecret } from '../../utils/qrSecret';
 import { escapeHtml } from '../../utils/escapeHtml';
 import { TypeDocument, GenererDocumentInput, GenererCartesLotInput, UpsertTemplateInput, TYPE_DOCUMENT_VALUES, CARD_TYPES } from './documents.schema';
 import { getDefaultTemplate, TYPE_DOCUMENT_LABELS, getCardTemplate } from './templates/defaults';
+import { calculerMoyennesClasse } from '../bulletins/bulletins.service';
 
 function signQrPayload(payload: object): string {
   const data = JSON.stringify(payload);
@@ -425,6 +426,18 @@ async function buildTableauNotesClasse(
       note_max: Number(cm.note_max_override ?? cm.matiere.note_max),
     }))
     .filter(m => classeMatieres.find(cm => cm.matiere.id === m.id)?.matiere.active !== false);
+
+  // Barème par trimestre prioritaire : certaines matières changent d'échelle entre
+  // T1 et T2 (CLC arabe, RER…). Pour un relevé d'un trimestre donné, normaliser sur
+  // le barème de CE trimestre, pas le barème par défaut de la classe.
+  if (periode && periode > 0) {
+    const cmps = await prisma.classeMatierePeriode.findMany({
+      where: { classe_id, periode, matiere_id: { in: matieres.map(m => m.id) } },
+      select: { matiere_id: true, note_max: true },
+    });
+    const ovr = new Map(cmps.map(c => [c.matiere_id, Number(c.note_max)]));
+    for (const m of matieres) { const o = ovr.get(m.id); if (o != null) m.note_max = o; }
+  }
 
   // Récupérer un éventuel titulaire (premier prof de la classe)
   const titulaireRow = await prisma.personnelMatiereClasse.findFirst({
@@ -858,8 +871,20 @@ async function buildA4DocumentHtml(
         });
         vars.TABLEAU_NOTES = buildNotesTable(notes as Parameters<typeof buildNotesTable>[0]);
         if (!vars.MOYENNE_ANNUELLE && notes.length > 0) {
-          const total = notes.reduce((s, n) => s + (n.valeur as unknown as { toNumber(): number }).toNumber(), 0);
-          vars.MOYENNE_ANNUELLE = (total / notes.length).toFixed(2);
+          // Moyenne annuelle NORMALISÉE et pondérée (barèmes/coeff effectifs), comme
+          // les bulletins — et non une moyenne brute des notes (barèmes variables).
+          const periodes = [1, 2, 3];
+          let somme = 0, n = 0;
+          for (const [cid, fil] of [
+            [inscription.classe_fr_id, 'FR'] as const,
+            [inscription.classe_ar_id, 'AR'] as const,
+          ]) {
+            if (!cid) continue;
+            const moys = await calculerMoyennesClasse(etablissement_id, cid, inscription.annee_scolaire_id, periodes, [fil]);
+            const v = moys.get(destinataire_id);
+            if (v != null) { somme += v; n++; }
+          }
+          if (n > 0) vars.MOYENNE_ANNUELLE = (somme / n).toFixed(2);
         }
       }
     }
