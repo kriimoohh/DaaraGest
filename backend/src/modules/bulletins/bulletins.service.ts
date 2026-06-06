@@ -205,6 +205,46 @@ export async function getBaremesClasse(
   return map;
 }
 
+type InscriptionClasses = { eleve_id: string; classe_fr_id: string | null; classe_ar_id: string | null };
+
+/**
+ * Barème + coefficient EFFECTIFS par (élève → période → matière), en combinant les
+ * DEUX classes de l'élève (classe_fr_id ET classe_ar_id). Indispensable aux
+ * bulletins COMBINE : un élève bilingue a ses matières FR et AR dans deux classes
+ * distinctes — n'utiliser qu'un seul classe_id n'en compterait qu'une (la moyenne
+ * COMBINE ne refléterait alors qu'une filière).
+ */
+async function baremesParElevePeriode(
+  inscriptions: InscriptionClasses[], filieres: ('FR' | 'AR')[], periodes: number[], baseNote: number,
+): Promise<Map<string, Map<number, Map<string, { coeff: number; note_max: number }>>>> {
+  const cache = new Map<string, Map<string, { coeff: number; note_max: number }>>(); // `${classeId}|${f}|${p}`
+  const getClasse = async (classeId: string, f: 'FR' | 'AR', p: number) => {
+    const key = `${classeId}|${f}|${p}`;
+    let m = cache.get(key);
+    if (!m) {
+      const mats = await getMatieresDeclasse(classeId, f, p, baseNote);
+      m = new Map(mats.map(x => [x.id, { coeff: Number(x.coeff_effectif), note_max: Number(x.note_max_effectif) }]));
+      cache.set(key, m);
+    }
+    return m;
+  };
+  const res = new Map<string, Map<number, Map<string, { coeff: number; note_max: number }>>>();
+  for (const insc of inscriptions) {
+    const parPeriode = new Map<number, Map<string, { coeff: number; note_max: number }>>();
+    for (const p of periodes) {
+      const merged = new Map<string, { coeff: number; note_max: number }>();
+      for (const f of filieres) {
+        const cid = f === 'FR' ? insc.classe_fr_id : insc.classe_ar_id;
+        if (!cid) continue;
+        for (const [mid, v] of await getClasse(cid, f, p)) merged.set(mid, v);
+      }
+      parPeriode.set(p, merged);
+    }
+    res.set(insc.eleve_id, parPeriode);
+  }
+  return res;
+}
+
 // ─── Lister ─────────────────────────────────────────────────────────────────
 
 export async function listerBulletins(
@@ -239,14 +279,15 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
   if (inscriptions.length === 0) return { message: 'Aucun élève inscrit', bulletins: [] };
 
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
-  const matMap: Record<string, MatiereAvecCoeff[]> = {};
-  for (const f of filieres) matMap[f] = await getMatieresDeclasse(classe_id, f, periode, baseNote);
+  // Barème/coeff effectifs par élève en combinant SES classes FR et AR (un élève
+  // bilingue a deux classes) — sinon une moyenne COMBINE ne refléterait qu'une filière.
+  const baremes = await baremesParElevePeriode(inscriptions, filieres, [periode], baseNote);
 
-  // Fetch toutes les notes d'un coup (évite N+1)
-  const tousMatIds = filieres.flatMap(f => matMap[f].map(m => m.id));
+  // Fetch toutes les notes d'un coup (évite N+1). On laisse le barème par élève
+  // décider quelles matières comptent (matières hors programme = ignorées).
   const elevesIds = inscriptions.map(i => i.eleve_id);
   const toutesLesNotes = await prisma.note.findMany({
-    where: { eleve_id: { in: elevesIds }, annee_scolaire_id, periode, matiere_id: { in: tousMatIds } },
+    where: { eleve_id: { in: elevesIds }, annee_scolaire_id, periode },
     include: { matiere: true },
   });
   const notesByEleve = new Map<string, typeof toutesLesNotes>();
@@ -255,22 +296,15 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
     notesByEleve.get(n.eleve_id)!.push(n);
   }
 
-  // Map matiere_id → coeff_effectif / note_max_effectif (override prioritaire)
-  const coeffMap = new Map<string, number>(
-    filieres.flatMap(f => matMap[f].map(m => [m.id, Number(m.coeff_effectif)]))
-  );
-  const noteMaxMap = new Map<string, number>(
-    filieres.flatMap(f => matMap[f].map(m => [m.id, Number(m.note_max_effectif)]))
-  );
-
   const moyennes: { eleve_id: string; moyenne: number }[] = [];
   for (const { eleve_id } of inscriptions) {
+    const bm = baremes.get(eleve_id)?.get(periode);
     let totalP = 0, totalC = 0;
     for (const n of notesByEleve.get(eleve_id) ?? []) {
-      const c = coeffMap.get(n.matiere_id) ?? Number(n.matiere.coeff_defaut);
-      const nm = noteMaxMap.get(n.matiere_id) ?? baseNote;
-      totalP += contributionNote(Number(n.valeur), nm, baseNote, c);
-      totalC += c;
+      const eff = bm?.get(n.matiere_id);
+      if (!eff) continue; // matière hors programme de la/les classe(s) de l'élève
+      totalP += contributionNote(Number(n.valeur), eff.note_max, baseNote, eff.coeff);
+      totalC += eff.coeff;
     }
     if (totalC === 0) continue;
     moyennes.push({ eleve_id, moyenne: Math.round((totalP / totalC) * 100) / 100 });
@@ -308,14 +342,14 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
   const mentions = await getMentions(etablissement_id);
 
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
-  const matMapAnnuel: Record<string, MatiereAvecCoeff[]> = {};
-  for (const f of filieres) matMapAnnuel[f] = await getMatieresDeclasse(classe_id, f, undefined, baseNote);
+  // Barème/coeff effectifs PAR ÉLÈVE et PAR PÉRIODE (les coeff peuvent changer d'un
+  // trimestre à l'autre), en combinant les deux classes FR+AR de l'élève.
+  const baremes = await baremesParElevePeriode(inscriptions, filieres, periodesAnnuelles, baseNote);
 
   // Fetch toutes les notes annuelles d'un coup (évite N+1)
-  const tousMatIdsAnnuel = filieres.flatMap(f => matMapAnnuel[f].map(m => m.id));
   const elevesIdsAnnuel = inscriptions.map(i => i.eleve_id);
   const toutesLesNotesAnnuel = await prisma.note.findMany({
-    where: { eleve_id: { in: elevesIdsAnnuel }, annee_scolaire_id, periode: { in: periodesAnnuelles }, matiere_id: { in: tousMatIdsAnnuel } },
+    where: { eleve_id: { in: elevesIdsAnnuel }, annee_scolaire_id, periode: { in: periodesAnnuelles } },
     include: { matiere: true },
   });
   const notesByEleveAnnuel = new Map<string, typeof toutesLesNotesAnnuel>();
@@ -324,28 +358,15 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
     notesByEleveAnnuel.get(n.eleve_id)!.push(n);
   }
 
-  // Coeff/barème PAR PÉRIODE (les coefficients peuvent changer d'un trimestre à
-  // l'autre, surtout en arabe). On bâtit une carte par période.
-  const coeffParPeriode = new Map<number, Map<string, number>>();
-  const noteMaxParPeriode = new Map<number, Map<string, number>>();
-  for (const p of periodesAnnuelles) {
-    const cMap = new Map<string, number>(), nmMap = new Map<string, number>();
-    for (const f of filieres) {
-      for (const m of await getMatieresDeclasse(classe_id, f, p, baseNote)) {
-        cMap.set(m.id, Number(m.coeff_effectif)); nmMap.set(m.id, Number(m.note_max_effectif));
-      }
-    }
-    coeffParPeriode.set(p, cMap); noteMaxParPeriode.set(p, nmMap);
-  }
-
   const moyennes: { eleve_id: string; moyenne: number }[] = [];
   for (const { eleve_id } of inscriptions) {
+    const parP = baremes.get(eleve_id);
     let totalP = 0, totalC = 0;
     for (const n of notesByEleveAnnuel.get(eleve_id) ?? []) {
-      const c = coeffParPeriode.get(n.periode)?.get(n.matiere_id) ?? Number(n.matiere.coeff_defaut);
-      const nm = noteMaxParPeriode.get(n.periode)?.get(n.matiere_id) ?? baseNote;
-      totalP += contributionNote(Number(n.valeur), nm, baseNote, c);
-      totalC += c;
+      const eff = parP?.get(n.periode)?.get(n.matiere_id);
+      if (!eff) continue; // matière hors programme de la/les classe(s) de l'élève
+      totalP += contributionNote(Number(n.valeur), eff.note_max, baseNote, eff.coeff);
+      totalC += eff.coeff;
     }
     if (totalC === 0) continue;
     moyennes.push({ eleve_id, moyenne: Math.round((totalP / totalC) * 100) / 100 });

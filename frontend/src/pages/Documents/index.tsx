@@ -120,7 +120,7 @@ const EXTRA_PARAMS: Record<TypeDocument, { key: string; label: string; type: 'te
   FICHE_TRANSFERT:        [{ key: 'ETABLISSEMENT_DESTINATION', label: 'Établissement de destination', type: 'text' }, { key: 'MOTIF', label: 'Motif du transfert', type: 'text' }],
   ORDRE_MISSION:          [{ key: 'DESTINATION', label: 'Destination', type: 'text' }, { key: 'DATE_DEBUT_MISSION', label: 'Date de début', type: 'date' }, { key: 'DATE_FIN_MISSION', label: 'Date de fin', type: 'date' }, { key: 'OBJET_MISSION', label: 'Objet de la mission', type: 'textarea' }],
   FICHE_PAIE:             [{ key: 'MOIS_ANNEE', label: 'Mois / Année (ex: Mai 2026)', type: 'text' }, { key: 'SALAIRE_BRUT', label: 'Salaire brut (FCFA)', type: 'number' }, { key: 'RETENUES', label: 'Retenues (FCFA)', type: 'number' }, { key: 'NET_A_PAYER', label: 'Net à payer (FCFA)', type: 'number' }],
-  ATTESTATION_RESULTATS:  [{ key: 'MOYENNE_ANNUELLE', label: 'Moyenne annuelle /20', type: 'number' }],
+  ATTESTATION_RESULTATS:  [{ key: 'MOYENNE_ANNUELLE', label: 'Moyenne annuelle', type: 'number' }],
   // POSTE_OCCUPE / DATE_FIN_CONTRAT / PERIODE_STAGE_* : pré-remplis depuis la fiche professeur.
   CERTIFICAT_TRAVAIL_PERMANENT: [],
   CERTIFICAT_TRAVAIL_STAGIAIRE: [],

@@ -73,13 +73,10 @@ export interface BulletinAnnuelData extends BulletinBaseData {
 const periodeLabel = (p: number) =>
   ({ 1: '1er Trimestre', 2: '2ème Trimestre', 3: '3ème Trimestre' }[p] ?? `Période ${p}`);
 
-const periodeLabelAR = (p: number) =>
-  ({ 1: 'الفصل الأول', 2: 'الفصل الثاني', 3: 'الفصل الثالث' }[p] ?? `الفصل ${p}`);
-
 // Appréciation par matière = mentions configurées de l'établissement (mêmes bandes
 // que la moyenne, ex /10 : Très bien≥10, Bien≥8…), appliquées à la note ramenée
-// sur l'échelle établissement. Les relevés officiels affichent ces mentions en
-// français même côté arabe → getApprNomAR délègue à getApprNom.
+// sur l'échelle établissement. Les bulletins sont strictement en français,
+// y compris pour la filière arabe.
 function getApprNom(note: number | null, noteMax: number): string {
   if (note === null) return '';
   if (RENDER_MENTIONS.length) return mentionFor(noteMax > 0 ? (note / noteMax) * RENDER_BASE : 0);
@@ -89,10 +86,6 @@ function getApprNom(note: number | null, noteMax: number): string {
   if (pct >= 0.6) return 'Assez bien';
   if (pct >= 0.5) return 'Passable';
   return 'Insuffisant';
-}
-
-function getApprNomAR(note: number | null, noteMax: number): string {
-  return getApprNom(note, noteMax);
 }
 
 function apprClass(note: number | null, noteMax: number): string {
@@ -133,15 +126,12 @@ body { font-family:Arial,sans-serif;font-size:11.5px;color:#111;padding:18px 28p
 /* ── Tableau d'évaluation ── */
 .eval-section { margin-bottom:14px }
 .eval-header { background:#0F172A;color:#fff;text-align:center;padding:5px 8px;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;border-radius:4px 4px 0 0 }
-.eval-header-ar { background:#10B981 }
 table { width:100%;border-collapse:collapse }
 thead { background:#f0fdf4 }
 th { padding:6px 8px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#374151;border-bottom:2px solid #10B981;border-right:1px solid #d1d5db }
-th.ar-th { text-align:right;direction:rtl;background:#f0fff4;border-bottom-color:#10B981 }
 th:last-child { border-right:none }
 td { padding:5px 8px;border-bottom:1px solid #e5e7eb;border-right:1px solid #f3f4f6;font-size:11px }
 td:last-child { border-right:none }
-td.ar-td { text-align:right;direction:rtl }
 tr:last-child td { border-bottom:none }
 tr:nth-child(even) { background:#f9fafb }
 .center { text-align:center }
@@ -157,7 +147,6 @@ tr:nth-child(even) { background:#f9fafb }
 /* ── Ligne de résultats ── */
 .results-row td { background:#0F172A;color:#fff;font-weight:700;font-size:11px;border-bottom:none;border-right:1px solid #374151 }
 .results-row td:last-child { border-right:none }
-.results-row.results-ar td { background:#10B981 }
 
 /* ── Section combinée ── */
 .section-label { font-size:10.5px;font-weight:700;padding:4px 8px;margin-bottom:-1px;border-radius:4px 4px 0 0;display:inline-block }
@@ -330,62 +319,9 @@ function tableFR(notes: NoteRow[], headerTitle = 'Évaluation des acquis — Fil
   </div>`;
 }
 
-// ─── Tableau AR ─────────────────────────────────────────────────────────────
-
-function tableAR(notes: NoteRow[], headerTitle = 'تقييم المكتسبات — الشعبة العربية'): string {
-  const withVal = notes.filter(n => n.valeur !== null);
-  const totalCoeff = withVal.reduce((s, n) => s + n.coeff, 0);
-  const totalPoints = withVal.reduce((s, n) => s + (n.valeur! * n.coeff), 0);
-  const moy = moyenneNorm(notes);
-
-  const rows = notes.map(n => {
-    const nmax = n.note_max ?? RENDER_BASE;
-    const isFail = n.valeur !== null && n.valeur < nmax / 2;
-    const appr = getApprNomAR(n.valeur, nmax);
-    const cls = n.valeur !== null ? apprClass(n.valeur, nmax) : '';
-    return `
-    <tr>
-      <td class="ar-td" style="font-weight:500">${escapeHtml(n.nom_ar)}</td>
-      <td class="center">${n.coeff}</td>
-      <td class="center grade ${isFail ? 'fail' : 'pass'}">
-        ${n.valeur !== null ? Number(n.valeur).toFixed(2) : '—'}
-      </td>
-      <td class="center" style="font-size:10px;color:#6b7280">/${nmax}</td>
-      <td class="ar-td ${cls}">${appr}</td>
-    </tr>`;
-  }).join('');
-
-  const moyStr = moy !== null ? Number(moy).toFixed(2) : '—';
-  const ptStr  = totalPoints > 0 ? Number(totalPoints).toFixed(2) : '—';
-  const cfStr  = totalCoeff > 0 ? Number(totalCoeff).toFixed(1) : '—';
-
-  return `
-  <div class="eval-section">
-    <div class="eval-header eval-header-ar" style="direction:rtl">${headerTitle}</div>
-    <table>
-      <thead><tr>
-        <th class="ar-th" style="width:42%">المواد</th>
-        <th class="center" style="width:8%">المعامل</th>
-        <th class="center" style="width:10%">الدرجة</th>
-        <th class="center" style="width:8%">/ الأقصى</th>
-        <th class="ar-th" style="width:32%">الملاحظة</th>
-      </tr></thead>
-      <tbody>
-        ${rows || '<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:10px">لا توجد درجات</td></tr>'}
-        <tr class="results-row results-ar">
-          <td class="ar-td">النتائج</td>
-          <td class="center">م: ${cfStr}</td>
-          <td class="center" colspan="2">المجموع: ${ptStr}</td>
-          <td class="center">المعدل: ${moyStr} / ${RENDER_BASE}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>`;
-}
-
 // ─── Tableau annuel ──────────────────────────────────────────────────────────
 
-function tableAnnuelFR(matieres: TrimestreRow[]): string {
+function tableAnnuelFR(matieres: TrimestreRow[], headerTitle = 'Évaluation annuelle — Filière Française'): string {
   const rows = matieres.map(m => `
     <tr>
       <td style="font-weight:500">${escapeHtml(m.nom_fr)}</td>
@@ -400,7 +336,7 @@ function tableAnnuelFR(matieres: TrimestreRow[]): string {
     </tr>`).join('');
   return `
   <div class="eval-section">
-    <div class="eval-header">Évaluation annuelle — Filière Française</div>
+    <div class="eval-header">${headerTitle}</div>
     <table>
       <thead><tr>
         <th style="width:35%">Matière</th>
@@ -410,37 +346,6 @@ function tableAnnuelFR(matieres: TrimestreRow[]): string {
         <th class="center">T3</th>
         <th class="center" style="background:#f0fdf4;color:#059669">Moy. Ann.</th>
         <th style="width:22%">Appréciation</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  </div>`;
-}
-
-function tableAnnuelAR(matieres: TrimestreRow[]): string {
-  const rows = matieres.map(m => `
-    <tr>
-      <td class="ar-td" style="font-weight:500">${escapeHtml(m.nom_ar)}</td>
-      <td class="center">${m.coeff}</td>
-      ${m.valeurs.map(v => `<td class="center grade ${v !== null && v < (m.note_max ?? RENDER_BASE) / 2 ? 'fail' : 'pass'}">${v !== null ? Number(v).toFixed(2) : '—'}</td>`).join('')}
-      <td class="center grade ${m.moyenne_annuelle !== null && m.moyenne_annuelle < (m.note_max ?? RENDER_BASE) / 2 ? 'fail' : 'pass'}" style="font-weight:700;background:#ecfdf5">
-        ${m.moyenne_annuelle !== null ? Number(m.moyenne_annuelle).toFixed(2) : '—'}
-      </td>
-      <td class="ar-td ${m.moyenne_annuelle !== null ? apprClass(m.moyenne_annuelle, m.note_max ?? RENDER_BASE) : ''}">
-        ${getApprNomAR(m.moyenne_annuelle, m.note_max ?? RENDER_BASE)}
-      </td>
-    </tr>`).join('');
-  return `
-  <div class="eval-section">
-    <div class="eval-header eval-header-ar" style="direction:rtl">التقييم السنوي — الشعبة العربية</div>
-    <table>
-      <thead><tr>
-        <th class="ar-th" style="width:35%">المادة</th>
-        <th class="center" style="width:7%">المعامل</th>
-        <th class="center">ف1</th>
-        <th class="center">ف2</th>
-        <th class="center">ف3</th>
-        <th class="center" style="background:#ecfdf5;color:#065f46">المعدل السنوي</th>
-        <th class="ar-th" style="width:22%">الملاحظة</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
@@ -512,11 +417,13 @@ export function generateBulletinHtml(data: BulletinTrimestreData): string {
   }
 
   if (data.type === 'AR') {
-    return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"/><style>${CSS}</style></head><body>
+    // Bulletins strictement en français : la filière arabe est rendue avec les
+    // libellés FR (nom_fr), en-têtes français et sens LTR.
+    return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><style>${CSS}</style></head><body>
       ${headerHtml(data)}
-      ${titleHtml(periodeLabelAR(data.periode), data.annee_libelle)}
+      ${titleHtml(periodeStr, data.annee_libelle)}
       ${studentInfoHtml(data)}
-      ${tableAR(data.notes_ar ?? [])}
+      ${tableFR(data.notes_ar ?? [], 'Évaluation des acquis — Filière Arabe')}
       ${observationHtml(data.appreciation)}
       ${footerHtml(ecole)}
     </body></html>`;
@@ -533,7 +440,7 @@ export function generateBulletinHtml(data: BulletinTrimestreData): string {
     ${titleHtml(`${periodeStr} — Filières FR &amp; AR`, data.annee_libelle)}
     ${studentInfoHtml(data)}
     ${tableFR(notesFR)}
-    ${tableAR(notesAR)}
+    ${tableFR(notesAR, 'Évaluation des acquis — Filière Arabe')}
     ${combinedSummaryHtml(data, frMoy, arMoy)}
     ${observationHtml(data.appreciation)}
     ${footerHtml(ecole)}
@@ -557,13 +464,14 @@ export function generateBulletinAnnuelHtml(data: BulletinAnnuelData): string {
   const frMoy = frCoeff > 0 ? frWithMoy.reduce((s, m) => s + m.moyenne_annuelle! * m.coeff, 0) / frCoeff : null;
   const arMoy = arCoeff > 0 ? arWithMoy.reduce((s, m) => s + m.moyenne_annuelle! * m.coeff, 0) / arCoeff : null;
 
-  return `<!DOCTYPE html><html lang="${isAR ? 'ar' : 'fr'}" ${isAR ? 'dir="rtl"' : ''}><head><meta charset="UTF-8"/><style>${CSS}</style></head><body>
+  // Bulletins strictement en français, y compris la filière arabe (libellés FR, LTR).
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><style>${CSS}</style></head><body>
     ${headerHtml(data)}
     ${titleAnnuelHtml(data.annee_libelle)}
     ${studentInfoHtml(data)}
 
     ${!isAR && mFR.length > 0 ? tableAnnuelFR(mFR) : ''}
-    ${(isAR || isCombine) && mAR.length > 0 ? tableAnnuelAR(mAR) : ''}
+    ${(isAR || isCombine) && mAR.length > 0 ? tableAnnuelFR(mAR, 'Évaluation annuelle — Filière Arabe') : ''}
 
     ${isCombine ? combinedSummaryHtml(data, frMoy, arMoy) : ''}
 

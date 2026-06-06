@@ -5,7 +5,7 @@ import { getQrSecret } from '../../utils/qrSecret';
 import { escapeHtml } from '../../utils/escapeHtml';
 import { TypeDocument, GenererDocumentInput, GenererCartesLotInput, UpsertTemplateInput, TYPE_DOCUMENT_VALUES, CARD_TYPES } from './documents.schema';
 import { getDefaultTemplate, TYPE_DOCUMENT_LABELS, getCardTemplate } from './templates/defaults';
-import { calculerMoyennesClasse } from '../bulletins/bulletins.service';
+import { calculerMoyennesClasse, getBaremesClasse } from '../bulletins/bulletins.service';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 
 function signQrPayload(payload: object): string {
@@ -77,6 +77,13 @@ async function buildCommonVars(etablissement_id: string): Promise<Record<string,
     where: { etablissement_id, active: true },
   });
 
+  // Échelle de notation de l'établissement (ex: 10) — pour ne pas afficher « /20 »
+  // en dur dans les documents alors que les moyennes sont sur cette échelle.
+  const cfgNotes = await prisma.configNotes.findUnique({
+    where: { etablissement_id }, select: { note_max: true },
+  });
+  const noteMaxBase = Number(cfgNotes?.note_max ?? DEFAULT_NOTE_MAX);
+
   const today = new Date();
   const refDoc = `REF-${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}-${Math.floor(Math.random() * 9000 + 1000)}`;
 
@@ -117,6 +124,7 @@ async function buildCommonVars(etablissement_id: string): Promise<Record<string,
     TITRE_DIRECTEUR,
     DIRECTEUR_QUALITE,
     SOUSSIGNE,
+    NOTE_MAX_BASE: String(noteMaxBase),
   };
 }
 
@@ -250,11 +258,19 @@ async function buildProfVars(prof_id: string, _etablissement_id: string): Promis
 
 // ─── Build notes table ────────────────────────────────────────────────────────
 
-function buildNotesTable(notes: Array<{ periode: number; matiere: { nom_fr: string }; valeur: { toNumber(): number } }>, baseNote: number = DEFAULT_NOTE_MAX): string {
+type ReleveNote = {
+  periode: number;
+  matiere: { nom_fr: string };
+  valeur: { toNumber(): number };
+  note_max_effectif: number; // barème de saisie (ex: /60), pour afficher valeur/barème
+  coeff_effectif: number;    // pondération pour la moyenne de période
+};
+
+function buildNotesTable(notes: ReleveNote[], baseNote: number = DEFAULT_NOTE_MAX): string {
   if (!notes.length) return '<p style="font-size:13px;color:#777">Aucune note enregistrée.</p>';
 
   // Group by period
-  const byPeriode = new Map<number, typeof notes>();
+  const byPeriode = new Map<number, ReleveNote[]>();
   for (const n of notes) {
     const arr = byPeriode.get(n.periode) ?? [];
     arr.push(n);
@@ -263,15 +279,23 @@ function buildNotesTable(notes: Array<{ periode: number; matiere: { nom_fr: stri
 
   let html = '';
   for (const [periode, pNotes] of Array.from(byPeriode.entries()).sort((a, b) => a[0] - b[0])) {
-    const total = pNotes.reduce((s, n) => s + n.valeur.toNumber(), 0);
-    const moy = (total / pNotes.length).toFixed(2);
+    // Moyenne de période NORMALISÉE et pondérée : chaque note est ramenée sur
+    // l'échelle de l'établissement via son barème, puis pondérée par son coefficient
+    // (cohérent avec les bulletins). Une moyenne brute mélangerait /10../60.
+    let tp = 0, tc = 0;
+    for (const n of pNotes) {
+      const nm = n.note_max_effectif || baseNote;
+      const c = n.coeff_effectif || 1;
+      if (nm > 0 && c > 0) { tp += (n.valeur.toNumber() / nm) * baseNote * c; tc += c; }
+    }
+    const moy = tc > 0 ? (tp / tc).toFixed(2) : '—';
     html += `
     <p style="font-size:13px;font-weight:bold;color:#1a5276;margin:16px 0 6px;">Période ${periode}</p>
     <table class="data-table">
-      <thead><tr><th>Matière</th><th style="text-align:right">Note / ${baseNote}</th></tr></thead>
+      <thead><tr><th>Matière</th><th style="text-align:right">Note</th></tr></thead>
       <tbody>
-        ${pNotes.map(n => `<tr><td>${n.matiere.nom_fr}</td><td style="text-align:right">${n.valeur.toNumber().toFixed(2)}</td></tr>`).join('')}
-        <tr style="background:#e8f4f8"><td style="font-weight:bold">Moyenne période ${periode}</td><td style="text-align:right;font-weight:bold">${moy}</td></tr>
+        ${pNotes.map(n => `<tr><td>${n.matiere.nom_fr}</td><td style="text-align:right">${n.valeur.toNumber().toFixed(2)} / ${n.note_max_effectif}</td></tr>`).join('')}
+        <tr style="background:#e8f4f8"><td style="font-weight:bold">Moyenne période ${periode}</td><td style="text-align:right;font-weight:bold">${moy} / ${baseNote}</td></tr>
       </tbody>
     </table>`;
   }
@@ -880,11 +904,33 @@ async function buildA4DocumentHtml(
         });
         const cfgNotes = await prisma.configNotes.findUnique({ where: { etablissement_id }, select: { note_max: true } });
         const baseNote = Number(cfgNotes?.note_max ?? DEFAULT_NOTE_MAX);
-        vars.TABLEAU_NOTES = buildNotesTable(notes as Parameters<typeof buildNotesTable>[0], baseNote);
+
+        // Barème + coeff EFFECTIFS par (matière, période), en combinant les classes
+        // FR et AR de l'élève (filière selon la matière) — pour afficher chaque note
+        // sur son barème et pondérer correctement la moyenne de période.
+        const periodes = [1, 2, 3];
+        const baremes = new Map<string, { coeff: number; note_max: number }>();
+        for (const [cid, fil] of [
+          [inscription.classe_fr_id, 'FR'] as const,
+          [inscription.classe_ar_id, 'AR'] as const,
+        ]) {
+          if (!cid) continue;
+          for (const [k, v] of await getBaremesClasse(cid, periodes, [fil])) baremes.set(k, v);
+        }
+        const notesEnrichies = notes.map(n => {
+          const b = baremes.get(`${n.matiere_id}|${n.periode}`);
+          return {
+            periode: n.periode,
+            matiere: { nom_fr: n.matiere.nom_fr },
+            valeur: n.valeur,
+            note_max_effectif: b?.note_max ?? baseNote,
+            coeff_effectif: b?.coeff ?? 1,
+          };
+        });
+        vars.TABLEAU_NOTES = buildNotesTable(notesEnrichies, baseNote);
         if (!vars.MOYENNE_ANNUELLE && notes.length > 0) {
           // Moyenne annuelle NORMALISÉE et pondérée (barèmes/coeff effectifs), comme
           // les bulletins — et non une moyenne brute des notes (barèmes variables).
-          const periodes = [1, 2, 3];
           let somme = 0, n = 0;
           for (const [cid, fil] of [
             [inscription.classe_fr_id, 'FR'] as const,
