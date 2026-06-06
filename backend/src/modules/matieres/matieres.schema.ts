@@ -10,7 +10,6 @@ export const matiereSchema = z.object({
   nom_ar: z.string().optional(),
   filiere: z.enum(['FR', 'AR']),
   coeff_defaut: z.number().positive().optional(),
-  note_max: z.number().positive().max(100).optional(),
   note_min: z.number().min(0).optional(),
   ordre_bulletin: z.number().int().optional(),
   domaine_id: z.string().uuid().nullable().optional(),

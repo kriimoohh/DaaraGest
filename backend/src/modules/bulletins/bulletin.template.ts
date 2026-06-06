@@ -1,4 +1,5 @@
 import { escapeHtml } from '../../utils/escapeHtml';
+import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -33,10 +34,10 @@ interface BulletinBaseData {
 }
 
 // Échelle de l'établissement (ex: 10) + mentions configurées, fixées au début du rendu.
-let RENDER_BASE = 20;
+let RENDER_BASE = DEFAULT_NOTE_MAX;
 let RENDER_MENTIONS: { libelle_fr: string; seuil_min: number }[] = [];
 function setRenderContext(d: { note_max_etab?: number; mentions?: { libelle_fr: string; seuil_min: number }[] }) {
-  RENDER_BASE = d.note_max_etab ?? 20;
+  RENDER_BASE = d.note_max_etab ?? DEFAULT_NOTE_MAX;
   RENDER_MENTIONS = (d.mentions ?? []).slice().sort((a, b) => b.seuil_min - a.seuil_min);
 }
 // Mention pour une valeur ramenée sur l'échelle établissement (RENDER_BASE).
@@ -285,7 +286,7 @@ function tableFR(notes: NoteRow[], headerTitle = 'Évaluation des acquis — Fil
   const moy = moyenneNorm(notes);
 
   const rows = notes.map(n => {
-    const nmax = n.note_max ?? 20;
+    const nmax = n.note_max ?? RENDER_BASE;
     const isFail = n.valeur !== null && n.valeur < nmax / 2;
     const appr = getApprNom(n.valeur, nmax);
     const cls = n.valeur !== null ? apprClass(n.valeur, nmax) : '';
@@ -338,7 +339,7 @@ function tableAR(notes: NoteRow[], headerTitle = 'تقييم المكتسبات 
   const moy = moyenneNorm(notes);
 
   const rows = notes.map(n => {
-    const nmax = n.note_max ?? 20;
+    const nmax = n.note_max ?? RENDER_BASE;
     const isFail = n.valeur !== null && n.valeur < nmax / 2;
     const appr = getApprNomAR(n.valeur, nmax);
     const cls = n.valeur !== null ? apprClass(n.valeur, nmax) : '';
@@ -389,12 +390,12 @@ function tableAnnuelFR(matieres: TrimestreRow[]): string {
     <tr>
       <td style="font-weight:500">${escapeHtml(m.nom_fr)}</td>
       <td class="center">${m.coeff}</td>
-      ${m.valeurs.map(v => `<td class="center grade ${v !== null && v < (m.note_max ?? 20) / 2 ? 'fail' : 'pass'}">${v !== null ? Number(v).toFixed(2) : '—'}</td>`).join('')}
-      <td class="center grade ${m.moyenne_annuelle !== null && m.moyenne_annuelle < (m.note_max ?? 20) / 2 ? 'fail' : 'pass'}" style="font-weight:700;background:#f0fdf4">
+      ${m.valeurs.map(v => `<td class="center grade ${v !== null && v < (m.note_max ?? RENDER_BASE) / 2 ? 'fail' : 'pass'}">${v !== null ? Number(v).toFixed(2) : '—'}</td>`).join('')}
+      <td class="center grade ${m.moyenne_annuelle !== null && m.moyenne_annuelle < (m.note_max ?? RENDER_BASE) / 2 ? 'fail' : 'pass'}" style="font-weight:700;background:#f0fdf4">
         ${m.moyenne_annuelle !== null ? Number(m.moyenne_annuelle).toFixed(2) : '—'}
       </td>
-      <td class="${m.moyenne_annuelle !== null ? apprClass(m.moyenne_annuelle, m.note_max ?? 20) : ''}">
-        ${getApprNom(m.moyenne_annuelle, m.note_max ?? 20)}
+      <td class="${m.moyenne_annuelle !== null ? apprClass(m.moyenne_annuelle, m.note_max ?? RENDER_BASE) : ''}">
+        ${getApprNom(m.moyenne_annuelle, m.note_max ?? RENDER_BASE)}
       </td>
     </tr>`).join('');
   return `
@@ -420,12 +421,12 @@ function tableAnnuelAR(matieres: TrimestreRow[]): string {
     <tr>
       <td class="ar-td" style="font-weight:500">${escapeHtml(m.nom_ar)}</td>
       <td class="center">${m.coeff}</td>
-      ${m.valeurs.map(v => `<td class="center grade ${v !== null && v < (m.note_max ?? 20) / 2 ? 'fail' : 'pass'}">${v !== null ? Number(v).toFixed(2) : '—'}</td>`).join('')}
-      <td class="center grade ${m.moyenne_annuelle !== null && m.moyenne_annuelle < (m.note_max ?? 20) / 2 ? 'fail' : 'pass'}" style="font-weight:700;background:#ecfdf5">
+      ${m.valeurs.map(v => `<td class="center grade ${v !== null && v < (m.note_max ?? RENDER_BASE) / 2 ? 'fail' : 'pass'}">${v !== null ? Number(v).toFixed(2) : '—'}</td>`).join('')}
+      <td class="center grade ${m.moyenne_annuelle !== null && m.moyenne_annuelle < (m.note_max ?? RENDER_BASE) / 2 ? 'fail' : 'pass'}" style="font-weight:700;background:#ecfdf5">
         ${m.moyenne_annuelle !== null ? Number(m.moyenne_annuelle).toFixed(2) : '—'}
       </td>
-      <td class="ar-td ${m.moyenne_annuelle !== null ? apprClass(m.moyenne_annuelle, m.note_max ?? 20) : ''}">
-        ${getApprNomAR(m.moyenne_annuelle, m.note_max ?? 20)}
+      <td class="ar-td ${m.moyenne_annuelle !== null ? apprClass(m.moyenne_annuelle, m.note_max ?? RENDER_BASE) : ''}">
+        ${getApprNomAR(m.moyenne_annuelle, m.note_max ?? RENDER_BASE)}
       </td>
     </tr>`).join('');
   return `

@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { CreerMentionInput, ModifierMentionInput } from './mentions.schema';
+import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 
 // Pourcentages des seuils par défaut, appliqués à note_max (base 20 = 80%, 70%, 60%, 50%)
 const SEUILS_DEFAUT_PCT = [
@@ -17,7 +18,7 @@ async function ensureMentionsExist(etablissement_id: string) {
   if (count > 0) return;
 
   const cn = await prisma.configNotes.findUnique({ where: { etablissement_id } });
-  const noteMax = Number(cn?.note_max ?? 20);
+  const noteMax = Number(cn?.note_max ?? DEFAULT_NOTE_MAX);
 
   // Si ConfigNotes a des seuils configurés ET cohérents avec note_max, on les utilise
   const tbRaw  = cn ? Number(cn.seuil_tres_bien)  : null;
@@ -45,7 +46,7 @@ async function ensureMentionsExist(etablissement_id: string) {
 
 async function getNoteMax(etablissement_id: string): Promise<number> {
   const cn = await prisma.configNotes.findUnique({ where: { etablissement_id }, select: { note_max: true } });
-  return Number(cn?.note_max ?? 20);
+  return Number(cn?.note_max ?? DEFAULT_NOTE_MAX);
 }
 
 export async function listerMentions(etablissement_id: string) {

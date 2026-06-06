@@ -1,6 +1,7 @@
 import prisma from '../../config/database';
 import { ClasseInput, ClasseMatiereInput, ClasseMatiereUpdateInput, DupliquerArInput } from './classes.schema';
 import { renderPdfHtml } from '../../utils/browserPool';
+import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 
 type ListeData = Awaited<ReturnType<typeof listerElevesDeClasse>>;
 
@@ -105,10 +106,22 @@ export async function listerMatieresDeclasse(classe_id: string, etablissement_id
   const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
   if (!classe) throw new Error('Classe introuvable');
 
-  return prisma.classeMatiere.findMany({
+  // Barème effectif = override de classe si présent, sinon échelle établissement.
+  // Exposé sur la matière (note_max) ET au niveau du lien (note_max_effectif) pour
+  // la saisie/affichage des notes, qui doivent utiliser ce barème, pas un défaut plat.
+  const config = await prisma.configNotes.findUnique({
+    where: { etablissement_id }, select: { note_max: true },
+  });
+  const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
+
+  const rows = await prisma.classeMatiere.findMany({
     where: { classe_id },
     include: { matiere: true },
     orderBy: [{ ordre_override: 'asc' }, { matiere: { ordre_bulletin: 'asc' } }],
+  });
+  return rows.map(r => {
+    const note_max_effectif = Number(r.note_max_override ?? baseNote);
+    return { ...r, note_max_effectif, matiere: { ...r.matiere, note_max: note_max_effectif } };
   });
 }
 

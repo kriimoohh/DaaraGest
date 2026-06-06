@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { ValiderProgressionInput } from './progression.schema';
+import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 
 export async function listerProgressions(
   etablissement_id: string,
@@ -42,7 +43,7 @@ export async function listerProgressions(
 
 export async function genererProgressions(etablissement_id: string, annee_scolaire_id: string) {
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
-  const baseNote = Number(config?.note_max ?? 20);
+  const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
   const seuil  = baseNote / 2; // seuil de passage = moitié de l'échelle (ex: 5 sur /10)
 
   // Récupérer tous les élèves inscrits cette année

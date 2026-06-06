@@ -330,7 +330,6 @@ model Matiere {
   nom_ar           String?
   filiere          String
   coeff_defaut     Decimal @default(1) @db.Decimal(4, 2)
-  note_max         Decimal @default(20) @db.Decimal(5, 2)
   note_min         Decimal @default(0) @db.Decimal(5, 2)
   ordre_bulletin   Int     @default(0)
   active           Boolean @default(true)
@@ -403,8 +402,9 @@ model ClasseMatiere {
   coeff_override Decimal? @db.Decimal(4, 2)
   ordre_override Int?
   // Barème de la matière spécifique à cette classe (ex: RLC /60 en CE, /40 en CM).
-  // Si null, on retombe sur Matiere.note_max. Sert à normaliser les notes brutes
-  // (saisies sur leur barème) avant le calcul de la moyenne du bulletin.
+  // Si null, on retombe sur l'échelle de l'établissement (ConfigNotes.note_max).
+  // Sert à normaliser les notes brutes (saisies sur leur barème) avant le calcul
+  // de la moyenne du bulletin.
   note_max_override Decimal? @db.Decimal(5, 2)
 
   classe  Classe  @relation(fields: [classe_id], references: [id])
