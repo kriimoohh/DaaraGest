@@ -72,11 +72,34 @@ export async function bulkUpsertNotes(
   const matieres = await prisma.matiere.findMany({ where: { id: { in: matiereIds } } });
   const matiereMap = new Map(matieres.map(m => [m.id, m]));
 
+  // Barème EFFECTIF de chaque matière pour cette classe : on valide sur le barème
+  // réellement utilisé (ex: CLC /40 ou /60, Rés.Prob /4), pas sur Matiere.note_max
+  // (échelle plate, ex /20) — sinon on rejette des notes /60 légitimes ET on accepte
+  // des notes hors barème pour les matières < 20. Priorité : période > classe > matière.
+  const baremeOverride = new Map<string, number>();     // matiere_id → note_max (défaut classe)
+  const baremePeriode  = new Map<string, number>();      // `${matiere_id}|${periode}` → note_max
+  if (classe_id) {
+    const [cms, cmps] = await Promise.all([
+      prisma.classeMatiere.findMany({
+        where: { classe_id, matiere_id: { in: matiereIds } },
+        select: { matiere_id: true, note_max_override: true },
+      }),
+      prisma.classeMatierePeriode.findMany({
+        where: { classe_id, matiere_id: { in: matiereIds } },
+        select: { matiere_id: true, periode: true, note_max: true },
+      }),
+    ]);
+    for (const cm of cms) if (cm.note_max_override != null) baremeOverride.set(cm.matiere_id, Number(cm.note_max_override));
+    for (const cmp of cmps) baremePeriode.set(`${cmp.matiere_id}|${cmp.periode}`, Number(cmp.note_max));
+  }
+
   // Valider toutes les notes avant d'ouvrir la transaction
   for (const note of notes) {
     const matiere = matiereMap.get(note.matiere_id);
     if (matiere) {
-      const noteMax = Number(matiere.note_max);
+      const noteMax = baremePeriode.get(`${note.matiere_id}|${note.periode}`)
+        ?? baremeOverride.get(note.matiere_id)
+        ?? Number(matiere.note_max);
       const noteMin = Number(matiere.note_min);
       if (note.valeur > noteMax) {
         throw new Error(`La note ${note.valeur} dépasse le maximum autorisé (${noteMax}) pour "${matiere.nom_fr}"`);
