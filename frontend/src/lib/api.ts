@@ -72,10 +72,23 @@ async function request<T>(path: string, options: RequestInit = {}, retried = fal
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.error ?? 'Erreur réseau');
+    // On préserve le payload complet (utile pour les 409 qui transportent l'impact).
+    const err = new ApiError(data.error ?? 'Erreur réseau', response.status, data);
+    throw err;
   }
 
   return data as T;
+}
+
+export class ApiError extends Error {
+  status: number;
+  payload: unknown;
+  constructor(message: string, status: number, payload: unknown) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.payload = payload;
+  }
 }
 
 export const api = {

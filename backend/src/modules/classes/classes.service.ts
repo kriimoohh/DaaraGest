@@ -1,8 +1,18 @@
 import prisma from '../../config/database';
-import { ClasseInput, ClasseMatiereInput, ClasseMatiereUpdateInput, DupliquerArInput } from './classes.schema';
+import { ClasseInput, ClasseMatiereInput, ClasseMatiereUpdateInput, ClasseMatierePeriodeInput, DupliquerArInput } from './classes.schema';
 import { renderPdfHtml } from '../../utils/browserPool';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
+import { bulletinsImpactesParMatiere } from '../bulletins/bulletins.service';
+import { logAction } from '../../utils/audit';
 import { NotFoundError } from '../../utils/errors';
+
+// Erreur typée pour exposer le détail de l'impact (front affiche les options).
+function bulletinsImpactError(payload: unknown): Error {
+  const err = new Error('Bulletins déjà générés impactés');
+  (err as { statusCode?: number; payload?: unknown }).statusCode = 409;
+  (err as { statusCode?: number; payload?: unknown }).payload = payload;
+  return err;
+}
 
 type ListeData = Awaited<ReturnType<typeof listerElevesDeClasse>>;
 
@@ -120,9 +130,24 @@ export async function listerMatieresDeclasse(classe_id: string, etablissement_id
     include: { matiere: true },
     orderBy: [{ ordre_override: 'asc' }, { matiere: { ordre_bulletin: 'asc' } }],
   });
+  // Overrides par période (coeff/note_max/evaluee) — utiles pour l'UI Programme afin
+  // d'afficher la matrice "matière × trimestre" et les badges "non évaluée au T1".
+  const periodesOv = await prisma.classeMatierePeriode.findMany({ where: { classe_id } });
+  const ovByMatiere = new Map<string, typeof periodesOv>();
+  for (const o of periodesOv) {
+    if (!ovByMatiere.has(o.matiere_id)) ovByMatiere.set(o.matiere_id, []);
+    ovByMatiere.get(o.matiere_id)!.push(o);
+  }
   return rows.map(r => {
     const note_max_effectif = Number(r.note_max_override ?? baseNote);
-    return { ...r, note_max_effectif, matiere: { ...r.matiere, note_max: note_max_effectif } };
+    return {
+      ...r,
+      note_max_effectif,
+      matiere: { ...r.matiere, note_max: note_max_effectif },
+      periodes_override: (ovByMatiere.get(r.matiere_id) ?? []).map(o => ({
+        periode: o.periode, coeff: Number(o.coeff), note_max: Number(o.note_max), evaluee: o.evaluee,
+      })),
+    };
   });
 }
 
@@ -146,13 +171,15 @@ export async function ajouterMatiereClasse(
       matiere_id: data.matiere_id,
       coeff_override: data.coeff_override ?? null,
       ordre_override: data.ordre_override ?? null,
+      evaluee: data.evaluee ?? true,
     },
     include: { matiere: true },
   });
 }
 
 export async function modifierMatiereClasse(
-  classe_id: string, etablissement_id: string, matiere_id: string, data: ClasseMatiereUpdateInput
+  classe_id: string, etablissement_id: string, matiere_id: string, data: ClasseMatiereUpdateInput,
+  opts: { force?: boolean; acteur_id?: string } = {},
 ) {
   const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
   if (!classe) throw new NotFoundError('Classe introuvable');
@@ -162,14 +189,164 @@ export async function modifierMatiereClasse(
   });
   if (!existing) throw new Error('Matière non assignée à cette classe');
 
-  return prisma.classeMatiere.update({
+  // Vérif impact uniquement si `evaluee` change réellement (autres champs n'invalident pas les bulletins).
+  const evalueeChange = data.evaluee !== undefined && data.evaluee !== existing.evaluee;
+  if (evalueeChange) {
+    const config = await prisma.configNotes.findUnique({ where: { etablissement_id }, select: { nb_periodes: true } });
+    const nbPeriodes = config?.nb_periodes ?? 3;
+    const periodesAll = [...Array.from({ length: nbPeriodes }, (_, i) => i + 1), 0]; // trimestres + annuel
+    const impact = await bulletinsImpactesParMatiere(classe_id, matiere_id, periodesAll);
+    if (impact.signed.length > 0) {
+      // Verrouillage strict : un bulletin signé doit être explicitement déverrouillé.
+      throw bulletinsImpactError({
+        code: 'BULLETINS_VALIDES',
+        signed_count: impact.signed.length,
+        unsigned_count: impact.unsigned.length,
+        signed: impact.signed,
+        unsigned: impact.unsigned,
+      });
+    }
+    if (impact.unsigned.length > 0 && !opts.force) {
+      throw bulletinsImpactError({
+        code: 'BULLETINS_IMPACTES',
+        unsigned_count: impact.unsigned.length,
+        unsigned: impact.unsigned,
+      });
+    }
+  }
+
+  // Patch partiel : seuls les champs fournis sont modifiés. `evaluee` n'a pas de
+  // sentinelle "null = unset" (toujours bool), donc on ne touche au champ que si présent.
+  const updateData: Record<string, unknown> = {
+    coeff_override: data.coeff_override ?? null,
+    ordre_override: data.ordre_override ?? null,
+  };
+  if (data.evaluee !== undefined) updateData.evaluee = data.evaluee;
+  const updated = await prisma.classeMatiere.update({
     where: { classe_id_matiere_id: { classe_id, matiere_id } },
-    data: {
-      coeff_override: data.coeff_override ?? null,
-      ordre_override: data.ordre_override ?? null,
-    },
+    data: updateData,
     include: { matiere: true },
   });
+
+  if (evalueeChange && opts.acteur_id) {
+    await logAction(etablissement_id, opts.acteur_id, 'UPDATE', 'ClasseMatiere', updated.id, {
+      action: 'toggle_evaluee', classe_id, matiere_id,
+      ancien: existing.evaluee, nouveau: data.evaluee, force: !!opts.force,
+    });
+  }
+  return updated;
+}
+
+// ─── Overrides par période (coeff/note_max/evaluee) ──────────────────────────
+
+/**
+ * Upsert d'un override par période. Utilisé par la modale Programme pour piloter
+ * la matrice "matière × trimestre". Si l'override existant a des valeurs et que
+ * l'input n'en redéfinit pas, on les conserve (patch partiel).
+ */
+export async function upsertOverridePeriode(
+  classe_id: string, etablissement_id: string, data: ClasseMatierePeriodeInput,
+  opts: { force?: boolean; acteur_id?: string } = {},
+) {
+  const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
+  if (!classe) throw new Error('Classe introuvable');
+
+  // Charger pour récupérer les valeurs effectives par défaut (coeff/note_max) à
+  // utiliser si l'override n'en redéfinit pas (le modèle n'admet pas de null).
+  const config = await prisma.configNotes.findUnique({ where: { etablissement_id }, select: { note_max: true } });
+  const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
+  const cm = await prisma.classeMatiere.findUnique({
+    where: { classe_id_matiere_id: { classe_id, matiere_id: data.matiere_id } },
+    include: { matiere: true },
+  });
+  if (!cm) throw new Error('Matière non assignée à cette classe');
+
+  const existing = await prisma.classeMatierePeriode.findUnique({
+    where: { classe_id_matiere_id_periode: { classe_id, matiere_id: data.matiere_id, periode: data.periode } },
+  });
+
+  // Vérif impact si `evaluee` change réellement (= effectivement va modifier la moyenne T+annuel).
+  const ancienEvaluee = existing?.evaluee ?? cm.evaluee;
+  const nouveauEvaluee = data.evaluee !== undefined ? (data.evaluee ?? cm.evaluee) : ancienEvaluee;
+  const evalueeChange = data.evaluee !== undefined && ancienEvaluee !== nouveauEvaluee;
+  if (evalueeChange) {
+    const impact = await bulletinsImpactesParMatiere(classe_id, data.matiere_id, [data.periode, 0]);
+    if (impact.signed.length > 0) {
+      throw bulletinsImpactError({
+        code: 'BULLETINS_VALIDES',
+        signed_count: impact.signed.length,
+        unsigned_count: impact.unsigned.length,
+        signed: impact.signed, unsigned: impact.unsigned,
+      });
+    }
+    if (impact.unsigned.length > 0 && !opts.force) {
+      throw bulletinsImpactError({
+        code: 'BULLETINS_IMPACTES',
+        unsigned_count: impact.unsigned.length, unsigned: impact.unsigned,
+      });
+    }
+  }
+
+  const coeff = data.coeff ?? Number(existing?.coeff ?? cm.coeff_override ?? cm.matiere.coeff_defaut);
+  const note_max = data.note_max ?? Number(existing?.note_max ?? cm.note_max_override ?? baseNote);
+  // evaluee: si non fourni, on garde l'existant (ou null si pas d'override).
+  const evaluee = data.evaluee !== undefined ? data.evaluee : (existing?.evaluee ?? null);
+
+  const result = await prisma.classeMatierePeriode.upsert({
+    where: { classe_id_matiere_id_periode: { classe_id, matiere_id: data.matiere_id, periode: data.periode } },
+    create: { classe_id, matiere_id: data.matiere_id, periode: data.periode, coeff, note_max, evaluee },
+    update: { coeff, note_max, evaluee },
+  });
+
+  if (evalueeChange && opts.acteur_id) {
+    await logAction(etablissement_id, opts.acteur_id, 'UPDATE', 'ClasseMatierePeriode', result.id, {
+      action: 'toggle_evaluee_periode', classe_id, matiere_id: data.matiere_id, periode: data.periode,
+      ancien: ancienEvaluee, nouveau: nouveauEvaluee, force: !!opts.force,
+    });
+  }
+  return result;
+}
+
+export async function supprimerOverridePeriode(
+  classe_id: string, etablissement_id: string, matiere_id: string, periode: number,
+  opts: { force?: boolean; acteur_id?: string } = {},
+) {
+  const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
+  if (!classe) throw new Error('Classe introuvable');
+  // Si l'override existant porte un evaluee non null et que le défaut classe diffère,
+  // la suppression équivaut à un changement d'évaluée → vérif d'impact.
+  const existing = await prisma.classeMatierePeriode.findUnique({
+    where: { classe_id_matiere_id_periode: { classe_id, matiere_id, periode } },
+  });
+  if (existing && existing.evaluee !== null) {
+    const cm = await prisma.classeMatiere.findUnique({
+      where: { classe_id_matiere_id: { classe_id, matiere_id } },
+      select: { evaluee: true },
+    });
+    const evalueeChange = cm && cm.evaluee !== existing.evaluee;
+    if (evalueeChange) {
+      const impact = await bulletinsImpactesParMatiere(classe_id, matiere_id, [periode, 0]);
+      if (impact.signed.length > 0) {
+        throw bulletinsImpactError({
+          code: 'BULLETINS_VALIDES',
+          signed_count: impact.signed.length, unsigned_count: impact.unsigned.length,
+          signed: impact.signed, unsigned: impact.unsigned,
+        });
+      }
+      if (impact.unsigned.length > 0 && !opts.force) {
+        throw bulletinsImpactError({
+          code: 'BULLETINS_IMPACTES',
+          unsigned_count: impact.unsigned.length, unsigned: impact.unsigned,
+        });
+      }
+    }
+  }
+  await prisma.classeMatierePeriode.deleteMany({ where: { classe_id, matiere_id, periode } });
+  if (existing && opts.acteur_id) {
+    await logAction(etablissement_id, opts.acteur_id, 'DELETE', 'ClasseMatierePeriode', existing.id, {
+      action: 'reset_override_periode', classe_id, matiere_id, periode,
+    });
+  }
 }
 
 export async function supprimerMatiereClasse(
