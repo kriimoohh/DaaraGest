@@ -104,7 +104,7 @@ function apprClass(note: number | null, noteMax: number): string {
 
 // ─── CSS commun ─────────────────────────────────────────────────────────────
 
-const CSS = `
+export const CSS = `
 * { margin:0;padding:0;box-sizing:border-box }
 body { font-family:Arial,sans-serif;font-size:11.5px;color:#111;padding:18px 28px }
 
