@@ -1,10 +1,10 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
-import { genererBulletinSchema, genererBulletinAnnuelSchema, observationSchema, preflightSchema } from './bulletins.schema';
+import { genererBulletinSchema, genererBulletinAnnuelSchema, observationSchema, preflightSchema, deverrouillerPeriodeSchema } from './bulletins.schema';
 import {
   listerBulletins, genererBulletins, genererBulletinsAnnuels,
   getBulletin, genererPdfBulletin, genererPdfClasse, mettreAJourObservation,
-  preflightBulletins,
+  preflightBulletins, deverrouillerPeriode,
 } from './bulletins.service';
 
 export async function listerHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -83,6 +83,17 @@ export async function preflightHandler(request: FastifyRequest, reply: FastifyRe
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
   try {
     return reply.send(await preflightBulletins(etablissement_id, parsed.data));
+  } catch (err) {
+    return reply.status(400).send({ error: (err as Error).message });
+  }
+}
+
+export async function deverrouillerPeriodeHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id, id: acteur_id } = request.user as JwtPayload;
+  const parsed = deverrouillerPeriodeSchema.safeParse(request.body);
+  if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  try {
+    return reply.send(await deverrouillerPeriode(etablissement_id, parsed.data, acteur_id));
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
   }

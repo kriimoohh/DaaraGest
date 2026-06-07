@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
-import { API_BASE } from '../../lib/api';
+import { API_BASE, ApiError } from '../../lib/api';
 import { toast } from '../../store/toastStore';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { PageHeader } from '../../components/ui/PageHeader';
@@ -164,6 +164,18 @@ export function ClassesPage() {
   const [togglingEvaluee, setTogglingEvaluee] = useState<string | null>(null); // matiere_id en cours de bascule
   const [expandedRow, setExpandedRow] = useState<string | null>(null); // matiere_id de la ligne dépliée
   const [periodeOvSaving, setPeriodeOvSaving] = useState<string | null>(null); // `${matiere_id}|${periode}`
+  // Phase 2 : modale d'impact (bulletins déjà générés/validés) + déverrouillage.
+  const [impactModal, setImpactModal] = useState<{
+    code: 'BULLETINS_VALIDES' | 'BULLETINS_IMPACTES';
+    title: string;
+    unsigned_count: number;
+    signed_count: number;
+    unsigned?: { periode: number; filiere: string }[];
+    signed?: { periode: number; filiere: string }[];
+    onConfirm: () => Promise<void>;
+    onUnlock?: () => Promise<void>;
+  } | null>(null);
+  const [impactWorking, setImpactWorking] = useState(false);
 
   // Duplication FR → AR
   const [dupliquerModal, setDupliquerModal] = useState<Classe | null>(null);
@@ -356,22 +368,81 @@ export function ClassesPage() {
     }
   }
 
+  // Identifie le scope (année, filière) d'un bulletin impacté à partir des
+  // métadonnées renvoyées par le 409 — utile pour proposer le déverrouillage.
+  function scopeFromImpact(items: { filiere: string; periode: number }[] | undefined): { filieres: string[]; periodes: number[] } {
+    const filieres = Array.from(new Set((items ?? []).map(i => i.filiere)));
+    const periodes = Array.from(new Set((items ?? []).map(i => i.periode)));
+    return { filieres, periodes };
+  }
+
+  async function deverrouillerImpact(scope: { filieres: string[]; periodes: number[] }) {
+    if (!anneeFilter) {
+      toast.error('Sélectionne d\'abord une année scolaire pour déverrouiller');
+      return;
+    }
+    // Pour chaque (filière × période) on appelle le déverrouillage.
+    for (const f of scope.filieres) for (const p of scope.periodes) {
+      await api.post(`/api/v1/bulletins/deverrouiller-periode`, {
+        classe_id: programmeModal!.id,
+        annee_scolaire_id: anneeFilter,
+        periode: p, filiere: f,
+      });
+    }
+  }
+
+  async function applyEvalueeChange(cm: ClasseMatiere, params: { force: boolean }): Promise<void> {
+    await api.put(`/api/v1/classes/${programmeModal!.id}/matieres/${cm.matiere_id}${params.force ? '?force=true' : ''}`, {
+      coeff_override: cm.coeff_override,
+      ordre_override: cm.ordre_override,
+      evaluee: !cm.evaluee,
+    });
+    const prog = await api.get<ClasseMatiere[]>(`/api/v1/classes/${programmeModal!.id}/matieres`);
+    setProgramme(prog);
+  }
+
   async function toggleEvaluee(cm: ClasseMatiere) {
     if (!programmeModal) return;
     setTogglingEvaluee(cm.matiere_id);
     try {
-      await api.put(`/api/v1/classes/${programmeModal.id}/matieres/${cm.matiere_id}`, {
-        coeff_override: cm.coeff_override,
-        ordre_override: cm.ordre_override,
-        evaluee: !cm.evaluee,
-      });
-      const prog = await api.get<ClasseMatiere[]>(`/api/v1/classes/${programmeModal.id}/matieres`);
-      setProgramme(prog);
+      await applyEvalueeChange(cm, { force: false });
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      if (err instanceof ApiError && err.status === 409) {
+        const payload = err.payload as { code: string; unsigned_count?: number; signed_count?: number; unsigned?: { periode: number; filiere: string }[]; signed?: { periode: number; filiere: string }[] };
+        setImpactModal({
+          code: payload.code === 'BULLETINS_VALIDES' ? 'BULLETINS_VALIDES' : 'BULLETINS_IMPACTES',
+          title: `Modifier "Évaluée" — ${cm.matiere.nom_fr}`,
+          unsigned_count: payload.unsigned_count ?? 0,
+          signed_count: payload.signed_count ?? 0,
+          unsigned: payload.unsigned, signed: payload.signed,
+          onConfirm: async () => { await applyEvalueeChange(cm, { force: true }); },
+          onUnlock: payload.code === 'BULLETINS_VALIDES'
+            ? async () => { await deverrouillerImpact(scopeFromImpact(payload.signed)); }
+            : undefined,
+        });
+      } else {
+        toast.error((err as Error).message || 'Erreur');
+      }
     } finally {
       setTogglingEvaluee(null);
     }
+  }
+
+  async function applyEvalueePeriodeChange(cm: ClasseMatiere, periode: number, evaluee: boolean | null, params: { force: boolean }): Promise<void> {
+    const existing = cm.periodes_override?.find(o => o.periode === periode);
+    const baseCoeff = Number(cm.coeff_override ?? cm.matiere.coeff_defaut);
+    const onlyEvalueeOverridden = existing
+      && Number(existing.coeff) === baseCoeff
+      && existing.evaluee !== null;
+    if (evaluee === null && onlyEvalueeOverridden) {
+      await api.delete(`/api/v1/classes/${programmeModal!.id}/matieres/${cm.matiere_id}/periode/${periode}${params.force ? '?force=true' : ''}`);
+    } else {
+      await api.put(`/api/v1/classes/${programmeModal!.id}/matieres/${cm.matiere_id}/periode${params.force ? '?force=true' : ''}`, {
+        matiere_id: cm.matiere_id, periode, evaluee,
+      });
+    }
+    const prog = await api.get<ClasseMatiere[]>(`/api/v1/classes/${programmeModal!.id}/matieres`);
+    setProgramme(prog);
   }
 
   async function setEvalueePeriode(cm: ClasseMatiere, periode: number, evaluee: boolean | null) {
@@ -379,24 +450,24 @@ export function ClassesPage() {
     const key = `${cm.matiere_id}|${periode}`;
     setPeriodeOvSaving(key);
     try {
-      // null = revenir au défaut de classe. Si seul `evaluee` était overridé, on
-      // supprime l'override entier ; sinon on patch avec evaluee=null.
-      const existing = cm.periodes_override?.find(o => o.periode === periode);
-      const baseCoeff = Number(cm.coeff_override ?? cm.matiere.coeff_defaut);
-      const onlyEvalueeOverridden = existing
-        && Number(existing.coeff) === baseCoeff
-        && existing.evaluee !== null;
-      if (evaluee === null && onlyEvalueeOverridden) {
-        await api.delete(`/api/v1/classes/${programmeModal.id}/matieres/${cm.matiere_id}/periode/${periode}`);
-      } else {
-        await api.put(`/api/v1/classes/${programmeModal.id}/matieres/${cm.matiere_id}/periode`, {
-          matiere_id: cm.matiere_id, periode, evaluee,
-        });
-      }
-      const prog = await api.get<ClasseMatiere[]>(`/api/v1/classes/${programmeModal.id}/matieres`);
-      setProgramme(prog);
+      await applyEvalueePeriodeChange(cm, periode, evaluee, { force: false });
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      if (err instanceof ApiError && err.status === 409) {
+        const payload = err.payload as { code: string; unsigned_count?: number; signed_count?: number; unsigned?: { periode: number; filiere: string }[]; signed?: { periode: number; filiere: string }[] };
+        setImpactModal({
+          code: payload.code === 'BULLETINS_VALIDES' ? 'BULLETINS_VALIDES' : 'BULLETINS_IMPACTES',
+          title: `Modifier T${periode} — ${cm.matiere.nom_fr}`,
+          unsigned_count: payload.unsigned_count ?? 0,
+          signed_count: payload.signed_count ?? 0,
+          unsigned: payload.unsigned, signed: payload.signed,
+          onConfirm: async () => { await applyEvalueePeriodeChange(cm, periode, evaluee, { force: true }); },
+          onUnlock: payload.code === 'BULLETINS_VALIDES'
+            ? async () => { await deverrouillerImpact(scopeFromImpact(payload.signed)); }
+            : undefined,
+        });
+      } else {
+        toast.error((err as Error).message || 'Erreur');
+      }
     } finally {
       setPeriodeOvSaving(null);
     }
@@ -1150,6 +1221,93 @@ export function ClassesPage() {
       loading={supprimerProgrammeLoading}
       message={`Retirer "${supprimerProgramme?.matiere.nom_fr}" du programme de cette classe ?`}
     />
+
+    {/* Modale impact bulletins (phase 2) — affichée quand le backend retourne 409 */}
+    {impactModal && (
+      <Modal isOpen={!!impactModal} onClose={() => !impactWorking && setImpactModal(null)} title={impactModal.title} size="md">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {impactModal.code === 'BULLETINS_VALIDES' ? (
+            <div style={{ padding: 12, background: 'var(--danger-soft)', borderRadius: 'var(--r-md)' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--danger-text)', marginBottom: 6 }}>
+                🔒 {impactModal.signed_count} bulletin(s) signé(s) impacté(s)
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--ink-2)', lineHeight: 1.5 }}>
+                Ces bulletins ont déjà été validés et sont considérés comme officiels.
+                Pour modifier la configuration, déverrouille-les d'abord — ils devront être re-validés ensuite.
+              </div>
+              {impactModal.signed && impactModal.signed.length > 0 && (
+                <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {Array.from(new Set(impactModal.signed.map(s => `${s.filiere}·${s.periode === 0 ? 'Annuel' : 'T' + s.periode}`))).map(label => (
+                    <span key={label} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'var(--paper)', border: '1px solid var(--danger)', color: 'var(--danger-text)' }}>{label}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ padding: 12, background: 'var(--warning-soft)', borderRadius: 'var(--r-md)' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--warning-text)', marginBottom: 6 }}>
+                ⚠️ {impactModal.unsigned_count} bulletin(s) déjà généré(s)
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--ink-2)', lineHeight: 1.5 }}>
+                Ces bulletins ne sont pas validés mais leurs moyennes/rangs deviendront obsolètes.
+                Confirme pour appliquer le changement — il faudra ensuite régénérer les bulletins.
+              </div>
+              {impactModal.unsigned && impactModal.unsigned.length > 0 && (
+                <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {Array.from(new Set(impactModal.unsigned.map(s => `${s.filiere}·${s.periode === 0 ? 'Annuel' : 'T' + s.periode}`))).map(label => (
+                    <span key={label} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'var(--paper)', border: '1px solid var(--warning)', color: 'var(--warning-text)' }}>{label}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+            <Button variant="secondary" onClick={() => setImpactModal(null)} disabled={impactWorking}>Annuler</Button>
+            {impactModal.code === 'BULLETINS_VALIDES' && impactModal.onUnlock ? (
+              <Button
+                variant="danger"
+                loading={impactWorking}
+                onClick={async () => {
+                  setImpactWorking(true);
+                  try {
+                    await impactModal.onUnlock!();
+                    // Une fois déverrouillé, on tente la modif. Si encore des unsigned, on retombe en 409 "IMPACTES".
+                    await impactModal.onConfirm();
+                    toast.success('Configuration mise à jour — bulletins à régénérer');
+                    setImpactModal(null);
+                  } catch (err) {
+                    toast.error((err as Error).message || 'Erreur lors du déverrouillage');
+                  } finally {
+                    setImpactWorking(false);
+                  }
+                }}
+              >
+                🔓 Déverrouiller puis appliquer
+              </Button>
+            ) : (
+              <Button
+                loading={impactWorking}
+                onClick={async () => {
+                  setImpactWorking(true);
+                  try {
+                    await impactModal.onConfirm();
+                    toast.success('Configuration mise à jour — bulletins à régénérer');
+                    setImpactModal(null);
+                  } catch (err) {
+                    toast.error((err as Error).message || 'Erreur');
+                  } finally {
+                    setImpactWorking(false);
+                  }
+                }}
+              >
+                Confirmer
+              </Button>
+            )}
+          </div>
+        </div>
+      </Modal>
+    )}
 
     {/* ── Modale liste des élèves ──────────────────────────────────────────── */}
     {/* ── Modale duplication FR → AR ─────────────────────────────────────── */}

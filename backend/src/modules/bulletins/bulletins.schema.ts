@@ -32,7 +32,16 @@ export const preflightSchema = z.object({
   filiere: z.enum(['FR', 'AR', 'COMBINE']),
 });
 
+// Déverrouillage d'une période validée — phase 2 (action critique, admin/directeur).
+export const deverrouillerPeriodeSchema = z.object({
+  classe_id: z.string().uuid(),
+  annee_scolaire_id: z.string().uuid(),
+  periode: z.number().int().min(0).max(6),
+  filiere: z.enum(['FR', 'AR', 'COMBINE']),
+});
+
 export type GenererBulletinInput = z.infer<typeof genererBulletinSchema>;
 export type GenererBulletinAnnuelInput = z.infer<typeof genererBulletinAnnuelSchema>;
 export type ObservationInput = z.infer<typeof observationSchema>;
 export type PreflightInput = z.infer<typeof preflightSchema>;
+export type DeverrouillerPeriodeInput = z.infer<typeof deverrouillerPeriodeSchema>;

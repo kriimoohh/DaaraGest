@@ -275,6 +275,70 @@ export async function listerBulletins(
   });
 }
 
+// ─── Impact sur bulletins déjà générés (phase 2) ────────────────────────────
+
+type BulletinImpacte = { id: string; eleve_id: string; periode: number; filiere: string; valide_le: Date | null };
+
+/**
+ * Bulletins déjà générés qui dépendent d'une matière donnée.
+ * Pris en compte : bulletin avec la même filière que la matière OU `COMBINE`.
+ * Pris en compte (élève) : inscrit dans cette classe (côté FR OU côté AR).
+ * Annuel : `periode=0` est inclus si `0 ∈ periodes`.
+ */
+export async function bulletinsImpactesParMatiere(
+  classe_id: string, matiere_id: string, periodes: number[],
+): Promise<{ unsigned: BulletinImpacte[]; signed: BulletinImpacte[] }> {
+  const matiere = await prisma.matiere.findUnique({ where: { id: matiere_id }, select: { filiere: true } });
+  if (!matiere) return { unsigned: [], signed: [] };
+  const filieres = matiere.filiere === 'FR' ? ['FR', 'COMBINE'] : ['AR', 'COMBINE'];
+  const bulletins = await prisma.bulletin.findMany({
+    where: {
+      filiere: { in: filieres },
+      periode: { in: periodes },
+      eleve: { inscriptions: { some: { OR: [{ classe_fr_id: classe_id }, { classe_ar_id: classe_id }] } } },
+    },
+    select: { id: true, eleve_id: true, periode: true, filiere: true, valide_le: true },
+  });
+  return {
+    unsigned: bulletins.filter(b => b.valide_le === null),
+    signed: bulletins.filter(b => b.valide_le !== null),
+  };
+}
+
+/**
+ * Déverrouille les bulletins validés d'un (classe, année, période, filière) en
+ * remettant `valide_par/valide_le = null`. Étape requise avant de modifier la
+ * config (evaluee) si des bulletins ont été signés.
+ */
+export async function deverrouillerPeriode(
+  etablissement_id: string,
+  data: { classe_id: string; annee_scolaire_id: string; periode: number; filiere: 'FR' | 'AR' | 'COMBINE' },
+  acteur_id: string,
+): Promise<{ count: number }> {
+  const bulletins = await prisma.bulletin.findMany({
+    where: {
+      annee_scolaire_id: data.annee_scolaire_id,
+      periode: data.periode,
+      filiere: data.filiere,
+      valide_le: { not: null },
+      eleve: {
+        etablissement_id,
+        inscriptions: { some: { OR: [{ classe_fr_id: data.classe_id }, { classe_ar_id: data.classe_id }] } },
+      },
+    },
+    select: { id: true },
+  });
+  if (bulletins.length === 0) return { count: 0 };
+  await prisma.bulletin.updateMany({
+    where: { id: { in: bulletins.map(b => b.id) } },
+    data: { valide_par: null, valide_le: null },
+  });
+  await logAction(etablissement_id, acteur_id, 'UPDATE', 'Bulletin', 'deverrouillage_periode', {
+    classe_id: data.classe_id, periode: data.periode, filiere: data.filiere, count: bulletins.length,
+  });
+  return { count: bulletins.length };
+}
+
 // ─── Pré-vol avant génération ────────────────────────────────────────────────
 
 export type PreflightWarning = { code: 'matieres_non_evaluees' | 'matieres_sans_notes' | 'eleves_sans_aucune_note'; message: string };

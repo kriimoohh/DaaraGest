@@ -261,6 +261,49 @@ describe('résolution evaluee (override période > classe)', () => {
   });
 });
 
+// Réplique du tri "unsigned/signed" appliqué par bulletinsImpactesParMatiere.
+function classerImpact(bulletins: { id: string; valide_le: Date | null }[]) {
+  return {
+    unsigned: bulletins.filter(b => b.valide_le === null).map(b => b.id),
+    signed: bulletins.filter(b => b.valide_le !== null).map(b => b.id),
+  };
+}
+
+describe('verrouillage bulletins (phase 2)', () => {
+  it('tri unsigned / signed selon valide_le', () => {
+    const r = classerImpact([
+      { id: 'b1', valide_le: null },
+      { id: 'b2', valide_le: new Date('2026-03-01') },
+      { id: 'b3', valide_le: null },
+    ]);
+    expect(r.unsigned).toEqual(['b1', 'b3']);
+    expect(r.signed).toEqual(['b2']);
+  });
+
+  it('aucun bulletin → impact vide', () => {
+    expect(classerImpact([])).toEqual({ unsigned: [], signed: [] });
+  });
+
+  // Politique : signed > 0 = refus systématique (force ou pas).
+  function decision(impact: { unsigned_count: number; signed_count: number }, force: boolean): 'ok' | 'IMPACTES' | 'VALIDES' {
+    if (impact.signed_count > 0) return 'VALIDES';
+    if (impact.unsigned_count > 0 && !force) return 'IMPACTES';
+    return 'ok';
+  }
+
+  it('force=false : tout impact bloque', () => {
+    expect(decision({ unsigned_count: 3, signed_count: 0 }, false)).toBe('IMPACTES');
+    expect(decision({ unsigned_count: 0, signed_count: 2 }, false)).toBe('VALIDES');
+    expect(decision({ unsigned_count: 0, signed_count: 0 }, false)).toBe('ok');
+  });
+
+  it('force=true : unsigned passe, signed refuse toujours', () => {
+    expect(decision({ unsigned_count: 5, signed_count: 0 }, true)).toBe('ok');
+    expect(decision({ unsigned_count: 0, signed_count: 1 }, true)).toBe('VALIDES');
+    expect(decision({ unsigned_count: 5, signed_count: 1 }, true)).toBe('VALIDES');
+  });
+});
+
 describe('observations bulletin', () => {
   it('observation vide reste vide', () => {
     const obs = { observation_fr: '', observation_prof: '' };
