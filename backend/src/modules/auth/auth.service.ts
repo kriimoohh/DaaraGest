@@ -134,12 +134,20 @@ export async function updateProfil(
 
 const REFRESH_EXPIRY_DAYS = 30;
 
-export async function creerRefreshToken(utilisateur_id: string): Promise<string> {
-  // Révoquer les anciens tokens de cet utilisateur
-  await prisma.refreshToken.updateMany({ where: { utilisateur_id, revoked: false }, data: { revoked: true } });
+export async function creerRefreshToken(
+  utilisateur_id: string,
+  device_id?: string | null,
+): Promise<string> {
+  // Rotation : ne révoquer que les tokens actifs du MÊME appareil (multi-device).
+  await prisma.refreshToken.updateMany({
+    where: { utilisateur_id, device_id: device_id ?? null, revoked: false },
+    data: { revoked: true },
+  });
 
   const expires_at = new Date(Date.now() + REFRESH_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
-  const rt = await prisma.refreshToken.create({ data: { utilisateur_id, expires_at } });
+  const rt = await prisma.refreshToken.create({
+    data: { utilisateur_id, device_id: device_id ?? null, expires_at },
+  });
   return rt.token;
 }
 
@@ -149,7 +157,8 @@ export async function validerRefreshToken(token: string) {
     include: { utilisateur: { include: { role: true } } },
   });
   if (!rt || rt.revoked || rt.expires_at < new Date()) return null;
-  return rt.utilisateur;
+  // On renvoie le token complet (device_id inclus) pour rotation par appareil.
+  return rt;
 }
 
 export async function revoquerRefreshToken(token: string) {

@@ -872,6 +872,10 @@ model RefreshToken {
   id             String   @id @default(uuid())
   utilisateur_id String
   token          String   @unique @default(uuid())
+  // Identifiant de l'appareil (UUID généré côté client). La rotation ne révoque
+  // que les tokens du MÊME device → multi-device (un login sur tablette ne tue
+  // plus la session du téléphone). Nullable pour les tokens legacy.
+  device_id      String?
   expires_at     DateTime
   revoked        Boolean  @default(false)
   created_at     DateTime @default(now())
@@ -880,6 +884,7 @@ model RefreshToken {
 
   @@index([token])
   @@index([utilisateur_id])
+  @@index([utilisateur_id, device_id])
 }
 
 // ─── Phase 4.3 — Bibliothèque scolaire ──────────────────────────────────────
