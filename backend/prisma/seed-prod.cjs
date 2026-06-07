@@ -6,8 +6,17 @@
  */
 const { PrismaClient, Prisma } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const LGM = require('./data/lgm-matieres.json');
 const prisma = new PrismaClient();
+
+// Mot de passe admin initial : aléatoire et fort par défaut (évite le 'Admin123!'
+// prévisible). Surchageable via ADMIN_INITIAL_PASSWORD. Le suffixe garantit la
+// complexité (maj/min/chiffre/spécial) exigée par passwordPolicy.
+function genererMotDePasse() {
+  const base = crypto.randomBytes(12).toString('base64').replace(/[/+=]/g, '');
+  return base.slice(0, 14) + 'A1a!';
+}
 
 async function main() {
   console.log('\n🏫  DaaraGest — Seed production\n');
@@ -64,7 +73,9 @@ async function main() {
 
   const existingAdmin = await prisma.utilisateur.findFirst({ where: { role_id: roleAdmin.id } });
   if (!existingAdmin) {
-    const hash = await bcrypt.hash('Admin123!', 10);
+    const fourni = !!process.env.ADMIN_INITIAL_PASSWORD;
+    const motDePasse = process.env.ADMIN_INITIAL_PASSWORD || genererMotDePasse();
+    const hash = await bcrypt.hash(motDePasse, 10);
     await prisma.utilisateur.create({
       data: {
         identifiant: 'admin', mot_de_passe: hash,
@@ -74,7 +85,17 @@ async function main() {
         must_change_password: true,
       },
     });
-    console.log('✅ Admin (admin / Admin123!) — changement de mot de passe requis');
+    if (fourni) {
+      console.log('✅ Admin créé (mot de passe via ADMIN_INITIAL_PASSWORD) — changement requis à la 1re connexion');
+    } else {
+      console.log('\n┌─────────────────────────────────────────────────────────────┐');
+      console.log('│  ✅ Admin créé — MOT DE PASSE INITIAL GÉNÉRÉ (notez-le !)     │');
+      console.log('├─────────────────────────────────────────────────────────────┤');
+      console.log(`│  identifiant : admin`);
+      console.log(`│  mot de passe : ${motDePasse}`);
+      console.log('│  ⚠️  Changement de mot de passe requis à la 1re connexion.    │');
+      console.log('└─────────────────────────────────────────────────────────────┘\n');
+    }
   } else {
     console.log('✅ Admin (compte existant conservé)');
   }
