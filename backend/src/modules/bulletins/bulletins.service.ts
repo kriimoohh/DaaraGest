@@ -250,9 +250,21 @@ async function baremesParElevePeriode(
 
 export async function listerBulletins(
   etablissement_id: string, annee_scolaire_id?: string, periode?: number,
-  eleve_id?: string, filiere?: string,
+  eleve_id?: string, filiere?: string, classe_id?: string,
 ) {
-  const where: Record<string, unknown> = { eleve: { etablissement_id } };
+  // Le Bulletin n'a pas de classe_id : on filtre via les inscriptions de l'élève
+  // pour l'année scolaire considérée (un élève bilingue peut être dans une classe
+  // FR et une classe AR distinctes — d'où le OR sur les deux colonnes).
+  const eleveWhere: Record<string, unknown> = { etablissement_id };
+  if (classe_id) {
+    eleveWhere.inscriptions = {
+      some: {
+        ...(annee_scolaire_id ? { annee_scolaire_id } : {}),
+        OR: [{ classe_fr_id: classe_id }, { classe_ar_id: classe_id }],
+      },
+    };
+  }
+  const where: Record<string, unknown> = { eleve: eleveWhere };
   if (annee_scolaire_id) where.annee_scolaire_id = annee_scolaire_id;
   if (periode !== undefined) where.periode = periode;
   if (eleve_id) where.eleve_id = eleve_id;
