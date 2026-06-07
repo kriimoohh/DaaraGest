@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { CreerDemandeInput, TraiterDemandeInput } from './demandes-absence.schema';
+import { NotFoundError } from '../../utils/errors';
 
 export async function listerDemandes(etablissement_id: string, statut?: string) {
   return prisma.demandeAbsencePersonnel.findMany({
@@ -39,7 +40,7 @@ export async function traiterDemande(
 ) {
   const demande = await prisma.demandeAbsencePersonnel.findUniqueOrThrow({ where: { id } });
   if (demande.etablissement_id !== etablissement_id) {
-    throw Object.assign(new Error('Ressource introuvable'), { statusCode: 404 });
+    throw Object.assign(new NotFoundError('Ressource introuvable'), { statusCode: 404 });
   }
   if (demande.statut !== 'EN_ATTENTE') {
     throw Object.assign(new Error('Cette demande a déjà été traitée'), { statusCode: 400 });
@@ -62,7 +63,7 @@ export async function traiterDemande(
 export async function supprimerDemande(id: string, etablissement_id: string) {
   const demande = await prisma.demandeAbsencePersonnel.findUniqueOrThrow({ where: { id } });
   if (demande.etablissement_id !== etablissement_id) {
-    throw Object.assign(new Error('Ressource introuvable'), { statusCode: 404 });
+    throw Object.assign(new NotFoundError('Ressource introuvable'), { statusCode: 404 });
   }
   if (demande.statut !== 'EN_ATTENTE') {
     throw Object.assign(new Error('Seules les demandes en attente peuvent être supprimées'), { statusCode: 400 });

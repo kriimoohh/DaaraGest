@@ -1,6 +1,7 @@
 import prisma from '../../config/database';
 import { logAction } from '../../utils/audit';
 import { PaiementEleveInput, BulkPaiementEleveInput, UpdatePaiementEleveInput, PaiementPersonnelInput } from './finances.schema';
+import { NotFoundError } from '../../utils/errors';
 
 async function genererRecu(): Promise<string> {
   const now = new Date();
@@ -55,7 +56,7 @@ export async function listerPaiementsEleves(
 
 export async function creerPaiementEleve(etablissement_id: string, data: PaiementEleveInput, acteurId: string) {
   const eleve = await prisma.eleve.findFirst({ where: { id: data.eleve_id, etablissement_id } });
-  if (!eleve) throw new Error('Élève introuvable');
+  if (!eleve) throw new NotFoundError('Élève introuvable');
 
   const paiement = await prisma.paiementEleve.create({
     data: {
@@ -113,7 +114,7 @@ export async function modifierPaiementEleve(id: string, etablissement_id: string
   const existing = await prisma.paiementEleve.findFirst({
     where: { id, eleve: { etablissement_id } },
   });
-  if (!existing) throw new Error('Paiement introuvable');
+  if (!existing) throw new NotFoundError('Paiement introuvable');
 
   const paiement = await prisma.paiementEleve.update({
     where: { id },
@@ -134,7 +135,7 @@ export async function supprimerPaiementEleve(id: string, etablissement_id: strin
   const existing = await prisma.paiementEleve.findFirst({
     where: { id, eleve: { etablissement_id } },
   });
-  if (!existing) throw new Error('Paiement introuvable');
+  if (!existing) throw new NotFoundError('Paiement introuvable');
   await prisma.paiementEleve.delete({ where: { id } });
   await logAction(etablissement_id, acteurId, 'DELETE', 'PaiementEleve', id, {
     eleve_id: existing.eleve_id, montant: String(existing.montant), recu: existing.recu_numero,
@@ -181,7 +182,7 @@ export async function creerPaiementPersonnel(etablissement_id: string, data: Pai
   const personnel = await prisma.personnel.findFirst({
     where: { id: data.personnel_id, utilisateur: { etablissement_id } },
   });
-  if (!personnel) throw new Error('Personnel introuvable');
+  if (!personnel) throw new NotFoundError('Personnel introuvable');
 
   const paiement = await prisma.paiementPersonnel.create({
     data: {

@@ -4,6 +4,7 @@ import { renderPdfHtml } from '../../utils/browserPool';
 import { assertProfPeutAccederClasse } from '../../utils/teachingPolicy';
 import { logAction } from '../../utils/audit';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
+import { NotFoundError } from '../../utils/errors';
 
 type Filiere = 'FR' | 'AR' | 'COMBINE';
 
@@ -271,7 +272,7 @@ export async function listerBulletins(
 export async function genererBulletins(etablissement_id: string, data: GenererBulletinInput) {
   const { classe_id, annee_scolaire_id, periode, filiere } = data;
   const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
-  if (!classe) throw new Error('Classe introuvable');
+  if (!classe) throw new NotFoundError('Classe introuvable');
   const inscriptions = await getElevesClasse(classe_id, annee_scolaire_id);
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
   const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
@@ -329,7 +330,7 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
 export async function genererBulletinsAnnuels(etablissement_id: string, data: GenererBulletinAnnuelInput) {
   const { classe_id, annee_scolaire_id, filiere } = data;
   const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
-  if (!classe) throw new Error('Classe introuvable');
+  if (!classe) throw new NotFoundError('Classe introuvable');
   const inscriptions = await getElevesClasse(classe_id, annee_scolaire_id);
   if (inscriptions.length === 0) return { message: 'Aucun élève inscrit', bulletins: [] };
 
@@ -396,7 +397,7 @@ export async function getBulletin(id: string, etablissement_id: string) {
       annee_scolaire: true,
     },
   });
-  if (!bulletin) throw new Error('Bulletin introuvable');
+  if (!bulletin) throw new NotFoundError('Bulletin introuvable');
 
   const filieres: ('FR' | 'AR')[] = bulletin.filiere === 'COMBINE' ? ['FR', 'AR'] : [bulletin.filiere as 'FR' | 'AR'];
 
@@ -448,7 +449,7 @@ export async function mettreAJourObservation(
   role?: string,
 ) {
   const bulletin = await prisma.bulletin.findFirst({ where: { id, eleve: { etablissement_id } } });
-  if (!bulletin) throw new Error('Bulletin introuvable');
+  if (!bulletin) throw new NotFoundError('Bulletin introuvable');
 
   if (role) {
     const inscription = await prisma.inscription.findFirst({
@@ -460,7 +461,7 @@ export async function mettreAJourObservation(
       bulletin.filiere === 'FR' ? null : inscription?.classe_ar_id,
     ].filter((c): c is string => Boolean(c));
     if (candidateClasses.length === 0) {
-      throw new Error('Inscription introuvable pour ce bulletin');
+      throw new NotFoundError('Inscription introuvable pour ce bulletin');
     }
     let acces = false;
     for (const classe_id of candidateClasses) {
@@ -503,7 +504,7 @@ export async function mettreAJourObservation(
 export async function genererPdfBulletin(id: string, etablissement_id: string): Promise<Buffer> {
   const data = await getBulletin(id, etablissement_id);
   const etab = await prisma.etablissement.findUnique({ where: { id: etablissement_id } });
-  if (!etab) throw new Error('Établissement introuvable');
+  if (!etab) throw new NotFoundError('Établissement introuvable');
 
   // Nb de périodes dynamique (cf. genererBulletinsAnnuels + getBulletin)
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
@@ -596,7 +597,7 @@ export async function genererPdfClasse(
   filiere: string, etablissement_id: string
 ): Promise<Buffer> {
   const etab = await prisma.etablissement.findUnique({ where: { id: etablissement_id } });
-  if (!etab) throw new Error('Établissement introuvable');
+  if (!etab) throw new NotFoundError('Établissement introuvable');
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
   const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
   const mentions = await getMentions(etablissement_id);

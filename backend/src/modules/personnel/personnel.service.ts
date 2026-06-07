@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import prisma from '../../config/database';
 import { PersonnelInput } from './personnel.schema';
+import { NotFoundError } from '../../utils/errors';
 
 async function genererMatriculePersonnel(etablissement_id: string): Promise<string> {
   const etab = await prisma.etablissement.findUniqueOrThrow({
@@ -67,13 +68,13 @@ export async function getPersonnel(id: string, etablissement_id: string) {
       matieres_classes: { include: { matiere: true, classe: true } },
     },
   });
-  if (!professeur) throw new Error('Personnel introuvable');
+  if (!professeur) throw new NotFoundError('Personnel introuvable');
   return professeur;
 }
 
 export async function creerPersonnel(etablissement_id: string, data: PersonnelInput) {
   const roleProf = await prisma.role.findFirst({ where: { libelle_fr: 'professeur' } });
-  if (!roleProf) throw new Error('Rôle professeur introuvable');
+  if (!roleProf) throw new NotFoundError('Rôle professeur introuvable');
 
   const hashedPassword = await bcrypt.hash(data.mot_de_passe, 10);
   const matricule = data.matricule || await genererMatriculePersonnel(etablissement_id);
@@ -119,7 +120,7 @@ export async function modifierPersonnel(id: string, etablissement_id: string, da
     where: { OR: [{ id }, { utilisateur_id: id }], utilisateur: { etablissement_id } },
     include: { utilisateur: true },
   });
-  if (!professeur) throw new Error('Personnel introuvable');
+  if (!professeur) throw new NotFoundError('Personnel introuvable');
 
   const updateTasks: Promise<unknown>[] = [];
 
@@ -176,7 +177,7 @@ export async function supprimerPersonnel(id: string, etablissement_id: string) {
     where: { OR: [{ id }, { utilisateur_id: id }], utilisateur: { etablissement_id } },
     include: { utilisateur: true },
   });
-  if (!professeur) throw new Error('Personnel introuvable');
+  if (!professeur) throw new NotFoundError('Personnel introuvable');
 
   return prisma.utilisateur.update({
     where: { id: professeur.utilisateur_id },

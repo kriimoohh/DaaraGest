@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { CreerDomaineInput, ModifierDomaineInput } from './domaines.schema';
+import { NotFoundError } from '../../utils/errors';
 
 export async function listerDomaines(etablissement_id: string, inclureInactifs = false) {
   return prisma.domaine.findMany({
@@ -33,7 +34,7 @@ export async function creerDomaine(etablissement_id: string, data: CreerDomaineI
 
 export async function modifierDomaine(id: string, etablissement_id: string, data: ModifierDomaineInput) {
   const existing = await prisma.domaine.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw Object.assign(new Error('Domaine introuvable'), { statusCode: 404 });
+  if (!existing) throw Object.assign(new NotFoundError('Domaine introuvable'), { statusCode: 404 });
 
   if (data.code && data.code !== existing.code) {
     const conflit = await prisma.domaine.findFirst({
@@ -60,7 +61,7 @@ export async function modifierDomaine(id: string, etablissement_id: string, data
 
 export async function supprimerDomaine(id: string, etablissement_id: string) {
   const existing = await prisma.domaine.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw Object.assign(new Error('Domaine introuvable'), { statusCode: 404 });
+  if (!existing) throw Object.assign(new NotFoundError('Domaine introuvable'), { statusCode: 404 });
 
   const nbMatieres = await prisma.matiere.count({ where: { domaine_id: id } });
   if (nbMatieres > 0) {

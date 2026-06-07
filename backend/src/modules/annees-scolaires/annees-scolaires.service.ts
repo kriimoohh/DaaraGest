@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { AnneeScolaireInput } from './annees-scolaires.schema';
+import { NotFoundError } from '../../utils/errors';
 
 export async function listerAnneesScolaires(etablissement_id: string) {
   return prisma.anneeScolaire.findMany({
@@ -21,7 +22,7 @@ export async function creerAnneeScolaire(etablissement_id: string, data: AnneeSc
 
 export async function modifierAnneeScolaire(id: string, etablissement_id: string, data: AnneeScolaireInput) {
   const existing = await prisma.anneeScolaire.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Année scolaire introuvable');
+  if (!existing) throw new NotFoundError('Année scolaire introuvable');
 
   return prisma.anneeScolaire.update({
     where: { id },
@@ -35,7 +36,7 @@ export async function modifierAnneeScolaire(id: string, etablissement_id: string
 
 export async function activerAnneeScolaire(id: string, etablissement_id: string) {
   const existing = await prisma.anneeScolaire.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Année scolaire introuvable');
+  if (!existing) throw new NotFoundError('Année scolaire introuvable');
 
   await prisma.anneeScolaire.updateMany({
     where: { etablissement_id, active: true },
@@ -50,7 +51,7 @@ export async function activerAnneeScolaire(id: string, etablissement_id: string)
 
 export async function supprimerAnneeScolaire(id: string, etablissement_id: string) {
   const existing = await prisma.anneeScolaire.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw Object.assign(new Error('Année scolaire introuvable'), { statusCode: 404 });
+  if (!existing) throw Object.assign(new NotFoundError('Année scolaire introuvable'), { statusCode: 404 });
 
   // L'année est référencée par de nombreuses tables (Restrict par défaut) : on
   // refuse la suppression si des données y sont rattachées, avec un message clair

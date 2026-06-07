@@ -7,6 +7,7 @@ import { TypeDocument, GenererDocumentInput, GenererCartesLotInput, UpsertTempla
 import { getDefaultTemplate, TYPE_DOCUMENT_LABELS, getCardTemplate } from './templates/defaults';
 import { calculerMoyennesClasse, getBaremesClasse } from '../bulletins/bulletins.service';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
+import { NotFoundError } from '../../utils/errors';
 
 function signQrPayload(payload: object): string {
   const data = JSON.stringify(payload);
@@ -441,7 +442,7 @@ async function buildTableauNotesClasse(
     }),
   ]);
 
-  if (!classeRaw) throw Object.assign(new Error('Classe introuvable'), { statusCode: 404 });
+  if (!classeRaw) throw Object.assign(new NotFoundError('Classe introuvable'), { statusCode: 404 });
 
   // Échelle de l'établissement (ConfigNotes.note_max) : sert de barème par défaut
   // quand une matière de la classe n'a pas d'override, et d'échelle d'affichage.

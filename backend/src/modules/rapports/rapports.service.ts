@@ -4,6 +4,7 @@ import prisma from '../../config/database';
 import { renderPdfHtml as _renderPdfHtmlReal } from '../../utils/browserPool';
 import { calculerMoyennesClasse, getMentionsEtab, mentionPour, getBaremesClasse } from '../bulletins/bulletins.service';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
+import { NotFoundError } from '../../utils/errors';
 
 // Mode aperçu : on intercepte renderPdfHtml pour capturer le HTML sans
 // passer par Puppeteer. AsyncLocalStorage isole les appels concurrents.
@@ -198,7 +199,7 @@ export async function rapportResultatsClasse(
   const { classe_id, annee_scolaire_id, periode, format } = params;
 
   const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
-  if (!classe) throw new Error('Classe introuvable');
+  if (!classe) throw new NotFoundError('Classe introuvable');
 
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
   const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
@@ -453,7 +454,7 @@ export async function rapportGrilleIef(
     prisma.etablissement.findUnique({ where: { id: etablissement_id } }),
     prisma.configNotes.findUnique({ where: { etablissement_id } }),
   ]);
-  if (!classeRaw) throw new Error('Classe introuvable');
+  if (!classeRaw) throw new NotFoundError('Classe introuvable');
 
   const [inscriptions, titulaireNom] = await Promise.all([
     fetchInscriptions(classe_id, annee_scolaire_id),
@@ -623,7 +624,7 @@ export async function rapportGrillePerformance(
     }),
     prisma.etablissement.findUnique({ where: { id: etablissement_id } }),
   ]);
-  if (!classeRaw) throw new Error('Classe introuvable');
+  if (!classeRaw) throw new NotFoundError('Classe introuvable');
 
   const groupeGrille = classeRaw.niveau?.groupe_grille ?? 'AUTRE';
   // Seuils différents selon le groupe de niveau
@@ -848,7 +849,7 @@ export async function rapportPerformanceDomaine(
     }),
     prisma.etablissement.findUnique({ where: { id: etablissement_id } }),
   ]);
-  if (!classeRaw) throw new Error('Classe introuvable');
+  if (!classeRaw) throw new NotFoundError('Classe introuvable');
 
   const [inscriptions, domaines, titulaireNom] = await Promise.all([
     fetchInscriptions(classe_id, annee_scolaire_id),
@@ -1030,7 +1031,7 @@ export async function rapportReleveNotes(
     }),
     prisma.etablissement.findUnique({ where: { id: etablissement_id } }),
   ]);
-  if (!classeRaw) throw new Error('Classe introuvable');
+  if (!classeRaw) throw new NotFoundError('Classe introuvable');
 
   const [inscriptions, classeMatieres, titulaireNom] = await Promise.all([
     fetchInscriptions(classe_id, annee_scolaire_id),
@@ -1185,7 +1186,7 @@ export async function rapportPropositionsFin(
     }),
     prisma.etablissement.findUnique({ where: { id: etablissement_id } }),
   ]);
-  if (!classeRaw) throw new Error('Classe introuvable');
+  if (!classeRaw) throw new NotFoundError('Classe introuvable');
 
   const [inscriptions, titulaireNom] = await Promise.all([
     fetchInscriptions(classe_id, annee_scolaire_id),

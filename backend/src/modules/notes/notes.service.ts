@@ -3,6 +3,7 @@ import { logAction } from '../../utils/audit';
 import { assertProfPeutSaisirNotes, getPolitiqueSaisieNotes, estModeStrict } from '../../utils/teachingPolicy';
 import { NoteItem } from './notes.schema';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
+import { NotFoundError } from '../../utils/errors';
 
 export async function listerNotes(
   etablissement_id: string,
@@ -13,7 +14,7 @@ export async function listerNotes(
 ) {
   if (classe_id) {
     const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
-    if (!classe) throw new Error('Classe introuvable');
+    if (!classe) throw new NotFoundError('Classe introuvable');
   }
 
   const where: Record<string, unknown> = {};
@@ -164,7 +165,7 @@ export async function bulkUpsertNotes(
 
 export async function listerNotesEleve(eleve_id: string, etablissement_id: string, annee_scolaire_id?: string) {
   const eleve = await prisma.eleve.findFirst({ where: { id: eleve_id, etablissement_id } });
-  if (!eleve) throw new Error('Élève introuvable');
+  if (!eleve) throw new NotFoundError('Élève introuvable');
   return prisma.note.findMany({
     where: { eleve_id, ...(annee_scolaire_id ? { annee_scolaire_id } : {}) },
     include: { matiere: true, annee_scolaire: true },

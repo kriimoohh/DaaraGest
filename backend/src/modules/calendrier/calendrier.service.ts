@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { EvenementInput } from './calendrier.schema';
+import { NotFoundError } from '../../utils/errors';
 
 export async function listerEvenements(
   etablissement_id: string,
@@ -50,7 +51,7 @@ export async function creerEvenement(etablissement_id: string, createur_id: stri
 
 export async function modifierEvenement(id: string, etablissement_id: string, data: Partial<EvenementInput>) {
   const existing = await prisma.evenementCalendrier.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Événement introuvable');
+  if (!existing) throw new NotFoundError('Événement introuvable');
 
   const updateData: Record<string, unknown> = {};
   if (data.titre_fr !== undefined) updateData.titre_fr = data.titre_fr;
@@ -69,6 +70,6 @@ export async function modifierEvenement(id: string, etablissement_id: string, da
 
 export async function supprimerEvenement(id: string, etablissement_id: string) {
   const existing = await prisma.evenementCalendrier.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Événement introuvable');
+  if (!existing) throw new NotFoundError('Événement introuvable');
   await prisma.evenementCalendrier.delete({ where: { id } });
 }

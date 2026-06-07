@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import prisma from '../../config/database';
 import { JwtPayload } from '../../utils/jwt';
 import { assertMotDePasseValide } from '../../utils/passwordPolicy';
+import { NotFoundError } from '../../utils/errors';
 
 // ─── Verrouillage anti brute-force ──────────────────────────────────────────────
 // Persisté en base (et non en mémoire process) pour rester efficace même quand
@@ -94,7 +95,7 @@ export async function changePassword(id: string, ancien: string, nouveau: string
     where: { id },
     include: { role: true },
   });
-  if (!utilisateur) throw new Error('Utilisateur introuvable');
+  if (!utilisateur) throw new NotFoundError('Utilisateur introuvable');
   const valid = await bcrypt.compare(ancien, utilisateur.mot_de_passe);
   if (!valid) throw new Error('Mot de passe actuel incorrect');
   assertMotDePasseValide(nouveau);
@@ -166,7 +167,7 @@ export async function getMe(id: string) {
   });
 
   if (!utilisateur) {
-    throw new Error('Utilisateur introuvable');
+    throw new NotFoundError('Utilisateur introuvable');
   }
 
   return {
