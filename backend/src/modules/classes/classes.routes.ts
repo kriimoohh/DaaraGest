@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { authMiddleware } from '../../middlewares/auth.middleware';
 import { requireRole } from '../../middlewares/role.middleware';
 import { ROLE_GROUPS } from '../../config/roles';
-import { listerHandler, getHandler, creerHandler, modifierHandler, supprimerHandler, listerElevesHandler, pdfListeClasseHandler, pdfToutesClassesHandler, listerMatieresClasseHandler, ajouterMatiereClasseHandler, modifierMatiereClasseHandler, supprimerMatiereClasseHandler, dupliquerArHandler } from './classes.controller';
+import { listerHandler, getHandler, creerHandler, modifierHandler, supprimerHandler, listerElevesHandler, pdfListeClasseHandler, pdfToutesClassesHandler, listerMatieresClasseHandler, ajouterMatiereClasseHandler, modifierMatiereClasseHandler, supprimerMatiereClasseHandler, dupliquerArHandler, upsertOverridePeriodeHandler, supprimerOverridePeriodeHandler } from './classes.controller';
 
 const lecture        = requireRole(...ROLE_GROUPS.ACADEMIQUE);
 const gestion        = requireRole(...ROLE_GROUPS.GESTION);
@@ -23,4 +23,7 @@ export async function classeRoutes(fastify: FastifyInstance) {
   fastify.post('/:id/matieres',                 { preHandler: [authMiddleware, gestion] }, ajouterMatiereClasseHandler);
   fastify.put('/:id/matieres/:matiere_id',      { preHandler: [authMiddleware, gestion] }, modifierMatiereClasseHandler);
   fastify.delete('/:id/matieres/:matiere_id',   { preHandler: [authMiddleware, gestion] }, supprimerMatiereClasseHandler);
+  // Overrides par période (coeff/note_max/evaluee)
+  fastify.put('/:id/matieres/:matiere_id/periode',                  { preHandler: [authMiddleware, gestion] }, upsertOverridePeriodeHandler);
+  fastify.delete('/:id/matieres/:matiere_id/periode/:periode',      { preHandler: [authMiddleware, gestion] }, supprimerOverridePeriodeHandler);
 }

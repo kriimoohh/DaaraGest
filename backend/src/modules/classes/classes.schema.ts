@@ -12,11 +12,24 @@ export const classeMatiereSchema = z.object({
   matiere_id: z.string().uuid(),
   coeff_override: z.number().positive().optional(),
   ordre_override: z.number().int().min(0).optional(),
+  // Décision pédagogique : matière enseignée mais non évaluée → hors moyenne du bulletin.
+  evaluee: z.boolean().optional(),
 });
 
 export const classeMatiereUpdateSchema = z.object({
   coeff_override: z.number().positive().nullable().optional(),
   ordre_override: z.number().int().min(0).nullable().optional(),
+  evaluee: z.boolean().optional(),
+});
+
+// Override "évaluée" par trimestre (ex: matière évaluée au T2 mais pas au T1/T3).
+// null sur evaluee remet l'override "non défini" (= hérite de ClasseMatiere).
+export const classeMatierePeriodeSchema = z.object({
+  matiere_id: z.string().uuid(),
+  periode: z.number().int().min(1).max(6),
+  coeff: z.number().positive().optional(),
+  note_max: z.number().positive().optional(),
+  evaluee: z.boolean().nullable().optional(),
 });
 
 export const dupliquerArSchema = z.object({
@@ -26,4 +39,5 @@ export const dupliquerArSchema = z.object({
 export type ClasseInput = z.infer<typeof classeSchema>;
 export type ClasseMatiereInput = z.infer<typeof classeMatiereSchema>;
 export type ClasseMatiereUpdateInput = z.infer<typeof classeMatiereUpdateSchema>;
+export type ClasseMatierePeriodeInput = z.infer<typeof classeMatierePeriodeSchema>;
 export type DupliquerArInput = z.infer<typeof dupliquerArSchema>;

@@ -406,6 +406,10 @@ model ClasseMatiere {
   // Sert à normaliser les notes brutes (saisies sur leur barème) avant le calcul
   // de la moyenne du bulletin.
   note_max_override Decimal? @db.Decimal(5, 2)
+  // Matière enseignée mais non évaluée (n'entre pas dans la moyenne du bulletin).
+  // Reste visible sur le bulletin avec la mention "Non évaluée".
+  // Override possible par période via ClasseMatierePeriode.evaluee.
+  evaluee Boolean @default(true)
 
   classe  Classe  @relation(fields: [classe_id], references: [id])
   matiere Matiere @relation(fields: [matiere_id], references: [id])
@@ -424,6 +428,9 @@ model ClasseMatierePeriode {
   periode    Int
   coeff      Decimal  @db.Decimal(4, 2)
   note_max   Decimal  @db.Decimal(5, 2)
+  // Override "évaluée" pour cette période uniquement (ex: matière évaluée au T2
+  // mais pas au T1/T3). null = on retombe sur ClasseMatiere.evaluee.
+  evaluee    Boolean?
   created_at DateTime @default(now())
 
   @@unique([classe_id, matiere_id, periode])

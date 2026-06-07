@@ -409,7 +409,15 @@
     "val_nom_fr_requis": "الاسم (بالفرنسية) مطلوب",
     "val_filiere_requise": "الشعبة مطلوبة",
     "val_annee_requise": "السنة الدراسية مطلوبة",
-    "val_capacite_invalide": "الطاقة الاستيعابية غير صالحة"
+    "val_capacite_invalide": "الطاقة الاستيعابية غير صالحة",
+    "col_evaluee": "مُقَيَّمة",
+    "evaluee_oui": "نعم",
+    "evaluee_non": "لا",
+    "override_periode": "إعداد لكل فصل",
+    "override_periode_hint": "اترك \"افتراضي\" لاستخدام إعداد الفصل.",
+    "evaluee_defaut": "افتراضي",
+    "evaluee_evaluee": "مُقَيَّمة",
+    "evaluee_non_evaluee": "غير مُقَيَّمة"
   },
   "annee_scolaire": {
     "titre": "السنوات الدراسية",
@@ -636,7 +644,19 @@
     "ok_generes": "تم توليد الشهادات بنجاح",
     "ok_pdf_eleve": "تم تنزيل PDF",
     "ok_pdf_classe": "تم تنزيل PDF القسم ({{count}} شهادة)",
-    "chargement_progress": "جارٍ التحميل…"
+    "chargement_progress": "جارٍ التحميل…",
+    "preflight_titre": "التحقق قبل إصدار الشهادات",
+    "preflight_evaluees": "المواد المُقَيَّمة",
+    "preflight_non_evaluees": "غير مُقَيَّمة",
+    "preflight_sans_notes": "بدون نقاط مُدخَلة",
+    "preflight_eleves_sans_note": "تلاميذ بدون نقاط",
+    "preflight_options": "خيارات الحساب",
+    "preflight_inclure_non_evaluees": "احتساب المواد غير المُقَيَّمة في المعدل",
+    "preflight_manquantes_zero": "اعتبار النقاط الناقصة 0 (يُعاقِب التلاميذ بدون نقطة)",
+    "preflight_non_evaluees_hint": "تَظهَر على الشهادة مع ذكر \"غير مُقَيَّمة\".",
+    "preflight_warn_sans_notes": "مواد البرنامج بدون نقاط مُدخَلة",
+    "preflight_confirmer": "إصدار {{count}} شهادة",
+    "non_evaluee": "غير مُقَيَّمة"
   },
   "evaluation": {
     "titre": "التقييمات التكوينية",

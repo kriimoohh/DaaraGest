@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
-import { classeSchema, classeMatiereSchema, classeMatiereUpdateSchema, dupliquerArSchema } from './classes.schema';
-import { listerClasses, getClasse, creerClasse, modifierClasse, supprimerClasse, listerElevesDeClasse, genererPdfListeClasse, genererPdfToutesClasses, listerMatieresDeclasse, ajouterMatiereClasse, modifierMatiereClasse, supprimerMatiereClasse, dupliquerClasseFrEnAr } from './classes.service';
+import { classeSchema, classeMatiereSchema, classeMatiereUpdateSchema, classeMatierePeriodeSchema, dupliquerArSchema } from './classes.schema';
+import { listerClasses, getClasse, creerClasse, modifierClasse, supprimerClasse, listerElevesDeClasse, genererPdfListeClasse, genererPdfToutesClasses, listerMatieresDeclasse, ajouterMatiereClasse, modifierMatiereClasse, supprimerMatiereClasse, dupliquerClasseFrEnAr, upsertOverridePeriode, supprimerOverridePeriode } from './classes.service';
 
 export async function listerHandler(
   request: FastifyRequest, reply: FastifyReply
@@ -170,17 +170,20 @@ export async function ajouterMatiereClasseHandler(
 export async function modifierMatiereClasseHandler(
   request: FastifyRequest, reply: FastifyReply
 ) {
-  const { etablissement_id } = request.user as JwtPayload;
+  const { etablissement_id, id: acteur_id } = request.user as JwtPayload;
   const { id, matiere_id } = request.params as { id: string; matiere_id: string };
   const parsed = classeMatiereUpdateSchema.safeParse(request.body);
   if (!parsed.success) {
     return reply.status(400).send({ error: parsed.error.errors[0].message });
   }
+  const force = (request.query as { force?: string }).force === 'true';
   try {
-    const data = await modifierMatiereClasse(id, etablissement_id, matiere_id, parsed.data);
+    const data = await modifierMatiereClasse(id, etablissement_id, matiere_id, parsed.data, { force, acteur_id });
     return reply.send(data);
   } catch (err) {
-    return reply.status(404).send({ error: (err as Error).message });
+    const e = err as { statusCode?: number; message: string; payload?: unknown };
+    if (e.statusCode === 409) return reply.status(409).send({ error: e.message, ...((e.payload as object) ?? {}) });
+    return reply.status(404).send({ error: e.message });
   }
 }
 
@@ -194,5 +197,38 @@ export async function supprimerMatiereClasseHandler(
     return reply.status(204).send();
   } catch (err) {
     return reply.status(404).send({ error: (err as Error).message });
+  }
+}
+
+export async function upsertOverridePeriodeHandler(
+  request: FastifyRequest, reply: FastifyReply
+) {
+  const { etablissement_id, id: acteur_id } = request.user as JwtPayload;
+  const { id } = request.params as { id: string };
+  const parsed = classeMatierePeriodeSchema.safeParse(request.body);
+  if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  const force = (request.query as { force?: string }).force === 'true';
+  try {
+    return reply.send(await upsertOverridePeriode(id, etablissement_id, parsed.data, { force, acteur_id }));
+  } catch (err) {
+    const e = err as { statusCode?: number; message: string; payload?: unknown };
+    if (e.statusCode === 409) return reply.status(409).send({ error: e.message, ...((e.payload as object) ?? {}) });
+    return reply.status(404).send({ error: e.message });
+  }
+}
+
+export async function supprimerOverridePeriodeHandler(
+  request: FastifyRequest, reply: FastifyReply
+) {
+  const { etablissement_id, id: acteur_id } = request.user as JwtPayload;
+  const { id, matiere_id, periode } = request.params as { id: string; matiere_id: string; periode: string };
+  const force = (request.query as { force?: string }).force === 'true';
+  try {
+    await supprimerOverridePeriode(id, etablissement_id, matiere_id, parseInt(periode), { force, acteur_id });
+    return reply.status(204).send();
+  } catch (err) {
+    const e = err as { statusCode?: number; message: string; payload?: unknown };
+    if (e.statusCode === 409) return reply.status(409).send({ error: e.message, ...((e.payload as object) ?? {}) });
+    return reply.status(404).send({ error: e.message });
   }
 }
