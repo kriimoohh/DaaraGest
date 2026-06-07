@@ -1,6 +1,7 @@
 import prisma from '../../config/database';
 import { getBaremesClasse } from '../bulletins/bulletins.service';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
+import { NotFoundError } from '../../utils/errors';
 
 // Fallback : si pas d'année scolaire active, expire dans 90 jours (au lieu de 365).
 const TOKEN_FALLBACK_DUREE_MS = 90 * 24 * 60 * 60 * 1000;
@@ -16,7 +17,7 @@ async function calculerExpiration(etablissement_id: string): Promise<Date> {
 
 export async function genererToken(etablissement_id: string, eleve_id: string) {
   const eleve = await prisma.eleve.findFirst({ where: { id: eleve_id, etablissement_id } });
-  if (!eleve) throw new Error('Élève introuvable');
+  if (!eleve) throw new NotFoundError('Élève introuvable');
 
   const expires_at = await calculerExpiration(etablissement_id);
 
@@ -30,7 +31,7 @@ export async function genererToken(etablissement_id: string, eleve_id: string) {
 
 export async function revoquerToken(token: string, etablissement_id: string) {
   const record = await prisma.portailParentToken.findFirst({ where: { token, etablissement_id } });
-  if (!record) throw new Error('Token introuvable');
+  if (!record) throw new NotFoundError('Token introuvable');
   return prisma.portailParentToken.update({ where: { id: record.id }, data: { actif: false } });
 }
 
@@ -175,7 +176,7 @@ export async function getBulletinPdfViaToken(token: string, bulletin_id: string)
     where: { id: bulletin_id, eleve_id: record.eleve_id },
     select: { id: true, periode: true, filiere: true },
   });
-  if (!bulletin) throw new Error('Bulletin introuvable');
+  if (!bulletin) throw new NotFoundError('Bulletin introuvable');
 
   const { genererPdfBulletin } = await import('../bulletins/bulletins.service');
   const buffer = await genererPdfBulletin(bulletin.id, record.etablissement_id);

@@ -1,6 +1,7 @@
 import prisma from '../../config/database';
 import { ValiderProgressionInput } from './progression.schema';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
+import { NotFoundError } from '../../utils/errors';
 
 export async function listerProgressions(
   etablissement_id: string,
@@ -111,7 +112,7 @@ export async function validerProgression(
   validee_par: string,
 ) {
   const existing = await prisma.progressionEleve.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Progression introuvable');
+  if (!existing) throw new NotFoundError('Progression introuvable');
 
   return prisma.progressionEleve.update({
     where: { id },
@@ -131,7 +132,7 @@ export async function validerProgression(
 
 export async function historiqueEleve(eleve_id: string, etablissement_id: string) {
   const eleve = await prisma.eleve.findFirst({ where: { id: eleve_id, etablissement_id } });
-  if (!eleve) throw new Error('Élève introuvable');
+  if (!eleve) throw new NotFoundError('Élève introuvable');
 
   const [inscriptions, progressions, absencesParAnnee, paiementsParAnnee] = await Promise.all([
     prisma.inscription.findMany({

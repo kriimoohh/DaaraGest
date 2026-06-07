@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { CreneauInput } from './emploi-du-temps.schema';
+import { NotFoundError } from '../../utils/errors';
 
 function heureToMinutes(h: string): number {
   const [hh, mm] = h.split(':').map(Number);
@@ -41,10 +42,10 @@ export async function creerCreneau(etablissement_id: string, data: CreneauInput)
     prisma.anneeScolaire.findFirst({ where: { id: data.annee_scolaire_id, etablissement_id } }),
     prisma.configNotes.findUnique({ where: { etablissement_id } }),
   ]);
-  if (!classe) throw new Error('Classe introuvable');
-  if (!matiere) throw new Error('Matière introuvable');
-  if (!professeur) throw new Error('Personnel introuvable');
-  if (!annee) throw new Error('Année scolaire introuvable');
+  if (!classe) throw new NotFoundError('Classe introuvable');
+  if (!matiere) throw new NotFoundError('Matière introuvable');
+  if (!professeur) throw new NotFoundError('Personnel introuvable');
+  if (!annee) throw new NotFoundError('Année scolaire introuvable');
 
   const joursActifs = (config?.jours_cours as string[]) ?? ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
   if (!joursActifs.includes(data.jour)) {
@@ -87,7 +88,7 @@ export async function creerCreneau(etablissement_id: string, data: CreneauInput)
 
 export async function modifierCreneau(id: string, etablissement_id: string, data: Partial<CreneauInput>) {
   const existing = await prisma.creneau.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Créneau introuvable');
+  if (!existing) throw new NotFoundError('Créneau introuvable');
 
   const updated = { ...existing, ...data };
 
@@ -127,6 +128,6 @@ export async function modifierCreneau(id: string, etablissement_id: string, data
 
 export async function supprimerCreneau(id: string, etablissement_id: string) {
   const existing = await prisma.creneau.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Créneau introuvable');
+  if (!existing) throw new NotFoundError('Créneau introuvable');
   await prisma.creneau.delete({ where: { id } });
 }

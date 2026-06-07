@@ -2,6 +2,7 @@ import prisma from '../../config/database';
 import { ClasseInput, ClasseMatiereInput, ClasseMatiereUpdateInput, DupliquerArInput } from './classes.schema';
 import { renderPdfHtml } from '../../utils/browserPool';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
+import { NotFoundError } from '../../utils/errors';
 
 type ListeData = Awaited<ReturnType<typeof listerElevesDeClasse>>;
 
@@ -60,7 +61,7 @@ export async function getClasse(id: string, etablissement_id: string) {
     where: { id, etablissement_id },
     include: { annee_scolaire: true, niveau: true },
   });
-  if (!classe) throw new Error('Classe introuvable');
+  if (!classe) throw new NotFoundError('Classe introuvable');
   return classe;
 }
 
@@ -79,7 +80,7 @@ export async function creerClasse(etablissement_id: string, data: ClasseInput) {
 
 export async function modifierClasse(id: string, etablissement_id: string, data: ClasseInput) {
   const existing = await prisma.classe.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Classe introuvable');
+  if (!existing) throw new NotFoundError('Classe introuvable');
 
   return prisma.classe.update({
     where: { id },
@@ -95,7 +96,7 @@ export async function modifierClasse(id: string, etablissement_id: string, data:
 
 export async function supprimerClasse(id: string, etablissement_id: string) {
   const existing = await prisma.classe.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Classe introuvable');
+  if (!existing) throw new NotFoundError('Classe introuvable');
 
   return prisma.classe.update({ where: { id }, data: { active: false } });
 }
@@ -104,7 +105,7 @@ export async function supprimerClasse(id: string, etablissement_id: string) {
 
 export async function listerMatieresDeclasse(classe_id: string, etablissement_id: string) {
   const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
-  if (!classe) throw new Error('Classe introuvable');
+  if (!classe) throw new NotFoundError('Classe introuvable');
 
   // Barème effectif = override de classe si présent, sinon échelle établissement.
   // Exposé sur la matière (note_max) ET au niveau du lien (note_max_effectif) pour
@@ -129,12 +130,12 @@ export async function ajouterMatiereClasse(
   classe_id: string, etablissement_id: string, data: ClasseMatiereInput
 ) {
   const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
-  if (!classe) throw new Error('Classe introuvable');
+  if (!classe) throw new NotFoundError('Classe introuvable');
 
   const matiere = await prisma.matiere.findFirst({
     where: { id: data.matiere_id, etablissement_id, active: true },
   });
-  if (!matiere) throw new Error('Matière introuvable');
+  if (!matiere) throw new NotFoundError('Matière introuvable');
   if (matiere.filiere !== classe.filiere) {
     throw new Error(`Impossible d'ajouter une matière ${matiere.filiere} à une classe ${classe.filiere}`);
   }
@@ -154,7 +155,7 @@ export async function modifierMatiereClasse(
   classe_id: string, etablissement_id: string, matiere_id: string, data: ClasseMatiereUpdateInput
 ) {
   const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
-  if (!classe) throw new Error('Classe introuvable');
+  if (!classe) throw new NotFoundError('Classe introuvable');
 
   const existing = await prisma.classeMatiere.findUnique({
     where: { classe_id_matiere_id: { classe_id, matiere_id } },
@@ -175,7 +176,7 @@ export async function supprimerMatiereClasse(
   classe_id: string, etablissement_id: string, matiere_id: string
 ) {
   const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
-  if (!classe) throw new Error('Classe introuvable');
+  if (!classe) throw new NotFoundError('Classe introuvable');
 
   const existing = await prisma.classeMatiere.findUnique({
     where: { classe_id_matiere_id: { classe_id, matiere_id } },
@@ -196,7 +197,7 @@ export async function listerElevesDeClasse(
     where: { id: classe_id, etablissement_id },
     include: { annee_scolaire: true },
   });
-  if (!classe) throw new Error('Classe introuvable');
+  if (!classe) throw new NotFoundError('Classe introuvable');
 
   const inscriptions = await prisma.inscription.findMany({
     where: {
@@ -237,7 +238,7 @@ export async function dupliquerClasseFrEnAr(
     where: { id, etablissement_id, active: true },
     include: { annee_scolaire: true, niveau: true },
   });
-  if (!source) throw new Error('Classe introuvable');
+  if (!source) throw new NotFoundError('Classe introuvable');
   if (source.filiere !== 'FR') throw new Error('La classe source doit être de filière française (FR)');
 
   const whereInscriptions = {

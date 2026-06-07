@@ -1,6 +1,7 @@
 import prisma from '../../config/database';
 import { EtablissementUpdateInput, ConfigNotesInput, ConfigNotificationsInput } from './parametres.schema';
 import { etablissementCache, configNotesCache, invalidateEtablissement } from '../../utils/cache';
+import { NotFoundError } from '../../utils/errors';
 
 export async function getParametres(etablissement_id: string) {
   return etablissementCache.getOrLoad(etablissement_id, async () => {
@@ -8,7 +9,7 @@ export async function getParametres(etablissement_id: string) {
       where: { id: etablissement_id },
       include: { config_notes: true },
     });
-    if (!etablissement) throw new Error('Établissement introuvable');
+    if (!etablissement) throw new NotFoundError('Établissement introuvable');
     return etablissement;
   });
 }

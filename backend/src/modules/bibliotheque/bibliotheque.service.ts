@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { LivreInput, UpdateLivreInput, EmpruntInput, RetourInput } from './bibliotheque.schema';
+import { NotFoundError } from '../../utils/errors';
 
 // ─── Livres ──────────────────────────────────────────────────────────────────
 
@@ -29,13 +30,13 @@ export async function creerLivre(etablissement_id: string, data: LivreInput) {
 
 export async function modifierLivre(id: string, etablissement_id: string, data: UpdateLivreInput) {
   const existing = await prisma.livreStock.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Livre introuvable');
+  if (!existing) throw new NotFoundError('Livre introuvable');
   return prisma.livreStock.update({ where: { id }, data });
 }
 
 export async function supprimerLivre(id: string, etablissement_id: string) {
   const existing = await prisma.livreStock.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Livre introuvable');
+  if (!existing) throw new NotFoundError('Livre introuvable');
   return prisma.livreStock.update({ where: { id }, data: { actif: false } });
 }
 
@@ -71,11 +72,11 @@ export async function listerEmprunts(
 
 export async function creerEmprunt(etablissement_id: string, data: EmpruntInput, cree_par: string) {
   const livre = await prisma.livreStock.findFirst({ where: { id: data.livre_id, etablissement_id, actif: true } });
-  if (!livre) throw new Error('Livre introuvable');
+  if (!livre) throw new NotFoundError('Livre introuvable');
   if (livre.quantite_dispo <= 0) throw new Error('Aucun exemplaire disponible');
 
   const eleve = await prisma.eleve.findFirst({ where: { id: data.eleve_id, etablissement_id } });
-  if (!eleve) throw new Error('Élève introuvable');
+  if (!eleve) throw new NotFoundError('Élève introuvable');
 
   const [emprunt] = await prisma.$transaction([
     prisma.emprunt.create({
@@ -99,7 +100,7 @@ export async function creerEmprunt(etablissement_id: string, data: EmpruntInput,
 
 export async function enregistrerRetour(id: string, etablissement_id: string, data: RetourInput) {
   const emprunt = await prisma.emprunt.findFirst({ where: { id, etablissement_id, statut: 'en_cours' } });
-  if (!emprunt) throw new Error('Emprunt introuvable ou déjà clôturé');
+  if (!emprunt) throw new NotFoundError('Emprunt introuvable ou déjà clôturé');
 
   const [updated] = await prisma.$transaction([
     prisma.emprunt.update({
