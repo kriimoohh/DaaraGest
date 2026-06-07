@@ -133,12 +133,6 @@ async function build() {
       .send({ status: allOk ? 'ok' : 'degraded', db: 'ok', pdf, timestamp: new Date().toISOString() });
   });
 
-  // [TEMPORAIRE] Vérification Sentry : lève une erreur non catchée → 500 →
-  // captureError → Sentry. À retirer après validation.
-  fastify.get('/debug-sentry', async () => {
-    throw new Error('Sentry backend test event (à ignorer)');
-  });
-
   await fastify.register(
     async (api) => {
       await api.register(authRoutes, { prefix: '/auth' });
