@@ -1,7 +1,12 @@
 # Anomalie — historique des migrations non rejouable depuis zéro
 
 > Découvert le **2026-06-05** en montant les tests d'intégration CI (point #2 de l'audit P1).
-> Statut : **à vérifier** — l'utilisateur pense l'avoir déjà corrigé. Voir « Procédure de vérification » plus bas.
+> **✅ RÉSOLU le 2026-06-07** par squash/re-baseline (option B). Détails en bas (« Résolution »).
+>
+> Le diagnostic ci-dessous reste pour mémoire. À la vérification, l'anomalie n'était PAS
+> corrigée — pire, plusieurs éditions latentes existaient (pas seulement `libelle_ar`) :
+> `tarifs` lisait `ConfigNotes.montant_mensualite`, et cette colonne n'était créée par
+> aucune migration. L'option A (guard) était donc insuffisante ; on a fait l'option B.
 
 ## Symptôme
 
@@ -72,3 +77,21 @@ dropdb daaragest_replay_check
 | **B — Squash / re-baseline** | Consolider l'historique en **une** migration baseline = `schema.prisma` actuel, re-baseliner la prod. Historique propre et rejouable. | Plus lourd, mais assainit durablement. |
 
 Recommandation : **B** à terme (prod déjà baselinée + besoin d'une CI fiable), **A** comme déblocage immédiat.
+
+## ✅ Résolution (2026-06-07) — option B appliquée
+
+1. **Réconciliation prod → schéma** : `migrate diff --from-url PROD --to-schema-datamodel`
+   donnait 82 lignes de dérive (quasi cosmétiques : renames de contraintes/index, défauts SQL
+   gérés côté app, précision timestamps) + 1 colonne orpheline `PersonnelMatiereClasse.coefficient`
+   (table vide, 0 donnée). Appliqué en transaction unique. Diff ensuite **vide**.
+2. **Baseline** : `00000000000000_baseline` générée via `migrate diff --from-empty --to-schema-datamodel`
+   (50 tables). Replay sur base vierge OK ; diff baseline ↔ schéma **vide**.
+3. **Re-baseline prod (zéro-fenêtre)** : `migrate resolve --applied 00000000000000_baseline` en
+   gardant les anciennes lignes (état valable pour l'ancien ET le nouveau repo), puis squash du
+   repo poussé sur `main` → auto-deploy = no-op, puis nettoyage des anciennes lignes de
+   `_prisma_migrations` (il ne reste que la baseline).
+4. **CI** : le job d'intégration passe de `prisma db push` à `prisma migrate deploy` → teste
+   désormais le vrai replay (garde-fou anti-régression).
+
+Backups : `~/daaragest-backups/before_rebaseline_*.sql` (dump complet), `baseline_proven_*.sql`,
+`pmc_coefficient_*.csv`. Vérifié post-op : 561 élèves intacts, API health 200, `migrate status` = « up to date ».

@@ -79,12 +79,12 @@ jobs:
       - name: Generate Prisma client
         working-directory: backend
         run: npx prisma generate
-      # Le replay des migrations depuis zéro n'est pas garanti (une migration
-      # historique référence une colonne supprimée depuis) — on synchronise le
-      # schéma courant directement, ce qui suffit aux tests d'intégration.
-      - name: Sync schema (db push)
+      # Depuis le squash du 2026-06-07, l'historique se résume à une baseline
+      # rejouable. On teste donc le VRAI replay des migrations : si une future
+      # migration casse le replay depuis zéro, la CI échouera ici.
+      - name: Apply migrations (replay depuis zéro)
         working-directory: backend
-        run: npx prisma db push --skip-generate
+        run: npx prisma migrate deploy
       - name: Integration tests
         working-directory: backend
         run: npm run test:integration
