@@ -1,23 +1,8 @@
 import bcrypt from 'bcryptjs';
 import prisma from '../../config/database';
 import { PersonnelInput } from './personnel.schema';
-
-async function genererMatriculePersonnel(etablissement_id: string): Promise<string> {
-  const etab = await prisma.etablissement.findUniqueOrThrow({
-    where: { id: etablissement_id },
-    select: { code: true },
-  });
-  const yy = String(new Date().getFullYear()).slice(-2);
-  const seqName = `seq_mat_p_${etablissement_id.replace(/-/g, '_')}_${yy}`;
-  await prisma.$executeRawUnsafe(
-    `CREATE SEQUENCE IF NOT EXISTS "${seqName}" START 1 INCREMENT 1`
-  );
-  const result = await prisma.$queryRawUnsafe<[{ nextval: bigint }]>(
-    `SELECT nextval('"${seqName}"')`
-  );
-  const num = String(result[0].nextval).padStart(3, '0');
-  return `${etab.code}-P-${yy}-${num}`;
-}
+import { NotFoundError } from '../../utils/errors';
+import { genererMatricule } from '../../utils/matricule';
 
 export async function listerPersonnel(etablissement_id: string, page = 1, search?: string, fonction?: string) {
   const limit = 20;
@@ -67,16 +52,16 @@ export async function getPersonnel(id: string, etablissement_id: string) {
       matieres_classes: { include: { matiere: true, classe: true } },
     },
   });
-  if (!professeur) throw new Error('Personnel introuvable');
+  if (!professeur) throw new NotFoundError('Personnel introuvable');
   return professeur;
 }
 
 export async function creerPersonnel(etablissement_id: string, data: PersonnelInput) {
   const roleProf = await prisma.role.findFirst({ where: { libelle_fr: 'professeur' } });
-  if (!roleProf) throw new Error('Rôle professeur introuvable');
+  if (!roleProf) throw new NotFoundError('Rôle professeur introuvable');
 
   const hashedPassword = await bcrypt.hash(data.mot_de_passe, 10);
-  const matricule = data.matricule || await genererMatriculePersonnel(etablissement_id);
+  const matricule = data.matricule || await genererMatricule(etablissement_id, 'P');
 
   const utilisateur = await prisma.utilisateur.create({
     data: {
@@ -119,7 +104,7 @@ export async function modifierPersonnel(id: string, etablissement_id: string, da
     where: { OR: [{ id }, { utilisateur_id: id }], utilisateur: { etablissement_id } },
     include: { utilisateur: true },
   });
-  if (!professeur) throw new Error('Personnel introuvable');
+  if (!professeur) throw new NotFoundError('Personnel introuvable');
 
   const updateTasks: Promise<unknown>[] = [];
 
@@ -176,7 +161,7 @@ export async function supprimerPersonnel(id: string, etablissement_id: string) {
     where: { OR: [{ id }, { utilisateur_id: id }], utilisateur: { etablissement_id } },
     include: { utilisateur: true },
   });
-  if (!professeur) throw new Error('Personnel introuvable');
+  if (!professeur) throw new NotFoundError('Personnel introuvable');
 
   return prisma.utilisateur.update({
     where: { id: professeur.utilisateur_id },

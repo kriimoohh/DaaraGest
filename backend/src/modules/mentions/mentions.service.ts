@@ -1,6 +1,7 @@
 import prisma from '../../config/database';
 import { CreerMentionInput, ModifierMentionInput } from './mentions.schema';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
+import { NotFoundError } from '../../utils/errors';
 
 // Pourcentages des seuils par défaut, appliqués à note_max (base 20 = 80%, 70%, 60%, 50%)
 const SEUILS_DEFAUT_PCT = [
@@ -90,7 +91,7 @@ export async function creerMention(etablissement_id: string, data: CreerMentionI
 
 export async function modifierMention(id: string, etablissement_id: string, data: ModifierMentionInput) {
   const mention = await prisma.mention.findFirst({ where: { id, etablissement_id } });
-  if (!mention) throw Object.assign(new Error('Mention introuvable'), { statusCode: 404 });
+  if (!mention) throw Object.assign(new NotFoundError('Mention introuvable'), { statusCode: 404 });
 
   if (mention.is_system && data.seuil_min !== undefined && data.seuil_min !== 0) {
     throw Object.assign(
@@ -134,7 +135,7 @@ export async function modifierMention(id: string, etablissement_id: string, data
 
 export async function supprimerMention(id: string, etablissement_id: string) {
   const mention = await prisma.mention.findFirst({ where: { id, etablissement_id } });
-  if (!mention) throw Object.assign(new Error('Mention introuvable'), { statusCode: 404 });
+  if (!mention) throw Object.assign(new NotFoundError('Mention introuvable'), { statusCode: 404 });
   if (mention.is_system) {
     throw Object.assign(
       new Error('La mention "Insuffisant" est système et ne peut pas être supprimée'),

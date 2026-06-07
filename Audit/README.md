@@ -1,11 +1,33 @@
-# Audit DaaraGest — Mai 2026 (révision + Sprints 5 & 6)
+# Audit DaaraGest — Index des audits
 
-Audit complet du projet sur 4 axes, **réalisé le 2026-05-22** (révision du précédent audit du 2026-05-19) — suivi du **Sprint 5** qui applique l'ensemble des P1 cross-audit identifiés.
+Index de tous les audits du projet sur 4 axes : **pédagogie**, **cybersécurité**, **ingénierie conceptuelle**, **design**.
 
-## Sommaire
+---
+
+## Audit le plus récent — Juin 2026
+
+**[00-audit-complet-juin-2026.md](./00-audit-complet-juin-2026.md)** — synthèse transversale, **7 juin 2026**, HEAD `f94ead5`.
+
+| Axe | Note |
+|-----|------|
+| Pédagogie | **9/10** |
+| Cybersécurité | **8,5/10** |
+| Ingénierie conceptuelle | **8/10** |
+| Design | **8,5/10** |
+
+**Métriques** : 484 tests backend · 50 modèles Prisma · ~36 modules backend · 32 pages frontend · i18n ~1 750 clés FR / ~1 559 AR.
+
+> Commencer par ce document pour une vue d'ensemble à jour. Les fichiers `01`–`04` ci-dessous restent la référence détaillée par axe (mai 2026).
+
+---
+
+## Audits détaillés par axe — Mai 2026 (révision + Sprints 5 & 6)
+
+Audit approfondi **réalisé le 2026-05-22** (révision du précédent audit du 2026-05-19) — suivi du **Sprint 5** qui applique l'ensemble des P1 cross-audit identifiés.
 
 | # | Axe | Note initiale | Note post-révision | Note post-Sprint 5 | Fichier |
 |---|---|---|---|---|---|
+| 00 | **Synthèse transversale** — 4 axes, juin 2026 | — | — | **voir ci-dessus** | [00-audit-complet-juin-2026.md](./00-audit-complet-juin-2026.md) |
 | 01 | **Pédagogique** — modèle métier, modules, workflows scolaires | 8/10 | 8.5/10 | **9/10** | [01-audit-pedagogique.md](./01-audit-pedagogique.md) |
 | 02 | **Cybersécurité** — auth, JWT, RBAC, validation, secrets | 6/10 | 8/10 | **9/10** | [02-audit-cybersecurite.md](./02-audit-cybersecurite.md) |
 | 03 | **Ingénierie & conception** — archi, code, tests, scalabilité | 7/10 | 7.5/10 | **8.5/10** | [03-audit-ingenierie-conception.md](./03-audit-ingenierie-conception.md) |
@@ -134,7 +156,7 @@ Après analyse de cohérence du codebase, **toutes** les incohérences structure
 
 ## Comment utiliser ces documents
 
-1. **Lecture séquentielle** : ouvrir le README → choisir un axe → traiter par ordre de priorité (🔴 P0 d'abord, 🟠 P1 ensuite).
+1. **Lecture séquentielle** : [00-audit-complet-juin-2026.md](./00-audit-complet-juin-2026.md) pour la synthèse → puis un axe (`01`–`04`) si besoin de détail → traiter par priorité (🔴 P0 d'abord, 🟠 P1 ensuite).
 2. **Format actionnable** : chaque constat indique un fichier `path:line` cliquable + un fix proposé + un effort estimé.
 3. **Ouverture d'issues** : copier-coller le constat (titre + bloc Markdown) directement dans un ticket GitHub/Linear.
 4. **Suivi** : cocher les actions au fur et à mesure (✅ / 🟡 en cours / ❌ abandonné).
@@ -149,4 +171,6 @@ Après analyse de cohérence du codebase, **toutes** les incohérences structure
 
 ---
 
-*Auditeur : Claude (Opus 4.7) — révision technique du 2026-05-22, comparée à l'audit initial du 2026-05-19.*
+*Audits mai 2026 : Claude (Opus 4.7) — révision technique du 2026-05-22, comparée à l'audit initial du 2026-05-19.*
+
+*Audit juin 2026 : [00-audit-complet-juin-2026.md](./00-audit-complet-juin-2026.md) — synthèse du 2026-06-07, HEAD `f94ead5`.*

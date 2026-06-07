@@ -6,6 +6,8 @@ import rateLimit from '@fastify/rate-limit';
 import { Prisma } from '@prisma/client';
 import prisma from './config/database';
 import { env, isProd } from './config/env';
+import { initSentry, captureError } from './config/sentry';
+import { isOriginBlocked } from './utils/csrf';
 import { checkBrowser } from './utils/browserPool';
 import { authRoutes } from './modules/auth/auth.routes';
 import { anneeScolaireRoutes } from './modules/annees-scolaires/annees-scolaires.routes';
@@ -68,6 +70,7 @@ const fastify = Fastify({
 });
 
 async function build() {
+  initSentry();
   // Support plusieurs origines séparées par des virgules
   const corsOrigins = env.CORS_ORIGIN.split(',').map(s => s.trim()).filter(Boolean);
   await fastify.register(cors, {
@@ -78,6 +81,21 @@ async function build() {
     exposedHeaders: ['Set-Cookie'],
     preflight: true,
     strictPreflight: false,
+  });
+
+  // Protection CSRF par validation d'Origin. L'auth se faisant par cookie
+  // (sameSite=none en prod, donc envoyé en cross-site), une page malveillante
+  // pourrait forger une requête mutante. Les navigateurs attachent TOUJOURS
+  // l'en-tête Origin aux requêtes POST/PUT/PATCH/DELETE cross-site (y compris
+  // les form-POST « simples » que le CORS ne bloque pas à l'émission). On
+  // rejette donc toute mutation dont l'Origin est présent mais non autorisé.
+  // L'absence d'Origin (clients non-navigateur : tests, scripts) n'est pas un
+  // vecteur CSRF et reste acceptée.
+  const allowedOrigins = new Set(corsOrigins);
+  fastify.addHook('onRequest', async (req, reply) => {
+    if (isOriginBlocked(req.method, req.url, req.headers.origin, allowedOrigins)) {
+      return reply.status(403).send({ error: 'Origine non autorisée' });
+    }
   });
 
   await fastify.register(cookie);
@@ -189,6 +207,7 @@ async function build() {
     if (statusCode < 500) {
       return reply.status(statusCode).send({ error: error.message ?? 'Requête invalide' });
     }
+    captureError(error);
     return reply.status(500).send({ error: 'Erreur interne du serveur' });
   });
 

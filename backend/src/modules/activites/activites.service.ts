@@ -4,6 +4,7 @@ import {
   PresenceActiviteItem, EvaluationActiviteInput,
 } from './activites.schema';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
+import { NotFoundError } from '../../utils/errors';
 
 // ─── Activités ───────────────────────────────────────────────────────────────
 
@@ -26,7 +27,7 @@ export async function creerActivite(etablissement_id: string, data: ActiviteInpu
     const utilisateur = await prisma.utilisateur.findFirst({
       where: { id: data.responsable_id, etablissement_id },
     });
-    if (!utilisateur) throw new Error('Responsable introuvable');
+    if (!utilisateur) throw new NotFoundError('Responsable introuvable');
   }
 
   return prisma.activite.create({
@@ -39,13 +40,13 @@ export async function creerActivite(etablissement_id: string, data: ActiviteInpu
 
 export async function modifierActivite(id: string, etablissement_id: string, data: Partial<ActiviteInput>) {
   const existing = await prisma.activite.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Activité introuvable');
+  if (!existing) throw new NotFoundError('Activité introuvable');
   return prisma.activite.update({ where: { id }, data });
 }
 
 export async function supprimerActivite(id: string, etablissement_id: string) {
   const existing = await prisma.activite.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Activité introuvable');
+  if (!existing) throw new NotFoundError('Activité introuvable');
   return prisma.activite.delete({ where: { id } });
 }
 
@@ -53,7 +54,7 @@ export async function supprimerActivite(id: string, etablissement_id: string) {
 
 export async function listerInscriptions(activite_id: string, etablissement_id: string, annee_scolaire_id?: string) {
   const activite = await prisma.activite.findFirst({ where: { id: activite_id, etablissement_id } });
-  if (!activite) throw new Error('Activité introuvable');
+  if (!activite) throw new NotFoundError('Activité introuvable');
 
   const where: Record<string, unknown> = { activite_id };
   if (annee_scolaire_id) where.annee_scolaire_id = annee_scolaire_id;
@@ -71,7 +72,7 @@ export async function listerInscriptions(activite_id: string, etablissement_id: 
 
 export async function inscrireEleve(activite_id: string, etablissement_id: string, data: InscriptionActiviteInput) {
   const activite = await prisma.activite.findFirst({ where: { id: activite_id, etablissement_id } });
-  if (!activite) throw new Error('Activité introuvable');
+  if (!activite) throw new NotFoundError('Activité introuvable');
 
   if (activite.capacite_max) {
     const count = await prisma.inscriptionActivite.count({
@@ -90,12 +91,12 @@ export async function inscrireEleve(activite_id: string, etablissement_id: strin
 
 export async function desinscrireEleve(activite_id: string, eleve_id: string, annee_scolaire_id: string, etablissement_id: string) {
   const activite = await prisma.activite.findFirst({ where: { id: activite_id, etablissement_id } });
-  if (!activite) throw new Error('Activité introuvable');
+  if (!activite) throw new NotFoundError('Activité introuvable');
 
   const inscription = await prisma.inscriptionActivite.findFirst({
     where: { activite_id, eleve_id, annee_scolaire_id },
   });
-  if (!inscription) throw new Error('Inscription introuvable');
+  if (!inscription) throw new NotFoundError('Inscription introuvable');
 
   return prisma.inscriptionActivite.delete({ where: { id: inscription.id } });
 }
@@ -104,7 +105,7 @@ export async function desinscrireEleve(activite_id: string, eleve_id: string, an
 
 export async function listerSeances(activite_id: string, etablissement_id: string) {
   const activite = await prisma.activite.findFirst({ where: { id: activite_id, etablissement_id } });
-  if (!activite) throw new Error('Activité introuvable');
+  if (!activite) throw new NotFoundError('Activité introuvable');
 
   return prisma.seanceActivite.findMany({
     where: { activite_id },
@@ -115,7 +116,7 @@ export async function listerSeances(activite_id: string, etablissement_id: strin
 
 export async function creerSeance(activite_id: string, etablissement_id: string, data: SeanceInput) {
   const activite = await prisma.activite.findFirst({ where: { id: activite_id, etablissement_id } });
-  if (!activite) throw new Error('Activité introuvable');
+  if (!activite) throw new NotFoundError('Activité introuvable');
 
   return prisma.seanceActivite.create({
     data: { activite_id, date: new Date(data.date), duree_min: data.duree_min, notes: data.notes },
@@ -124,10 +125,10 @@ export async function creerSeance(activite_id: string, etablissement_id: string,
 
 export async function supprimerSeance(seance_id: string, activite_id: string, etablissement_id: string) {
   const activite = await prisma.activite.findFirst({ where: { id: activite_id, etablissement_id } });
-  if (!activite) throw new Error('Activité introuvable');
+  if (!activite) throw new NotFoundError('Activité introuvable');
 
   const seance = await prisma.seanceActivite.findFirst({ where: { id: seance_id, activite_id } });
-  if (!seance) throw new Error('Séance introuvable');
+  if (!seance) throw new NotFoundError('Séance introuvable');
 
   return prisma.seanceActivite.delete({ where: { id: seance_id } });
 }
@@ -136,7 +137,7 @@ export async function supprimerSeance(seance_id: string, activite_id: string, et
 
 export async function listerPresences(seance_id: string, activite_id: string, etablissement_id: string) {
   const activite = await prisma.activite.findFirst({ where: { id: activite_id, etablissement_id } });
-  if (!activite) throw new Error('Activité introuvable');
+  if (!activite) throw new NotFoundError('Activité introuvable');
 
   return prisma.presenceActivite.findMany({
     where: { seance_id },
@@ -154,10 +155,10 @@ export async function bulkUpsertPresences(
   presences: PresenceActiviteItem[],
 ) {
   const activite = await prisma.activite.findFirst({ where: { id: activite_id, etablissement_id } });
-  if (!activite) throw new Error('Activité introuvable');
+  if (!activite) throw new NotFoundError('Activité introuvable');
 
   const seance = await prisma.seanceActivite.findFirst({ where: { id: seance_id, activite_id } });
-  if (!seance) throw new Error('Séance introuvable');
+  if (!seance) throw new NotFoundError('Séance introuvable');
 
   return prisma.$transaction(async (tx) => {
     const saved = [];
@@ -185,7 +186,7 @@ export async function upsertEvaluationActivite(
     include: { activite: true },
   });
   if (!inscription || inscription.activite.etablissement_id !== etablissement_id) {
-    throw new Error('Inscription introuvable');
+    throw new NotFoundError('Inscription introuvable');
   }
 
   // La note d'activité est sur l'échelle de l'établissement (ConfigNotes.note_max).

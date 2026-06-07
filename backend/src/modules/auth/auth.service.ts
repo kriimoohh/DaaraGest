@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import prisma from '../../config/database';
 import { JwtPayload } from '../../utils/jwt';
 import { assertMotDePasseValide } from '../../utils/passwordPolicy';
+import { NotFoundError } from '../../utils/errors';
 
 // ─── Verrouillage anti brute-force ──────────────────────────────────────────────
 // Persisté en base (et non en mémoire process) pour rester efficace même quand
@@ -94,7 +95,7 @@ export async function changePassword(id: string, ancien: string, nouveau: string
     where: { id },
     include: { role: true },
   });
-  if (!utilisateur) throw new Error('Utilisateur introuvable');
+  if (!utilisateur) throw new NotFoundError('Utilisateur introuvable');
   const valid = await bcrypt.compare(ancien, utilisateur.mot_de_passe);
   if (!valid) throw new Error('Mot de passe actuel incorrect');
   assertMotDePasseValide(nouveau);
@@ -133,12 +134,20 @@ export async function updateProfil(
 
 const REFRESH_EXPIRY_DAYS = 30;
 
-export async function creerRefreshToken(utilisateur_id: string): Promise<string> {
-  // Révoquer les anciens tokens de cet utilisateur
-  await prisma.refreshToken.updateMany({ where: { utilisateur_id, revoked: false }, data: { revoked: true } });
+export async function creerRefreshToken(
+  utilisateur_id: string,
+  device_id?: string | null,
+): Promise<string> {
+  // Rotation : ne révoquer que les tokens actifs du MÊME appareil (multi-device).
+  await prisma.refreshToken.updateMany({
+    where: { utilisateur_id, device_id: device_id ?? null, revoked: false },
+    data: { revoked: true },
+  });
 
   const expires_at = new Date(Date.now() + REFRESH_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
-  const rt = await prisma.refreshToken.create({ data: { utilisateur_id, expires_at } });
+  const rt = await prisma.refreshToken.create({
+    data: { utilisateur_id, device_id: device_id ?? null, expires_at },
+  });
   return rt.token;
 }
 
@@ -148,7 +157,8 @@ export async function validerRefreshToken(token: string) {
     include: { utilisateur: { include: { role: true } } },
   });
   if (!rt || rt.revoked || rt.expires_at < new Date()) return null;
-  return rt.utilisateur;
+  // On renvoie le token complet (device_id inclus) pour rotation par appareil.
+  return rt;
 }
 
 export async function revoquerRefreshToken(token: string) {
@@ -166,7 +176,7 @@ export async function getMe(id: string) {
   });
 
   if (!utilisateur) {
-    throw new Error('Utilisateur introuvable');
+    throw new NotFoundError('Utilisateur introuvable');
   }
 
   return {

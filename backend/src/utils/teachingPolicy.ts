@@ -1,13 +1,7 @@
 import prisma from '../config/database';
 import { ROLES } from '../config/roles';
 import { configNotesCache } from './cache';
-
-class ForbiddenError extends Error {
-  statusCode = 403;
-  constructor(message = 'Accès refusé') {
-    super(message);
-  }
-}
+import { ForbiddenError } from './errors';
 
 const ROLES_ADMIN_LIKE = new Set<string>([ROLES.ADMIN, ROLES.DIRECTEUR, ROLES.GESTIONNAIRE]);
 

@@ -4,6 +4,8 @@ import QRCode from 'qrcode';
 import { logAction } from '../../utils/audit';
 import { getQrSecret } from '../../utils/qrSecret';
 import { EleveInput, InscriptionInput } from './eleves.schema';
+import { NotFoundError } from '../../utils/errors';
+import { genererMatricule } from '../../utils/matricule';
 
 const VALID_SORT_FIELDS = ['nom_fr', 'prenom_fr', 'matricule', 'sexe', 'date_naissance'];
 
@@ -79,7 +81,7 @@ export async function getEleve(id: string, etablissement_id: string) {
       },
     },
   });
-  if (!eleve) throw new Error('Élève introuvable');
+  if (!eleve) throw new NotFoundError('Élève introuvable');
   return eleve;
 }
 
@@ -88,7 +90,7 @@ export async function getProgressionEleve(id: string, etablissement_id: string) 
     where: { id, etablissement_id },
     select: { id: true, nom_fr: true, prenom_fr: true, matricule: true, sexe: true },
   });
-  if (!eleve) throw new Error('Élève introuvable');
+  if (!eleve) throw new NotFoundError('Élève introuvable');
 
   const inscriptions = await prisma.inscription.findMany({
     where: { eleve_id: id },
@@ -161,28 +163,10 @@ export async function getProgressionEleve(id: string, etablissement_id: string) 
   return { eleve, progression };
 }
 
-async function genererMatricule(etablissement_id: string): Promise<string> {
-  const etab = await prisma.etablissement.findUniqueOrThrow({
-    where: { id: etablissement_id },
-    select: { code: true },
-  });
-  const yy = String(new Date().getFullYear()).slice(-2);
-  // Séquence par établissement+année : atomique, sans race condition.
-  const seqName = `seq_mat_e_${etablissement_id.replace(/-/g, '_')}_${yy}`;
-  await prisma.$executeRawUnsafe(
-    `CREATE SEQUENCE IF NOT EXISTS "${seqName}" START 1 INCREMENT 1`
-  );
-  const result = await prisma.$queryRawUnsafe<[{ nextval: bigint }]>(
-    `SELECT nextval('"${seqName}"')`
-  );
-  const num = String(result[0].nextval).padStart(3, '0');
-  return `${etab.code}-E-${yy}-${num}`;
-}
-
 export async function creerEleve(etablissement_id: string, data: EleveInput, acteurId: string) {
   const { parents, ...eleveData } = data;
 
-  const matricule = data.matricule || await genererMatricule(etablissement_id);
+  const matricule = data.matricule || await genererMatricule(etablissement_id, 'E');
   const eleve = await prisma.eleve.create({
     data: {
       etablissement_id,
@@ -203,7 +187,7 @@ export async function creerEleve(etablissement_id: string, data: EleveInput, act
 
 export async function modifierEleve(id: string, etablissement_id: string, data: Omit<EleveInput, 'parents'>, acteurId: string) {
   const existing = await prisma.eleve.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Élève introuvable');
+  if (!existing) throw new NotFoundError('Élève introuvable');
 
   const eleve = await prisma.eleve.update({
     where: { id },
@@ -223,7 +207,7 @@ export async function modifierEleve(id: string, etablissement_id: string, data: 
 
 export async function supprimerEleve(id: string, etablissement_id: string, acteurId: string) {
   const existing = await prisma.eleve.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Élève introuvable');
+  if (!existing) throw new NotFoundError('Élève introuvable');
 
   const eleve = await prisma.eleve.update({ where: { id }, data: { actif: false } });
   await logAction(etablissement_id, acteurId, 'DELETE', 'Eleve', id, { matricule: existing.matricule });
@@ -232,7 +216,7 @@ export async function supprimerEleve(id: string, etablissement_id: string, acteu
 
 export async function toggleActifEleve(id: string, etablissement_id: string) {
   const existing = await prisma.eleve.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Élève introuvable');
+  if (!existing) throw new NotFoundError('Élève introuvable');
 
   return prisma.eleve.update({ where: { id }, data: { actif: !existing.actif } });
 }
@@ -259,7 +243,7 @@ export async function importerEleves(etablissement_id: string, rows: ImportRow[]
         ? [{ nom_fr: row.parent_nom_fr, lien: (row.parent_lien || 'pere') as 'pere' | 'mere' | 'tuteur', telephone: row.parent_telephone || '' }]
         : undefined;
 
-      const matricule = await genererMatricule(etablissement_id);
+      const matricule = await genererMatricule(etablissement_id, 'E');
       await prisma.eleve.create({
         data: {
           etablissement_id, matricule,
@@ -283,7 +267,7 @@ export async function importerEleves(etablissement_id: string, rows: ImportRow[]
 
 export async function inscrireEleve(id: string, etablissement_id: string, data: InscriptionInput) {
   const existing = await prisma.eleve.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Élève introuvable');
+  if (!existing) throw new NotFoundError('Élève introuvable');
 
   return prisma.inscription.create({
     data: {
@@ -346,7 +330,7 @@ export async function getEleveQR(etablissement_id: string, eleveId: string) {
   const eleve = await prisma.eleve.findFirst({
     where: { id: eleveId, etablissement_id },
   });
-  if (!eleve) throw Object.assign(new Error('Élève introuvable'), { statusCode: 404 });
+  if (!eleve) throw Object.assign(new NotFoundError('Élève introuvable'), { statusCode: 404 });
 
   let token = eleve.qr_token;
   if (!token) {

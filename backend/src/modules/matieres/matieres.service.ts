@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { MatiereInput } from './matieres.schema';
+import { NotFoundError } from '../../utils/errors';
 
 export async function listerMatieres(etablissement_id: string, filiere?: string) {
   return prisma.matiere.findMany({
@@ -13,7 +14,7 @@ async function verifierDomaine(etablissement_id: string, domaine_id: string | nu
   if (!domaine_id) return;
   const dom = await prisma.domaine.findFirst({ where: { id: domaine_id, etablissement_id } });
   if (!dom) {
-    throw Object.assign(new Error('Domaine introuvable pour cet établissement'), { statusCode: 400 });
+    throw Object.assign(new NotFoundError('Domaine introuvable pour cet établissement'), { statusCode: 400 });
   }
 }
 
@@ -40,7 +41,7 @@ export async function creerMatiere(etablissement_id: string, data: MatiereInput)
 
 export async function modifierMatiere(id: string, etablissement_id: string, data: MatiereInput) {
   const existing = await prisma.matiere.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Matière introuvable');
+  if (!existing) throw new NotFoundError('Matière introuvable');
   await verifierDomaine(etablissement_id, data.domaine_id);
   return prisma.matiere.update({
     where: { id },
@@ -61,6 +62,6 @@ export async function modifierMatiere(id: string, etablissement_id: string, data
 
 export async function supprimerMatiere(id: string, etablissement_id: string) {
   const existing = await prisma.matiere.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Matière introuvable');
+  if (!existing) throw new NotFoundError('Matière introuvable');
   return prisma.matiere.update({ where: { id }, data: { active: false } });
 }

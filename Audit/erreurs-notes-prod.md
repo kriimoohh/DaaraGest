@@ -9,31 +9,46 @@
 
 ## 🔴 A. Impact direct sur les moyennes (priorité haute)
 
-### A1 — Anglais T2 compté mais jamais noté (156 notes à 0)
+### A1 — ✅ CORRIGÉ le 2026-06-07 — Anglais T2 jamais importé (156 notes étaient à 0)
 - Classes : **CP A, CP B, CI A, CI B** — filière FR, **trimestre 2**.
-- Anglais a `coeff = 1` (compté) au T2, mais **les 156 notes valent 0**.
-- Effet : 0 au numérateur + 10 de barème au dénominateur → **moyenne T2 sous-évaluée** pour ~156 élèves.
-- Au T1, Anglais est bien à `coeff = 0` (exclu) — c'est seulement le T2 qui est en cause.
-- **Fix possible** : soit saisir les vraies notes d'anglais, soit mettre `coeff = 0` pour Anglais T2 dans ces 4 classes (cohérent avec le T1).
+- Anglais a `coeff = 1` (compté) au T2, mais **les 156 notes valaient 0**.
+- **Cause réelle (tranchée par les relevés officiels papier du 04/06/2026)** : l'anglais a bien
+  été enseigné et noté au T2, mais les notes **n'avaient jamais été importées** (mises à 0 par
+  l'import). Ce n'était donc PAS un problème de coefficient — ne pas mettre `coeff = 0`.
+- **Correction appliquée** : import des 156 vraies notes d'anglais depuis les relevés CI A/CI B/CP A/CP B
+  (matching nom↔base 156/156, transaction `UPDATE`, backup `~/daaragest-backups/before_anglais_import_*`).
+  Vérifié post-import : 0 note à 0, valeurs alignées sur les relevés.
+- Au T1, Anglais reste sans notes pour CI A/B (normal — non noté ce trimestre), inchangé.
 - (= problème ① du rapport de vérification)
 
-### A2 — CE2 B Arabe T1 : CLC saisie sur /40 au lieu de /20 (38 notes = toute la classe)
+### A2 — ⏳ À VÉRIFIER AVEC LE PROF — CE2 B Arabe T1 : CLC notée sur /40 alors que le barème app est /20 (38 notes)
 - Classe : **CE2 B (AR)**, trimestre 1, matière **Langue et Communication : Compétence (CLC)**.
-- Valeurs 28 → 39 sur un barème app de **/20**.
-- Les classes sœurs (CE1 A, CE1 B, CE2 A) notent bien la CLC sur /20 au T1.
-- Effet : **moyennes de CE2 B T1 AR gonflées**, non comparables aux autres classes.
-- **Fix possible** : re-saisir sur /20 (≈ ÷2), ou passer le barème de cette classe à /40 (et ajuster le coef).
+- **Vérifié le 2026-06-07 contre le relevé officiel CE2 B (T1)** : la colonne CLC du relevé affiche bien **28 → 39**,
+  et la base contient **exactement les mêmes valeurs**. Donc **les notes sont fidèlement enregistrées** ; ce n'est
+  PAS une erreur de saisie individuelle.
+- Le problème est le **barème** : la prof a noté sur **/40**, mais la config (identique aux classes sœurs CE1 A/B,
+  CE2 A) attend la CLC du T1 sur **/20** (`ClasseMatierePeriode.note_max = 20`, coeff 2). Effet : `39/20×10 = 19,5/10`
+  → **moyenne T1 AR de CE2 B gonflée**.
+- **Décision à confirmer avec le prof** : la CLC de CE2 B au T1 est-elle bien sur **/40** ?
+  - Si OUI → fix = passer le barème CE2 B CLC T1 de /20 à **/40** (1 `UPDATE` sur `ClasseMatierePeriode`, coeff inchangé).
+    Notes officielles préservées, moyenne corrigée (`39/40×10 = 9,75`).
+  - Si la prof voulait /20 (notes doublées par erreur) → diviser les 38 notes par 2 (même moyenne au final, mais altère les valeurs du relevé).
 - (= problème ② du rapport)
 
-## 🟠 B. Notes « impossibles » isolées (fautes de frappe)
+## 🟠 B. Notes « impossibles » isolées (fautes de frappe) — ⏳ À VÉRIFIER AVEC LES PROFS
 
-| Élève | Matricule | Classe | T | Matière | Note | Barème |
-|---|---|---|---|---|---|---|
-| ABDOU KARIM DIALLO | CAAM-E-26-243 | CP A | T1 | Résolution de Problèmes | **14** | /4 |
-| ALIMATOU NIASS | CAAM-E-26-368 | CE1 B (AR) | T1 | RER (Mawarid) | **36,5** | /30 |
-| FAMA FALL | CAAM-E-26-530 | CM2 A | T2 | RLC (FR) | **50** | /40 |
+| Élève | Matricule | Classe | T | Matière | Note en base (= bulletin) | Barème confirmé | Vraie valeur ? |
+|---|---|---|---|---|---|---|---|
+| ABDOU KARIM DIALLO | CAAM-E-26-243 | CP A | T1 | Résolution de Problème | **14** | /4 (75 autres élèves ≤4) | ⏳ à confirmer |
+| ALIMATOU NIASS | CAAM-E-26-368 | CE1 B (AR) | T1 | RER (Mawarid) | **36,5** | /30 (37 autres ≤30) | ⏳ à confirmer |
+| FAMA FALL | CAAM-E-26-530 | CM2 A | T2 | LC Ressources (FR) | **50** | /40 (38 autres ≤40) | ⏳ à confirmer |
 
-- À corriger individuellement.
+- **Vérifié le 2026-06-07** : dans chaque classe, **un seul** élève dépasse le barème (tous les autres sont dedans)
+  → le barème est bon, c'est bien une **saisie erronée isolée**.
+- ⚠️ **Les bulletins fournis reproduisent les mêmes valeurs fausses** (36,5 / 50 / 14), chacune **affichée sans
+  appréciation** (case vide) → l'app les rejette comme hors barème. Les documents **confirment l'erreur mais ne
+  donnent pas la bonne valeur**.
+- **Action** : récupérer la vraie note auprès du maître (cahier de notes) pour chacun des 3, puis 1 `UPDATE` par élève.
 - RER 36,5 = problème ③ du rapport.
 - ⚠️ D'autres notes RLC = 50 existent en CE1 A / CE2 A / CE2 B (FR) mais sont **valides** (barème RLC /60 dans ces classes), donc non listées ici.
 
@@ -106,10 +121,10 @@ base = `ConfigNotes.note_max` (= 10). **rapports** et **progression** sont confo
 
 ## Récapitulatif données
 
-| Cause | Notes concernées | Impact moyenne |
-|---|---|---|
-| A1 Anglais T2 non noté (CP/CI) | 156 | Sous-évalue |
-| A2 CLC CE2 B AR sur /40 | 38 | Gonfle |
-| B Fautes de frappe isolées | 3 | Gonfle (ponctuel) |
-| C CM2 AR RLC/CLC permutés | 21 | Neutre (affichage) |
-| **Total** | **218 / 13 753** | |
+| Cause | Notes concernées | Impact moyenne | Statut |
+|---|---|---|---|
+| A1 Anglais T2 non importé (CP/CI) | 156 | Sous-évalue | ✅ Corrigé 2026-06-07 (import vraies notes) |
+| A2 CLC CE2 B AR sur /40 | 38 | Gonfle | ⏳ Vérifié — attend confirmation prof (barème /40 ?) |
+| B Fautes de frappe isolées | 3 | Gonfle (ponctuel) | ⏳ Vérifié — attend vraies valeurs (cahier prof) |
+| C CM2 AR CLC sur /40 (devrait /60) | 21 | Neutre (affichage) | ⏳ À traiter (fix sûr dispo, sans prof) |
+| **Total** | **218 / 13 753** (62 restantes) | | |

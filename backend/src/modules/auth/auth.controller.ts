@@ -27,7 +27,7 @@ export async function loginHandler(request: FastifyRequest, reply: FastifyReply)
   try {
     const { payload, user } = await login(parsed.data.identifiant, parsed.data.mot_de_passe);
     const token = await reply.jwtSign(payload, { expiresIn: TOKEN_EXPIRY });
-    const refreshToken = await creerRefreshToken(user.id);
+    const refreshToken = await creerRefreshToken(user.id, parsed.data.device_id);
     reply.setCookie('daaragest_token', token, cookieOptions(reply));
     reply.setCookie('daaragest_refresh', refreshToken, { ...cookieOptions(reply), maxAge: 30 * 24 * 60 * 60 });
     // Le token n'est plus retourné dans le body : il vit uniquement dans le
@@ -53,12 +53,13 @@ export async function refreshHandler(request: FastifyRequest, reply: FastifyRepl
   const refreshToken = request.cookies['daaragest_refresh'];
   if (!refreshToken) return reply.status(401).send({ error: 'Refresh token manquant' });
 
-  const utilisateur = await validerRefreshToken(refreshToken);
-  if (!utilisateur) {
+  const rt = await validerRefreshToken(refreshToken);
+  if (!rt) {
     reply.clearCookie('daaragest_token',   { path: '/' });
     reply.clearCookie('daaragest_refresh', { path: '/' });
     return reply.status(401).send({ error: 'Session expirée. Veuillez vous reconnecter.' });
   }
+  const utilisateur = rt.utilisateur;
 
   const payload: JwtPayload = {
     id: utilisateur.id,
@@ -70,7 +71,8 @@ export async function refreshHandler(request: FastifyRequest, reply: FastifyRepl
   };
 
   const newToken        = await reply.jwtSign(payload, { expiresIn: TOKEN_EXPIRY });
-  const newRefreshToken = await creerRefreshToken(utilisateur.id);
+  // Rotation dans le même appareil (device_id porté par le token courant).
+  const newRefreshToken = await creerRefreshToken(utilisateur.id, rt.device_id);
 
   reply.setCookie('daaragest_token',   newToken,        cookieOptions(reply));
   reply.setCookie('daaragest_refresh', newRefreshToken, { ...cookieOptions(reply), maxAge: 30 * 24 * 60 * 60 });

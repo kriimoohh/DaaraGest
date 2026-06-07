@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { CreerDemandeInput, TraiterDemandeInput } from './demandes-absence.schema';
+import { NotFoundError, ValidationError } from '../../utils/errors';
 
 export async function listerDemandes(etablissement_id: string, statut?: string) {
   return prisma.demandeAbsencePersonnel.findMany({
@@ -16,6 +17,15 @@ export async function listerDemandes(etablissement_id: string, statut?: string) 
 }
 
 export async function creerDemande(etablissement_id: string, data: CreerDemandeInput) {
+  // Multi-tenant strict : le personnel ciblé doit appartenir à l'établissement
+  // du demandeur (sinon on pourrait créer une demande pour un personnel d'un
+  // autre établissement en forgeant personnel_id).
+  const personnel = await prisma.personnel.findFirst({
+    where: { id: data.personnel_id, utilisateur: { etablissement_id } },
+    select: { id: true },
+  });
+  if (!personnel) throw new NotFoundError('Personnel introuvable');
+
   return prisma.demandeAbsencePersonnel.create({
     data: {
       etablissement_id,
@@ -39,10 +49,10 @@ export async function traiterDemande(
 ) {
   const demande = await prisma.demandeAbsencePersonnel.findUniqueOrThrow({ where: { id } });
   if (demande.etablissement_id !== etablissement_id) {
-    throw Object.assign(new Error('Ressource introuvable'), { statusCode: 404 });
+    throw new NotFoundError('Demande introuvable');
   }
   if (demande.statut !== 'EN_ATTENTE') {
-    throw Object.assign(new Error('Cette demande a déjà été traitée'), { statusCode: 400 });
+    throw new ValidationError('Cette demande a déjà été traitée');
   }
   return prisma.demandeAbsencePersonnel.update({
     where: { id },
@@ -62,10 +72,10 @@ export async function traiterDemande(
 export async function supprimerDemande(id: string, etablissement_id: string) {
   const demande = await prisma.demandeAbsencePersonnel.findUniqueOrThrow({ where: { id } });
   if (demande.etablissement_id !== etablissement_id) {
-    throw Object.assign(new Error('Ressource introuvable'), { statusCode: 404 });
+    throw new NotFoundError('Demande introuvable');
   }
   if (demande.statut !== 'EN_ATTENTE') {
-    throw Object.assign(new Error('Seules les demandes en attente peuvent être supprimées'), { statusCode: 400 });
+    throw new ValidationError('Seules les demandes en attente peuvent être supprimées');
   }
   return prisma.demandeAbsencePersonnel.delete({ where: { id } });
 }

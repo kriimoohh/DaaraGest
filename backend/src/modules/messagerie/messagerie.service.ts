@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import prisma from '../../config/database';
 import { CreerConversationInput, AjouterMessageInput } from './messagerie.schema';
 import { creerNotification } from '../notifications/notifications.service';
+import { NotFoundError } from '../../utils/errors';
 
 export async function listerConversations(etablissement_id: string, utilisateur_id: string) {
   const participations = await prisma.conversationParticipant.findMany({
@@ -56,7 +57,7 @@ export async function getConversation(id: string, etablissement_id: string, util
   const participation = await prisma.conversationParticipant.findFirst({
     where: { conversation_id: id, utilisateur_id, conversation: { etablissement_id } },
   });
-  if (!participation) throw new Error('Conversation introuvable ou accès refusé');
+  if (!participation) throw new NotFoundError('Conversation introuvable ou accès refusé');
 
   const conversation = await prisma.conversation.findUnique({
     where: { id },
@@ -156,7 +157,7 @@ export async function ajouterMessage(
   const participation = await prisma.conversationParticipant.findFirst({
     where: { conversation_id, utilisateur_id: expediteur_id, conversation: { etablissement_id } },
   });
-  if (!participation) throw new Error('Conversation introuvable ou accès refusé');
+  if (!participation) throw new NotFoundError('Conversation introuvable ou accès refusé');
 
   const [message] = await prisma.$transaction([
     prisma.messageConversation.create({

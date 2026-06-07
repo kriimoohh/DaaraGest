@@ -3,6 +3,7 @@ import prisma from '../../config/database';
 import { logAction } from '../../utils/audit';
 import { UtilisateurInput, ResetPasswordInput } from './utilisateurs.schema';
 import { ROLES } from '../../config/roles';
+import { NotFoundError } from '../../utils/errors';
 
 export async function listerRoles() {
   return prisma.role.findMany({ orderBy: { libelle_fr: 'asc' } });
@@ -85,7 +86,7 @@ export async function modifierUtilisateur(
   acteurId: string
 ) {
   const existing = await prisma.utilisateur.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Utilisateur introuvable');
+  if (!existing) throw new NotFoundError('Utilisateur introuvable');
 
   // Garde-fou : un utilisateur ne peut pas modifier son propre rôle
   // (évite qu'un admin se rétrograde et perde l'accès à l'administration).
@@ -119,7 +120,7 @@ export async function supprimerUtilisateur(id: string, etablissement_id: string,
     where: { id, etablissement_id },
     include: { role: true },
   });
-  if (!existing) throw Object.assign(new Error('Utilisateur introuvable'), { statusCode: 404 });
+  if (!existing) throw Object.assign(new NotFoundError('Utilisateur introuvable'), { statusCode: 404 });
 
   // Empêcher un administrateur de supprimer son propre compte.
   if (id === acteurId) {
@@ -154,7 +155,7 @@ export async function supprimerUtilisateur(id: string, etablissement_id: string,
 // si le suffixe `_deleted_<timestamp>` est présent et que le slot est de nouveau libre.
 export async function reactiverUtilisateur(id: string, etablissement_id: string, acteurId: string) {
   const existing = await prisma.utilisateur.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw Object.assign(new Error('Utilisateur introuvable'), { statusCode: 404 });
+  if (!existing) throw Object.assign(new NotFoundError('Utilisateur introuvable'), { statusCode: 404 });
   if (existing.actif) throw Object.assign(new Error('Ce compte est déjà actif.'), { statusCode: 400 });
 
   let identifiantRestaure = existing.identifiant;
@@ -188,7 +189,7 @@ export async function supprimerDefinitivement(id: string, etablissement_id: stri
     where: { id, etablissement_id },
     include: { role: true },
   });
-  if (!existing) throw Object.assign(new Error('Utilisateur introuvable'), { statusCode: 404 });
+  if (!existing) throw Object.assign(new NotFoundError('Utilisateur introuvable'), { statusCode: 404 });
 
   if (id === acteurId) {
     throw Object.assign(new Error('Vous ne pouvez pas supprimer votre propre compte.'), { statusCode: 400 });
@@ -252,7 +253,7 @@ export async function supprimerDefinitivement(id: string, etablissement_id: stri
 
 export async function resetPassword(id: string, etablissement_id: string, data: ResetPasswordInput, acteurId: string) {
   const existing = await prisma.utilisateur.findFirst({ where: { id, etablissement_id } });
-  if (!existing) throw new Error('Utilisateur introuvable');
+  if (!existing) throw new NotFoundError('Utilisateur introuvable');
 
   const hashedPassword = await bcrypt.hash(data.nouveau_mot_de_passe, 10);
 
