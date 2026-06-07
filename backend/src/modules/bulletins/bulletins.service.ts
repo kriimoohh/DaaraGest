@@ -912,7 +912,8 @@ export async function genererPdfClasse(
   const matMap: Record<string, MatiereAvecCoeff[]> = {};
   for (const f of filieres) matMap[f] = await getMatieresDeclasse(classe_id, f, periode, baseNote);
 
-  const { generateBulletinHtml } = await import('./bulletin.template');
+  // CSS partagée du template réutilisée pour le PDF classe (sinon rendu non stylé).
+  const { generateBulletinHtml, CSS: BULLETIN_CSS } = await import('./bulletin.template');
   const pages: string[] = [];
 
   for (const bulletin of bulletins) {
@@ -948,9 +949,24 @@ export async function genererPdfClasse(
     }));
   }
 
-  const combined = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>.pb{page-break-after:always}body{margin:0;padding:0}</style></head><body>
-    ${pages.map((p, i) => { const m = p.match(/<body>([\s\S]*)<\/body>/); const c = m ? m[1] : p; return i < pages.length - 1 ? `<div class="pb" style="padding:28px 36px">${c}</div>` : `<div style="padding:28px 36px">${c}</div>`; }).join('\n')}
-  </body></html>`;
+  // On reconstruit un document unique en réutilisant la CSS partagée du template
+  // (sinon le rendu retombe sur du HTML non stylé, complètement différent du PDF
+  // individuel). Chaque bulletin est isolé dans `.bulletin-page` avec le même
+  // padding que `body` en mode individuel (18px 28px) ; `body` doit donc être
+  // remis à padding:0 pour ne pas ajouter d'offset global. Les marges PDF sont
+  // alignées sur celles du bulletin individuel (10mm/8mm).
+  const pageContents = pages.map(p => {
+    const m = p.match(/<body[^>]*>([\s\S]*?)<\/body>/);
+    return m ? m[1] : p;
+  });
+  const combined = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><style>
+${BULLETIN_CSS}
+body { padding: 0 }
+.bulletin-page { padding: 18px 28px; page-break-after: always }
+.bulletin-page:last-child { page-break-after: auto }
+</style></head><body>
+${pageContents.map(c => `<div class="bulletin-page">${c}</div>`).join('\n')}
+</body></html>`;
 
-  return renderPdfHtml(combined, { format: 'A4', printBackground: true, margin: { top: '0', bottom: '0', left: '0', right: '0' } });
+  return renderPdfHtml(combined, { format: 'A4', printBackground: true, margin: { top: '10mm', bottom: '10mm', left: '8mm', right: '8mm' } });
 }
