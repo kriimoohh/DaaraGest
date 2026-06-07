@@ -8,10 +8,10 @@ import {
 
 export async function listerHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
-  const { annee_scolaire_id, periode, eleve_id, filiere } = request.query as Record<string, string | undefined>;
+  const { annee_scolaire_id, periode, eleve_id, filiere, classe_id } = request.query as Record<string, string | undefined>;
   const data = await listerBulletins(
     etablissement_id, annee_scolaire_id,
-    periode ? parseInt(periode) : undefined, eleve_id, filiere
+    periode ? parseInt(periode) : undefined, eleve_id, filiere, classe_id
   );
   return reply.send(data);
 }

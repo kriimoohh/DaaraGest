@@ -166,6 +166,7 @@ export function BulletinsPage() {
       const filiereFetch = isAnnuel ? filiere : type;
       const periodeFetch = isAnnuel ? 0 : parseInt(periode);
       const params = new URLSearchParams({ annee_scolaire_id: anneeId, periode: String(periodeFetch), filiere: filiereFetch });
+      if (classeId) params.set('classe_id', classeId);
       const data = await api.get<Bulletin[]>(`/api/v1/bulletins?${params}`);
       setBulletins(data);
     } catch (err) {
