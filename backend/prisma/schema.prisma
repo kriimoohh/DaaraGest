@@ -1029,3 +1029,15 @@ model Mention {
   @@unique([etablissement_id, seuil_min])
   @@index([etablissement_id])
 }
+
+// Compteur de matricules par établissement + type (E=élève, P=personnel) + année
+// (YY). Remplace les séquences Postgres créées via $executeRawUnsafe : un seul
+// modèle Prisma, incrément atomique par upsert.
+model MatriculeCounter {
+  etablissement_id String
+  type             String // 'E' | 'P'
+  annee            String // année sur 2 chiffres (ex: '26')
+  last_value       Int    @default(0)
+
+  @@id([etablissement_id, type, annee])
+}

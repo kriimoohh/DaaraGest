@@ -5,6 +5,7 @@ import { logAction } from '../../utils/audit';
 import { getQrSecret } from '../../utils/qrSecret';
 import { EleveInput, InscriptionInput } from './eleves.schema';
 import { NotFoundError } from '../../utils/errors';
+import { genererMatricule } from '../../utils/matricule';
 
 const VALID_SORT_FIELDS = ['nom_fr', 'prenom_fr', 'matricule', 'sexe', 'date_naissance'];
 
@@ -162,28 +163,10 @@ export async function getProgressionEleve(id: string, etablissement_id: string) 
   return { eleve, progression };
 }
 
-async function genererMatricule(etablissement_id: string): Promise<string> {
-  const etab = await prisma.etablissement.findUniqueOrThrow({
-    where: { id: etablissement_id },
-    select: { code: true },
-  });
-  const yy = String(new Date().getFullYear()).slice(-2);
-  // Séquence par établissement+année : atomique, sans race condition.
-  const seqName = `seq_mat_e_${etablissement_id.replace(/-/g, '_')}_${yy}`;
-  await prisma.$executeRawUnsafe(
-    `CREATE SEQUENCE IF NOT EXISTS "${seqName}" START 1 INCREMENT 1`
-  );
-  const result = await prisma.$queryRawUnsafe<[{ nextval: bigint }]>(
-    `SELECT nextval('"${seqName}"')`
-  );
-  const num = String(result[0].nextval).padStart(3, '0');
-  return `${etab.code}-E-${yy}-${num}`;
-}
-
 export async function creerEleve(etablissement_id: string, data: EleveInput, acteurId: string) {
   const { parents, ...eleveData } = data;
 
-  const matricule = data.matricule || await genererMatricule(etablissement_id);
+  const matricule = data.matricule || await genererMatricule(etablissement_id, 'E');
   const eleve = await prisma.eleve.create({
     data: {
       etablissement_id,
@@ -260,7 +243,7 @@ export async function importerEleves(etablissement_id: string, rows: ImportRow[]
         ? [{ nom_fr: row.parent_nom_fr, lien: (row.parent_lien || 'pere') as 'pere' | 'mere' | 'tuteur', telephone: row.parent_telephone || '' }]
         : undefined;
 
-      const matricule = await genererMatricule(etablissement_id);
+      const matricule = await genererMatricule(etablissement_id, 'E');
       await prisma.eleve.create({
         data: {
           etablissement_id, matricule,

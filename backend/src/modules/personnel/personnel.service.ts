@@ -2,23 +2,7 @@ import bcrypt from 'bcryptjs';
 import prisma from '../../config/database';
 import { PersonnelInput } from './personnel.schema';
 import { NotFoundError } from '../../utils/errors';
-
-async function genererMatriculePersonnel(etablissement_id: string): Promise<string> {
-  const etab = await prisma.etablissement.findUniqueOrThrow({
-    where: { id: etablissement_id },
-    select: { code: true },
-  });
-  const yy = String(new Date().getFullYear()).slice(-2);
-  const seqName = `seq_mat_p_${etablissement_id.replace(/-/g, '_')}_${yy}`;
-  await prisma.$executeRawUnsafe(
-    `CREATE SEQUENCE IF NOT EXISTS "${seqName}" START 1 INCREMENT 1`
-  );
-  const result = await prisma.$queryRawUnsafe<[{ nextval: bigint }]>(
-    `SELECT nextval('"${seqName}"')`
-  );
-  const num = String(result[0].nextval).padStart(3, '0');
-  return `${etab.code}-P-${yy}-${num}`;
-}
+import { genererMatricule } from '../../utils/matricule';
 
 export async function listerPersonnel(etablissement_id: string, page = 1, search?: string, fonction?: string) {
   const limit = 20;
@@ -77,7 +61,7 @@ export async function creerPersonnel(etablissement_id: string, data: PersonnelIn
   if (!roleProf) throw new NotFoundError('Rôle professeur introuvable');
 
   const hashedPassword = await bcrypt.hash(data.mot_de_passe, 10);
-  const matricule = data.matricule || await genererMatriculePersonnel(etablissement_id);
+  const matricule = data.matricule || await genererMatricule(etablissement_id, 'P');
 
   const utilisateur = await prisma.utilisateur.create({
     data: {
