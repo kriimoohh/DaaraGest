@@ -9,6 +9,8 @@ interface NoteRow {
   coeff: number;
   valeur: number | null;
   note_max?: number;
+  // false = matière enseignée mais non évaluée → mention dédiée, hors moyenne.
+  evaluee?: boolean;
 }
 
 interface TrimestreRow {
@@ -18,6 +20,7 @@ interface TrimestreRow {
   note_max?: number;
   valeurs: (number | null)[];
   moyenne_annuelle: number | null;
+  evaluee?: boolean;
 }
 
 interface BulletinBaseData {
@@ -47,8 +50,9 @@ function mentionFor(scaled: number | null): string {
   return RENDER_MENTIONS.length ? RENDER_MENTIONS[RENDER_MENTIONS.length - 1].libelle_fr : '';
 }
 // Moyenne pondérée normalisée sur l'échelle établissement (notes saisies sur leur barème).
-function moyenneNorm(notes: { valeur: number | null; coeff: number; note_max?: number }[]): number | null {
-  const withVal = notes.filter(n => n.valeur !== null);
+// Les matières non évaluées (evaluee === false) sont exclues du calcul.
+function moyenneNorm(notes: { valeur: number | null; coeff: number; note_max?: number; evaluee?: boolean }[]): number | null {
+  const withVal = notes.filter(n => n.valeur !== null && n.evaluee !== false);
   const totalCoeff = withVal.reduce((s, n) => s + n.coeff, 0);
   if (totalCoeff === 0) return null;
   const pts = withVal.reduce((s, n) => s + (n.valeur! / (n.note_max || RENDER_BASE)) * RENDER_BASE * n.coeff, 0);
@@ -269,13 +273,25 @@ function footerHtml(etablissementNom: string): string {
 // ─── Tableau FR ─────────────────────────────────────────────────────────────
 
 function tableFR(notes: NoteRow[], headerTitle = 'Évaluation des acquis — Filière Française'): string {
-  const withVal = notes.filter(n => n.valeur !== null);
-  const totalCoeff = withVal.reduce((s, n) => s + n.coeff, 0);
-  const totalPoints = withVal.reduce((s, n) => s + (n.valeur! * n.coeff), 0);
+  // Matières évaluées uniquement → contribuent aux totaux et à la moyenne.
+  const evalueesAvecNote = notes.filter(n => n.evaluee !== false && n.valeur !== null);
+  const totalCoeff = evalueesAvecNote.reduce((s, n) => s + n.coeff, 0);
+  const totalPoints = evalueesAvecNote.reduce((s, n) => s + (n.valeur! * n.coeff), 0);
   const moy = moyenneNorm(notes);
 
   const rows = notes.map(n => {
     const nmax = n.note_max ?? RENDER_BASE;
+    const nonEvaluee = n.evaluee === false;
+    if (nonEvaluee) {
+      return `
+      <tr>
+        <td style="font-weight:500;color:#6b7280">${escapeHtml(n.nom_fr)}</td>
+        <td class="center" style="color:#9ca3af">${n.coeff}</td>
+        <td class="center" style="color:#9ca3af">—</td>
+        <td class="center" style="font-size:10px;color:#9ca3af">/${nmax}</td>
+        <td style="color:#6b7280;font-style:italic;font-size:10px">Non évaluée</td>
+      </tr>`;
+    }
     const isFail = n.valeur !== null && n.valeur < nmax / 2;
     const appr = getApprNom(n.valeur, nmax);
     const cls = n.valeur !== null ? apprClass(n.valeur, nmax) : '';
@@ -322,7 +338,20 @@ function tableFR(notes: NoteRow[], headerTitle = 'Évaluation des acquis — Fil
 // ─── Tableau annuel ──────────────────────────────────────────────────────────
 
 function tableAnnuelFR(matieres: TrimestreRow[], headerTitle = 'Évaluation annuelle — Filière Française'): string {
-  const rows = matieres.map(m => `
+  const rows = matieres.map(m => {
+    const nonEvaluee = m.evaluee === false;
+    if (nonEvaluee) {
+      const cells = m.valeurs.map(() => '<td class="center" style="color:#9ca3af">—</td>').join('');
+      return `
+      <tr>
+        <td style="font-weight:500;color:#6b7280">${escapeHtml(m.nom_fr)}</td>
+        <td class="center" style="color:#9ca3af">${m.coeff}</td>
+        ${cells}
+        <td class="center" style="color:#9ca3af;background:#f9fafb">—</td>
+        <td style="color:#6b7280;font-style:italic;font-size:10px">Non évaluée</td>
+      </tr>`;
+    }
+    return `
     <tr>
       <td style="font-weight:500">${escapeHtml(m.nom_fr)}</td>
       <td class="center">${m.coeff}</td>
@@ -333,7 +362,8 @@ function tableAnnuelFR(matieres: TrimestreRow[], headerTitle = 'Évaluation annu
       <td class="${m.moyenne_annuelle !== null ? apprClass(m.moyenne_annuelle, m.note_max ?? RENDER_BASE) : ''}">
         ${getApprNom(m.moyenne_annuelle, m.note_max ?? RENDER_BASE)}
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
   return `
   <div class="eval-section">
     <div class="eval-header">${headerTitle}</div>
@@ -456,9 +486,9 @@ export function generateBulletinAnnuelHtml(data: BulletinAnnuelData): string {
   const mFR = data.matieres_fr ?? [];
   const mAR = data.matieres_ar ?? [];
 
-  // Compute sub-moyennes for combined summary
-  const frWithMoy = mFR.filter(m => m.moyenne_annuelle !== null);
-  const arWithMoy = mAR.filter(m => m.moyenne_annuelle !== null);
+  // Compute sub-moyennes for combined summary — matières non évaluées exclues.
+  const frWithMoy = mFR.filter(m => m.evaluee !== false && m.moyenne_annuelle !== null);
+  const arWithMoy = mAR.filter(m => m.evaluee !== false && m.moyenne_annuelle !== null);
   const frCoeff = frWithMoy.reduce((s, m) => s + m.coeff, 0);
   const arCoeff = arWithMoy.reduce((s, m) => s + m.coeff, 0);
   const frMoy = frCoeff > 0 ? frWithMoy.reduce((s, m) => s + m.moyenne_annuelle! * m.coeff, 0) / frCoeff : null;
