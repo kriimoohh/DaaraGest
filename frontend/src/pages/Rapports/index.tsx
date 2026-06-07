@@ -449,7 +449,7 @@ export function RapportsPage() {
               srcDoc={previewHtml}
               title="Aperçu rapport"
               sandbox="allow-same-origin"
-              style={{ flex: 1, width: '100%', border: 'none', borderRadius: 8, background: 'var(--card)', boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}
+              style={{ flex: 1, width: '100%', border: 'none', borderRadius: 8, background: '#fff', boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}
             />
             <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, margin: 0, textAlign: 'center' }}>
               Aperçu HTML — rendu très proche du PDF final.
