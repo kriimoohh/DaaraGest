@@ -9,6 +9,7 @@
     "start": "node server.cjs"
   },
   "dependencies": {
+    "@sentry/react": "^10.56.0",
     "html5-qrcode": "^2.3.8",
     "i18next": "^23.0.0",
     "papaparse": "^5.5.3",

@@ -10,6 +10,9 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
   PUPPETEER_EXECUTABLE_PATH: z.string().optional(),
+  // Observabilité (optionnel) : si SENTRY_DSN absent, Sentry est désactivé (no-op).
+  SENTRY_DSN: z.string().optional(),
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -39,6 +42,8 @@ export const env: Env = isTestRun
       NODE_ENV: 'test',
       PORT: 3000,
       PUPPETEER_EXECUTABLE_PATH: process.env.PUPPETEER_EXECUTABLE_PATH,
+      SENTRY_DSN: undefined,
+      SENTRY_TRACES_SAMPLE_RATE: 0,
     } as Env)
   : loadEnv();
 
