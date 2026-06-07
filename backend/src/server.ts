@@ -6,6 +6,7 @@ import rateLimit from '@fastify/rate-limit';
 import { Prisma } from '@prisma/client';
 import prisma from './config/database';
 import { env, isProd } from './config/env';
+import { initSentry, captureError } from './config/sentry';
 import { checkBrowser } from './utils/browserPool';
 import { authRoutes } from './modules/auth/auth.routes';
 import { anneeScolaireRoutes } from './modules/annees-scolaires/annees-scolaires.routes';
@@ -68,6 +69,7 @@ const fastify = Fastify({
 });
 
 async function build() {
+  initSentry();
   // Support plusieurs origines séparées par des virgules
   const corsOrigins = env.CORS_ORIGIN.split(',').map(s => s.trim()).filter(Boolean);
   await fastify.register(cors, {
@@ -189,6 +191,7 @@ async function build() {
     if (statusCode < 500) {
       return reply.status(statusCode).send({ error: error.message ?? 'Requête invalide' });
     }
+    captureError(error);
     return reply.status(500).send({ error: 'Erreur interne du serveur' });
   });
 
