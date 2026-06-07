@@ -23,7 +23,18 @@ interface Bulletin {
 interface NoteDetail {
   valeur: number | null;
   periode: number;
+  evaluee?: boolean;
   matiere: { nom_fr: string; nom_ar: string; coeff_defaut: number; note_max: number; };
+}
+
+interface PreflightResult {
+  classe_id: string; periode: number; filiere: string;
+  total_eleves: number;
+  matieres_evaluees: { id: string; nom_fr: string; nom_ar: string | null; coeff: number; note_max: number; filiere: 'FR' | 'AR'; eleves_avec_notes: number }[];
+  matieres_non_evaluees: { id: string; nom_fr: string; nom_ar: string | null; filiere: 'FR' | 'AR'; source: 'periode' | 'classe' }[];
+  matieres_sans_notes: { id: string; nom_fr: string; nom_ar: string | null; filiere: 'FR' | 'AR' }[];
+  eleves_sans_aucune_note: { id: string; nom_fr: string; prenom_fr: string; matricule: string }[];
+  warnings: { code: string; message: string }[];
 }
 
 interface DetailBulletin extends Bulletin {
@@ -146,6 +157,11 @@ export function BulletinsPage() {
   const [detail, setDetail] = useState<DetailBulletin | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [view, setView] = useState<'cards' | 'table'>('cards');
+  // Pré-vol : modale de vérification avant génération
+  const [preflight, setPreflight] = useState<PreflightResult | null>(null);
+  const [preflightLoading, setPreflightLoading] = useState(false);
+  const [inclureNonEvaluees, setInclureNonEvaluees] = useState(false);
+  const [manquantesCommeZero, setManquantesCommeZero] = useState(false);
 
   const isAnnuel = type.startsWith('ANNUEL');
   const filiere = isAnnuel ? type.replace('ANNUEL_', '') : type;
@@ -175,16 +191,44 @@ export function BulletinsPage() {
     }
   };
 
+  // Ouvre la modale de pré-vol au lieu de générer direct. Les flags
+  // inclure_non_evaluees / traiter_manquantes_comme_zero sont définis dans la modale.
   const generer = async () => {
     if (!classeId || !anneeId) { toast.error(t('bulletin.err_classe_requise')); return; }
+    setPreflightLoading(true);
+    setInclureNonEvaluees(false);
+    setManquantesCommeZero(false);
+    try {
+      const periodeFetch = isAnnuel ? 0 : parseInt(periode);
+      const filiereFetch = isAnnuel ? filiere : type;
+      const pf = await api.post<PreflightResult>('/api/v1/bulletins/preflight', {
+        classe_id: classeId, annee_scolaire_id: anneeId, periode: periodeFetch, filiere: filiereFetch,
+      });
+      setPreflight(pf);
+    } catch (err) {
+      toast.error((err as Error).message || t('bulletin.err_generation'));
+    } finally {
+      setPreflightLoading(false);
+    }
+  };
+
+  const confirmerGeneration = async () => {
+    if (!preflight || !classeId || !anneeId) return;
     setGenerating(true);
     try {
+      const body = {
+        classe_id: classeId, annee_scolaire_id: anneeId,
+        filiere: isAnnuel ? filiere : type,
+        inclure_non_evaluees: inclureNonEvaluees,
+        traiter_manquantes_comme_zero: manquantesCommeZero,
+      };
       if (isAnnuel) {
-        await api.post('/api/v1/bulletins/generer-annuel', { classe_id: classeId, annee_scolaire_id: anneeId, filiere });
+        await api.post('/api/v1/bulletins/generer-annuel', body);
       } else {
-        await api.post('/api/v1/bulletins/generer', { classe_id: classeId, annee_scolaire_id: anneeId, periode: parseInt(periode), filiere: type });
+        await api.post('/api/v1/bulletins/generer', { ...body, periode: parseInt(periode) });
       }
       toast.success(t('bulletin.ok_generes'));
+      setPreflight(null);
       await charger();
     } catch (err) {
       toast.error((err as Error).message || t('bulletin.err_generation'));
@@ -290,7 +334,7 @@ export function BulletinsPage() {
           <Button variant="secondary" onClick={charger} loading={loading} disabled={!anneeId}>
             {t('bulletin.charger')}
           </Button>
-          <Button onClick={generer} loading={generating} disabled={!classeId}>
+          <Button onClick={generer} loading={preflightLoading || generating} disabled={!classeId}>
             {t('actions.generer')}
           </Button>
           {bulletins.length > 0 && (
@@ -466,6 +510,101 @@ export function BulletinsPage() {
         )}
         {detail && !loadingDetail && <BulletinDetailContent detail={detail} downloading={downloading} onDownload={downloadPdf} onClose={() => setDetail(null)} api={api} />}
       </Modal>
+
+      {/* Modale de pré-vol avant génération */}
+      <Modal isOpen={!!preflight} onClose={() => setPreflight(null)} title="Vérification avant génération" size="lg">
+        {preflight && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Synthèse */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+              <div style={{ padding: 12, background: 'var(--success-soft)', borderRadius: 'var(--r-md)', textAlign: 'center' }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--success-text)' }}>{preflight.matieres_evaluees.length}</div>
+                <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>Matières évaluées</div>
+              </div>
+              <div style={{ padding: 12, background: 'var(--paper-2)', borderRadius: 'var(--r-md)', textAlign: 'center' }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink-2)' }}>{preflight.matieres_non_evaluees.length}</div>
+                <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>Non évaluées</div>
+              </div>
+              <div style={{ padding: 12, background: preflight.matieres_sans_notes.length > 0 ? 'var(--warning-soft)' : 'var(--paper-2)', borderRadius: 'var(--r-md)', textAlign: 'center' }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: preflight.matieres_sans_notes.length > 0 ? 'var(--warning-text)' : 'var(--ink-2)' }}>{preflight.matieres_sans_notes.length}</div>
+                <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>Sans note saisie</div>
+              </div>
+              <div style={{ padding: 12, background: preflight.eleves_sans_aucune_note.length > 0 ? 'var(--warning-soft)' : 'var(--paper-2)', borderRadius: 'var(--r-md)', textAlign: 'center' }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: preflight.eleves_sans_aucune_note.length > 0 ? 'var(--warning-text)' : 'var(--ink-2)' }}>{preflight.eleves_sans_aucune_note.length}</div>
+                <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>Élèves sans note</div>
+              </div>
+            </div>
+
+            {/* Détails matières non évaluées */}
+            {preflight.matieres_non_evaluees.length > 0 && (
+              <div style={{ padding: 12, background: 'var(--paper-2)', borderRadius: 'var(--r-md)' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Matières non évaluées (hors moyenne)</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {preflight.matieres_non_evaluees.map(m => (
+                    <span key={m.id} style={{ fontSize: 11, padding: '2px 8px', background: 'var(--paper)', borderRadius: 999, border: '1px solid var(--rule)' }}>
+                      {m.nom_fr} <span style={{ color: 'var(--ink-4)' }}>· {m.filiere}{m.source === 'periode' ? ' · T' : ''}</span>
+                    </span>
+                  ))}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 8, fontStyle: 'italic' }}>
+                  Affichées sur le bulletin avec mention "Non évaluée".
+                </div>
+              </div>
+            )}
+
+            {/* Matières sans notes */}
+            {preflight.matieres_sans_notes.length > 0 && (
+              <div style={{ padding: 12, background: 'var(--warning-soft)', borderRadius: 'var(--r-md)' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--warning-text)', marginBottom: 6 }}>
+                  ⚠️ Matières du programme sans aucune note saisie
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {preflight.matieres_sans_notes.map(m => (
+                    <span key={m.id} style={{ fontSize: 11, padding: '2px 8px', background: 'var(--paper)', borderRadius: 999, border: '1px solid var(--warning)', color: 'var(--warning-text)' }}>
+                      {m.nom_fr} <span style={{ color: 'var(--ink-4)' }}>· {m.filiere}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Élèves sans note */}
+            {preflight.eleves_sans_aucune_note.length > 0 && (
+              <div style={{ padding: 12, background: 'var(--warning-soft)', borderRadius: 'var(--r-md)' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--warning-text)', marginBottom: 6 }}>
+                  ⚠️ Élèves sans aucune note ({preflight.eleves_sans_aucune_note.length})
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>
+                  {preflight.eleves_sans_aucune_note.slice(0, 8).map(e => `${e.prenom_fr} ${e.nom_fr}`).join(' · ')}
+                  {preflight.eleves_sans_aucune_note.length > 8 && ` … et ${preflight.eleves_sans_aucune_note.length - 8} autre(s)`}
+                </div>
+              </div>
+            )}
+
+            {/* Options */}
+            <div style={{ padding: 12, border: '1px solid var(--rule)', borderRadius: 'var(--r-md)' }}>
+              <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>Options de calcul</div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, marginBottom: 6, cursor: 'pointer' }}>
+                <input type="checkbox" checked={inclureNonEvaluees} onChange={e => setInclureNonEvaluees(e.target.checked)} />
+                Inclure quand même les matières non évaluées dans la moyenne
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, cursor: 'pointer' }}>
+                <input type="checkbox" checked={manquantesCommeZero} onChange={e => setManquantesCommeZero(e.target.checked)} />
+                Compter les notes manquantes comme 0 (pénalise les élèves sans note)
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              <Button variant="secondary" onClick={() => setPreflight(null)} disabled={generating}>
+                Annuler
+              </Button>
+              <Button onClick={confirmerGeneration} loading={generating}>
+                Générer {preflight.total_eleves} bulletin(s)
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </>
   );
 }
@@ -495,18 +634,34 @@ function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere
           </tr>
         </thead>
         <tbody>
-          {notes.map((n, i) => (
-            <tr key={i}>
-              <td style={{ color: 'var(--ink-2)' }}>{n.matiere.nom_fr}</td>
+          {notes.map((n, i) => {
+            const nonEvaluee = n.evaluee === false;
+            return (
+            <tr key={i} style={nonEvaluee ? { opacity: 0.6 } : undefined}>
+              <td style={{ color: 'var(--ink-2)' }}>
+                {n.matiere.nom_fr}
+                {nonEvaluee && (
+                  <span style={{ fontSize: 10, fontStyle: 'italic', color: 'var(--ink-4)', marginInlineStart: 6 }}>
+                    · Non évaluée
+                  </span>
+                )}
+              </td>
               <td style={{ textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>{n.matiere.coeff_defaut}</td>
               <td style={{ textAlign: 'center' }}>
-                <span style={{ color: noteColor(n.valeur, n.matiere.note_max), fontWeight: n.valeur !== null ? 600 : 400 }}>
-                  {n.valeur !== null ? Number(n.valeur).toFixed(1) : '—'}
-                </span>
-                <span style={{ color: 'var(--ink-4)', fontSize: 12 }}>/{Number(n.matiere.note_max)}</span>
+                {nonEvaluee ? (
+                  <span style={{ color: 'var(--ink-4)', fontSize: 12 }}>—</span>
+                ) : (
+                  <>
+                    <span style={{ color: noteColor(n.valeur, n.matiere.note_max), fontWeight: n.valeur !== null ? 600 : 400 }}>
+                      {n.valeur !== null ? Number(n.valeur).toFixed(1) : '—'}
+                    </span>
+                    <span style={{ color: 'var(--ink-4)', fontSize: 12 }}>/{Number(n.matiere.note_max)}</span>
+                  </>
+                )}
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     );

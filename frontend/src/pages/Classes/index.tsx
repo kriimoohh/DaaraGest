@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Fragment } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
 import { API_BASE } from '../../lib/api';
@@ -25,13 +25,22 @@ interface Matiere {
   ordre_bulletin: number;
 }
 
+interface PeriodeOverride {
+  periode: number;
+  coeff: number;
+  note_max: number;
+  evaluee: boolean | null;
+}
+
 interface ClasseMatiere {
   id: string;
   classe_id: string;
   matiere_id: string;
   coeff_override: number | null;
   ordre_override: number | null;
+  evaluee: boolean;
   matiere: Matiere;
+  periodes_override?: PeriodeOverride[];
 }
 
 interface AnneeScolaire {
@@ -151,6 +160,10 @@ export function ClassesPage() {
   const [editProgrammeSaving, setEditProgrammeSaving] = useState(false);
   const [supprimerProgramme, setSupprimerProgramme] = useState<ClasseMatiere | null>(null);
   const [supprimerProgrammeLoading, setSupprimerProgrammeLoading] = useState(false);
+  // Bascule "évaluée" + expand des overrides par période
+  const [togglingEvaluee, setTogglingEvaluee] = useState<string | null>(null); // matiere_id en cours de bascule
+  const [expandedRow, setExpandedRow] = useState<string | null>(null); // matiere_id de la ligne dépliée
+  const [periodeOvSaving, setPeriodeOvSaving] = useState<string | null>(null); // `${matiere_id}|${periode}`
 
   // Duplication FR → AR
   const [dupliquerModal, setDupliquerModal] = useState<Classe | null>(null);
@@ -340,6 +353,52 @@ export function ClassesPage() {
       toast.error((err as Error).message || 'Erreur');
     } finally {
       setEditProgrammeSaving(false);
+    }
+  }
+
+  async function toggleEvaluee(cm: ClasseMatiere) {
+    if (!programmeModal) return;
+    setTogglingEvaluee(cm.matiere_id);
+    try {
+      await api.put(`/api/v1/classes/${programmeModal.id}/matieres/${cm.matiere_id}`, {
+        coeff_override: cm.coeff_override,
+        ordre_override: cm.ordre_override,
+        evaluee: !cm.evaluee,
+      });
+      const prog = await api.get<ClasseMatiere[]>(`/api/v1/classes/${programmeModal.id}/matieres`);
+      setProgramme(prog);
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    } finally {
+      setTogglingEvaluee(null);
+    }
+  }
+
+  async function setEvalueePeriode(cm: ClasseMatiere, periode: number, evaluee: boolean | null) {
+    if (!programmeModal) return;
+    const key = `${cm.matiere_id}|${periode}`;
+    setPeriodeOvSaving(key);
+    try {
+      // null = revenir au défaut de classe. Si seul `evaluee` était overridé, on
+      // supprime l'override entier ; sinon on patch avec evaluee=null.
+      const existing = cm.periodes_override?.find(o => o.periode === periode);
+      const baseCoeff = Number(cm.coeff_override ?? cm.matiere.coeff_defaut);
+      const onlyEvalueeOverridden = existing
+        && Number(existing.coeff) === baseCoeff
+        && existing.evaluee !== null;
+      if (evaluee === null && onlyEvalueeOverridden) {
+        await api.delete(`/api/v1/classes/${programmeModal.id}/matieres/${cm.matiere_id}/periode/${periode}`);
+      } else {
+        await api.put(`/api/v1/classes/${programmeModal.id}/matieres/${cm.matiere_id}/periode`, {
+          matiere_id: cm.matiere_id, periode, evaluee,
+        });
+      }
+      const prog = await api.get<ClasseMatiere[]>(`/api/v1/classes/${programmeModal.id}/matieres`);
+      setProgramme(prog);
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    } finally {
+      setPeriodeOvSaving(null);
     }
   }
 
@@ -902,13 +961,27 @@ export function ClassesPage() {
                   <table className="tbl">
                     <thead>
                       <tr>
-                        {['Matière FR', 'Matière AR', 'Coeff effectif', 'Ordre', 'Actions'].map(h => <th key={h}>{h}</th>)}
+                        {['Matière FR', 'Matière AR', 'Coeff effectif', 'Ordre', 'Évaluée', 'Actions'].map(h => <th key={h}>{h}</th>)}
                       </tr>
                     </thead>
                     <tbody>
-                      {programme.map(cm => (
-                        <tr key={cm.id}>
-                          <td>{cm.matiere.nom_fr}</td>
+                      {programme.map(cm => {
+                        const periodesOv = cm.periodes_override ?? [];
+                        const hasPeriodeOverride = periodesOv.some(o => o.evaluee !== null);
+                        const isExpanded = expandedRow === cm.matiere_id;
+                        return (
+                        <Fragment key={cm.id}>
+                        <tr>
+                          <td>
+                            <button
+                              onClick={() => setExpandedRow(isExpanded ? null : cm.matiere_id)}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-3)', fontSize: 10, marginInlineEnd: 6 }}
+                              title="Configurer par trimestre"
+                            >
+                              {isExpanded ? '▼' : '▶'}
+                            </button>
+                            {cm.matiere.nom_fr}
+                          </td>
                           <td dir="rtl">{cm.matiere.nom_ar}</td>
                           <td>
                             {editProgramme?.id === cm.id ? (
@@ -945,6 +1018,22 @@ export function ClassesPage() {
                             )}
                           </td>
                           <td>
+                            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', opacity: togglingEvaluee === cm.matiere_id ? 0.5 : 1 }}>
+                              <input
+                                type="checkbox"
+                                checked={cm.evaluee}
+                                onChange={() => toggleEvaluee(cm)}
+                                disabled={togglingEvaluee === cm.matiere_id}
+                              />
+                              <span style={{ fontSize: 11, color: cm.evaluee ? 'var(--ink)' : 'var(--ink-3)' }}>
+                                {cm.evaluee ? 'Oui' : 'Non'}
+                              </span>
+                              {hasPeriodeOverride && (
+                                <span title="Override par trimestre actif" style={{ fontSize: 10, color: 'var(--warning)' }}>✎</span>
+                              )}
+                            </label>
+                          </td>
+                          <td>
                             <div className="row" style={{ gap: 6 }}>
                               {editProgramme?.id === cm.id ? (
                                 <>
@@ -960,7 +1049,44 @@ export function ClassesPage() {
                             </div>
                           </td>
                         </tr>
-                      ))}
+                        {isExpanded && (
+                          <tr>
+                            <td colSpan={6} style={{ background: 'var(--paper-2)', padding: '8px 16px' }}>
+                              <div style={{ fontSize: 11, color: 'var(--ink-3)', marginBottom: 8 }}>
+                                Override par trimestre — laisse blanc pour utiliser le défaut classe ({cm.evaluee ? 'évaluée' : 'non évaluée'}).
+                              </div>
+                              <div style={{ display: 'flex', gap: 12 }}>
+                                {[1, 2, 3].map(p => {
+                                  const ov = periodesOv.find(o => o.periode === p);
+                                  const value = ov?.evaluee ?? null; // null = hérite
+                                  const saving = periodeOvSaving === `${cm.matiere_id}|${p}`;
+                                  return (
+                                    <div key={p} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                      <span style={{ fontSize: 11, fontWeight: 600 }}>T{p}</span>
+                                      <select
+                                        value={value === null ? '' : value ? 'true' : 'false'}
+                                        onChange={e => {
+                                          const v = e.target.value;
+                                          setEvalueePeriode(cm, p, v === '' ? null : v === 'true');
+                                        }}
+                                        disabled={saving}
+                                        className="input"
+                                        style={{ width: 110, padding: '4px 6px', fontSize: 11 }}
+                                      >
+                                        <option value="">Défaut</option>
+                                        <option value="true">Évaluée</option>
+                                        <option value="false">Non évaluée</option>
+                                      </select>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        </Fragment>
+                      );
+                      })}
                     </tbody>
                   </table>
                 </div>

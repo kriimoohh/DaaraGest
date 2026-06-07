@@ -909,7 +909,7 @@ async function buildA4DocumentHtml(
         // FR et AR de l'élève (filière selon la matière) — pour afficher chaque note
         // sur son barème et pondérer correctement la moyenne de période.
         const periodes = [1, 2, 3];
-        const baremes = new Map<string, { coeff: number; note_max: number }>();
+        const baremes = new Map<string, { coeff: number; note_max: number; evaluee: boolean }>();
         for (const [cid, fil] of [
           [inscription.classe_fr_id, 'FR'] as const,
           [inscription.classe_ar_id, 'AR'] as const,

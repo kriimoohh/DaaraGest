@@ -1,5 +1,5 @@
 import prisma from '../../config/database';
-import { ClasseInput, ClasseMatiereInput, ClasseMatiereUpdateInput, DupliquerArInput } from './classes.schema';
+import { ClasseInput, ClasseMatiereInput, ClasseMatiereUpdateInput, ClasseMatierePeriodeInput, DupliquerArInput } from './classes.schema';
 import { renderPdfHtml } from '../../utils/browserPool';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 
@@ -119,9 +119,24 @@ export async function listerMatieresDeclasse(classe_id: string, etablissement_id
     include: { matiere: true },
     orderBy: [{ ordre_override: 'asc' }, { matiere: { ordre_bulletin: 'asc' } }],
   });
+  // Overrides par période (coeff/note_max/evaluee) — utiles pour l'UI Programme afin
+  // d'afficher la matrice "matière × trimestre" et les badges "non évaluée au T1".
+  const periodesOv = await prisma.classeMatierePeriode.findMany({ where: { classe_id } });
+  const ovByMatiere = new Map<string, typeof periodesOv>();
+  for (const o of periodesOv) {
+    if (!ovByMatiere.has(o.matiere_id)) ovByMatiere.set(o.matiere_id, []);
+    ovByMatiere.get(o.matiere_id)!.push(o);
+  }
   return rows.map(r => {
     const note_max_effectif = Number(r.note_max_override ?? baseNote);
-    return { ...r, note_max_effectif, matiere: { ...r.matiere, note_max: note_max_effectif } };
+    return {
+      ...r,
+      note_max_effectif,
+      matiere: { ...r.matiere, note_max: note_max_effectif },
+      periodes_override: (ovByMatiere.get(r.matiere_id) ?? []).map(o => ({
+        periode: o.periode, coeff: Number(o.coeff), note_max: Number(o.note_max), evaluee: o.evaluee,
+      })),
+    };
   });
 }
 
@@ -145,6 +160,7 @@ export async function ajouterMatiereClasse(
       matiere_id: data.matiere_id,
       coeff_override: data.coeff_override ?? null,
       ordre_override: data.ordre_override ?? null,
+      evaluee: data.evaluee ?? true,
     },
     include: { matiere: true },
   });
@@ -161,13 +177,65 @@ export async function modifierMatiereClasse(
   });
   if (!existing) throw new Error('Matière non assignée à cette classe');
 
+  // Patch partiel : seuls les champs fournis sont modifiés. `evaluee` n'a pas de
+  // sentinelle "null = unset" (toujours bool), donc on ne touche au champ que si présent.
+  const updateData: Record<string, unknown> = {
+    coeff_override: data.coeff_override ?? null,
+    ordre_override: data.ordre_override ?? null,
+  };
+  if (data.evaluee !== undefined) updateData.evaluee = data.evaluee;
   return prisma.classeMatiere.update({
     where: { classe_id_matiere_id: { classe_id, matiere_id } },
-    data: {
-      coeff_override: data.coeff_override ?? null,
-      ordre_override: data.ordre_override ?? null,
-    },
+    data: updateData,
     include: { matiere: true },
+  });
+}
+
+// ─── Overrides par période (coeff/note_max/evaluee) ──────────────────────────
+
+/**
+ * Upsert d'un override par période. Utilisé par la modale Programme pour piloter
+ * la matrice "matière × trimestre". Si l'override existant a des valeurs et que
+ * l'input n'en redéfinit pas, on les conserve (patch partiel).
+ */
+export async function upsertOverridePeriode(
+  classe_id: string, etablissement_id: string, data: ClasseMatierePeriodeInput
+) {
+  const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
+  if (!classe) throw new Error('Classe introuvable');
+
+  // Charger pour récupérer les valeurs effectives par défaut (coeff/note_max) à
+  // utiliser si l'override n'en redéfinit pas (le modèle n'admet pas de null).
+  const config = await prisma.configNotes.findUnique({ where: { etablissement_id }, select: { note_max: true } });
+  const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
+  const cm = await prisma.classeMatiere.findUnique({
+    where: { classe_id_matiere_id: { classe_id, matiere_id: data.matiere_id } },
+    include: { matiere: true },
+  });
+  if (!cm) throw new Error('Matière non assignée à cette classe');
+
+  const existing = await prisma.classeMatierePeriode.findUnique({
+    where: { classe_id_matiere_id_periode: { classe_id, matiere_id: data.matiere_id, periode: data.periode } },
+  });
+  const coeff = data.coeff ?? Number(existing?.coeff ?? cm.coeff_override ?? cm.matiere.coeff_defaut);
+  const note_max = data.note_max ?? Number(existing?.note_max ?? cm.note_max_override ?? baseNote);
+  // evaluee: si non fourni, on garde l'existant (ou null si pas d'override).
+  const evaluee = data.evaluee !== undefined ? data.evaluee : (existing?.evaluee ?? null);
+
+  return prisma.classeMatierePeriode.upsert({
+    where: { classe_id_matiere_id_periode: { classe_id, matiere_id: data.matiere_id, periode: data.periode } },
+    create: { classe_id, matiere_id: data.matiere_id, periode: data.periode, coeff, note_max, evaluee },
+    update: { coeff, note_max, evaluee },
+  });
+}
+
+export async function supprimerOverridePeriode(
+  classe_id: string, etablissement_id: string, matiere_id: string, periode: number
+) {
+  const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
+  if (!classe) throw new Error('Classe introuvable');
+  await prisma.classeMatierePeriode.deleteMany({
+    where: { classe_id, matiere_id, periode },
   });
 }
 

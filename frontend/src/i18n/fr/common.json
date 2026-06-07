@@ -409,7 +409,15 @@
     "val_nom_fr_requis": "Le nom (FR) est requis",
     "val_filiere_requise": "La filière est requise",
     "val_annee_requise": "L'année scolaire est requise",
-    "val_capacite_invalide": "Capacité invalide"
+    "val_capacite_invalide": "Capacité invalide",
+    "col_evaluee": "Évaluée",
+    "evaluee_oui": "Oui",
+    "evaluee_non": "Non",
+    "override_periode": "Configurer par trimestre",
+    "override_periode_hint": "Laisse \"Défaut\" pour utiliser le réglage de la classe.",
+    "evaluee_defaut": "Défaut",
+    "evaluee_evaluee": "Évaluée",
+    "evaluee_non_evaluee": "Non évaluée"
   },
   "annee_scolaire": {
     "titre": "Années scolaires",
@@ -636,7 +644,19 @@
     "ok_generes": "Bulletins générés avec succès",
     "ok_pdf_eleve": "PDF téléchargé",
     "ok_pdf_classe": "PDF de la classe téléchargé ({{count}} bulletin(s))",
-    "chargement_progress": "Chargement…"
+    "chargement_progress": "Chargement…",
+    "preflight_titre": "Vérification avant génération",
+    "preflight_evaluees": "Matières évaluées",
+    "preflight_non_evaluees": "Non évaluées",
+    "preflight_sans_notes": "Sans note saisie",
+    "preflight_eleves_sans_note": "Élèves sans note",
+    "preflight_options": "Options de calcul",
+    "preflight_inclure_non_evaluees": "Inclure quand même les matières non évaluées dans la moyenne",
+    "preflight_manquantes_zero": "Compter les notes manquantes comme 0 (pénalise les élèves sans note)",
+    "preflight_non_evaluees_hint": "Affichées sur le bulletin avec mention \"Non évaluée\".",
+    "preflight_warn_sans_notes": "Matières du programme sans aucune note saisie",
+    "preflight_confirmer": "Générer {{count}} bulletin(s)",
+    "non_evaluee": "Non évaluée"
   },
   "evaluation": {
     "titre": "Évaluations formatives",

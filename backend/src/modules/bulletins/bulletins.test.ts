@@ -143,6 +143,124 @@ describe('calculerMoyenne — cas limites', () => {
   });
 });
 
+// Réplique du loop de calcul de moyenne avec marqueur evaluee + flags de génération,
+// pour figer le contrat de bulletins.service.ts:genererBulletins.
+function moyenneAvecEvaluee(
+  programme: { matiere_id: string; coeff: number; note_max: number; evaluee: boolean }[],
+  notes: { matiere_id: string; valeur: number }[],
+  base: number,
+  flags: { inclureNonEvaluees?: boolean; manquantesCommeZero?: boolean } = {},
+): number | null {
+  const inclureNonEvaluees = flags.inclureNonEvaluees ?? false;
+  const manquantesCommeZero = flags.manquantesCommeZero ?? false;
+  const idx = new Map(notes.map(n => [n.matiere_id, n]));
+  let tp = 0, tc = 0;
+  for (const m of programme) {
+    if (!m.evaluee && !inclureNonEvaluees) continue;
+    if (m.coeff === 0) continue;
+    const note = idx.get(m.matiere_id);
+    if (!note) {
+      if (manquantesCommeZero) tc += m.coeff;
+      continue;
+    }
+    tp += (note.valeur / m.note_max) * base * m.coeff;
+    tc += m.coeff;
+  }
+  if (tc === 0) return null;
+  return Math.round((tp / tc) * 100) / 100;
+}
+
+describe('matières non évaluées (phase 1)', () => {
+  it('matière non évaluée → exclue de la moyenne et du dénominateur', () => {
+    const programme = [
+      { matiere_id: 'fr', coeff: 3, note_max: 10, evaluee: true },
+      { matiere_id: 'math', coeff: 2, note_max: 10, evaluee: true },
+      { matiere_id: 'eps', coeff: 1, note_max: 10, evaluee: false },
+    ];
+    const notes = [
+      { matiere_id: 'fr', valeur: 8 },
+      { matiere_id: 'math', valeur: 6 },
+      { matiere_id: 'eps', valeur: 9 }, // note conservée mais hors moyenne
+    ];
+    // (8*3 + 6*2) / (3+2) = 36/5 = 7.2
+    expect(moyenneAvecEvaluee(programme, notes, 10)).toBe(7.2);
+  });
+
+  it('flag inclure_non_evaluees=true → la matière non évaluée est intégrée', () => {
+    const programme = [
+      { matiere_id: 'fr', coeff: 3, note_max: 10, evaluee: true },
+      { matiere_id: 'eps', coeff: 1, note_max: 10, evaluee: false },
+    ];
+    const notes = [
+      { matiere_id: 'fr', valeur: 8 },
+      { matiere_id: 'eps', valeur: 9 },
+    ];
+    // sans flag : 8.00 ; avec flag : (8*3 + 9*1)/4 = 33/4 = 8.25
+    expect(moyenneAvecEvaluee(programme, notes, 10, { inclureNonEvaluees: true })).toBe(8.25);
+  });
+
+  it('notes manquantes : ignorées par défaut (coeff aussi)', () => {
+    const programme = [
+      { matiere_id: 'fr', coeff: 3, note_max: 10, evaluee: true },
+      { matiere_id: 'math', coeff: 2, note_max: 10, evaluee: true },
+    ];
+    const notes = [{ matiere_id: 'fr', valeur: 8 }]; // math sans note
+    // 8*3/3 = 8.00 (math complètement ignoré)
+    expect(moyenneAvecEvaluee(programme, notes, 10)).toBe(8);
+  });
+
+  it('flag traiter_manquantes_comme_zero=true → coeff au dénominateur, 0 points', () => {
+    const programme = [
+      { matiere_id: 'fr', coeff: 3, note_max: 10, evaluee: true },
+      { matiere_id: 'math', coeff: 2, note_max: 10, evaluee: true },
+    ];
+    const notes = [{ matiere_id: 'fr', valeur: 8 }];
+    // (8*3 + 0*2) / (3+2) = 24/5 = 4.80
+    expect(moyenneAvecEvaluee(programme, notes, 10, { manquantesCommeZero: true })).toBe(4.8);
+  });
+
+  it('tout le programme non évalué + flag off → moyenne null', () => {
+    const programme = [
+      { matiere_id: 'eps', coeff: 1, note_max: 10, evaluee: false },
+      { matiere_id: 'art', coeff: 1, note_max: 10, evaluee: false },
+    ];
+    const notes = [{ matiere_id: 'eps', valeur: 9 }];
+    expect(moyenneAvecEvaluee(programme, notes, 10)).toBeNull();
+  });
+
+  it('manquantes_comme_zero ne s\'applique pas aux matières non évaluées exclues', () => {
+    // EPS est non évaluée et sans note ; le flag manquantesCommeZero ne doit PAS l'inclure
+    // (le filtre evaluee passe d'abord, donc la matière est sautée tout court).
+    const programme = [
+      { matiere_id: 'fr', coeff: 3, note_max: 10, evaluee: true },
+      { matiere_id: 'eps', coeff: 1, note_max: 10, evaluee: false },
+    ];
+    const notes = [{ matiere_id: 'fr', valeur: 6 }];
+    expect(moyenneAvecEvaluee(programme, notes, 10, { manquantesCommeZero: true })).toBe(6);
+  });
+});
+
+// Résolution du flag effectif : ClasseMatierePeriode.evaluee (si non null) > ClasseMatiere.evaluee.
+function resolveEvaluee(classMatiere: boolean, periodeOverride: boolean | null | undefined): boolean {
+  return periodeOverride != null ? periodeOverride : classMatiere;
+}
+
+describe('résolution evaluee (override période > classe)', () => {
+  it('pas d\'override période → valeur classe', () => {
+    expect(resolveEvaluee(false, null)).toBe(false);
+    expect(resolveEvaluee(true, undefined)).toBe(true);
+  });
+
+  it('override période true → réactive une matière non évaluée au niveau classe', () => {
+    // Cas du scénario : Dessin = non évaluée au niveau classe, évaluée au T2.
+    expect(resolveEvaluee(false, true)).toBe(true);
+  });
+
+  it('override période false → désactive une matière évaluée au niveau classe', () => {
+    expect(resolveEvaluee(true, false)).toBe(false);
+  });
+});
+
 describe('observations bulletin', () => {
   it('observation vide reste vide', () => {
     const obs = { observation_fr: '', observation_prof: '' };

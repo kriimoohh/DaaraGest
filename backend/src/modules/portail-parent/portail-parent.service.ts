@@ -64,7 +64,7 @@ export async function getPortailData(token: string) {
   const noteMaxBase = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
   const periodes = Array.from({ length: config?.nb_periodes ?? 3 }, (_, i) => i + 1);
 
-  const baremes = new Map<string, { coeff: number; note_max: number }>();
+  const baremes = new Map<string, { coeff: number; note_max: number; evaluee: boolean }>();
   if (inscription?.classe_fr_id) {
     for (const [k, v] of await getBaremesClasse(inscription.classe_fr_id, periodes, ['FR'], noteMaxBase)) baremes.set(k, v);
   }
