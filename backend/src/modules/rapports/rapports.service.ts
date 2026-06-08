@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import type { PDFOptions } from 'puppeteer';
 import prisma from '../../config/database';
 import { renderPdfHtml as _renderPdfHtmlReal } from '../../utils/browserPool';
-import { calculerMoyennesClasse, getMentionsEtab, mentionPour, getBaremesClasse } from '../bulletins/bulletins.service';
+import { calculerMoyennesClasse, getMentionsEtab, mentionPour, getBaremesClasseCohorte } from '../bulletins/bulletins.service';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 import { NotFoundError } from '../../utils/errors';
 
@@ -485,7 +485,7 @@ export async function rapportGrilleIef(
   const moyGen = await calculerMoyennesClasse(etablissement_id, classe_id, annee_scolaire_id, periodes, ['FR', 'AR']);
 
   // Moyennes par domaine, chaque note ramenée sur l'échelle établissement via son barème effectif.
-  const baremes = await getBaremesClasse(classe_id, periodes, ['FR', 'AR'], baseNote);
+  const baremes = await getBaremesClasseCohorte(classe_id, annee_scolaire_id, periodes, ['FR', 'AR'], baseNote);
   const norm = (v: number, nm: number) => (nm > 0 ? (v / nm) * baseNote : 0);
   const domMoy = new Map<string, Map<string, number>>();
   const dnb = new Map<string, Map<string, number[]>>();
@@ -648,7 +648,7 @@ export async function rapportGrillePerformance(
   const nbPeriodes = cfg?.nb_periodes ?? 3;
   const baseNote = Number(cfg?.note_max ?? DEFAULT_NOTE_MAX);
   const periodes = periode && periode > 0 ? [periode] : Array.from({ length: nbPeriodes }, (_, i) => i + 1);
-  const baremes = await getBaremesClasse(classe_id, periodes, ['FR', 'AR'], baseNote);
+  const baremes = await getBaremesClasseCohorte(classe_id, annee_scolaire_id, periodes, ['FR', 'AR'], baseNote);
   const noteWhere: Record<string, unknown> = { eleve_id: { in: eleveIds }, annee_scolaire_id };
   if (periode && periode > 0) noteWhere.periode = periode;
 
@@ -865,7 +865,7 @@ export async function rapportPerformanceDomaine(
   const nbPeriodes = cfg?.nb_periodes ?? 3;
   const baseNote = Number(cfg?.note_max ?? DEFAULT_NOTE_MAX);
   const periodes = periode && periode > 0 ? [periode] : Array.from({ length: nbPeriodes }, (_, i) => i + 1);
-  const baremes = await getBaremesClasse(classe_id, periodes, ['FR', 'AR'], baseNote);
+  const baremes = await getBaremesClasseCohorte(classe_id, annee_scolaire_id, periodes, ['FR', 'AR'], baseNote);
   const noteWhere: Record<string, unknown> = { eleve_id: { in: eleveIds }, annee_scolaire_id };
   if (periode && periode > 0) noteWhere.periode = periode;
 
