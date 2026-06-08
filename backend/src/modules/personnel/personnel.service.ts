@@ -73,6 +73,9 @@ export async function creerPersonnel(etablissement_id: string, data: PersonnelIn
       identifiant: data.identifiant,
       email: data.email ?? null,
       mot_de_passe: hashedPassword,
+      // Comme le module Utilisateurs : le personnel doit changer le mot de passe
+      // attribué dès sa première connexion.
+      must_change_password: true,
     },
   });
 
