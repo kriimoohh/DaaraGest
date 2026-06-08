@@ -150,6 +150,17 @@ export async function calculerMoyennesClasse(
   const inscriptions = await getElevesClasse(classe_id, annee_scolaire_id);
   if (inscriptions.length === 0) return new Map();
 
+  // Les matières d'une filière sont rattachées à la classe de cette filière
+  // (classe_fr_id pour FR, classe_ar_id pour AR), qui peuvent être distinctes
+  // pour un élève bilingue. On résout donc les classes par filière depuis le
+  // cohort (sinon les matières AR, cherchées sur la classe FR, seraient ignorées
+  // et la moyenne COMBINE ne refléterait que le FR).
+  const classIdsByFiliere: Record<'FR' | 'AR', Set<string>> = { FR: new Set(), AR: new Set() };
+  for (const i of inscriptions) {
+    if (i.classe_fr_id) classIdsByFiliere.FR.add(i.classe_fr_id);
+    if (i.classe_ar_id) classIdsByFiliere.AR.add(i.classe_ar_id);
+  }
+
   // Coeff/barème/évaluée par période (gère les coefficients qui changent de trimestre)
   const coefByP = new Map<number, Map<string, number>>();
   const nmByP = new Map<number, Map<string, number>>();
@@ -157,8 +168,10 @@ export async function calculerMoyennesClasse(
   const matIds = new Set<string>();
   for (const p of periodes) {
     const cM = new Map<string, number>(), nM = new Map<string, number>(), eM = new Map<string, boolean>();
-    for (const f of filieres) for (const m of await getMatieresDeclasse(classe_id, f, p, baseNote)) {
-      cM.set(m.id, Number(m.coeff_effectif)); nM.set(m.id, Number(m.note_max_effectif)); eM.set(m.id, m.evaluee_effectif); matIds.add(m.id);
+    for (const f of filieres) for (const classId of classIdsByFiliere[f]) {
+      for (const m of await getMatieresDeclasse(classId, f, p, baseNote)) {
+        cM.set(m.id, Number(m.coeff_effectif)); nM.set(m.id, Number(m.note_max_effectif)); eM.set(m.id, m.evaluee_effectif); matIds.add(m.id);
+      }
     }
     coefByP.set(p, cM); nmByP.set(p, nM); evByP.set(p, eM);
   }
@@ -207,6 +220,32 @@ export async function getBaremesClasse(
   const map = new Map<string, { coeff: number; note_max: number; evaluee: boolean }>();
   for (const p of periodes) for (const f of filieres) {
     for (const m of await getMatieresDeclasse(classe_id, f, p, baseNote)) {
+      map.set(`${m.id}|${p}`, { coeff: Number(m.coeff_effectif), note_max: Number(m.note_max_effectif), evaluee: m.evaluee_effectif });
+    }
+  }
+  return map;
+}
+
+/**
+ * Comme getBaremesClasse, mais résout les barèmes sur les DEUX classes du cohort
+ * (classe_fr_id ET classe_ar_id de l'élève), pas seulement le classe_id passé.
+ * À utiliser pour tout rapport COMBINE/bilingue : les matières AR sont rattachées
+ * à la classe AR, distincte de la classe FR — sinon leurs notes seraient
+ * normalisées sur l'échelle établissement au lieu de leur vrai barème (ex: /60).
+ */
+export async function getBaremesClasseCohorte(
+  classe_id: string, annee_scolaire_id: string, periodes: number[],
+  filieres: ('FR' | 'AR')[] = ['FR', 'AR'], baseNote: number = DEFAULT_NOTE_MAX,
+): Promise<Map<string, { coeff: number; note_max: number; evaluee: boolean }>> {
+  const inscriptions = await getElevesClasse(classe_id, annee_scolaire_id);
+  const classIds: Record<'FR' | 'AR', Set<string>> = { FR: new Set(), AR: new Set() };
+  for (const i of inscriptions) {
+    if (i.classe_fr_id) classIds.FR.add(i.classe_fr_id);
+    if (i.classe_ar_id) classIds.AR.add(i.classe_ar_id);
+  }
+  const map = new Map<string, { coeff: number; note_max: number; evaluee: boolean }>();
+  for (const p of periodes) for (const f of filieres) for (const cid of classIds[f]) {
+    for (const m of await getMatieresDeclasse(cid, f, p, baseNote)) {
       map.set(`${m.id}|${p}`, { coeff: Number(m.coeff_effectif), note_max: Number(m.note_max_effectif), evaluee: m.evaluee_effectif });
     }
   }
@@ -909,24 +948,42 @@ export async function genererPdfClasse(
   if (bulletins.length === 0) throw new Error('Aucun bulletin trouvé');
 
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
-  const matMap: Record<string, MatiereAvecCoeff[]> = {};
-  for (const f of filieres) matMap[f] = await getMatieresDeclasse(classe_id, f, periode, baseNote);
+
+  // Les matières/notes AR sont rattachées à la classe AR de l'élève (classe_ar_id),
+  // distincte de la classe FR. Utiliser le classe_id passé (FR) pour les deux
+  // filières masquait toutes les notes AR du bulletin COMBINE → on résout la
+  // bonne classe par élève et par filière (comme le bulletin individuel).
+  const inscriptions = await prisma.inscription.findMany({
+    where: { annee_scolaire_id, eleve_id: { in: bulletins.map(b => b.eleve_id) } },
+    select: { eleve_id: true, classe_fr_id: true, classe_ar_id: true },
+  });
+  const inscByEleve = new Map(inscriptions.map(i => [i.eleve_id, i]));
+  const matCache = new Map<string, MatiereAvecCoeff[]>();
+  const matieresPour = async (classId: string | null | undefined, f: 'FR' | 'AR') => {
+    if (!classId) return [];
+    const key = `${classId}|${f}`;
+    let mats = matCache.get(key);
+    if (!mats) { mats = await getMatieresDeclasse(classId, f, periode, baseNote); matCache.set(key, mats); }
+    return mats;
+  };
 
   // CSS partagée du template réutilisée pour le PDF classe (sinon rendu non stylé).
   const { generateBulletinHtml, CSS: BULLETIN_CSS } = await import('./bulletin.template');
   const pages: string[] = [];
 
   for (const bulletin of bulletins) {
+    const insc = inscByEleve.get(bulletin.eleve_id);
     // Pour CHAQUE filière, on fusionne le programme (toutes matières) avec les notes
     // existantes — ainsi les matières non évaluées apparaissent quand même.
     const rowsByFiliere: Record<string, { nom_fr: string; nom_ar: string; coeff: number; valeur: number | null; note_max: number; evaluee: boolean }[]> = {};
     for (const f of filieres) {
+      const mats = await matieresPour(f === 'FR' ? insc?.classe_fr_id : insc?.classe_ar_id, f);
       const notes = await prisma.note.findMany({
-        where: { eleve_id: bulletin.eleve_id, annee_scolaire_id, periode, matiere_id: { in: matMap[f].map(m => m.id) } },
+        where: { eleve_id: bulletin.eleve_id, annee_scolaire_id, periode, matiere_id: { in: mats.map(m => m.id) } },
         select: { matiere_id: true, valeur: true },
       });
       const noteByMat = new Map(notes.map(n => [n.matiere_id, Number(n.valeur)]));
-      rowsByFiliere[f] = matMap[f].map(m => ({
+      rowsByFiliere[f] = mats.map(m => ({
         nom_fr: m.nom_fr, nom_ar: m.nom_ar ?? m.nom_fr,
         coeff: Number(m.coeff_effectif),
         valeur: noteByMat.has(m.id) ? noteByMat.get(m.id)! : null,
