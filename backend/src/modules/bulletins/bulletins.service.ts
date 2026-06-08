@@ -833,6 +833,30 @@ export async function mettreAJourObservation(
 
 // ─── PDF individuel ──────────────────────────────────────────────────────────
 
+/** Extrait le contenu de <body> d'un HTML de bulletin complet. */
+function bodyContent(html: string): string {
+  const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/);
+  return m ? m[1] : html;
+}
+
+/**
+ * Assemble un (ou plusieurs) bulletins en un document HTML où chaque bulletin
+ * occupe une page A4. Chaque page (`.a4-page`) contient un wrapper `.a4-fit`
+ * que renderPdfHtml(..., { fitToA4:true }) réduit si le contenu dépasse une page
+ * → garantit « 1 bulletin = 1 page A4 ».
+ */
+function wrapBulletinsA4(pageContents: string[], css: string): string {
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><style>
+${css}
+body { padding: 0; margin: 0 }
+.a4-page { page-break-after: always }
+.a4-page:last-child { page-break-after: auto }
+.a4-fit { transform-origin: top left; padding: 18px 28px }
+</style></head><body>
+${pageContents.map(c => `<div class="a4-page"><div class="a4-fit">${c}</div></div>`).join('\n')}
+</body></html>`;
+}
+
 export async function genererPdfBulletin(id: string, etablissement_id: string): Promise<Buffer> {
   const data = await getBulletin(id, etablissement_id);
   const etab = await prisma.etablissement.findUnique({ where: { id: etablissement_id } });
@@ -863,7 +887,7 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
     }
   }
 
-  const { generateBulletinHtml, generateBulletinAnnuelHtml } = await import('./bulletin.template');
+  const { generateBulletinHtml, generateBulletinAnnuelHtml, CSS: BULLETIN_CSS } = await import('./bulletin.template');
 
   const base = {
     etablissement_nom_fr: etab.nom_fr,
@@ -922,7 +946,11 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
     });
   }
 
-  return renderPdfHtml(html, { format: 'A4', printBackground: true, margin: { top: '10mm', bottom: '10mm', left: '8mm', right: '8mm' } });
+  return renderPdfHtml(
+    wrapBulletinsA4([bodyContent(html)], BULLETIN_CSS),
+    { format: 'A4', printBackground: true, margin: { top: '10mm', bottom: '10mm', left: '8mm', right: '8mm' } },
+    { fitToA4: true },
+  );
 }
 
 // ─── PDF toute la classe ─────────────────────────────────────────────────────
@@ -1016,14 +1044,9 @@ export async function genererPdfClasse(
     const m = p.match(/<body[^>]*>([\s\S]*?)<\/body>/);
     return m ? m[1] : p;
   });
-  const combined = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><style>
-${BULLETIN_CSS}
-body { padding: 0 }
-.bulletin-page { padding: 18px 28px; page-break-after: always }
-.bulletin-page:last-child { page-break-after: auto }
-</style></head><body>
-${pageContents.map(c => `<div class="bulletin-page">${c}</div>`).join('\n')}
-</body></html>`;
-
-  return renderPdfHtml(combined, { format: 'A4', printBackground: true, margin: { top: '10mm', bottom: '10mm', left: '8mm', right: '8mm' } });
+  return renderPdfHtml(
+    wrapBulletinsA4(pageContents, BULLETIN_CSS),
+    { format: 'A4', printBackground: true, margin: { top: '10mm', bottom: '10mm', left: '8mm', right: '8mm' } },
+    { fitToA4: true },
+  );
 }
