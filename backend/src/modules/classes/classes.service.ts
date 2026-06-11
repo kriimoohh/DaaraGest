@@ -438,6 +438,7 @@ export async function dupliquerClasseFrEnAr(
         filiere: 'AR',
         niveau_id: source.niveau_id ?? null,
         capacite: source.capacite,
+        code: classeCode(nomAr, 'AR'),
       },
       include: { annee_scolaire: true, niveau: true },
     });
