@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
+import { useAnneeScolaire } from '../../store/anneeStore';
 import { API_BASE } from '../../lib/api';
 
 interface Classe { id: string; nom_fr: string; annee_scolaire_id?: string; }
@@ -133,7 +134,7 @@ export function RapportsPage() {
   const [classes, setClasses]   = useState<Classe[]>([]);
   const [annees, setAnnees]     = useState<AnneeScolaire[]>([]);
   const [classeId, setClasseId] = useState('');
-  const [anneeId, setAnneeId]   = useState('');
+  const [anneeId, setAnneeId]   = useAnneeScolaire();
   const [mois, setMois]         = useState(String(new Date().getMonth() + 1));
   const [anneeNum, setAnneeNum] = useState(String(new Date().getFullYear()));
   const [periode, setPeriode]   = useState('');
@@ -147,8 +148,7 @@ export function RapportsPage() {
       if (annees.status === 'fulfilled') {
         const a = annees.value as AnneeScolaire[];
         setAnnees(a);
-        const active = a.find(x => x.active);
-        if (active) setAnneeId(active.id);
+        /* année courante gérée par le store global */
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps

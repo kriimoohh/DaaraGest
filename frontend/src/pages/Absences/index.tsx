@@ -8,6 +8,7 @@ import { Input } from '../../components/ui/Input';
 import { Pagination } from '../../components/ui/Pagination';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
+import { useAnneeScolaire } from '../../store/anneeStore';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -54,7 +55,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
   const { t } = useTranslation();
   const [annees, setAnnees] = useState<AnneeScolaire[]>([]);
   const [classes, setClasses] = useState<Classe[]>([]);
-  const [anneeId, setAnneeId] = useState('');
+  const [anneeId, setAnneeId] = useAnneeScolaire();
   const [classeId, setClasseId] = useState('');
   const [date, setDate] = useState(dateAujourdHui());
   const [eleves, setEleves] = useState<EleveJour[]>([]);
@@ -66,8 +67,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
     api.get<AnneeScolaire[]>('/api/v1/annees-scolaires').then(r => {
       const list = r ?? [];
       setAnnees(list);
-      const active = list.find(a => a.active);
-      if (active) setAnneeId(active.id);
+      /* année courante gérée par le store global */
     }).catch(() => {});
   }, []);
 
@@ -363,7 +363,7 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
   const now = new Date();
   const [annees, setAnnees] = useState<AnneeScolaire[]>([]);
   const [classes, setClasses] = useState<Classe[]>([]);
-  const [anneeId, setAnneeId] = useState('');
+  const [anneeId, setAnneeId] = useAnneeScolaire();
   const [classeId, setClasseId] = useState('');
   const [mois, setMois] = useState(String(now.getMonth() + 1));
   const [annee, setAnnee] = useState(String(now.getFullYear()));
@@ -374,8 +374,7 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
     api.get<AnneeScolaire[]>('/api/v1/annees-scolaires').then(r => {
       const list = r ?? [];
       setAnnees(list);
-      const active = list.find(a => a.active);
-      if (active) setAnneeId(active.id);
+      /* année courante gérée par le store global */
     }).catch(() => {});
   }, []);
 

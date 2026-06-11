@@ -57,3 +57,15 @@ export function useAnneeCourante() {
   const current = annees.find(a => a.id === currentId) ?? null;
   return { currentId, current, annees, setCurrent };
 }
+
+/**
+ * Drop-in pour `useState('')` d'un id d'année dans une page : la valeur EST
+ * l'année courante globale (sélecteur du header), et la modifier met à jour le
+ * store. Permet à toutes les pages de partager la même année de travail.
+ *
+ *   const [anneeId, setAnneeId] = useAnneeScolaire();
+ */
+export function useAnneeScolaire(): [string, (id: string) => void] {
+  const { currentId, setCurrent } = useAnneeCourante();
+  return [currentId, setCurrent];
+}

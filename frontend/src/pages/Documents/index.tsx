@@ -6,6 +6,7 @@ import { Input } from '../../components/ui/Input';
 import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
+import { useAnneeCourante } from '../../store/anneeStore';
 import { API_BASE } from '../../lib/api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -494,6 +495,7 @@ function TemplateEditor({ type, templates, onSaved }: {
 export function DocumentsPage() {
   const { t } = useTranslation();
   const api = useApi();
+  const { currentId: anneeCouranteId } = useAnneeCourante();
   const [tab, setTab] = useState<'generer' | 'historique' | 'modeles'>('generer');
 
   // Template list (shared across tabs)
@@ -537,12 +539,17 @@ export function DocumentsPage() {
       .then(d => setClasses(Array.isArray(d) ? d : (d as { data: Classe[] }).data ?? []))
       .catch(() => {});
     api.get<AnneeScolaire[]>('/api/v1/annees-scolaires')
-      .then(d => { setAnnees(d); const a = d.find(x => x.active); if (a) setExtraParams(p => ({ ...p, annee_scolaire_id: a.id })); })
+      .then(d => { setAnnees(d); })
       .catch(() => {});
     api.get<{ data: Professeur[] }>('/api/v1/personnel?limit=200')
       .then(d => setProfesseurs(d.data ?? []))
       .catch(() => {});
   }, []);
+
+  // L'année des paramètres suit l'année courante globale (sélecteur du header).
+  useEffect(() => {
+    if (anneeCouranteId) setExtraParams(p => ({ ...p, annee_scolaire_id: anneeCouranteId }));
+  }, [anneeCouranteId]);
 
   const loadHistorique = useCallback(() => {
     setHistLoading(true);
@@ -573,8 +580,7 @@ export function DocumentsPage() {
     setSelectedType(type);
     setSelectedEleve(null); setSelectedProfId(''); setSelectedClasseId('');
     setEleveSearch(''); setElevesFound([]);
-    const a = annees.find(x => x.active);
-    setExtraParams(a ? { annee_scolaire_id: a.id } : {});
+    setExtraParams(anneeCouranteId ? { annee_scolaire_id: anneeCouranteId } : {});
   };
 
   const destType = selectedType ? DEST_TYPE[selectedType] : null;
