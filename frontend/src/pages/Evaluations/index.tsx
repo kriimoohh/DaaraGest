@@ -9,6 +9,7 @@ import { Badge } from '../../components/ui/Badge';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
 import { useAuthStore } from '../../store/authStore';
+import { useAnneeScolaire } from '../../store/anneeStore';
 
 interface AnneeScolaire { id: string; libelle: string; active: boolean; }
 interface Classe        { id: string; nom_fr: string; filiere: string; }
@@ -50,7 +51,7 @@ export function EvaluationsPage() {
   const [annees,   setAnnees]   = useState<AnneeScolaire[]>([]);
   const [classes,  setClasses]  = useState<Classe[]>([]);
   const [matieres, setMatieres] = useState<Matiere[]>([]);
-  const [anneeId,  setAnneeId]  = useState('');
+  const [anneeId,  setAnneeId]  = useAnneeScolaire();
   const [classeId, setClasseId] = useState('');
   const [matiereId, setMatiereId] = useState('');
   const [periode,  setPeriode]  = useState('');
@@ -75,7 +76,7 @@ export function EvaluationsPage() {
   // Chargement des années au montage
   useEffect(() => {
     api.get<AnneeScolaire[]>('/api/v1/annees-scolaires')
-      .then(data => { setAnnees(data); const a = data.find(x => x.active); if (a) setAnneeId(a.id); })
+      .then(data => { setAnnees(data); }) /* année courante gérée par le store global */
       .catch(err => toast.error((err as Error).message));
   }, []);
 

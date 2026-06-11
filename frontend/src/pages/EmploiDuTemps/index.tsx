@@ -7,6 +7,7 @@ import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
+import { useAnneeScolaire } from '../../store/anneeStore';
 import { useAuthStore } from '../../store/authStore';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -131,7 +132,7 @@ export function EmploiDuTempsPage() {
   const [professeurs, setProfesseurs] = useState<PersonnelRow[]>([]);
   const [creneaux, setCreneaux] = useState<Creneau[]>([]);
   const [joursActifs, setJoursActifs] = useState<string[]>(['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi']);
-  const [anneeId, setAnneeId] = useState('');
+  const [anneeId, setAnneeId] = useAnneeScolaire();
   const [classeId, setClasseId] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -153,8 +154,7 @@ export function EmploiDuTempsPage() {
     api.get<AnneeScolaire[]>('/api/v1/annees-scolaires').then(r => {
       const list = r ?? [];
       setAnnees(list);
-      const active = list.find(a => a.active);
-      if (active) setAnneeId(active.id);
+      /* année courante gérée par le store global */
     }).catch(() => {});
 
     api.get<{ config_notes?: { jours_cours?: string[] } }>('/api/v1/parametres').then(r => {

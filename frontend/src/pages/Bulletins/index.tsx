@@ -8,6 +8,7 @@ import { Modal } from '../../components/ui/Modal';
 import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
 import { useNoteMax } from '../../store/noteScaleStore';
+import { useAnneeScolaire } from '../../store/anneeStore';
 import { toast } from '../../store/toastStore';
 
 interface AnneeScolaire { id: string; libelle: string; }
@@ -146,7 +147,7 @@ export function BulletinsPage() {
   const [classes, setClasses] = useState<Classe[]>([]);
   const [bulletins, setBulletins] = useState<Bulletin[]>([]);
 
-  const [anneeId, setAnneeId] = useState('');
+  const [anneeId, setAnneeId] = useAnneeScolaire();
   const [classeId, setClasseId] = useState('');
   const [periode, setPeriode] = useState('1');
   const [type, setType] = useState<BulletinType>('FR');

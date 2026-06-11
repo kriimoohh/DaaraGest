@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
+import { useAnneeCourante } from '../store/anneeStore';
 import { useApi } from '../hooks/useApi';
 
 interface Stats { nb_eleves: number; nb_personnel: number; nb_classes: number; }
@@ -57,6 +58,7 @@ function TauxCard({ label, data, summary }: { label: string; data?: TauxPresence
 export function Dashboard() {
   const { t, i18n } = useTranslation();
   const { user } = useAuthStore();
+  const { currentId: anneeCouranteId } = useAnneeCourante();
   const api = useApi();
 
   const isAr  = i18n.language === 'ar';
@@ -82,7 +84,9 @@ export function Dashboard() {
     Promise.allSettled([
       api.get<{ total: number }>('/api/v1/eleves?limit=1'),
       api.get<{ total: number }>('/api/v1/personnel?limit=1'),
-      api.get<unknown[]>('/api/v1/classes'),
+      // Scopé à l'année courante : « CE1 A » existe chaque année, sans scope le
+      // compteur de classes additionnerait toutes les années.
+      api.get<unknown[]>(`/api/v1/classes${anneeCouranteId ? `?annee_scolaire_id=${anneeCouranteId}` : ''}`),
       api.get<StatsMois>('/api/v1/finances/stats'),
       api.get<{ nom_fr: string }>('/api/v1/parametres'),
       api.get<MoisStat[]>('/api/v1/finances/stats-mensuels'),
@@ -105,7 +109,7 @@ export function Dashboard() {
         .finally(() => setTdbLoading(false));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [anneeCouranteId]);
 
   const hour = new Date().getHours();
   const greeting = t(

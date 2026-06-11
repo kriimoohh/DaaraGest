@@ -4,6 +4,7 @@ import Papa from 'papaparse';
 import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
 import { useNoteMax } from '../../store/noteScaleStore';
+import { useAnneeCourante } from '../../store/anneeStore';
 import { toast } from '../../store/toastStore';
 import { API_BASE } from '../../lib/api';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
@@ -226,6 +227,7 @@ function FicheRow({ label, value }: { label: string; value: React.ReactNode }) {
 export function ElevesPage() {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ar' ? 'ar-SN' : 'fr-FR';
+  const { currentId: anneeCouranteId } = useAnneeCourante();
   const isAdmin = useAuthStore(s => s.user?.role === 'admin');
   const isGestion = useAuthStore(s => ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'].includes(s.user?.role ?? ''));
   const canInscrire = useAuthStore(s => ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'].includes(s.user?.role ?? ''));
@@ -257,7 +259,7 @@ export function ElevesPage() {
   const [filterStatut, setFilterStatut] = useState('');
   const [filterClasse, setFilterClasse] = useState('');
   const [limit, setLimit] = useState(20);
-  const [allClasses, setAllClasses] = useState<{ id: string; nom_fr: string; filiere: string }[]>([]);
+  const [allClasses, setAllClasses] = useState<{ id: string; nom_fr: string; filiere: string; annee_scolaire_id: string }[]>([]);
 
   // Edit/Create modal
   const [modalOpen, setModalOpen] = useState(false);
@@ -290,7 +292,7 @@ export function ElevesPage() {
   const [bulkInscForm, setBulkInscForm] = useState({ annee_scolaire_id: '', classe_fr_id: '', classe_ar_id: '' });
   const [bulkInscSaving, setBulkInscSaving] = useState(false);
   const [bulkAnnees, setBulkAnnees] = useState<{ id: string; libelle: string }[]>([]);
-  const [bulkClasses, setBulkClasses] = useState<{ id: string; nom_fr: string; filiere: string }[]>([]);
+  const [bulkClasses, setBulkClasses] = useState<{ id: string; nom_fr: string; filiere: string; annee_scolaire_id: string }[]>([]);
 
   // Portail parent
   const [portailModal, setPortailModal] = useState<Eleve | null>(null);
@@ -318,14 +320,14 @@ export function ElevesPage() {
   // Inscription
   const [inscModal, setInscModal] = useState<Eleve | null>(null);
   const [annees, setAnnees] = useState<{ id: string; libelle: string }[]>([]);
-  const [classesDisp, setClassesDisp] = useState<{ id: string; nom_fr: string; filiere: string }[]>([]);
+  const [classesDisp, setClassesDisp] = useState<{ id: string; nom_fr: string; filiere: string; annee_scolaire_id: string }[]>([]);
   const [inscForm, setInscForm] = useState({ annee_scolaire_id: '', classe_fr_id: '', classe_ar_id: '' });
   const [inscSaving, setInscSaving] = useState(false);
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    api.get<{ id: string; nom_fr: string; filiere: string }[]>('/api/v1/classes?limit=200')
+    api.get<{ id: string; nom_fr: string; filiere: string; annee_scolaire_id: string }[]>('/api/v1/classes?limit=200')
       .then(res => setAllClasses(Array.isArray(res) ? res : []))
       .catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -427,7 +429,7 @@ export function ElevesPage() {
     try {
       const [ans, cls] = await Promise.all([
         api.get<{ id: string; libelle: string }[]>('/api/v1/annees-scolaires'),
-        api.get<{ id: string; nom_fr: string; filiere: string }[]>('/api/v1/classes'),
+        api.get<{ id: string; nom_fr: string; filiere: string; annee_scolaire_id: string }[]>('/api/v1/classes'),
       ]);
       setBulkAnnees(ans);
       setBulkClasses(cls);
@@ -533,7 +535,7 @@ export function ElevesPage() {
     try {
       const [ans, cls] = await Promise.all([
         api.get<{ id: string; libelle: string }[]>('/api/v1/annees-scolaires'),
-        api.get<{ id: string; nom_fr: string; filiere: string }[]>('/api/v1/classes'),
+        api.get<{ id: string; nom_fr: string; filiere: string; annee_scolaire_id: string }[]>('/api/v1/classes'),
       ]);
       setAnnees(ans);
       setClassesDisp(cls);
@@ -1003,7 +1005,7 @@ export function ElevesPage() {
               onChange={e => setFilterClasse(e.target.value)}
               options={[
                 { value: '', label: 'Toutes les classes' },
-                ...allClasses.map(c => ({ value: c.id, label: `${c.nom_fr} (${c.filiere})` })),
+                ...allClasses.filter(c => !anneeCouranteId || c.annee_scolaire_id === anneeCouranteId).map(c => ({ value: c.id, label: `${c.nom_fr} (${c.filiere})` })),
               ]}
             />
           </div>
@@ -1369,14 +1371,14 @@ export function ElevesPage() {
           title={`Inscrire ${inscModal.prenom_fr} ${inscModal.nom_fr}`} size="md">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <Select label={t('classe.annee_scolaire')} value={inscForm.annee_scolaire_id}
-              onChange={(e) => setInscForm(f => ({ ...f, annee_scolaire_id: e.target.value }))}
+              onChange={(e) => setInscForm(f => ({ ...f, annee_scolaire_id: e.target.value, classe_fr_id: '', classe_ar_id: '' }))}
               options={[{ value: '', label: t('common.selectionner') }, ...annees.map(a => ({ value: a.id, label: a.libelle }))]} />
-            <Select label={t('eleve.classe_fr')} value={inscForm.classe_fr_id}
+            <Select label={t('eleve.classe_fr')} value={inscForm.classe_fr_id} disabled={!inscForm.annee_scolaire_id}
               onChange={(e) => setInscForm(f => ({ ...f, classe_fr_id: e.target.value }))}
-              options={[{ value: '', label: t('common.aucune') }, ...classesDisp.filter(cl => cl.filiere === 'FR').map(cl => ({ value: cl.id, label: cl.nom_fr }))]} />
-            <Select label={t('eleve.classe_ar')} value={inscForm.classe_ar_id}
+              options={[{ value: '', label: t('common.aucune') }, ...classesDisp.filter(cl => cl.filiere === 'FR' && cl.annee_scolaire_id === inscForm.annee_scolaire_id).map(cl => ({ value: cl.id, label: cl.nom_fr }))]} />
+            <Select label={t('eleve.classe_ar')} value={inscForm.classe_ar_id} disabled={!inscForm.annee_scolaire_id}
               onChange={(e) => setInscForm(f => ({ ...f, classe_ar_id: e.target.value }))}
-              options={[{ value: '', label: t('common.aucune') }, ...classesDisp.filter(cl => cl.filiere === 'AR').map(cl => ({ value: cl.id, label: cl.nom_fr }))]} />
+              options={[{ value: '', label: t('common.aucune') }, ...classesDisp.filter(cl => cl.filiere === 'AR' && cl.annee_scolaire_id === inscForm.annee_scolaire_id).map(cl => ({ value: cl.id, label: cl.nom_fr }))]} />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingTop: 8 }}>
               <Button variant="secondary" onClick={() => setInscModal(null)}>{t('actions.annuler')}</Button>
               <Button onClick={handleInscrire} loading={inscSaving}>{t('actions.inscrire')}</Button>
@@ -1426,20 +1428,22 @@ export function ElevesPage() {
           <Select
             label="Année scolaire"
             value={bulkInscForm.annee_scolaire_id}
-            onChange={e => setBulkInscForm(f => ({ ...f, annee_scolaire_id: e.target.value }))}
+            onChange={e => setBulkInscForm(f => ({ ...f, annee_scolaire_id: e.target.value, classe_fr_id: '', classe_ar_id: '' }))}
             options={[{ value: '', label: 'Sélectionner...' }, ...bulkAnnees.map(a => ({ value: a.id, label: a.libelle }))]}
           />
           <Select
             label="Classe FR"
             value={bulkInscForm.classe_fr_id}
+            disabled={!bulkInscForm.annee_scolaire_id}
             onChange={e => setBulkInscForm(f => ({ ...f, classe_fr_id: e.target.value }))}
-            options={[{ value: '', label: 'Aucune' }, ...bulkClasses.filter(c => c.filiere === 'FR').map(c => ({ value: c.id, label: c.nom_fr }))]}
+            options={[{ value: '', label: 'Aucune' }, ...bulkClasses.filter(c => c.filiere === 'FR' && c.annee_scolaire_id === bulkInscForm.annee_scolaire_id).map(c => ({ value: c.id, label: c.nom_fr }))]}
           />
           <Select
             label="Classe AR"
             value={bulkInscForm.classe_ar_id}
+            disabled={!bulkInscForm.annee_scolaire_id}
             onChange={e => setBulkInscForm(f => ({ ...f, classe_ar_id: e.target.value }))}
-            options={[{ value: '', label: 'Aucune' }, ...bulkClasses.filter(c => c.filiere === 'AR').map(c => ({ value: c.id, label: c.nom_fr }))]}
+            options={[{ value: '', label: 'Aucune' }, ...bulkClasses.filter(c => c.filiere === 'AR' && c.annee_scolaire_id === bulkInscForm.annee_scolaire_id).map(c => ({ value: c.id, label: c.nom_fr }))]}
           />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingTop: 8 }}>
             <Button variant="secondary" onClick={() => setBulkInscModal(false)}>Annuler</Button>
@@ -1613,7 +1617,7 @@ export function ElevesPage() {
             <label className="field-label">Classe</label>
             <select className="input" value={carteLotClasseId} onChange={e => setCarteLotClasseId(e.target.value)}>
               <option value="">Sélectionner une classe…</option>
-              {allClasses.map(c => <option key={c.id} value={c.id}>{c.nom_fr} ({c.filiere})</option>)}
+              {allClasses.filter(c => !anneeCouranteId || c.annee_scolaire_id === anneeCouranteId).map(c => <option key={c.id} value={c.id}>{c.nom_fr} ({c.filiere})</option>)}
             </select>
           </div>
           {carteLotErreurs.length > 0 && (

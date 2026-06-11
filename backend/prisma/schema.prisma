@@ -379,6 +379,12 @@ model Classe {
   niveau_id         String?
   capacite          Int     @default(30)
   active            Boolean @default(true)
+  // Identité STABLE de la classe entre les années (ex: "CE1-A-FR"). Dérivée de
+  // nom_fr (sans marqueur de filière) + filière. Permet de reconnaître « la même »
+  // classe d'une année sur l'autre (rapports de promotion/comparaison). Une classe
+  // reste identifiée de façon unique par (année + filière + nom_fr) ; `code` ne
+  // sert qu'au regroupement inter-années, il n'est donc pas unique en base.
+  code              String?
 
   etablissement   Etablissement            @relation(fields: [etablissement_id], references: [id])
   annee_scolaire  AnneeScolaire            @relation(fields: [annee_scolaire_id], references: [id])
@@ -393,6 +399,7 @@ model Classe {
 
   @@index([etablissement_id])
   @@index([etablissement_id, annee_scolaire_id])
+  @@index([etablissement_id, code])
 }
 
 model ClasseMatiere {
