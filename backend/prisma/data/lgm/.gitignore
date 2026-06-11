@@ -1,0 +1,6 @@
+# Données sources LGM : PII d'élèves mineurs (noms, dates de naissance, tuteurs).
+# NE PAS versionner — conservées en local pour le rejeu de l'import.
+*.csv
+# Artefacts générés par les scripts d'import
+_mapping.json
+_rapport_hors_bareme.csv
