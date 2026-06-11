@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
+import { useAnneeCourante } from '../../store/anneeStore';
 import { API_BASE, ApiError } from '../../lib/api';
 import { toast } from '../../store/toastStore';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
@@ -129,6 +130,10 @@ export function ClassesPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [filiereFilter, setFiliereFilter] = useState('');
+  // Le filtre d'année suit l'année courante globale (sélecteur du header) par
+  // défaut, pour ne montrer qu'une année à la fois ; « Toutes les années » reste
+  // possible localement.
+  const { currentId: anneeCouranteId } = useAnneeCourante();
   const [anneeFilter, setAnneeFilter] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -190,6 +195,9 @@ export function ClassesPage() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfToutesLoading, setPdfToutesLoading] = useState(false);
   const [imprimerToutesLoading, setImprimerToutesLoading] = useState(false);
+
+  // Suit l'année courante du header (défaut = année active).
+  useEffect(() => { setAnneeFilter(anneeCouranteId); }, [anneeCouranteId]);
 
   // Fetch annees scolaires + school name once
   useEffect(() => {
