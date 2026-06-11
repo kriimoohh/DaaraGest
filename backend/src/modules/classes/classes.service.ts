@@ -5,6 +5,7 @@ import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 import { bulletinsImpactesParMatiere } from '../bulletins/bulletins.service';
 import { logAction } from '../../utils/audit';
 import { NotFoundError } from '../../utils/errors';
+import { classeCode } from '../../utils/classeCode';
 
 // Erreur typée pour exposer le détail de l'impact (front affiche les options).
 function bulletinsImpactError(payload: unknown): Error {
@@ -84,6 +85,7 @@ export async function creerClasse(etablissement_id: string, data: ClasseInput) {
       niveau_id: data.niveau_id ?? null,
       annee_scolaire_id: data.annee_scolaire_id,
       capacite: data.capacite ?? 30,
+      code: classeCode(data.nom_fr, data.filiere),
     },
   });
 }
@@ -100,6 +102,7 @@ export async function modifierClasse(id: string, etablissement_id: string, data:
       niveau_id: data.niveau_id ?? null,
       annee_scolaire_id: data.annee_scolaire_id,
       capacite: data.capacite,
+      code: classeCode(data.nom_fr, data.filiere),
     },
   });
 }
@@ -435,6 +438,7 @@ export async function dupliquerClasseFrEnAr(
         filiere: 'AR',
         niveau_id: source.niveau_id ?? null,
         capacite: source.capacite,
+        code: classeCode(nomAr, 'AR'),
       },
       include: { annee_scolaire: true, niveau: true },
     });

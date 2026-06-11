@@ -7,6 +7,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
+import { useAnneeScolaire } from '../../store/anneeStore';
 import { toast } from '../../store/toastStore';
 
 interface AnneeScolaire { id: string; libelle: string; active: boolean; }
@@ -36,7 +37,7 @@ export function ProgressionPage() {
   const canWrite = useAuthStore(s => ['admin', 'directeur'].includes(s.user?.role ?? ''));
 
   const [annees,       setAnnees]       = useState<AnneeScolaire[]>([]);
-  const [anneeId,      setAnneeId]      = useState('');
+  const [anneeId,      setAnneeId]      = useAnneeScolaire();
   const [classes,      setClasses]      = useState<Classe[]>([]);
   const [classeId,     setClasseId]     = useState('');
   const [filiereFilter, setFiliereFilter] = useState('');
@@ -58,7 +59,7 @@ export function ProgressionPage() {
 
   useEffect(() => {
     api.get<AnneeScolaire[]>('/api/v1/annees-scolaires')
-      .then(data => { setAnnees(data); const a = data.find(x => x.active); if (a) setAnneeId(a.id); })
+      .then(data => { setAnnees(data); }) /* année courante gérée par le store global */
       .catch(err => toast.error((err as Error).message));
   }, []);
 

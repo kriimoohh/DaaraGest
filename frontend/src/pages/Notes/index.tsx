@@ -4,6 +4,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
 import { useAuthStore } from '../../store/authStore';
+import { useAnneeScolaire } from '../../store/anneeStore';
 import { AnneeScolaire, Classe, PolitiqueSaisieNotes } from './shared';
 import { ModeMatiere } from './ModeMatiere';
 import { ModeEleve } from './ModeEleve';
@@ -24,7 +25,7 @@ export function NotesPage() {
   const [politique, setPolitique] = useState<PolitiqueSaisieNotes | null>(null);
 
   // Sélecteurs partagés entre les deux modes
-  const [anneeId, setAnneeId] = useState('');
+  const [anneeId, setAnneeId] = useAnneeScolaire();
   const [classeId, setClasseId] = useState('');
   const [periode, setPeriode] = useState('1');
 

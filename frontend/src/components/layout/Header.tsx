@@ -11,6 +11,7 @@ import { CommandPalette } from '../CommandPalette';
 import { api } from '../../lib/api';
 import { toast } from '../../store/toastStore';
 import { findRoute } from '../../config/routes';
+import { useAnneeCourante } from '../../store/anneeStore';
 
 interface TopbarProps {
   onMenuClick: () => void;
@@ -23,6 +24,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const { user } = useAuthStore();
   const { signOut } = useAuth();
 
+  const { currentId, annees, setCurrent } = useAnneeCourante();
   const role = user?.role ?? '';
   const initials = (user?.nom_fr ?? '').slice(0, 2).toUpperCase();
   // Titre dérivé de config/routes — i18n via la clé nav.<key>
@@ -101,6 +103,21 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         </button>
 
         <div className="tb-spacer" />
+
+        {annees.length > 0 && (
+          <select
+            className="input tb-annee"
+            value={currentId}
+            onChange={e => setCurrent(e.target.value)}
+            title="Année scolaire de travail"
+            aria-label="Année scolaire de travail"
+            style={{ width: 'auto', minWidth: 110, height: 32, padding: '0 26px 0 10px', fontSize: 13 }}
+          >
+            {annees.map(a => (
+              <option key={a.id} value={a.id}>{a.libelle}{a.active ? ' •' : ''}</option>
+            ))}
+          </select>
+        )}
 
         <button className="tb-pill" onClick={toggleLang} title="Langue" aria-label={i18n.language === 'fr' ? 'Changer en arabe' : 'Changer en français'}>
           <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor">
