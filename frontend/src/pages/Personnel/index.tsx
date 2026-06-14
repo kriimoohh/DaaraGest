@@ -151,6 +151,12 @@ interface PersonnelRow {
     date_fin_contrat?: string | null;
     date_debut_stage?: string | null;
     date_fin_stage?: string | null;
+    date_naissance?: string | null;
+    lieu_naissance?: string | null;
+    cni?: string | null;
+    numero_autorisation?: string | null;
+    diplome_academique?: string | null;
+    diplome_professionnel?: string | null;
   };
 }
 
@@ -178,7 +184,7 @@ interface PersonnelResponse {
   page: number;
 }
 
-const FONCTION_VALUES = ['ENSEIGNANT', 'DIRECTEUR', 'SURVEILLANT', 'AGENT_SCOLARITE', 'COMPTABLE', 'INTENDANT', 'AUTRE'] as const;
+const FONCTION_VALUES = ['ENSEIGNANT', 'DIRECTEUR', 'SURVEILLANT', 'AGENT_SCOLARITE', 'COMPTABLE', 'AGENT_ENTRETIEN'] as const;
 type Fonction = typeof FONCTION_VALUES[number];
 
 const FONCTION_LABELS: Record<Fonction, string> = {
@@ -187,8 +193,7 @@ const FONCTION_LABELS: Record<Fonction, string> = {
   SURVEILLANT:     'Surveillant',
   AGENT_SCOLARITE: 'Agent de scolarité',
   COMPTABLE:       'Comptable',
-  INTENDANT:       'Intendant',
-  AUTRE:           'Autre',
+  AGENT_ENTRETIEN: "Agent d'entretien",
 };
 
 type Sexe = 'M' | 'F' | '';
@@ -219,6 +224,12 @@ interface PersonnelFormData {
   date_fin_contrat: string;
   date_debut_stage: string;
   date_fin_stage: string;
+  date_naissance: string;
+  lieu_naissance: string;
+  cni: string;
+  numero_autorisation: string;
+  diplome_academique: string;
+  diplome_professionnel: string;
 }
 
 type FormErrors = Partial<Record<keyof PersonnelFormData, string>>;
@@ -230,6 +241,7 @@ const EMPTY_FORM: PersonnelFormData = {
   sexe: '',
   specialite_fr: '', telephone: '', type_contrat: '',
   poste_fr: '', date_embauche: '', date_fin_contrat: '', date_debut_stage: '', date_fin_stage: '',
+  date_naissance: '', lieu_naissance: '', cni: '', numero_autorisation: '', diplome_academique: '', diplome_professionnel: '',
 };
 
 // Labels définis dans le composant via t() pour la traduction
@@ -264,6 +276,9 @@ export function PersonnelPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [fonctionFilter, setFonctionFilter] = useState('');
+  const [specialiteFilter, setSpecialiteFilter] = useState('');
+  const [specialiteOptions, setSpecialiteOptions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<'grid' | 'table'>('grid');
@@ -298,18 +313,26 @@ export function PersonnelPage() {
     try {
       const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
       if (search) params.set('search', search);
+      if (fonctionFilter) params.set('fonction', fonctionFilter);
+      if (specialiteFilter) params.set('specialite', specialiteFilter);
       const res = await api.get<PersonnelResponse>(`/api/v1/personnel?${params}`);
       setProfs(res.data);
       setTotal(res.total);
+      // Alimente la liste des spécialités proposées au filtre (union au fil des chargements).
+      setSpecialiteOptions((prev) => {
+        const set = new Set(prev);
+        for (const p of res.data) { const s = p.personnel?.specialite_fr?.trim(); if (s) set.add(s); }
+        return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors du chargement');
     } finally {
       setLoading(false);
     }
-  }, [page, search]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [page, search, fonctionFilter, specialiteFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetchProfs(); }, [fetchProfs]);
-  useEffect(() => { setPage(1); }, [search]);
+  useEffect(() => { setPage(1); }, [search, fonctionFilter, specialiteFilter]);
 
   function openAdd() {
     setEditTarget(null);
@@ -336,6 +359,12 @@ export function PersonnelPage() {
       date_fin_contrat: toDateInput(prof.personnel?.date_fin_contrat),
       date_debut_stage: toDateInput(prof.personnel?.date_debut_stage),
       date_fin_stage:   toDateInput(prof.personnel?.date_fin_stage),
+      date_naissance:   toDateInput(prof.personnel?.date_naissance),
+      lieu_naissance:        prof.personnel?.lieu_naissance ?? '',
+      cni:                   prof.personnel?.cni ?? '',
+      numero_autorisation:   prof.personnel?.numero_autorisation ?? '',
+      diplome_academique:    prof.personnel?.diplome_academique ?? '',
+      diplome_professionnel: prof.personnel?.diplome_professionnel ?? '',
     });
     setFormErrors({});
     setModalOpen(true);
@@ -374,6 +403,12 @@ export function PersonnelPage() {
         date_fin_contrat: !isStagiaire && form.date_fin_contrat ? form.date_fin_contrat : null,
         date_debut_stage: isStagiaire && form.date_debut_stage ? form.date_debut_stage : null,
         date_fin_stage:   isStagiaire && form.date_fin_stage   ? form.date_fin_stage   : null,
+        date_naissance: form.date_naissance || null,
+        lieu_naissance: form.lieu_naissance || null,
+        cni:            form.cni || null,
+        numero_autorisation:   form.fonction === 'ENSEIGNANT' ? (form.numero_autorisation || null)   : undefined,
+        diplome_academique:    form.fonction === 'ENSEIGNANT' ? (form.diplome_academique || null)    : undefined,
+        diplome_professionnel: form.fonction === 'ENSEIGNANT' ? (form.diplome_professionnel || null) : undefined,
       };
       if (!editTarget && form.mot_de_passe) payload.mot_de_passe = form.mot_de_passe;
       if (editTarget) {
@@ -558,6 +593,22 @@ export function PersonnelPage() {
 
         <div className="filter-row">
           <SearchInput value={search} onChange={setSearch} placeholder={t('personnel.rechercher')} />
+          <div style={{ minWidth: 170 }}>
+            <Select
+              value={fonctionFilter}
+              onChange={(e) => setFonctionFilter(e.target.value)}
+              placeholder={t('personnel.toutes_fonctions')}
+              options={fonctions.map((f) => ({ value: f.code, label: f.libelle_fr }))}
+            />
+          </div>
+          <div style={{ minWidth: 170 }}>
+            <Select
+              value={specialiteFilter}
+              onChange={(e) => setSpecialiteFilter(e.target.value)}
+              placeholder={t('personnel.toutes_specialites')}
+              options={specialiteOptions.map((s) => ({ value: s, label: s }))}
+            />
+          </div>
           <div className="row" style={{ marginInlineStart: 'auto', background: 'var(--paper-2)', border: '1px solid var(--rule)', borderRadius: 6, padding: 2 }}>
             <button className={`btn btn-sm ${view === 'grid' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => setView('grid')}>{t('professeur.vue_cartes')}</button>
             <button className={`btn btn-sm ${view === 'table' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => setView('table')}>{t('professeur.vue_liste')}</button>
@@ -737,6 +788,45 @@ export function PersonnelPage() {
               onChange={(e) => setField('email', e.target.value)}
               error={formErrors.email}
             />
+            <div className="grid-2">
+              <Input
+                label="Date de naissance"
+                type="date"
+                value={form.date_naissance}
+                onChange={(e) => setField('date_naissance', e.target.value)}
+              />
+              <Input
+                label="Lieu de naissance"
+                value={form.lieu_naissance}
+                onChange={(e) => setField('lieu_naissance', e.target.value)}
+              />
+            </div>
+            <Input
+              label="CNI"
+              value={form.cni}
+              onChange={(e) => setField('cni', e.target.value)}
+            />
+            {form.fonction === 'ENSEIGNANT' && (
+              <>
+                <Input
+                  label="N° d'autorisation d'enseigner"
+                  value={form.numero_autorisation}
+                  onChange={(e) => setField('numero_autorisation', e.target.value)}
+                />
+                <div className="grid-2">
+                  <Input
+                    label="Diplôme académique"
+                    value={form.diplome_academique}
+                    onChange={(e) => setField('diplome_academique', e.target.value)}
+                  />
+                  <Input
+                    label="Diplôme professionnel"
+                    value={form.diplome_professionnel}
+                    onChange={(e) => setField('diplome_professionnel', e.target.value)}
+                  />
+                </div>
+              </>
+            )}
             <Select
               label={t('professeur.type_contrat')}
               value={form.type_contrat}

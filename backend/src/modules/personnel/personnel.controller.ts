@@ -13,8 +13,8 @@ export async function listerHandler(
   request: FastifyRequest, reply: FastifyReply
 ) {
   const { etablissement_id } = request.user as JwtPayload;
-  const { page, search, fonction } = request.query as Record<string, string | undefined>;
-  const data = await listerPersonnel(etablissement_id, page ? parseInt(page) : 1, search, fonction);
+  const { page, search, fonction, specialite } = request.query as Record<string, string | undefined>;
+  const data = await listerPersonnel(etablissement_id, page ? parseInt(page) : 1, search, fonction, specialite);
   return reply.send(data);
 }
 

@@ -285,6 +285,8 @@
     "ajouter": "Ajouter un membre",
     "rechercher": "Rechercher par nom ou identifiant...",
     "aucun_trouve": "Aucun membre du personnel trouvé",
+    "toutes_fonctions": "Toutes les fonctions",
+    "toutes_specialites": "Toutes les spécialités",
     "fonction": "Fonction",
     "sexe": "Sexe",
     "poste_placeholder": "Ex: Professeur principal, Surveillant général…",
