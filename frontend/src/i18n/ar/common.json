@@ -285,6 +285,8 @@
     "ajouter": "إضافة موظف",
     "rechercher": "البحث بالاسم أو المعرّف...",
     "aucun_trouve": "لا يوجد موظفون",
+    "toutes_fonctions": "جميع الوظائف",
+    "toutes_specialites": "جميع التخصصات",
     "fonction": "الوظيفة",
     "sexe": "الجنس",
     "poste_placeholder": "مثال: أستاذ رئيسي، مراقب عام…",

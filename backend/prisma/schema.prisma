@@ -138,6 +138,14 @@ model Personnel {
   date_fin_contrat DateTime?
   date_debut_stage DateTime?
   date_fin_stage   DateTime?
+  // État civil (tout le personnel)
+  date_naissance   DateTime? @db.Date
+  lieu_naissance   String?
+  cni              String?
+  // Qualifications (principalement les enseignants)
+  numero_autorisation   String? // n° d'autorisation d'enseigner
+  diplome_academique    String?
+  diplome_professionnel String?
   created_at       DateTime  @default(now())
 
   utilisateur           Utilisateur               @relation(fields: [utilisateur_id], references: [id])

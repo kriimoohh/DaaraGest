@@ -4,14 +4,16 @@ import { PersonnelInput } from './personnel.schema';
 import { NotFoundError } from '../../utils/errors';
 import { genererMatricule } from '../../utils/matricule';
 
-export async function listerPersonnel(etablissement_id: string, page = 1, search?: string, fonction?: string) {
+export async function listerPersonnel(etablissement_id: string, page = 1, search?: string, fonction?: string, specialite?: string) {
   const limit = 20;
   const skip = (page - 1) * limit;
 
-  const personnelFilter: Record<string, unknown> = { isNot: null };
-  if (fonction) {
-    personnelFilter.is = { fonction };
-  }
+  // Filtres sur la relation Personnel (fonction exacte, spécialité « contient »).
+  const personnelIs: Record<string, unknown> = {};
+  if (fonction) personnelIs.fonction = fonction;
+  if (specialite) personnelIs.specialite_fr = { contains: specialite, mode: 'insensitive' };
+  const personnelFilter: Record<string, unknown> =
+    Object.keys(personnelIs).length > 0 ? { is: personnelIs } : { isNot: null };
 
   const where: Record<string, unknown> = {
     etablissement_id,
@@ -94,6 +96,12 @@ export async function creerPersonnel(etablissement_id: string, data: PersonnelIn
       date_fin_contrat: data.date_fin_contrat ? new Date(data.date_fin_contrat) : undefined,
       date_debut_stage: data.date_debut_stage ? new Date(data.date_debut_stage) : undefined,
       date_fin_stage:   data.date_fin_stage   ? new Date(data.date_fin_stage)   : undefined,
+      date_naissance:   data.date_naissance   ? new Date(data.date_naissance)   : undefined,
+      lieu_naissance:        data.lieu_naissance        ?? undefined,
+      cni:                   data.cni                   ?? undefined,
+      numero_autorisation:   data.numero_autorisation   ?? undefined,
+      diplome_academique:    data.diplome_academique    ?? undefined,
+      diplome_professionnel: data.diplome_professionnel ?? undefined,
     },
     include: { utilisateur: true },
   });
@@ -150,6 +158,12 @@ export async function modifierPersonnel(id: string, etablissement_id: string, da
         date_fin_contrat: parseDate(data.date_fin_contrat),
         date_debut_stage: parseDate(data.date_debut_stage),
         date_fin_stage:   parseDate(data.date_fin_stage),
+        date_naissance:   parseDate(data.date_naissance),
+        lieu_naissance:        data.lieu_naissance        === undefined ? undefined : (data.lieu_naissance        || null),
+        cni:                   data.cni                   === undefined ? undefined : (data.cni                   || null),
+        numero_autorisation:   data.numero_autorisation   === undefined ? undefined : (data.numero_autorisation   || null),
+        diplome_academique:    data.diplome_academique    === undefined ? undefined : (data.diplome_academique    || null),
+        diplome_professionnel: data.diplome_professionnel === undefined ? undefined : (data.diplome_professionnel || null),
       },
       include: { utilisateur: true },
     })

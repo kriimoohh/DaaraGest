@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { photoUrlSchema } from '../../utils/photoUrl';
 import { validerForceMotDePasse } from '../../utils/passwordPolicy';
 
-export const FONCTION_VALUES = ['ENSEIGNANT', 'DIRECTEUR', 'SURVEILLANT', 'AGENT_SCOLARITE', 'COMPTABLE', 'INTENDANT', 'AUTRE'] as const;
+// Aligné sur le catalogue Fonction par défaut (cf. table Fonction, supprimable=false).
+export const FONCTION_VALUES = ['ENSEIGNANT', 'DIRECTEUR', 'SURVEILLANT', 'AGENT_SCOLARITE', 'COMPTABLE', 'AGENT_ENTRETIEN'] as const;
 export type Fonction = typeof FONCTION_VALUES[number];
 
 export const personnelSchema = z.object({
@@ -27,6 +28,13 @@ export const personnelSchema = z.object({
   date_fin_contrat: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
   date_debut_stage: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
   date_fin_stage:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  // État civil + qualifications
+  date_naissance:        z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  lieu_naissance:        z.string().optional().nullable(),
+  cni:                   z.string().optional().nullable(),
+  numero_autorisation:   z.string().optional().nullable(),
+  diplome_academique:    z.string().optional().nullable(),
+  diplome_professionnel: z.string().optional().nullable(),
 });
 
 export type PersonnelInput = z.infer<typeof personnelSchema>;
