@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import prisma from '../../config/database';
-import { PersonnelInput } from './personnel.schema';
-import { NotFoundError } from '../../utils/errors';
+import { PersonnelInput, AffectationInput } from './personnel.schema';
+import { NotFoundError, ValidationError, ConflictError } from '../../utils/errors';
 import { genererMatricule } from '../../utils/matricule';
 
 export async function listerPersonnel(etablissement_id: string, page = 1, search?: string, fonction?: string, specialite?: string) {
@@ -171,6 +171,80 @@ export async function modifierPersonnel(id: string, etablissement_id: string, da
 
   const results = await Promise.all(updateTasks);
   return results[results.length - 1];
+}
+
+// ── Affectations matière × classe (PersonnelMatiereClasse) ──────────────────
+// Rattache un enseignant à (classe, matière) pour l'année de la classe. C'est ce
+// que consomme la politique de saisie des notes (cf. teachingPolicy.ts).
+
+// Résout le personnel à partir d'un id pouvant être personnel_id OU utilisateur_id,
+// en s'assurant qu'il appartient bien à l'établissement.
+async function resoudrePersonnel(id: string, etablissement_id: string) {
+  const prof = await prisma.personnel.findFirst({
+    where: { OR: [{ id }, { utilisateur_id: id }], utilisateur: { etablissement_id } },
+    select: { id: true },
+  });
+  if (!prof) throw new NotFoundError('Personnel introuvable');
+  return prof;
+}
+
+const affectationInclude = {
+  classe: { select: { id: true, nom_fr: true, filiere: true } },
+  matiere: { select: { id: true, nom_fr: true, filiere: true } },
+  annee_scolaire: { select: { id: true, libelle: true } },
+} as const;
+
+export async function listerAffectations(id: string, etablissement_id: string, annee_scolaire_id?: string) {
+  const prof = await resoudrePersonnel(id, etablissement_id);
+  return prisma.personnelMatiereClasse.findMany({
+    where: { personnel_id: prof.id, ...(annee_scolaire_id ? { annee_scolaire_id } : {}) },
+    include: affectationInclude,
+    orderBy: [{ classe: { nom_fr: 'asc' } }, { matiere: { nom_fr: 'asc' } }],
+  });
+}
+
+export async function ajouterAffectation(id: string, etablissement_id: string, data: AffectationInput) {
+  const prof = await resoudrePersonnel(id, etablissement_id);
+
+  // La classe détermine l'année scolaire de l'affectation.
+  const classe = await prisma.classe.findFirst({
+    where: { id: data.classe_id, etablissement_id },
+    select: { id: true, annee_scolaire_id: true },
+  });
+  if (!classe) throw new NotFoundError('Classe introuvable');
+
+  // La matière doit faire partie du programme de la classe (ClasseMatiere).
+  const cm = await prisma.classeMatiere.findFirst({
+    where: { classe_id: classe.id, matiere_id: data.matiere_id },
+    select: { id: true },
+  });
+  if (!cm) throw new ValidationError('Cette matière ne fait pas partie du programme de la classe');
+
+  const existing = await prisma.personnelMatiereClasse.findFirst({
+    where: { personnel_id: prof.id, classe_id: classe.id, matiere_id: data.matiere_id, annee_scolaire_id: classe.annee_scolaire_id },
+    select: { id: true },
+  });
+  if (existing) throw new ConflictError('Cet enseignant est déjà affecté à cette matière dans cette classe');
+
+  return prisma.personnelMatiereClasse.create({
+    data: {
+      personnel_id: prof.id,
+      classe_id: classe.id,
+      matiere_id: data.matiere_id,
+      annee_scolaire_id: classe.annee_scolaire_id,
+    },
+    include: affectationInclude,
+  });
+}
+
+export async function supprimerAffectation(id: string, affectation_id: string, etablissement_id: string) {
+  const prof = await resoudrePersonnel(id, etablissement_id);
+  const lien = await prisma.personnelMatiereClasse.findFirst({
+    where: { id: affectation_id, personnel_id: prof.id },
+    select: { id: true },
+  });
+  if (!lien) throw new NotFoundError('Affectation introuvable');
+  await prisma.personnelMatiereClasse.delete({ where: { id: lien.id } });
 }
 
 export async function supprimerPersonnel(id: string, etablissement_id: string) {
