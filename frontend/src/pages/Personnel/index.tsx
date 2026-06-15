@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { API_BASE } from '../../lib/api';
 import { useAuthStore } from '../../store/authStore';
+import { useAnneeScolaire } from '../../store/anneeStore';
 import { toast } from '../../store/toastStore';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { PageHeader } from '../../components/ui/PageHeader';
@@ -122,6 +123,125 @@ function QRCodeModal({ personnelId, nom, onClose, api }: {
         ) : (
           <div style={{ color: 'var(--danger)', padding: 20 }}>{t('personnel.qr_err_load')}</div>
         )}
+      </div>
+    </Modal>
+  );
+}
+
+interface Affectation {
+  id: string;
+  classe: { id: string; nom_fr: string; filiere: string };
+  matiere: { id: string; nom_fr: string; filiere: string };
+  annee_scolaire: { id: string; libelle: string };
+}
+
+// Gestion des affectations matière × classe d'un enseignant (année courante).
+// Rattache le prof à ce qu'il enseigne → débloque la saisie de notes (teachingPolicy).
+function AffectationsModal({ personnelId, nom, anneeId, onClose, api }: {
+  personnelId: string; nom: string; anneeId: string;
+  onClose: () => void; api: ReturnType<typeof useApi>;
+}) {
+  const { t } = useTranslation();
+  const [affectations, setAffectations] = useState<Affectation[]>([]);
+  const [classes, setClasses] = useState<{ id: string; nom_fr: string; filiere: string }[]>([]);
+  const [matieres, setMatieres] = useState<{ id: string; nom_fr: string }[]>([]);
+  const [classeId, setClasseId] = useState('');
+  const [matiereId, setMatiereId] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+
+  const reload = useCallback(async () => {
+    try {
+      const q = anneeId ? `?annee_scolaire_id=${anneeId}` : '';
+      setAffectations(await api.get<Affectation[]>(`/api/v1/personnel/${personnelId}/affectations${q}`));
+    } catch { /* silencieux */ } finally { setLoading(false); }
+  }, [personnelId, anneeId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { reload(); }, [reload]);
+
+  useEffect(() => {
+    if (!anneeId) return;
+    api.get<{ id: string; nom_fr: string; filiere: string }[]>(`/api/v1/classes?annee_scolaire_id=${anneeId}&limit=200`)
+      .then(setClasses).catch(() => {});
+  }, [anneeId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setMatiereId('');
+    if (!classeId) { setMatieres([]); return; }
+    api.get<{ matiere: { id: string; nom_fr: string } }[]>(`/api/v1/classes/${classeId}/matieres`)
+      .then((rows) => setMatieres(rows.map((r) => r.matiere)))
+      .catch(() => setMatieres([]));
+  }, [classeId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleAdd() {
+    if (!classeId || !matiereId) return;
+    setAdding(true);
+    try {
+      await api.post(`/api/v1/personnel/${personnelId}/affectations`, { classe_id: classeId, matiere_id: matiereId });
+      setMatiereId('');
+      await reload();
+      toast.success(t('affectation.ajoutee'));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('affectation.erreur'));
+    } finally { setAdding(false); }
+  }
+
+  async function handleRemove(id: string) {
+    try {
+      await api.delete(`/api/v1/personnel/${personnelId}/affectations/${id}`);
+      await reload();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('affectation.erreur'));
+    }
+  }
+
+  return (
+    <Modal isOpen onClose={onClose} title={t('affectation.titre', { nom })} size="md">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <p className="muted" style={{ fontSize: 12, margin: 0 }}>{t('affectation.aide')}</p>
+
+        {/* Ajout */}
+        <div className="grid-2" style={{ alignItems: 'end' }}>
+          <Select
+            label={t('affectation.classe')}
+            value={classeId}
+            onChange={(e) => setClasseId(e.target.value)}
+            placeholder={t('affectation.choisir_classe')}
+            options={classes.map((c) => ({ value: c.id, label: `${c.nom_fr} (${c.filiere})` }))}
+          />
+          <Select
+            label={t('affectation.matiere')}
+            value={matiereId}
+            onChange={(e) => setMatiereId(e.target.value)}
+            placeholder={classeId ? t('affectation.choisir_matiere') : t('affectation.choisir_classe_dabord')}
+            options={matieres.map((m) => ({ value: m.id, label: m.nom_fr }))}
+          />
+        </div>
+        <div>
+          <Button size="sm" onClick={handleAdd} loading={adding} disabled={!classeId || !matiereId}>
+            {t('affectation.ajouter')}
+          </Button>
+        </div>
+
+        {/* Liste */}
+        <div style={{ borderTop: '1px solid var(--rule)', paddingTop: 12 }}>
+          {loading ? (
+            <div className="muted" style={{ fontSize: 13 }}>{t('common.chargement')}</div>
+          ) : affectations.length === 0 ? (
+            <div className="muted" style={{ fontSize: 13 }}>{t('affectation.aucune')}</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {affectations.map((a) => (
+                <div key={a.id} className="row" style={{ justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: 'var(--paper-2)', border: '1px solid var(--rule)', borderRadius: 6 }}>
+                  <span style={{ fontSize: 13 }}>
+                    <strong>{a.classe.nom_fr}</strong> <span className="muted">({a.classe.filiere})</span> — {a.matiere.nom_fr}
+                  </span>
+                  <button className="btn btn-ghost btn-sm" onClick={() => handleRemove(a.id)} title={t('actions.supprimer')}>✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </Modal>
   );
@@ -271,6 +391,8 @@ export function PersonnelPage() {
   const { t } = useTranslation();
   const api = useApi();
   const isAdmin = useAuthStore(s => s.user?.role === 'admin');
+  const role = useAuthStore(s => s.user?.role);
+  const canGererAffectations = ['admin', 'directeur', 'gestionnaire'].includes(role ?? '');
 
   const [profs, setProfs] = useState<PersonnelRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -292,6 +414,8 @@ export function PersonnelPage() {
   const [deleting, setDeleting] = useState(false);
   const [photoLoading, setPhotoLoading] = useState(false);
   const [qrTarget, setQrTarget] = useState<PersonnelRow | null>(null);
+  const [affectTarget, setAffectTarget] = useState<PersonnelRow | null>(null);
+  const [anneeId] = useAnneeScolaire();
   const [carteUniqueLoading, setCarteUniqueLoading] = useState<string | null>(null);
   const [carteLotModal, setCarteLotModal] = useState(false);
   const [carteLotGenerating, setCarteLotGenerating] = useState(false);
@@ -502,6 +626,11 @@ export function PersonnelPage() {
                 icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x={3} y={3} width={7} height={7}/><rect x={14} y={3} width={7} height={7}/><rect x={3} y={14} width={7} height={7}/><path d="M14 14h3v3m0-3h3v3m-3 3h3"/></svg>,
                 onClick: () => setQrTarget(p),
               },
+              ...(canGererAffectations ? [{
+                label: t('affectation.menu'),
+                icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>,
+                onClick: () => setAffectTarget(p),
+              }] : []),
               {
                 label: carteUniqueLoading === p.id
                   ? 'Génération…'
@@ -901,6 +1030,16 @@ export function PersonnelPage() {
           personnelId={qrTarget.id}
           nom={`${qrTarget.prenom_fr ?? ''} ${qrTarget.nom_fr}`.trim()}
           onClose={() => setQrTarget(null)}
+          api={api}
+        />
+      )}
+
+      {affectTarget && (
+        <AffectationsModal
+          personnelId={affectTarget.id}
+          nom={`${affectTarget.prenom_fr ?? ''} ${affectTarget.nom_fr}`.trim()}
+          anneeId={anneeId}
+          onClose={() => setAffectTarget(null)}
           api={api}
         />
       )}

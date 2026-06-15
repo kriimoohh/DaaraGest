@@ -38,3 +38,10 @@ export const personnelSchema = z.object({
 });
 
 export type PersonnelInput = z.infer<typeof personnelSchema>;
+
+export const affectationSchema = z.object({
+  classe_id: z.string().uuid(),
+  matiere_id: z.string().uuid(),
+});
+
+export type AffectationInput = z.infer<typeof affectationSchema>;

@@ -278,6 +278,20 @@
     "fr_short": "FR",
     "ar_short": "AR"
   },
+  "affectation": {
+    "menu": "Affectations (classes/matières)",
+    "titre": "Affectations — {{nom}}",
+    "aide": "Rattachez l'enseignant aux matières qu'il enseigne, par classe (année courante). Indispensable pour qu'il puisse saisir les notes.",
+    "classe": "Classe",
+    "matiere": "Matière",
+    "choisir_classe": "— Choisir une classe —",
+    "choisir_matiere": "— Choisir une matière —",
+    "choisir_classe_dabord": "— Choisir une classe d'abord —",
+    "ajouter": "Ajouter l'affectation",
+    "ajoutee": "Affectation ajoutée",
+    "aucune": "Aucune affectation pour cette année.",
+    "erreur": "Erreur lors de l'opération"
+  },
   "personnel": {
     "rh": "Ressources humaines",
     "titre": "Personnel",
