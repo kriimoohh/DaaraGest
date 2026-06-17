@@ -17,8 +17,8 @@ export async function listerHandler(
   request: FastifyRequest, reply: FastifyReply
 ) {
   const { etablissement_id } = request.user as JwtPayload;
-  const { page, search, fonction, specialite } = request.query as Record<string, string | undefined>;
-  const data = await listerPersonnel(etablissement_id, page ? parseInt(page) : 1, search, fonction, specialite);
+  const { page, search, fonction, specialite, annee_scolaire_id } = request.query as Record<string, string | undefined>;
+  const data = await listerPersonnel(etablissement_id, page ? parseInt(page) : 1, search, fonction, specialite, annee_scolaire_id);
   return reply.send(data);
 }
 
@@ -110,9 +110,9 @@ export async function ajouterAffectationHandler(request: FastifyRequest, reply: 
 
 export async function supprimerAffectationHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
-  const { id, affectation_id } = request.params as { id: string; affectation_id: string };
+  const { id, classe_id, domaine_id } = request.params as { id: string; classe_id: string; domaine_id: string };
   try {
-    await supprimerAffectation(id, affectation_id, etablissement_id);
+    await supprimerAffectation(id, classe_id, domaine_id, etablissement_id);
     return reply.status(204).send();
   } catch (err) {
     return reply.status(err instanceof HttpError ? err.statusCode : 404).send({ error: (err as Error).message });

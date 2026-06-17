@@ -21,5 +21,5 @@ export async function personnelRoutes(fastify: FastifyInstance) {
   // Affectations matière × classe (rattachement enseignant → ce qu'il enseigne)
   fastify.get('/:id/affectations',                   { preHandler: [authMiddleware, lecture] }, listerAffectationsHandler);
   fastify.post('/:id/affectations',                  { preHandler: [authMiddleware, gestion] }, ajouterAffectationHandler);
-  fastify.delete('/:id/affectations/:affectation_id', { preHandler: [authMiddleware, gestion] }, supprimerAffectationHandler);
+  fastify.delete('/:id/affectations/:classe_id/:domaine_id', { preHandler: [authMiddleware, gestion] }, supprimerAffectationHandler);
 }
