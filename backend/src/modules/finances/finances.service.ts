@@ -124,6 +124,62 @@ export async function genererPdfPaiementsEleves(etablissement_id: string, f: Pai
   return renderPdfHtml(html, { format: 'A4', landscape: true, printBackground: true, margin: { top: '8mm', bottom: '8mm', left: '8mm', right: '8mm' } });
 }
 
+type ReliquatExportFiltres = { annee_scolaire_id?: string; mois?: number; annee?: number };
+
+const MOIS_LONG = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const MOIS_C = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+
+export async function genererExcelReliquats(etablissement_id: string, f: ReliquatExportFiltres): Promise<Buffer> {
+  const [etab, reliquats] = await Promise.all([
+    prisma.etablissement.findUnique({ where: { id: etablissement_id }, select: { nom_fr: true } }),
+    getReliquats(etablissement_id, f.annee_scolaire_id, f.mois, f.annee),
+  ]);
+  const { exportReliquatsExcel } = await import('../../utils/excel');
+  return exportReliquatsExcel(reliquats, etab?.nom_fr ?? '');
+}
+
+// PDF imprimable de la liste des élèves en retard de paiement (reliquats).
+export async function genererPdfReliquats(etablissement_id: string, f: ReliquatExportFiltres): Promise<Buffer> {
+  const [etab, reliquats] = await Promise.all([
+    prisma.etablissement.findUnique({ where: { id: etablissement_id }, select: { nom_fr: true } }),
+    getReliquats(etablissement_id, f.annee_scolaire_id, f.mois, f.annee),
+  ]);
+  const { renderPdfHtml } = await import('../../utils/browserPool');
+  const { escapeHtml: esc } = await import('../../utils/escapeHtml');
+  const fmt = (n: number) => Number(n).toLocaleString('fr-FR');
+  const total = reliquats.reduce((s, r) => s + r.montant_du, 0);
+  const periodeLabel = f.mois && f.annee ? `${MOIS_LONG[f.mois - 1]} ${f.annee}` : "Année scolaire en cours";
+  const rows = reliquats.map((r, i) => `<tr>
+    <td>${i + 1}</td>
+    <td class="l">${esc(r.eleve.prenom_fr)} ${esc(r.eleve.nom_fr)}</td>
+    <td>${esc(r.eleve.matricule)}</td>
+    <td>${r.nb_mois_dus}</td>
+    <td class="l">${esc(r.mois_manquants.map(m => `${MOIS_C[m.mois - 1]} ${m.annee}`).join(', '))}</td>
+    <td class="r">${fmt(r.montant_du)}</td>
+  </tr>`).join('');
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;font-size:9px;color:#000;padding:8mm 10mm}
+    h1{font-size:13px;text-align:center;margin-bottom:2px}
+    .meta{text-align:center;font-size:9px;color:#374151;margin-bottom:8px}
+    table{width:100%;border-collapse:collapse}
+    th,td{border:1px solid #333;padding:3px 4px;text-align:center;font-size:8.5px}
+    th{background:#B91C1C;color:#fff}
+    td.l{text-align:left}td.r{text-align:right;font-family:monospace}
+    tr:nth-child(even){background:#fef2f2}
+    tfoot td{font-weight:bold;background:#fee2e2}
+  </style></head><body>
+    <h1>${esc(etab?.nom_fr ?? '')}</h1>
+    <div class="meta">Élèves en retard de paiement — ${esc(periodeLabel)} · ${reliquats.length} élève(s)</div>
+    <table>
+      <thead><tr><th>N°</th><th>Élève</th><th>Matricule</th><th>Mois dus</th><th>Mois manquants</th><th>Montant dû (FCFA)</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="6" style="padding:10px">Aucun reliquat — tous les élèves sont à jour</td></tr>'}</tbody>
+      <tfoot><tr><td colspan="5" class="r">TOTAL DÛ</td><td class="r">${fmt(total)}</td></tr></tfoot>
+    </table>
+  </body></html>`;
+  return renderPdfHtml(html, { format: 'A4', landscape: true, printBackground: true, margin: { top: '8mm', bottom: '8mm', left: '8mm', right: '8mm' } });
+}
+
 export async function creerPaiementEleve(etablissement_id: string, data: PaiementEleveInput, acteurId: string) {
   const eleve = await prisma.eleve.findFirst({ where: { id: data.eleve_id, etablissement_id } });
   if (!eleve) throw new NotFoundError('Élève introuvable');

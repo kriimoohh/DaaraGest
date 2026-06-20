@@ -6,6 +6,7 @@ import {
   creerPaiementEleve, bulkCreerPaiementEleve, modifierPaiementEleve, supprimerPaiementEleve,
   listerPaiementsPersonnel, creerPaiementPersonnel,
   getStatsFinances, getReliquats, getStatsMensuels,
+  genererExcelReliquats, genererPdfReliquats,
 } from './finances.service';
 
 export async function statsMensuelsHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -150,4 +151,36 @@ export async function reliquatsHandler(request: FastifyRequest, reply: FastifyRe
     mois ? parseInt(mois) : undefined,
     annee ? parseInt(annee) : undefined,
   ));
+}
+
+export async function exportReliquatsExcelHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { annee_scolaire_id, mois, annee } = request.query as Record<string, string | undefined>;
+  try {
+    const buffer = await genererExcelReliquats(etablissement_id, {
+      annee_scolaire_id, mois: mois ? parseInt(mois) : undefined, annee: annee ? parseInt(annee) : undefined,
+    });
+    reply
+      .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      .header('Content-Disposition', 'attachment; filename="reliquats.xlsx"')
+      .send(buffer);
+  } catch (err) {
+    return reply.status(500).send({ error: (err as Error).message });
+  }
+}
+
+export async function exportReliquatsPdfHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { annee_scolaire_id, mois, annee } = request.query as Record<string, string | undefined>;
+  try {
+    const buffer = await genererPdfReliquats(etablissement_id, {
+      annee_scolaire_id, mois: mois ? parseInt(mois) : undefined, annee: annee ? parseInt(annee) : undefined,
+    });
+    reply
+      .header('Content-Type', 'application/pdf')
+      .header('Content-Disposition', 'attachment; filename="reliquats.pdf"')
+      .send(buffer);
+  } catch (err) {
+    return reply.status(500).send({ error: (err as Error).message });
+  }
 }

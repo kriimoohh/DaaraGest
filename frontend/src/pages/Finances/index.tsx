@@ -501,6 +501,31 @@ export function FinancesPage() {
     } finally { setExporting(null); }
   };
 
+  // Export de la liste des reliquats (élèves en retard) selon le mois/année courant.
+  const exportReliquats = async (format: 'excel' | 'pdf') => {
+    setExporting(format);
+    try {
+      const params = new URLSearchParams();
+      if (mois) params.set('mois', mois);
+      if (annee) params.set('annee', annee);
+      const endpoint = format === 'excel' ? 'reliquats/export-excel' : 'reliquats/export-pdf';
+      const resp = await fetch(
+        `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/api/v1/finances/${endpoint}?${params}`,
+        { credentials: 'include' },
+      );
+      if (!resp.ok) throw new Error('Erreur lors de l\'export');
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = format === 'excel' ? 'reliquats.xlsx' : 'reliquats.pdf';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error((e as Error).message || 'Erreur export');
+    } finally { setExporting(null); }
+  };
+
   const stopQrScanner = useCallback(async () => {
     if (qrScannerRef.current) {
       try { await qrScannerRef.current.stop(); qrScannerRef.current.clear(); } catch { /* ignore */ }
@@ -592,11 +617,15 @@ export function FinancesPage() {
 
       {tab === 'reliquats' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div className="filter-row">
+          <div className="filter-row" style={{ flexWrap: 'wrap' }}>
             <Select value={mois} onChange={e => setMois(e.target.value)}
               options={[{ value: '', label: 'Toute l\'année' }, ...MOIS.map((m, i) => ({ value: String(i+1), label: m }))]} />
             <Input label="" type="number" value={annee} onChange={e => setAnnee(e.target.value)} />
             <Button variant="secondary" onClick={charger} loading={loading}>Actualiser</Button>
+            <div style={{ marginInlineStart: 'auto', display: 'flex', gap: 8 }}>
+              <Button variant="secondary" onClick={() => exportReliquats('excel')} loading={exporting === 'excel'} disabled={reliquats.length === 0}>⬇ Excel</Button>
+              <Button variant="secondary" onClick={() => exportReliquats('pdf')} loading={exporting === 'pdf'} disabled={reliquats.length === 0}>🖨 Imprimer</Button>
+            </div>
           </div>
           {loading ? <div className="empty">Chargement...</div> :
           reliquats.length === 0 ? (
