@@ -851,14 +851,25 @@ export async function rapportPerformanceDomaine(
   ]);
   if (!classeRaw) throw new NotFoundError('Classe introuvable');
 
-  const [inscriptions, domaines, titulaireNom] = await Promise.all([
+  const [inscriptions, titulaireNom] = await Promise.all([
     fetchInscriptions(classe_id, annee_scolaire_id),
-    prisma.domaine.findMany({
-      where: { etablissement_id, actif: true },
-      orderBy: { ordre: 'asc' },
-    }),
     getTitulaire(classe_id, annee_scolaire_id),
   ]);
+
+  // Grille restreinte à 3 colonnes : Langue & communication (FR), (AR) et
+  // Mathématiques. Le domaine LANGUE_COMMUNICATION est scindé par filière.
+  const COLS = [
+    { key: 'LC_FR', label: 'Langue & communication (FR)' },
+    { key: 'LC_AR', label: 'Langue & communication (AR)' },
+    { key: 'MATHS', label: 'Mathématiques' },
+  ] as const;
+  const colKeys: string[] = COLS.map(c => c.key);
+  const colForNote = (note: { matiere: { filiere: string; domaine: { code: string } | null } }): string | null => {
+    const dc = note.matiere.domaine?.code;
+    if (dc === 'MATHEMATIQUES') return 'MATHS';
+    if (dc === 'LANGUE_COMMUNICATION') return note.matiere.filiere === 'AR' ? 'LC_AR' : 'LC_FR';
+    return null;
+  };
 
   const eleveIds = inscriptions.map(i => i.eleve_id);
   const cfg = await prisma.configNotes.findUnique({ where: { etablissement_id }, select: { nb_periodes: true, note_max: true } });
@@ -874,25 +885,24 @@ export async function rapportPerformanceDomaine(
     include: { matiere: { include: { domaine: true } } },
   });
 
-  // Score par domaine par élève (normalisé /10 via le barème effectif)
-  const domCodes = domaines.map(d => d.code);
+  // Score par colonne par élève (normalisé /10 via le barème effectif)
   const acc = new Map<string, Map<string, number[]>>();
   for (const note of notes) {
-    const dc = note.matiere.domaine?.code;
-    if (!dc || !domCodes.includes(dc)) continue;
+    const col = colForNote(note);
+    if (!col) continue;
     const bar = baremes.get(`${note.matiere_id}|${note.periode}`)?.note_max ?? baseNote;
     const nm = n10(Number(note.valeur), bar);
     if (!acc.has(note.eleve_id)) acc.set(note.eleve_id, new Map());
     const dm = acc.get(note.eleve_id)!;
-    if (!dm.has(dc)) dm.set(dc, []);
-    dm.get(dc)!.push(nm);
+    if (!dm.has(col)) dm.set(col, []);
+    dm.get(col)!.push(nm);
   }
 
   // Construire les lignes élèves
   const rows = inscriptions.map(i => {
     const dm = acc.get(i.eleve_id);
-    const domAvgs = domCodes.map(dc => {
-      const vals = dm?.get(dc);
+    const domAvgs = colKeys.map(ck => {
+      const vals = dm?.get(ck);
       return vals?.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
     });
     const nonNull = domAvgs.filter((v): v is number => v !== null);
@@ -904,9 +914,9 @@ export async function rapportPerformanceDomaine(
   // Rang
   const rowsRanked = rows.map((r, idx) => ({ ...r, rang: r.moy !== null ? idx + 1 : '—' }));
 
-  // Stats par domaine (sur les valeurs normalisées)
-  const domStats = domCodes.map(dc => {
-    const vals = rows.map(r => r.domAvgs[domCodes.indexOf(dc)]).filter((v): v is number => v !== null);
+  // Stats par colonne (sur les valeurs normalisées)
+  const domStats = colKeys.map(ck => {
+    const vals = rows.map(r => r.domAvgs[colKeys.indexOf(ck)]).filter((v): v is number => v !== null);
     if (!vals.length) return { min: null, max: null, freq: null, moy: null };
     const moy = vals.reduce((s, v) => s + v, 0) / vals.length;
     return {
@@ -960,7 +970,7 @@ th{background:#d0d0d0;font-weight:bold;}
     <tr>
       <th>N°</th>
       <th>PRÉNOM(S) &amp; NOM</th>
-      ${domaines.map(d => `<th>${esc(d.nom_fr)}</th>`).join('')}
+      ${COLS.map(c => `<th>${esc(c.label)}</th>`).join('')}
       <th>TOTAL</th>
       <th>MOYENNE</th>
       <th>RANG</th>
