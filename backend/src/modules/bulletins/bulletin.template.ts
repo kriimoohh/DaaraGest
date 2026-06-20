@@ -55,7 +55,8 @@ interface BulletinBaseData {
 function matiereLabel(nom_fr: string, nom_ar: string | undefined, bilingue: boolean): string {
   const fr = escapeHtml(nom_fr);
   if (bilingue && nom_ar && nom_ar !== nom_fr) {
-    return `${fr} <span dir="rtl" style="color:#4b5563;font-weight:400">${escapeHtml(nom_ar)}</span>`;
+    // FR à gauche, nom arabe collé à la bordure droite de la case.
+    return `<span style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><span>${fr}</span><span dir="rtl" style="color:#4b5563;font-weight:400;white-space:nowrap">${escapeHtml(nom_ar)}</span></span>`;
   }
   return fr;
 }
@@ -146,11 +147,11 @@ body { font-family:Arial,sans-serif;font-size:11.5px;color:#111;padding:18px 28p
 
 /* ── En-tête ── */
 .header { display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px }
-.header-top { display:flex;align-items:flex-start;gap:12px;margin-bottom:6px }
-.entete-wrap { flex:1;display:flex;justify-content:space-between;gap:16px }
-.entete-text { font-size:10px;color:#374151;line-height:1.45 }
+.header-top { display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px }
+.entete-text { font-size:10px;color:#374151;line-height:1.45;flex:1 }
 .entete-fr { text-align:left }
 .entete-ar { text-align:right;direction:rtl;font-size:11px }
+.header-logo { flex-shrink:0;align-self:center }
 .school-name-line { text-align:center;font-size:15px;font-weight:bold;color:#0F172A;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px }
 .school-block { flex:1 }
 .school-name { font-size:15px;font-weight:bold;color:#0F172A;text-transform:uppercase;letter-spacing:.3px }
@@ -217,7 +218,8 @@ tr:nth-child(even) { background:#f9fafb }
 .observation-line { border-bottom:1px solid #d1d5db;min-height:18px;margin-top:8px }
 
 /* ── Pied de page ── */
-.footer { display:flex;justify-content:space-between;margin-top:20px;padding-top:10px;border-top:1.5px solid #e5e7eb }
+.footer-date { text-align:right;font-size:10.5px;color:#374151;margin-top:14px }
+.footer { display:flex;justify-content:space-between;margin-top:8px;padding-top:10px;border-top:1.5px solid #e5e7eb }
 .signature-box { text-align:center;min-width:110px }
 .signature-line { width:110px;border-bottom:1px solid #374151;margin:26px auto 4px }
 .signature-label { font-size:9.5px;color:#374151;font-weight:600 }
@@ -251,23 +253,19 @@ function formatEntete(txt: string): string {
   return escapeHtml(txt).replace(/\r?\n/g, '<br>');
 }
 
-// En-tête : logo + zones de texte officielles (FR à gauche, AR à droite en RTL),
-// affichées selon la filière du bulletin, puis le nom de l'école (auto) + la date.
+// En-tête : texte officiel FR (bord gauche), logo (centre), texte officiel AR
+// (bord droit, RTL) — selon la filière. La date est rendue en bas (cf. footer).
 function headerHtml(data: BulletinBaseData, filiere: 'FR' | 'AR' | 'COMBINE'): string {
-  const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
   const showFr = filiere !== 'AR';
   const showAr = filiere !== 'FR';
-  const frBlock = showFr && data.entete_bulletin_fr
-    ? `<div class="entete-text entete-fr">${formatEntete(data.entete_bulletin_fr)}</div>` : '';
-  const arBlock = showAr && data.entete_bulletin_ar
-    ? `<div class="entete-text entete-ar" dir="rtl">${formatEntete(data.entete_bulletin_ar)}</div>` : '';
-  const enteteWrap = (frBlock || arBlock)
-    ? `<div class="entete-wrap">${frBlock}${arBlock}</div>` : `<div style="flex:1"></div>`;
+  // Placeholders vides toujours présents → le logo reste centré même si un seul bloc.
+  const frBlock = `<div class="entete-text entete-fr">${showFr && data.entete_bulletin_fr ? formatEntete(data.entete_bulletin_fr) : ''}</div>`;
+  const arBlock = `<div class="entete-text entete-ar" dir="rtl">${showAr && data.entete_bulletin_ar ? formatEntete(data.entete_bulletin_ar) : ''}</div>`;
   return `
   <div class="header-top">
-    ${logoHtml(data)}
-    ${enteteWrap}
-    <div class="header-date">le ${today}</div>
+    ${frBlock}
+    <div class="header-logo">${logoHtml(data)}</div>
+    ${arBlock}
   </div>
   <div class="school-name-line">${escapeHtml(data.etablissement_nom_fr)}</div>
   <hr class="divider"/>`;
@@ -339,26 +337,21 @@ function studentInfoHtml(data: BulletinBaseData): string {
   </div>`;
 }
 
-function footerHtml(etablissementNom: string): string {
+function footerHtml(data: BulletinBaseData): string {
+  const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const sig = (label: string) => `
+    <div class="signature-box">
+      <div class="signature-line"></div>
+      <div class="signature-label">${label}</div>
+    </div>`;
   return `
+  <div class="footer-date">le ${today}</div>
   <div class="footer">
-    <div class="signature-box">
-      <div class="signature-line"></div>
-      <div class="signature-label">La Maîtresse</div>
-    </div>
-    <div class="signature-box">
-      <div class="signature-line"></div>
-      <div class="signature-label">Le Maître (AR)</div>
-    </div>
-    <div class="footer-brand">${escapeHtml(etablissementNom)}<span class="gold-dot"></span></div>
-    <div class="signature-box">
-      <div class="signature-line"></div>
-      <div class="signature-label">Le Directeur</div>
-    </div>
-    <div class="signature-box">
-      <div class="signature-line"></div>
-      <div class="signature-label">Les Parents</div>
-    </div>
+    ${sig("L'enseignant(e) (FR)")}
+    ${sig("L'enseignant(e) (AR)")}
+    <div class="footer-brand">${escapeHtml(data.etablissement_nom_fr)}<span class="gold-dot"></span></div>
+    ${sig('Le Directeur')}
+    ${sig('Les Parents')}
   </div>`;
 }
 
@@ -563,7 +556,7 @@ function absencesHtml(data: BulletinBaseData): string {
 function observationHtml(appr: string | null): string {
   return `
   <div class="appreciation-box">
-    <div class="appreciation-label">Observation / Appréciation du conseil de classe <span dir="rtl">— ملاحظات مجلس القسم</span></div>
+    <div class="appreciation-label" style="display:flex;justify-content:space-between;gap:10px"><span>Observation / Appréciation du conseil de classe</span><span dir="rtl">ملاحظات مجلس القسم</span></div>
     <div style="font-size:11.5px;font-style:italic;color:#374151;margin-top:3px;min-height:16px">${appr ? escapeHtml(appr) : ''}</div>
     <div class="observation-line"></div>
   </div>`;
@@ -574,7 +567,6 @@ function observationHtml(appr: string | null): string {
 export function generateBulletinHtml(data: BulletinTrimestreData): string {
   setRenderContext(data);
   const periodeStr = periodeLabel(data.periode);
-  const ecole = data.etablissement_nom_fr;
 
   if (data.type === 'FR') {
     return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><style>${CSS}</style></head><body>
@@ -586,7 +578,7 @@ export function generateBulletinHtml(data: BulletinTrimestreData): string {
       ${resultsSummaryHtml(data)}
       ${absencesHtml(data)}
       ${observationHtml(data.appreciation)}
-      ${footerHtml(ecole)}
+      ${footerHtml(data)}
     </body></html>`;
   }
 
@@ -601,7 +593,7 @@ export function generateBulletinHtml(data: BulletinTrimestreData): string {
       ${resultsSummaryHtml(data)}
       ${absencesHtml(data)}
       ${observationHtml(data.appreciation)}
-      ${footerHtml(ecole)}
+      ${footerHtml(data)}
     </body></html>`;
   }
 
@@ -621,7 +613,7 @@ export function generateBulletinHtml(data: BulletinTrimestreData): string {
     ${combinedSummaryHtml(data, frMoy, arMoy)}
     ${absencesHtml(data)}
     ${observationHtml(data.appreciation)}
-    ${footerHtml(ecole)}
+    ${footerHtml(data)}
   </body></html>`;
 }
 
@@ -629,7 +621,6 @@ export function generateBulletinAnnuelHtml(data: BulletinAnnuelData): string {
   setRenderContext(data);
   const isCombine = data.type === 'ANNUEL_COMBINE';
   const isAR = data.type === 'ANNUEL_AR';
-  const ecole = data.etablissement_nom_fr;
 
   const mFR = data.matieres_fr ?? [];
   const mAR = data.matieres_ar ?? [];
@@ -656,6 +647,6 @@ export function generateBulletinAnnuelHtml(data: BulletinAnnuelData): string {
 
     ${absencesHtml(data)}
     ${observationHtml(data.appreciation)}
-    ${footerHtml(ecole)}
+    ${footerHtml(data)}
   </body></html>`;
 }
