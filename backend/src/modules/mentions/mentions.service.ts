@@ -15,7 +15,8 @@ const SEUILS_DEFAUT_PCT = [
 function arrondir(v: number) { return Math.round(v * 2) / 2; }
 
 async function ensureMentionsExist(etablissement_id: string) {
-  const count = await prisma.mention.count({ where: { etablissement_id } });
+  // On ne sème que les mentions PAR DÉFAUT de l'établissement (niveau_id null).
+  const count = await prisma.mention.count({ where: { etablissement_id, niveau_id: null } });
   if (count > 0) return;
 
   const cn = await prisma.configNotes.findUnique({ where: { etablissement_id } });
@@ -50,10 +51,18 @@ async function getNoteMax(etablissement_id: string): Promise<number> {
   return Number(cn?.note_max ?? DEFAULT_NOTE_MAX);
 }
 
-export async function listerMentions(etablissement_id: string) {
+// niveau_id null → mentions par défaut de l'établissement ; sinon mentions
+// spécifiques au niveau (peut être vide = le niveau hérite des défauts).
+export async function listerMentions(etablissement_id: string, niveau_id?: string | null) {
+  if (niveau_id) {
+    return prisma.mention.findMany({
+      where: { etablissement_id, niveau_id },
+      orderBy: [{ seuil_min: 'desc' }],
+    });
+  }
   await ensureMentionsExist(etablissement_id);
   return prisma.mention.findMany({
-    where: { etablissement_id },
+    where: { etablissement_id, niveau_id: null },
     orderBy: [{ seuil_min: 'desc' }],
   });
 }
@@ -67,8 +76,14 @@ export async function creerMention(etablissement_id: string, data: CreerMentionI
     );
   }
 
+  const niveau_id = data.niveau_id ?? null;
+  if (niveau_id) {
+    const niveau = await prisma.niveau.findFirst({ where: { id: niveau_id, etablissement_id }, select: { id: true } });
+    if (!niveau) throw Object.assign(new NotFoundError('Niveau introuvable'), { statusCode: 404 });
+  }
+
   const conflit = await prisma.mention.findFirst({
-    where: { etablissement_id, seuil_min: data.seuil_min },
+    where: { etablissement_id, niveau_id, seuil_min: data.seuil_min },
   });
   if (conflit) {
     throw Object.assign(
@@ -80,7 +95,9 @@ export async function creerMention(etablissement_id: string, data: CreerMentionI
   return prisma.mention.create({
     data: {
       etablissement_id,
+      niveau_id,
       libelle_fr: data.libelle_fr,
+      libelle_ar: data.libelle_ar ?? null,
       seuil_min:  data.seuil_min,
       couleur:    data.couleur ?? 'info',
       ordre:      data.ordre   ?? 0,
@@ -112,7 +129,7 @@ export async function modifierMention(id: string, etablissement_id: string, data
 
   if (data.seuil_min !== undefined && Number(data.seuil_min) !== Number(mention.seuil_min)) {
     const conflit = await prisma.mention.findFirst({
-      where: { etablissement_id, seuil_min: data.seuil_min, NOT: { id } },
+      where: { etablissement_id, niveau_id: mention.niveau_id, seuil_min: data.seuil_min, NOT: { id } },
     });
     if (conflit) {
       throw Object.assign(
@@ -126,6 +143,7 @@ export async function modifierMention(id: string, etablissement_id: string, data
     where: { id },
     data: {
       libelle_fr: data.libelle_fr,
+      libelle_ar: data.libelle_ar,
       seuil_min:  data.seuil_min,
       couleur:    data.couleur,
       ordre:      data.ordre,

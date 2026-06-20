@@ -11,7 +11,8 @@ const gestion = requireRole(...ROLE_GROUPS.GESTION);
 export async function mentionsRoutes(fastify: FastifyInstance) {
   fastify.get('/', { preHandler: [authMiddleware, lecture] }, async (req) => {
     const { etablissement_id } = req.user as { etablissement_id: string };
-    return listerMentions(etablissement_id);
+    const { niveau_id } = req.query as { niveau_id?: string };
+    return listerMentions(etablissement_id, niveau_id || null);
   });
 
   fastify.post('/', { preHandler: [authMiddleware, gestion] }, async (req, reply) => {
