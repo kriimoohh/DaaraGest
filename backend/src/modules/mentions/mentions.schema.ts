@@ -4,13 +4,17 @@ const COULEURS = ['success', 'info', 'warning', 'error'] as const;
 
 export const creerMentionSchema = z.object({
   libelle_fr: z.string().min(1).max(80),
+  libelle_ar: z.string().max(80).optional().nullable(),
   seuil_min:  z.number().finite().min(0),
   couleur:    z.enum(COULEURS).default('info'),
   ordre:      z.number().int().min(0).optional(),
+  // null/absent = mention par défaut établissement ; sinon override de ce niveau.
+  niveau_id:  z.string().uuid().optional().nullable(),
 });
 
 export const modifierMentionSchema = z.object({
   libelle_fr: z.string().min(1).max(80).optional(),
+  libelle_ar: z.string().max(80).optional().nullable(),
   seuil_min:  z.number().finite().min(0).optional(),
   couleur:    z.enum(COULEURS).optional(),
   ordre:      z.number().int().min(0).optional(),

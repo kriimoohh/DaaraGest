@@ -20,6 +20,10 @@ model Etablissement {
   nom_fr             String
   adresse            String?
   telephone          String?
+  email              String?
+  numero_autorisation String? // n° d'autorisation d'ouverture / d'enseigner de l'école
+  entete_bulletin_fr String? // bloc de texte officiel (FR) en en-tête de bulletin
+  entete_bulletin_ar String? // bloc de texte officiel (AR) en en-tête de bulletin
   logo_url           String?
   signature_url      String?
   cachet_url         String?
@@ -374,6 +378,7 @@ model Niveau {
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
   classes       Classe[]
+  mentions      Mention[]
 
   @@unique([etablissement_id, libelle])
 }
@@ -1044,7 +1049,10 @@ model DemandeAbsencePersonnel {
 model Mention {
   id               String   @id @default(uuid())
   etablissement_id String
+  // niveau_id null = mentions par défaut de l'établissement ; sinon override par niveau.
+  niveau_id        String?
   libelle_fr       String
+  libelle_ar       String?
   seuil_min        Decimal  @db.Decimal(5, 2)
   couleur          String   @default("info") // success | info | warning | error
   ordre            Int      @default(0)
@@ -1052,9 +1060,11 @@ model Mention {
   created_at       DateTime @default(now())
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
+  niveau        Niveau?       @relation(fields: [niveau_id], references: [id])
 
-  @@unique([etablissement_id, seuil_min])
+  @@unique([etablissement_id, niveau_id, seuil_min])
   @@index([etablissement_id])
+  @@index([niveau_id])
 }
 
 // Compteur de matricules par établissement + type (E=élève, P=personnel) + année
