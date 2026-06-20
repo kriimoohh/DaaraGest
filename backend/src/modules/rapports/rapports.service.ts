@@ -1214,7 +1214,7 @@ export async function rapportPropositionsFin(
   // Progressions (décision déjà saisie)
   const progressions = await prisma.progressionEleve.findMany({
     where: { eleve_id: { in: eleveIds }, annee_scolaire_id },
-    select: { eleve_id: true, decision: true },
+    select: { eleve_id: true, decision: true, validee: true },
   });
 
   // Index bulletins : eleveId → periode → moyenne
@@ -1224,7 +1224,7 @@ export async function rapportPropositionsFin(
     bulIdx.get(b.eleve_id)!.set(b.periode, Number(b.moyenne ?? 0));
   }
   // Index progressions : eleveId → decision
-  const progIdx = new Map(progressions.map(p => [p.eleve_id, p.decision]));
+  const progIdx = new Map(progressions.map(p => [p.eleve_id, p]));
 
   // Si pas de bulletins générés, on calcule depuis les notes
   const notesParEleve = await prisma.note.findMany({
@@ -1262,12 +1262,15 @@ export async function rapportPropositionsFin(
     const t3  = getMoy(i.eleve_id, 3);
     const nonNull = [t1, t2, t3].filter((v): v is number => v !== null);
     const ann = nonNull.length ? nonNull.reduce((s, v) => s + v, 0) / nonNull.length : null;
-    const dec = progIdx.get(i.eleve_id);
-    return { eleve: i.eleve, t1, t2, t3, ann, decision: dec ? (DECISION_LABELS[dec] ?? dec) : '' };
+    // La décision n'apparaît que si elle a été VALIDÉE en conseil de classe
+    // (module Progression). Sinon la case reste vide (à statuer pendant le conseil).
+    const prog = progIdx.get(i.eleve_id);
+    const decision = prog?.validee ? (DECISION_LABELS[prog.decision] ?? prog.decision) : '';
+    return { eleve: i.eleve, t1, t2, t3, ann, decision };
   });
 
   const fmt = (v: number | null) => v === null ? '—' : v.toFixed(2);
-  const dn  = (v: Date) => new Date(v).toLocaleDateString('fr-FR');
+  const age = (v: Date) => Math.floor((Date.now() - new Date(v).getTime()) / 31557600000);
 
   const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
 <style>
@@ -1297,7 +1300,7 @@ th{background:#d0d0d0;font-weight:bold;}
       <th>N°</th>
       <th class="lbl">PRÉNOM(S)</th>
       <th class="lbl">NOM</th>
-      <th>DATE NAISS.</th>
+      <th>ÂGE</th>
       <th>MOY. T1</th>
       <th>MOY. T2</th>
       <th>MOY. T3</th>
@@ -1311,7 +1314,7 @@ th{background:#d0d0d0;font-weight:bold;}
       <td>${i + 1}</td>
       <td class="lbl">${esc(r.eleve.prenom_fr)}</td>
       <td class="lbl">${esc(r.eleve.nom_fr)}</td>
-      <td>${dn(r.eleve.date_naissance)}</td>
+      <td>${age(r.eleve.date_naissance)} ans</td>
       <td>${fmt(r.t1)}</td>
       <td>${fmt(r.t2)}</td>
       <td>${fmt(r.t3)}</td>

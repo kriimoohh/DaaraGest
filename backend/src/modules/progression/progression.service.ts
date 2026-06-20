@@ -32,13 +32,37 @@ export async function listerProgressions(
     };
   }
 
-  return prisma.progressionEleve.findMany({
+  const progressions = await prisma.progressionEleve.findMany({
     where,
     include: {
       eleve:          { select: { id: true, matricule: true, nom_fr: true, prenom_fr: true } },
       annee_scolaire: { select: { libelle: true } },
     },
     orderBy: [{ validee: 'asc' }, { eleve: { nom_fr: 'asc' } }],
+  });
+  if (progressions.length === 0) return progressions.map(p => ({ ...p, moyenne_annuelle: null as number | null }));
+
+  // Moyenne annuelle (bulletins période 0) par élève — contexte pour le conseil de classe.
+  const eleveIds = progressions.map(p => p.eleve_id);
+  const annees = [...new Set(progressions.map(p => p.annee_scolaire_id))];
+  const annuels = await prisma.bulletin.findMany({
+    where: { periode: 0, eleve_id: { in: eleveIds }, annee_scolaire_id: { in: annees } },
+    select: { eleve_id: true, annee_scolaire_id: true, moyenne: true },
+  });
+  const moyMap = new Map<string, number[]>();
+  for (const b of annuels) {
+    if (b.moyenne == null) continue;
+    const k = `${b.eleve_id}|${b.annee_scolaire_id}`;
+    const arr = moyMap.get(k) ?? [];
+    arr.push(Number(b.moyenne));
+    moyMap.set(k, arr);
+  }
+  return progressions.map(p => {
+    const arr = moyMap.get(`${p.eleve_id}|${p.annee_scolaire_id}`) ?? [];
+    const moyenne_annuelle: number | null = arr.length
+      ? Math.round((arr.reduce((s, v) => s + v, 0) / arr.length) * 100) / 100
+      : null;
+    return { ...p, moyenne_annuelle };
   });
 }
 
