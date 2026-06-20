@@ -29,12 +29,11 @@ export async function listerPersonnel(etablissement_id: string, page = 1, search
     ];
   }
 
-  // Affectations (classe + domaines) pour l'année demandée — pour l'affichage carte.
+  // Affectations (classes) pour l'année demandée — pour l'affichage carte.
   const matieresClassesInclude = {
     where: annee_scolaire_id ? { annee_scolaire_id } : undefined,
     select: {
       classe: { select: { id: true, nom_fr: true, filiere: true } },
-      matiere: { select: { domaine: { select: { id: true, nom_fr: true, ordre: true } } } },
     },
   };
 
@@ -52,22 +51,14 @@ export async function listerPersonnel(etablissement_id: string, page = 1, search
     }),
   ]);
 
-  // Réduit matieres_classes (1 ligne/matière) en classes distinctes, chacune avec ses domaines.
+  // Réduit matieres_classes (1 ligne/matière) en classes distinctes.
   const data = items.map((u) => {
     const liens = u.personnel?.matieres_classes ?? [];
-    const parClasse = new Map<string, { classe: { id: string; nom_fr: string; filiere: string }; domaines: Map<string, { id: string; nom_fr: string; ordre: number }> }>();
-    for (const l of liens) {
-      let e = parClasse.get(l.classe.id);
-      if (!e) { e = { classe: l.classe, domaines: new Map() }; parClasse.set(l.classe.id, e); }
-      const d = l.matiere.domaine;
-      if (d) e.domaines.set(d.id, { id: d.id, nom_fr: d.nom_fr, ordre: d.ordre });
-    }
+    const parClasse = new Map<string, { id: string; nom_fr: string; filiere: string }>();
+    for (const l of liens) parClasse.set(l.classe.id, l.classe);
     const classes_assignees = [...parClasse.values()]
-      .sort((a, b) => a.classe.nom_fr.localeCompare(b.classe.nom_fr, 'fr'))
-      .map((e) => ({
-        classe: e.classe,
-        domaines: [...e.domaines.values()].sort((a, b) => a.ordre - b.ordre).map(({ ordre: _o, ...d }) => d),
-      }));
+      .sort((a, b) => a.nom_fr.localeCompare(b.nom_fr, 'fr'))
+      .map((classe) => ({ classe }));
     const personnel = u.personnel ? (() => { const { matieres_classes: _omit, ...rest } = u.personnel; return rest; })() : u.personnel;
     return { ...u, personnel, classes_assignees };
   });
@@ -205,13 +196,12 @@ export async function modifierPersonnel(id: string, etablissement_id: string, da
   return results[results.length - 1];
 }
 
-// ── Affectations par (classe, domaine) (PersonnelMatiereClasse) ─────────────
-// Unité d'affectation = une CLASSE + un ou plusieurs DOMAINES. Une même classe
-// peut avoir plusieurs maîtres se partageant les domaines. En base, l'affectation
-// reste stockée par matière (une ligne par matière du domaine dans le programme
-// de la classe), car c'est ce que consomme la politique de saisie des notes
-// (teachingPolicy.ts). L'API et l'UI raisonnent « par domaine » ; l'expansion
-// vers les matières est faite ici.
+// ── Affectations par classe (PersonnelMatiereClasse) ────────────────────────
+// Unité d'affectation = une CLASSE entière. En base, l'affectation reste stockée
+// par matière (une ligne par matière du programme de la classe), car c'est ce que
+// consomme la politique de saisie des notes (teachingPolicy.ts). L'API et l'UI
+// raisonnent « par classe » ; l'expansion vers toutes les matières du programme
+// est faite ici.
 
 // Résout le personnel à partir d'un id pouvant être personnel_id OU utilisateur_id,
 // en s'assurant qu'il appartient bien à l'établissement.
@@ -226,12 +216,11 @@ async function resoudrePersonnel(id: string, etablissement_id: string) {
 
 export interface AffectationGroupe {
   classe: { id: string; nom_fr: string; filiere: string };
-  domaine: { id: string; nom_fr: string } | null;
   annee_scolaire: { id: string; libelle: string };
   nb_matieres: number;
 }
 
-/** Liste les affectations du personnel, groupées par (classe, domaine). */
+/** Liste les affectations du personnel, groupées par classe. */
 export async function listerAffectations(id: string, etablissement_id: string, annee_scolaire_id?: string): Promise<AffectationGroupe[]> {
   const prof = await resoudrePersonnel(id, etablissement_id);
   const liens = await prisma.personnelMatiereClasse.findMany({
@@ -239,29 +228,18 @@ export async function listerAffectations(id: string, etablissement_id: string, a
     select: {
       classe: { select: { id: true, nom_fr: true, filiere: true } },
       annee_scolaire: { select: { id: true, libelle: true } },
-      matiere: { select: { domaine: { select: { id: true, nom_fr: true, ordre: true } } } },
     },
   });
-  const map = new Map<string, AffectationGroupe & { ordre: number }>();
+  const map = new Map<string, AffectationGroupe>();
   for (const l of liens) {
-    const dom = l.matiere.domaine;
-    const key = `${l.classe.id}|${dom?.id ?? 'null'}`;
-    const e = map.get(key);
+    const e = map.get(l.classe.id);
     if (e) e.nb_matieres += 1;
-    else map.set(key, {
-      classe: l.classe,
-      domaine: dom ? { id: dom.id, nom_fr: dom.nom_fr } : null,
-      annee_scolaire: l.annee_scolaire,
-      nb_matieres: 1,
-      ordre: dom?.ordre ?? 999,
-    });
+    else map.set(l.classe.id, { classe: l.classe, annee_scolaire: l.annee_scolaire, nb_matieres: 1 });
   }
-  return [...map.values()]
-    .sort((a, b) => a.classe.nom_fr.localeCompare(b.classe.nom_fr, 'fr') || a.ordre - b.ordre)
-    .map(({ ordre: _ordre, ...rest }) => rest);
+  return [...map.values()].sort((a, b) => a.classe.nom_fr.localeCompare(b.classe.nom_fr, 'fr'));
 }
 
-/** Affecte le personnel à un ou plusieurs domaines d'une classe (toutes les matières du domaine). */
+/** Affecte le personnel à une classe entière (toutes les matières de son programme). */
 export async function ajouterAffectation(id: string, etablissement_id: string, data: AffectationInput) {
   const prof = await resoudrePersonnel(id, etablissement_id);
 
@@ -271,13 +249,13 @@ export async function ajouterAffectation(id: string, etablissement_id: string, d
   });
   if (!classe) throw new NotFoundError('Classe introuvable');
 
-  // Matières du programme de la classe appartenant aux domaines choisis.
+  // Toutes les matières du programme de la classe.
   const programme = await prisma.classeMatiere.findMany({
-    where: { classe_id: classe.id, matiere: { domaine_id: { in: data.domaine_ids } } },
+    where: { classe_id: classe.id },
     select: { matiere_id: true },
   });
   if (programme.length === 0) {
-    throw new ValidationError('Aucune matière de ces domaines dans le programme de la classe');
+    throw new ValidationError('Aucune matière dans le programme de la classe');
   }
 
   // N'insère que les matières pas encore affectées (pas de contrainte d'unicité en base).
@@ -289,7 +267,7 @@ export async function ajouterAffectation(id: string, etablissement_id: string, d
   );
   const aCreer = programme.filter(p => !existantes.has(p.matiere_id));
   if (aCreer.length === 0) {
-    throw new ConflictError('Cet enseignant est déjà affecté à ces domaines dans cette classe');
+    throw new ConflictError('Cet enseignant est déjà affecté à cette classe');
   }
 
   await prisma.personnelMatiereClasse.createMany({
@@ -304,8 +282,8 @@ export async function ajouterAffectation(id: string, etablissement_id: string, d
   return listerAffectations(id, etablissement_id, classe.annee_scolaire_id);
 }
 
-/** Retire le personnel d'un domaine d'une classe (toutes les matières de ce domaine). */
-export async function supprimerAffectation(id: string, classe_id: string, domaine_id: string, etablissement_id: string) {
+/** Retire le personnel d'une classe (toutes ses matières). */
+export async function supprimerAffectation(id: string, classe_id: string, etablissement_id: string) {
   const prof = await resoudrePersonnel(id, etablissement_id);
   const classe = await prisma.classe.findFirst({
     where: { id: classe_id, etablissement_id },
@@ -318,7 +296,6 @@ export async function supprimerAffectation(id: string, classe_id: string, domain
       personnel_id: prof.id,
       classe_id: classe.id,
       annee_scolaire_id: classe.annee_scolaire_id,
-      matiere: { domaine_id },
     },
   });
   if (count === 0) throw new NotFoundError('Affectation introuvable');

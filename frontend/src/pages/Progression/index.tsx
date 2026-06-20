@@ -21,6 +21,7 @@ interface Progression {
   note_directeur: string | null;
   validee: boolean;
   validee_le: string | null;
+  moyenne_annuelle: number | null;
   eleve: { id: string; matricule: string; nom_fr: string; prenom_fr: string };
   annee_scolaire: { libelle: string };
 }
@@ -229,6 +230,7 @@ export function ProgressionPage() {
                       <tr>
                         <th>{t('progression.col_eleve')}</th>
                         <th>{t('progression.col_matricule')}</th>
+                        <th style={{ width: 100 }}>{t('progression.col_moyenne', 'Moy. annuelle')}</th>
                         <th style={{ width: 130 }}>{t('progression.col_proposition_auto')}</th>
                         <th style={{ width: 130 }}>{t('progression.col_decision_en_cours')}</th>
                         <th style={{ width: 100 }} />
@@ -239,6 +241,7 @@ export function ProgressionPage() {
                         <tr key={p.id}>
                           <td style={{ fontWeight: 500 }}>{p.eleve.prenom_fr} {p.eleve.nom_fr}</td>
                           <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-3)' }}>{p.eleve.matricule}</td>
+                          <td style={{ fontWeight: 600 }}>{p.moyenne_annuelle != null ? p.moyenne_annuelle.toFixed(2) : '—'}</td>
                           <td>
                             {p.decision_auto && (
                               <Badge
@@ -279,6 +282,7 @@ export function ProgressionPage() {
                       <tr>
                         <th>{t('progression.col_eleve')}</th>
                         <th>{t('progression.col_matricule')}</th>
+                        <th style={{ width: 100 }}>{t('progression.col_moyenne', 'Moy. annuelle')}</th>
                         <th style={{ width: 130 }}>{t('progression.col_decision')}</th>
                         <th>{t('progression.col_note_directeur')}</th>
                         <th style={{ width: 120 }}>{t('progression.col_validee_le')}</th>
@@ -290,6 +294,7 @@ export function ProgressionPage() {
                         <tr key={p.id}>
                           <td style={{ fontWeight: 500 }}>{p.eleve.prenom_fr} {p.eleve.nom_fr}</td>
                           <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-3)' }}>{p.eleve.matricule}</td>
+                          <td style={{ fontWeight: 600 }}>{p.moyenne_annuelle != null ? p.moyenne_annuelle.toFixed(2) : '—'}</td>
                           <td>
                             <Badge
                               label={decisionLabel(p.decision)}

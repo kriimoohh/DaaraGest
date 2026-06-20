@@ -18,8 +18,8 @@ export async function personnelRoutes(fastify: FastifyInstance) {
   fastify.put('/:id',    { preHandler: [authMiddleware, gestion] }, modifierHandler);
   fastify.delete('/:id', { preHandler: [authMiddleware, adminSeulement] }, supprimerHandler);
 
-  // Affectations matière × classe (rattachement enseignant → ce qu'il enseigne)
-  fastify.get('/:id/affectations',                   { preHandler: [authMiddleware, lecture] }, listerAffectationsHandler);
-  fastify.post('/:id/affectations',                  { preHandler: [authMiddleware, gestion] }, ajouterAffectationHandler);
-  fastify.delete('/:id/affectations/:classe_id/:domaine_id', { preHandler: [authMiddleware, gestion] }, supprimerAffectationHandler);
+  // Affectations par classe (rattachement enseignant → ce qu'il enseigne)
+  fastify.get('/:id/affectations',                { preHandler: [authMiddleware, lecture] }, listerAffectationsHandler);
+  fastify.post('/:id/affectations',               { preHandler: [authMiddleware, gestion] }, ajouterAffectationHandler);
+  fastify.delete('/:id/affectations/:classe_id',  { preHandler: [authMiddleware, gestion] }, supprimerAffectationHandler);
 }

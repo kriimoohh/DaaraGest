@@ -25,29 +25,66 @@ interface TrimestreRow {
 
 interface BulletinBaseData {
   etablissement_nom_fr: string;
+  etablissement_logo_url?: string | null;
+  entete_bulletin_fr?: string | null;
+  entete_bulletin_ar?: string | null;
   eleve_nom_fr: string;
   eleve_matricule: string;
+  eleve_date_naissance?: string | null;
+  eleve_lieu_naissance?: string | null;
   annee_libelle: string;
   moyenne: number | null;
   rang: number | null;
   appreciation: string | null;
   devise: string;
   note_max_etab?: number;
-  mentions?: { libelle_fr: string; seuil_min: number }[];
+  mentions?: { libelle_fr: string; libelle_ar?: string | null; seuil_min: number }[];
+  // Contact établissement (bandeau sous l'en-tête) + maître(s) de la classe.
+  etablissement_telephone?: string | null;
+  etablissement_email?: string | null;
+  etablissement_autorisation?: string | null;
+  maitre_fr?: string | null;
+  maitre_ar?: string | null;
+  // Absences cumulées sur l'année scolaire (justifiées / non justifiées).
+  absences_justifiees?: number;
+  absences_non_justifiees?: number;
+}
+
+// Libellé d'une matière, avec sa traduction arabe à côté (filière arabe) quand
+// une vraie traduction existe (nom_ar différent de nom_fr).
+function matiereLabel(nom_fr: string, nom_ar: string | undefined, bilingue: boolean): string {
+  const fr = escapeHtml(nom_fr);
+  if (bilingue && nom_ar && nom_ar !== nom_fr) {
+    // FR à gauche, nom arabe collé à la bordure droite de la case.
+    return `<span style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><span>${fr}</span><span dir="rtl" style="color:#4b5563;font-weight:400;white-space:nowrap">${escapeHtml(nom_ar)}</span></span>`;
+  }
+  return fr;
 }
 
 // Échelle de l'établissement (ex: 10) + mentions configurées, fixées au début du rendu.
+type MentionRow = { libelle_fr: string; libelle_ar?: string | null; seuil_min: number };
 let RENDER_BASE = DEFAULT_NOTE_MAX;
-let RENDER_MENTIONS: { libelle_fr: string; seuil_min: number }[] = [];
-function setRenderContext(d: { note_max_etab?: number; mentions?: { libelle_fr: string; seuil_min: number }[] }) {
+let RENDER_MENTIONS: MentionRow[] = [];
+function setRenderContext(d: { note_max_etab?: number; mentions?: MentionRow[] }) {
   RENDER_BASE = d.note_max_etab ?? DEFAULT_NOTE_MAX;
   RENDER_MENTIONS = (d.mentions ?? []).slice().sort((a, b) => b.seuil_min - a.seuil_min);
 }
-// Mention pour une valeur ramenée sur l'échelle établissement (RENDER_BASE).
+// Mention (objet) pour une valeur ramenée sur l'échelle établissement (RENDER_BASE).
+function mentionRowFor(scaled: number | null): MentionRow | null {
+  if (scaled === null) return null;
+  for (const m of RENDER_MENTIONS) if (scaled + 1e-9 >= m.seuil_min) return m;
+  return RENDER_MENTIONS.length ? RENDER_MENTIONS[RENDER_MENTIONS.length - 1] : null;
+}
+// Libellé FR de la mention (appréciation par matière).
 function mentionFor(scaled: number | null): string {
-  if (scaled === null) return '';
-  for (const m of RENDER_MENTIONS) if (scaled + 1e-9 >= m.seuil_min) return m.libelle_fr;
-  return RENDER_MENTIONS.length ? RENDER_MENTIONS[RENDER_MENTIONS.length - 1].libelle_fr : '';
+  return mentionRowFor(scaled)?.libelle_fr ?? '';
+}
+// Libellé bilingue FR + AR de la mention (résumé / mention générale).
+function mentionForBilingue(scaled: number | null): string {
+  const m = mentionRowFor(scaled);
+  if (!m) return '';
+  const fr = escapeHtml(m.libelle_fr);
+  return m.libelle_ar ? `${fr} <span dir="rtl">/ ${escapeHtml(m.libelle_ar)}</span>` : fr;
 }
 // Moyenne pondérée normalisée sur l'échelle établissement (notes saisies sur leur barème).
 // Les matières non évaluées (evaluee === false) sont exclues du calcul.
@@ -110,6 +147,12 @@ body { font-family:Arial,sans-serif;font-size:11.5px;color:#111;padding:18px 28p
 
 /* ── En-tête ── */
 .header { display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px }
+.header-top { display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px }
+.entete-text { font-size:10px;color:#374151;line-height:1.45;flex:1 }
+.entete-fr { text-align:left }
+.entete-ar { text-align:right;direction:rtl;font-size:11px }
+.header-logo { flex-shrink:0;align-self:center }
+.school-name-line { text-align:center;font-size:15px;font-weight:bold;color:#0F172A;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px }
 .school-block { flex:1 }
 .school-name { font-size:15px;font-weight:bold;color:#0F172A;text-transform:uppercase;letter-spacing:.3px }
 .school-name-ar { font-size:13px;color:#374151;direction:rtl;margin-top:2px }
@@ -120,6 +163,10 @@ body { font-family:Arial,sans-serif;font-size:11.5px;color:#111;padding:18px 28p
 .doc-title-wrap { border:2px solid #0F172A;border-radius:4px;margin-bottom:12px;overflow:hidden }
 .doc-title-main { background:#0F172A;color:#fff;text-align:center;padding:6px 10px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.4px }
 .doc-title-year { text-align:center;padding:4px;font-size:11px;color:#374151 }
+
+/* ── Bandeau contact école ── */
+.school-band { display:flex;justify-content:center;flex-wrap:wrap;gap:4px 18px;font-size:10px;color:#374151;margin-bottom:10px;padding:5px 8px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px }
+.school-band b { color:#0F172A;font-weight:700 }
 
 /* ── Infos élève ── */
 .student-info { display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin-bottom:12px;border:1px solid #d1d5db;border-radius:6px;padding:10px 14px }
@@ -163,6 +210,7 @@ tr:nth-child(even) { background:#f9fafb }
 .combined-summary td { padding:5px 6px;text-align:center;font-size:11px;border-right:1px solid #d1d5db;border-top:1px solid #d1d5db }
 .combined-summary td:last-child, .combined-summary th:last-child { border-right:none }
 .mention-cell { font-weight:700;font-size:12px }
+.th-ar { font-weight:400;font-size:8.5px;opacity:.85 }
 
 /* ── Boîte appréciation ── */
 .appreciation-box { border:1px solid #e5e7eb;border-radius:6px;padding:8px 12px;background:#fafafa;margin:10px 0 }
@@ -170,7 +218,8 @@ tr:nth-child(even) { background:#f9fafb }
 .observation-line { border-bottom:1px solid #d1d5db;min-height:18px;margin-top:8px }
 
 /* ── Pied de page ── */
-.footer { display:flex;justify-content:space-between;margin-top:20px;padding-top:10px;border-top:1.5px solid #e5e7eb }
+.footer-date { text-align:right;font-size:10.5px;color:#374151;margin-top:14px }
+.footer { display:flex;justify-content:space-between;margin-top:8px;padding-top:10px;border-top:1.5px solid #e5e7eb }
 .signature-box { text-align:center;min-width:110px }
 .signature-line { width:110px;border-bottom:1px solid #374151;margin:26px auto 4px }
 .signature-label { font-size:9.5px;color:#374151;font-weight:600 }
@@ -192,20 +241,33 @@ const LOGO_MARK_SVG = `<svg width="56" height="64" viewBox="0 0 56 64" fill="non
   <text x="28" y="22" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="13" fill="#FAF6EE">Dg</text>
 </svg>`;
 
-function headerHtml(data: BulletinBaseData): string {
-  const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+// Logo : logo uploadé de l'établissement si présent, sinon le mark générique.
+function logoHtml(data: BulletinBaseData): string {
+  return data.etablissement_logo_url
+    ? `<img src="${escapeHtml(data.etablissement_logo_url)}" alt="" style="width:56px;height:64px;object-fit:contain;flex-shrink:0"/>`
+    : LOGO_MARK_SVG;
+}
+
+// Bloc de texte d'en-tête configurable : échappé, sauts de ligne → <br>.
+function formatEntete(txt: string): string {
+  return escapeHtml(txt).replace(/\r?\n/g, '<br>');
+}
+
+// En-tête : texte officiel FR (bord gauche), logo (centre), texte officiel AR
+// (bord droit, RTL) — selon la filière. La date est rendue en bas (cf. footer).
+function headerHtml(data: BulletinBaseData, filiere: 'FR' | 'AR' | 'COMBINE'): string {
+  const showFr = filiere !== 'AR';
+  const showAr = filiere !== 'FR';
+  // Placeholders vides toujours présents → le logo reste centré même si un seul bloc.
+  const frBlock = `<div class="entete-text entete-fr">${showFr && data.entete_bulletin_fr ? formatEntete(data.entete_bulletin_fr) : ''}</div>`;
+  const arBlock = `<div class="entete-text entete-ar" dir="rtl">${showAr && data.entete_bulletin_ar ? formatEntete(data.entete_bulletin_ar) : ''}</div>`;
   return `
-  <div class="header">
-    <div class="school-block">
-      <div style="display:flex;align-items:center;gap:10px">
-        ${LOGO_MARK_SVG}
-        <div>
-          <div class="school-name">${escapeHtml(data.etablissement_nom_fr)}</div>
-        </div>
-      </div>
-    </div>
-    <div class="header-date">le ${today}</div>
+  <div class="header-top">
+    ${frBlock}
+    <div class="header-logo">${logoHtml(data)}</div>
+    ${arBlock}
   </div>
+  <div class="school-name-line">${escapeHtml(data.etablissement_nom_fr)}</div>
   <hr class="divider"/>`;
 }
 
@@ -225,7 +287,34 @@ function titleAnnuelHtml(annee: string): string {
   </div>`;
 }
 
+// Bandeau de contact de l'école, rendu juste après le titre : autorisation
+// d'enseigner, téléphone, email (seuls les champs renseignés sont affichés).
+function schoolBandHtml(data: BulletinBaseData): string {
+  const parts: string[] = [];
+  if (data.etablissement_autorisation) parts.push(`<span><b>Autorisation :</b> ${escapeHtml(data.etablissement_autorisation)}</span>`);
+  if (data.etablissement_telephone)    parts.push(`<span><b>Tél :</b> ${escapeHtml(data.etablissement_telephone)}</span>`);
+  if (data.etablissement_email)        parts.push(`<span><b>Email :</b> ${escapeHtml(data.etablissement_email)}</span>`);
+  if (parts.length === 0) return '';
+  return `<div class="school-band">${parts.join('')}</div>`;
+}
+
 function studentInfoHtml(data: BulletinBaseData): string {
+  // Né(e) le <date> à <lieu> — le rang n'apparaît plus en haut (déplacé en bas
+  // dans la ligne de résultats / le résumé).
+  const naissance = data.eleve_date_naissance
+    ? `${data.eleve_date_naissance}${data.eleve_lieu_naissance ? ` à ${data.eleve_lieu_naissance}` : ''}`
+    : (data.eleve_lieu_naissance ?? '—');
+
+  // Maître(s) de la classe : les deux (FR + AR) sur un bulletin combiné, sinon un seul.
+  const siRow = (label: string, value: string) =>
+    `<div class="si-row"><span class="si-label">${label}</span><span class="si-value">${escapeHtml(value)}</span></div>`;
+  let maitresRows = '';
+  if (data.maitre_fr && data.maitre_ar) {
+    maitresRows = siRow('Enseignant(e) FR :', data.maitre_fr) + siRow('Enseignant(e) AR :', data.maitre_ar);
+  } else if (data.maitre_fr || data.maitre_ar) {
+    maitresRows = siRow('Enseignant(e) :', (data.maitre_fr || data.maitre_ar)!);
+  }
+
   return `
   <div class="student-info">
     <div class="si-row">
@@ -237,42 +326,38 @@ function studentInfoHtml(data: BulletinBaseData): string {
       <span class="si-value">${escapeHtml(data.eleve_matricule)}</span>
     </div>
     <div class="si-row">
-      <span class="si-label">Rang :</span>
-      <span class="si-value">${data.rang ?? '—'}</span>
+      <span class="si-label">Né(e) le :</span>
+      <span class="si-value">${escapeHtml(naissance)}</span>
     </div>
     <div class="si-row">
       <span class="si-label">Année scolaire :</span>
       <span class="si-value">${escapeHtml(data.annee_libelle)}</span>
     </div>
+    ${maitresRows}
   </div>`;
 }
 
-function footerHtml(etablissementNom: string): string {
+function footerHtml(data: BulletinBaseData): string {
+  const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const sig = (label: string) => `
+    <div class="signature-box">
+      <div class="signature-line"></div>
+      <div class="signature-label">${label}</div>
+    </div>`;
   return `
+  <div class="footer-date">le ${today}</div>
   <div class="footer">
-    <div class="signature-box">
-      <div class="signature-line"></div>
-      <div class="signature-label">La Maîtresse</div>
-    </div>
-    <div class="signature-box">
-      <div class="signature-line"></div>
-      <div class="signature-label">Le Maître (AR)</div>
-    </div>
-    <div class="footer-brand">${escapeHtml(etablissementNom)}<span class="gold-dot"></span></div>
-    <div class="signature-box">
-      <div class="signature-line"></div>
-      <div class="signature-label">Le Directeur</div>
-    </div>
-    <div class="signature-box">
-      <div class="signature-line"></div>
-      <div class="signature-label">Les Parents</div>
-    </div>
+    ${sig("L'enseignant(e) (FR)")}
+    ${sig("L'enseignant(e) (AR)")}
+    <div class="footer-brand">${escapeHtml(data.etablissement_nom_fr)}<span class="gold-dot"></span></div>
+    ${sig('Le Directeur')}
+    ${sig('Les Parents')}
   </div>`;
 }
 
 // ─── Tableau FR ─────────────────────────────────────────────────────────────
 
-function tableFR(notes: NoteRow[], headerTitle = 'Évaluation des acquis — Filière Française'): string {
+function tableFR(notes: NoteRow[], headerTitle = 'Évaluation des acquis — Filière Française', bilingue = false): string {
   // Matières évaluées uniquement → contribuent aux totaux et à la moyenne.
   const evalueesAvecNote = notes.filter(n => n.evaluee !== false && n.valeur !== null);
   const totalCoeff = evalueesAvecNote.reduce((s, n) => s + n.coeff, 0);
@@ -285,7 +370,7 @@ function tableFR(notes: NoteRow[], headerTitle = 'Évaluation des acquis — Fil
     if (nonEvaluee) {
       return `
       <tr>
-        <td style="font-weight:500;color:#6b7280">${escapeHtml(n.nom_fr)}</td>
+        <td style="font-weight:500;color:#6b7280">${matiereLabel(n.nom_fr, n.nom_ar, bilingue)}</td>
         <td class="center" style="color:#9ca3af">${n.coeff}</td>
         <td class="center" style="color:#9ca3af">—</td>
         <td class="center" style="font-size:10px;color:#9ca3af">/${nmax}</td>
@@ -297,7 +382,7 @@ function tableFR(notes: NoteRow[], headerTitle = 'Évaluation des acquis — Fil
     const cls = n.valeur !== null ? apprClass(n.valeur, nmax) : '';
     return `
     <tr>
-      <td style="font-weight:500">${escapeHtml(n.nom_fr)}</td>
+      <td style="font-weight:500">${matiereLabel(n.nom_fr, n.nom_ar, bilingue)}</td>
       <td class="center">${n.coeff}</td>
       <td class="center grade ${isFail ? 'fail' : 'pass'}">
         ${n.valeur !== null ? Number(n.valeur).toFixed(2) : '—'}
@@ -337,14 +422,14 @@ function tableFR(notes: NoteRow[], headerTitle = 'Évaluation des acquis — Fil
 
 // ─── Tableau annuel ──────────────────────────────────────────────────────────
 
-function tableAnnuelFR(matieres: TrimestreRow[], headerTitle = 'Évaluation annuelle — Filière Française'): string {
+function tableAnnuelFR(matieres: TrimestreRow[], headerTitle = 'Évaluation annuelle — Filière Française', bilingue = false): string {
   const rows = matieres.map(m => {
     const nonEvaluee = m.evaluee === false;
     if (nonEvaluee) {
       const cells = m.valeurs.map(() => '<td class="center" style="color:#9ca3af">—</td>').join('');
       return `
       <tr>
-        <td style="font-weight:500;color:#6b7280">${escapeHtml(m.nom_fr)}</td>
+        <td style="font-weight:500;color:#6b7280">${matiereLabel(m.nom_fr, m.nom_ar, bilingue)}</td>
         <td class="center" style="color:#9ca3af">${m.coeff}</td>
         ${cells}
         <td class="center" style="color:#9ca3af;background:#f9fafb">—</td>
@@ -353,7 +438,7 @@ function tableAnnuelFR(matieres: TrimestreRow[], headerTitle = 'Évaluation annu
     }
     return `
     <tr>
-      <td style="font-weight:500">${escapeHtml(m.nom_fr)}</td>
+      <td style="font-weight:500">${matiereLabel(m.nom_fr, m.nom_ar, bilingue)}</td>
       <td class="center">${m.coeff}</td>
       ${m.valeurs.map(v => `<td class="center grade ${v !== null && v < (m.note_max ?? RENDER_BASE) / 2 ? 'fail' : 'pass'}">${v !== null ? Number(v).toFixed(2) : '—'}</td>`).join('')}
       <td class="center grade ${m.moyenne_annuelle !== null && m.moyenne_annuelle < (m.note_max ?? RENDER_BASE) / 2 ? 'fail' : 'pass'}" style="font-weight:700;background:#f0fdf4">
@@ -386,7 +471,32 @@ function tableAnnuelFR(matieres: TrimestreRow[], headerTitle = 'Évaluation annu
 
 function getMention(moyenne: number | null): string {
   if (moyenne === null) return '—';
-  return mentionFor(moyenne) || '—';
+  return mentionForBilingue(moyenne) || '—';
+}
+
+// Ligne de résultats bas de page pour les bulletins simples (FR ou AR) — porte
+// désormais le rang (retiré de l'en-tête), avec libellés bilingues FR/AR.
+function resultsSummaryHtml(data: BulletinBaseData): string {
+  const moy = data.moyenne;
+  const mention = getMention(moy);
+  const color = moy !== null && moy >= RENDER_BASE / 2 ? '#059669' : '#dc2626';
+  return `
+  <table class="combined-summary">
+    <thead>
+      <tr>
+        <th>Moyenne Générale<br><span class="th-ar">المعدل العام</span></th>
+        <th>Rang<br><span class="th-ar">الرتبة</span></th>
+        <th>Mention<br><span class="th-ar">التقدير</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="font-weight:700;font-size:13px;color:${color}">${moy !== null ? `${Number(moy).toFixed(2)} / ${RENDER_BASE}` : '—'}</td>
+        <td>${data.rang ?? '—'}</td>
+        <td class="mention-cell" style="color:${color}">${mention}</td>
+      </tr>
+    </tbody>
+  </table>`;
 }
 
 function combinedSummaryHtml(data: BulletinBaseData, frMoy: number | null, arMoy: number | null): string {
@@ -399,11 +509,11 @@ function combinedSummaryHtml(data: BulletinBaseData, frMoy: number | null, arMoy
     <thead>
       <tr>
         <th>Résultats FR — AR</th>
-        <th>Moy. FR</th>
-        <th>Moy. AR</th>
-        <th>Moyenne Générale</th>
-        <th>Rang</th>
-        <th>Mention</th>
+        <th>Moy. FR<br><span class="th-ar">معدل الفرنسية</span></th>
+        <th>Moy. AR<br><span class="th-ar">معدل العربية</span></th>
+        <th>Moyenne Générale<br><span class="th-ar">المعدل العام</span></th>
+        <th>Rang<br><span class="th-ar">الرتبة</span></th>
+        <th>Mention<br><span class="th-ar">التقدير</span></th>
       </tr>
     </thead>
     <tbody>
@@ -419,10 +529,34 @@ function combinedSummaryHtml(data: BulletinBaseData, frMoy: number | null, arMoy
   </table>`;
 }
 
+// Récapitulatif des absences (cumul année), justifiées / non justifiées, bilingue.
+function absencesHtml(data: BulletinBaseData): string {
+  const j = data.absences_justifiees ?? 0;
+  const nj = data.absences_non_justifiees ?? 0;
+  const total = j + nj;
+  return `
+  <table class="combined-summary" style="margin-top:8px">
+    <thead>
+      <tr>
+        <th>Total absences<br><span class="th-ar">مجموع الغيابات</span></th>
+        <th>Justifiées<br><span class="th-ar">مبررة</span></th>
+        <th>Non justifiées<br><span class="th-ar">غير مبررة</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="font-weight:700">${total}</td>
+        <td>${j}</td>
+        <td style="${nj > 0 ? 'color:#dc2626;font-weight:700' : ''}">${nj}</td>
+      </tr>
+    </tbody>
+  </table>`;
+}
+
 function observationHtml(appr: string | null): string {
   return `
   <div class="appreciation-box">
-    <div class="appreciation-label">Observation / Appréciation du conseil de classe</div>
+    <div class="appreciation-label" style="display:flex;justify-content:space-between;gap:10px"><span>Observation / Appréciation du conseil de classe</span><span dir="rtl">ملاحظات مجلس القسم</span></div>
     <div style="font-size:11.5px;font-style:italic;color:#374151;margin-top:3px;min-height:16px">${appr ? escapeHtml(appr) : ''}</div>
     <div class="observation-line"></div>
   </div>`;
@@ -433,29 +567,33 @@ function observationHtml(appr: string | null): string {
 export function generateBulletinHtml(data: BulletinTrimestreData): string {
   setRenderContext(data);
   const periodeStr = periodeLabel(data.periode);
-  const ecole = data.etablissement_nom_fr;
 
   if (data.type === 'FR') {
     return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><style>${CSS}</style></head><body>
-      ${headerHtml(data)}
+      ${headerHtml(data, 'FR')}
       ${titleHtml(periodeStr, data.annee_libelle)}
-      ${studentInfoHtml(data)}
+      ${schoolBandHtml(data)}
+    ${studentInfoHtml(data)}
       ${tableFR(data.notes_fr ?? [])}
+      ${resultsSummaryHtml(data)}
+      ${absencesHtml(data)}
       ${observationHtml(data.appreciation)}
-      ${footerHtml(ecole)}
+      ${footerHtml(data)}
     </body></html>`;
   }
 
   if (data.type === 'AR') {
-    // Bulletins strictement en français : la filière arabe est rendue avec les
-    // libellés FR (nom_fr), en-têtes français et sens LTR.
+    // Filière arabe : noms de matières affichés en bilingue (FR + AR à côté).
     return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><style>${CSS}</style></head><body>
-      ${headerHtml(data)}
+      ${headerHtml(data, 'AR')}
       ${titleHtml(periodeStr, data.annee_libelle)}
-      ${studentInfoHtml(data)}
-      ${tableFR(data.notes_ar ?? [], 'Évaluation des acquis — Filière Arabe')}
+      ${schoolBandHtml(data)}
+    ${studentInfoHtml(data)}
+      ${tableFR(data.notes_ar ?? [], 'Évaluation des acquis — Filière Arabe', true)}
+      ${resultsSummaryHtml(data)}
+      ${absencesHtml(data)}
       ${observationHtml(data.appreciation)}
-      ${footerHtml(ecole)}
+      ${footerHtml(data)}
     </body></html>`;
   }
 
@@ -466,14 +604,16 @@ export function generateBulletinHtml(data: BulletinTrimestreData): string {
   const arMoy = moyenneNorm(notesAR);
 
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><style>${CSS}</style></head><body>
-    ${headerHtml(data)}
+    ${headerHtml(data, 'COMBINE')}
     ${titleHtml(`${periodeStr} — Filières FR &amp; AR`, data.annee_libelle)}
+    ${schoolBandHtml(data)}
     ${studentInfoHtml(data)}
     ${tableFR(notesFR)}
-    ${tableFR(notesAR, 'Évaluation des acquis — Filière Arabe')}
+    ${tableFR(notesAR, 'Évaluation des acquis — Filière Arabe', true)}
     ${combinedSummaryHtml(data, frMoy, arMoy)}
+    ${absencesHtml(data)}
     ${observationHtml(data.appreciation)}
-    ${footerHtml(ecole)}
+    ${footerHtml(data)}
   </body></html>`;
 }
 
@@ -481,7 +621,6 @@ export function generateBulletinAnnuelHtml(data: BulletinAnnuelData): string {
   setRenderContext(data);
   const isCombine = data.type === 'ANNUEL_COMBINE';
   const isAR = data.type === 'ANNUEL_AR';
-  const ecole = data.etablissement_nom_fr;
 
   const mFR = data.matieres_fr ?? [];
   const mAR = data.matieres_ar ?? [];
@@ -496,16 +635,18 @@ export function generateBulletinAnnuelHtml(data: BulletinAnnuelData): string {
 
   // Bulletins strictement en français, y compris la filière arabe (libellés FR, LTR).
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><style>${CSS}</style></head><body>
-    ${headerHtml(data)}
+    ${headerHtml(data, isAR ? 'AR' : isCombine ? 'COMBINE' : 'FR')}
     ${titleAnnuelHtml(data.annee_libelle)}
+    ${schoolBandHtml(data)}
     ${studentInfoHtml(data)}
 
     ${!isAR && mFR.length > 0 ? tableAnnuelFR(mFR) : ''}
-    ${(isAR || isCombine) && mAR.length > 0 ? tableAnnuelFR(mAR, 'Évaluation annuelle — Filière Arabe') : ''}
+    ${(isAR || isCombine) && mAR.length > 0 ? tableAnnuelFR(mAR, 'Évaluation annuelle — Filière Arabe', true) : ''}
 
-    ${isCombine ? combinedSummaryHtml(data, frMoy, arMoy) : ''}
+    ${isCombine ? combinedSummaryHtml(data, frMoy, arMoy) : resultsSummaryHtml(data)}
 
+    ${absencesHtml(data)}
     ${observationHtml(data.appreciation)}
-    ${footerHtml(ecole)}
+    ${footerHtml(data)}
   </body></html>`;
 }

@@ -130,14 +130,13 @@ function QRCodeModal({ personnelId, nom, onClose, api }: {
 
 interface AffectationGroupe {
   classe: { id: string; nom_fr: string; filiere: string };
-  domaine: { id: string; nom_fr: string } | null;
   annee_scolaire: { id: string; libelle: string };
   nb_matieres: number;
 }
 
-// Gestion des affectations d'un enseignant par (classe, domaine) — année courante.
-// Une classe peut être partagée entre plusieurs maîtres (chacun ses domaines).
-// Rattache le prof à ce qu'il enseigne → débloque la saisie de notes (teachingPolicy).
+// Gestion des affectations d'un enseignant par classe — année courante.
+// Rattache le prof à toutes les matières de la classe → débloque la saisie de
+// notes (teachingPolicy).
 function AffectationsModal({ personnelId, nom, anneeId, onClose, onChanged, api }: {
   personnelId: string; nom: string; anneeId: string;
   onClose: () => void; onChanged: () => void; api: ReturnType<typeof useApi>;
@@ -145,10 +144,7 @@ function AffectationsModal({ personnelId, nom, anneeId, onClose, onChanged, api 
   const { t } = useTranslation();
   const [affectations, setAffectations] = useState<AffectationGroupe[]>([]);
   const [classes, setClasses] = useState<{ id: string; nom_fr: string; filiere: string }[]>([]);
-  const [domaines, setDomaines] = useState<{ id: string; nom_fr: string }[]>([]);
-  const [progDomaineIds, setProgDomaineIds] = useState<Set<string>>(new Set());
   const [classeId, setClasseId] = useState('');
-  const [selDomaines, setSelDomaines] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
 
@@ -162,36 +158,21 @@ function AffectationsModal({ personnelId, nom, anneeId, onClose, onChanged, api 
   useEffect(() => { reload(); }, [reload]);
 
   useEffect(() => {
-    api.get<{ id: string; nom_fr: string }[]>('/api/v1/domaines').then(setDomaines).catch(() => {});
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
     if (!anneeId) return;
     api.get<{ id: string; nom_fr: string; filiere: string }[]>(`/api/v1/classes?annee_scolaire_id=${anneeId}&limit=200`)
       .then(setClasses).catch(() => {});
   }, [anneeId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Domaines réellement présents dans le programme de la classe choisie.
-  useEffect(() => {
-    setSelDomaines([]);
-    if (!classeId) { setProgDomaineIds(new Set()); return; }
-    api.get<{ matiere: { domaine_id: string | null } }[]>(`/api/v1/classes/${classeId}/matieres`)
-      .then((rows) => setProgDomaineIds(new Set(rows.map((r) => r.matiere.domaine_id).filter((x): x is string => !!x))))
-      .catch(() => setProgDomaineIds(new Set()));
-  }, [classeId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const domainesDeLaClasse = domaines.filter((d) => progDomaineIds.has(d.id));
-
-  function toggleDomaine(id: string) {
-    setSelDomaines((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
-  }
+  // Classes pas encore affectées (pour ne proposer que le restant).
+  const dejaAffectees = new Set(affectations.map((a) => a.classe.id));
+  const classesDispo = classes.filter((c) => !dejaAffectees.has(c.id));
 
   async function handleAdd() {
-    if (!classeId || selDomaines.length === 0) return;
+    if (!classeId) return;
     setAdding(true);
     try {
-      await api.post(`/api/v1/personnel/${personnelId}/affectations`, { classe_id: classeId, domaine_ids: selDomaines });
-      setSelDomaines([]);
+      await api.post(`/api/v1/personnel/${personnelId}/affectations`, { classe_id: classeId });
+      setClasseId('');
       await reload();
       onChanged();
       toast.success(t('affectation.ajoutee'));
@@ -200,9 +181,9 @@ function AffectationsModal({ personnelId, nom, anneeId, onClose, onChanged, api 
     } finally { setAdding(false); }
   }
 
-  async function handleRemove(classe_id: string, domaine_id: string) {
+  async function handleRemove(classe_id: string) {
     try {
-      await api.delete(`/api/v1/personnel/${personnelId}/affectations/${classe_id}/${domaine_id}`);
+      await api.delete(`/api/v1/personnel/${personnelId}/affectations/${classe_id}`);
       await reload();
       onChanged();
     } catch (e) {
@@ -215,33 +196,18 @@ function AffectationsModal({ personnelId, nom, anneeId, onClose, onChanged, api 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <p className="muted" style={{ fontSize: 12, margin: 0 }}>{t('affectation.aide')}</p>
 
-        {/* Ajout : classe → domaines */}
-        <Select
-          label={t('affectation.classe')}
-          value={classeId}
-          onChange={(e) => setClasseId(e.target.value)}
-          placeholder={t('affectation.choisir_classe')}
-          options={classes.map((c) => ({ value: c.id, label: `${c.nom_fr} (${c.filiere})` }))}
-        />
-        {classeId && (
-          <div>
-            <div className="field-label" style={{ marginBottom: 6 }}>{t('affectation.domaines')}</div>
-            {domainesDeLaClasse.length === 0 ? (
-              <div className="muted" style={{ fontSize: 13 }}>{t('affectation.aucun_domaine')}</div>
-            ) : (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {domainesDeLaClasse.map((d) => (
-                  <label key={d.id} className="row" style={{ gap: 6, alignItems: 'center', cursor: 'pointer', padding: '4px 10px', border: '1px solid var(--rule)', borderRadius: 6, background: selDomaines.includes(d.id) ? 'var(--info-soft)' : 'var(--paper-2)' }}>
-                    <input type="checkbox" checked={selDomaines.includes(d.id)} onChange={() => toggleDomaine(d.id)} />
-                    <span style={{ fontSize: 13 }}>{d.nom_fr}</span>
-                  </label>
-                ))}
-              </div>
-            )}
+        {/* Ajout : classe entière */}
+        <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+          <div style={{ flex: 1 }}>
+            <Select
+              label={t('affectation.classe')}
+              value={classeId}
+              onChange={(e) => setClasseId(e.target.value)}
+              placeholder={t('affectation.choisir_classe')}
+              options={classesDispo.map((c) => ({ value: c.id, label: `${c.nom_fr} (${c.filiere})` }))}
+            />
           </div>
-        )}
-        <div>
-          <Button size="sm" onClick={handleAdd} loading={adding} disabled={!classeId || selDomaines.length === 0}>
+          <Button size="sm" onClick={handleAdd} loading={adding} disabled={!classeId}>
             {t('affectation.ajouter')}
           </Button>
         </div>
@@ -255,15 +221,12 @@ function AffectationsModal({ personnelId, nom, anneeId, onClose, onChanged, api 
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {affectations.map((a) => (
-                <div key={`${a.classe.id}|${a.domaine?.id ?? 'null'}`} className="row" style={{ justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: 'var(--paper-2)', border: '1px solid var(--rule)', borderRadius: 6 }}>
+                <div key={a.classe.id} className="row" style={{ justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: 'var(--paper-2)', border: '1px solid var(--rule)', borderRadius: 6 }}>
                   <span style={{ fontSize: 13 }}>
                     <strong>{a.classe.nom_fr}</strong> <span className="muted">({a.classe.filiere})</span>
-                    {' — '}{a.domaine ? a.domaine.nom_fr : t('affectation.sans_domaine')}
                     <span className="muted" style={{ fontSize: 11 }}> · {a.nb_matieres} {t('affectation.matieres_count')}</span>
                   </span>
-                  {a.domaine && (
-                    <button className="btn btn-ghost btn-sm" onClick={() => handleRemove(a.classe.id, a.domaine!.id)} title={t('actions.supprimer')}>✕</button>
-                  )}
+                  <button className="btn btn-ghost btn-sm" onClick={() => handleRemove(a.classe.id)} title={t('actions.supprimer')}>✕</button>
                 </div>
               ))}
             </div>
@@ -305,7 +268,7 @@ interface PersonnelRow {
     diplome_academique?: string | null;
     diplome_professionnel?: string | null;
   };
-  classes_assignees?: { classe: { id: string; nom_fr: string; filiere: string }; domaines: { id: string; nom_fr: string }[] }[];
+  classes_assignees?: { classe: { id: string; nom_fr: string; filiere: string } }[];
 }
 
 type TypeContrat = 'permanent' | 'vacataire' | 'stagiaire' | 'CDD' | 'CDI';
@@ -810,14 +773,14 @@ export function PersonnelPage() {
                     <Badge label={p.actif ? t('common.actif') : t('common.inactif')} variant={p.actif ? 'success' : 'neutral'} />
                   </div>
 
-                  {/* Affectations (classes + domaines) */}
+                  {/* Affectations (classes) */}
                   {p.classes_assignees && p.classes_assignees.length > 0 && (
                     <div style={{ padding: '0 16px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <div className="muted" style={{ fontSize: 11 }}>{t('affectation.carte_label')}</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                         {p.classes_assignees.map((a) => (
-                          <span key={a.classe.id} title={a.domaines.map((d) => d.nom_fr).join(', ')} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, background: 'var(--info-soft)', color: 'var(--info-text)' }}>
-                            {a.classe.nom_fr}{a.domaines.length > 0 && <span style={{ opacity: 0.75 }}> · {a.domaines.map((d) => d.nom_fr).join(', ')}</span>}
+                          <span key={a.classe.id} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, background: 'var(--info-soft)', color: 'var(--info-text)' }}>
+                            {a.classe.nom_fr}
                           </span>
                         ))}
                       </div>

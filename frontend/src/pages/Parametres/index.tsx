@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
+import { Modal } from '../../components/ui/Modal';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
@@ -46,6 +47,10 @@ interface Etablissement {
   code: string;
   adresse?: string;
   telephone?: string;
+  email?: string;
+  numero_autorisation?: string;
+  entete_bulletin_fr?: string;
+  entete_bulletin_ar?: string;
   nom_directeur?: string;
   civilite_directeur?: 'M' | 'Mme' | null;
   logo_url?: string;
@@ -80,10 +85,113 @@ type CouleurMention = 'success' | 'info' | 'warning' | 'error';
 interface Mention {
   id: string;
   libelle_fr: string;
+  libelle_ar?: string | null;
   seuil_min: number;
   couleur: CouleurMention;
   ordre: number;
   is_system: boolean;
+}
+
+const COULEUR_MENTION_OPTIONS: { value: CouleurMention; label: string }[] = [
+  { value: 'success', label: 'Vert' }, { value: 'info', label: 'Bleu' },
+  { value: 'warning', label: 'Jaune' }, { value: 'error', label: 'Rouge' },
+];
+
+// Mentions spécifiques à un niveau (override des mentions par défaut de l'établissement).
+function NiveauMentionsModal({ niveau, noteMax, defaults, api, onClose }: {
+  niveau: { id: string; libelle: string };
+  noteMax: number;
+  defaults: Mention[];
+  api: ReturnType<typeof useApi>;
+  onClose: () => void;
+}) {
+  const [mentions, setMentions] = useState<Mention[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({ libelle_fr: '', libelle_ar: '', seuil_min: '', couleur: 'info' as CouleurMention });
+  const [editId, setEditId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const reload = useCallback(() => {
+    setLoading(true);
+    api.get<Mention[]>(`/api/v1/mentions?niveau_id=${niveau.id}`)
+      .then(r => setMentions(r.map(m => ({ ...m, seuil_min: Number(m.seuil_min) }))))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [niveau.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { reload(); }, [reload]);
+
+  const reset = () => { setEditId(null); setForm({ libelle_fr: '', libelle_ar: '', seuil_min: '', couleur: 'info' }); };
+
+  const save = async () => {
+    const seuil = parseFloat(form.seuil_min);
+    if (!form.libelle_fr.trim()) { toast.error('Libellé requis'); return; }
+    if (isNaN(seuil) || seuil < 0) { toast.error('Seuil invalide (≥ 0)'); return; }
+    if (seuil >= noteMax) { toast.error(`Le seuil doit être inférieur à ${noteMax}`); return; }
+    setSaving(true);
+    try {
+      const body = { libelle_fr: form.libelle_fr, libelle_ar: form.libelle_ar.trim() || null, seuil_min: seuil, couleur: form.couleur };
+      if (editId) await api.patch(`/api/v1/mentions/${editId}`, body);
+      else await api.post('/api/v1/mentions', { ...body, niveau_id: niveau.id });
+      toast.success('Enregistré');
+      reset(); reload();
+    } catch (e) { toast.error((e as Error).message || 'Erreur'); }
+    finally { setSaving(false); }
+  };
+
+  const remove = async (id: string) => {
+    try { await api.delete(`/api/v1/mentions/${id}`); reload(); }
+    catch (e) { toast.error((e as Error).message || 'Erreur'); }
+  };
+
+  const sorted = [...mentions].sort((a, b) => b.seuil_min - a.seuil_min);
+
+  return (
+    <Modal isOpen onClose={onClose} title={`Mentions — ${niveau.libelle}`} size="md">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+          Mentions spécifiques à ce niveau. Si aucune n'est définie, le niveau hérite des mentions par défaut de l'établissement (onglet Barème).
+        </p>
+        {loading ? <div className="muted" style={{ fontSize: 13 }}>Chargement…</div> : (
+          <>
+            {mentions.length === 0 && (
+              <div style={{ fontSize: 13, color: 'var(--ink-3)', padding: '8px 12px', background: 'var(--paper-2)', borderRadius: 6, border: '1px solid var(--rule)' }}>
+                Hérite des mentions par défaut : {defaults.map(d => d.libelle_fr).join(', ') || '—'}
+              </div>
+            )}
+            {sorted.map(m => (
+              <div key={m.id} className="row" style={{ justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: 'var(--paper-2)', border: '1px solid var(--rule)', borderRadius: 6 }}>
+                <span style={{ fontSize: 13 }}>
+                  <span className={`badge badge-${m.couleur}`}>{m.libelle_fr}</span>
+                  {m.libelle_ar && <span dir="rtl" style={{ marginInlineStart: 8, color: 'var(--ink-3)' }}>{m.libelle_ar}</span>}
+                  <span className="muted" style={{ marginInlineStart: 8, fontFamily: 'var(--font-mono)' }}>≥ {m.seuil_min}</span>
+                </span>
+                <span style={{ display: 'flex', gap: 4 }}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => { setEditId(m.id); setForm({ libelle_fr: m.libelle_fr, libelle_ar: m.libelle_ar ?? '', seuil_min: String(m.seuil_min), couleur: m.couleur }); }} title="Modifier">✎</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => remove(m.id)} title="Supprimer">✕</button>
+                </span>
+              </div>
+            ))}
+            <div style={{ borderTop: '1px solid var(--rule)', paddingTop: 12, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end' }}>
+              <div style={{ flex: '1 1 120px' }}>
+                <Input label="Libellé (FR)" value={form.libelle_fr} onChange={e => setForm(f => ({ ...f, libelle_fr: e.target.value }))} placeholder="Très bien" />
+              </div>
+              <div style={{ flex: '1 1 100px' }}>
+                <Input label="Libellé (AR)" value={form.libelle_ar} onChange={e => setForm(f => ({ ...f, libelle_ar: e.target.value }))} placeholder="ممتاز" style={{ direction: 'rtl' }} />
+              </div>
+              <div style={{ flex: '0 1 90px' }}>
+                <Input label={`Seuil (/${noteMax})`} type="number" value={form.seuil_min} onChange={e => setForm(f => ({ ...f, seuil_min: e.target.value }))} />
+              </div>
+              <div style={{ flex: '0 1 100px' }}>
+                <Select label="Couleur" value={form.couleur} onChange={e => setForm(f => ({ ...f, couleur: e.target.value as CouleurMention }))} options={COULEUR_MENTION_OPTIONS} />
+              </div>
+              <Button size="sm" onClick={save} loading={saving} disabled={!form.libelle_fr.trim()}>{editId ? 'Modifier' : 'Ajouter'}</Button>
+              {editId && <Button size="sm" variant="ghost" onClick={reset}>Annuler</Button>}
+            </div>
+          </>
+        )}
+      </div>
+    </Modal>
+  );
 }
 
 interface ConfigNotifications {
@@ -335,6 +443,7 @@ export function ParametresPage() {
   const [niveauLibelle, setNiveauLibelle] = useState('');
   const [niveauOrdre, setNiveauOrdre] = useState('');
   const [editNiveau, setEditNiveau] = useState<Niveau | null>(null);
+  const [mentionsNiveau, setMentionsNiveau] = useState<Niveau | null>(null);
   const [savingNiveau, setSavingNiveau] = useState(false);
 
   const [tarifs, setTarifs] = useState<Tarif[]>([]);
@@ -358,7 +467,7 @@ export function ParametresPage() {
 
   const [mentions, setMentions] = useState<Mention[]>([]);
   const [editMention, setEditMention] = useState<Mention | null>(null);
-  const [mentionForm, setMentionForm] = useState({ libelle_fr: '', seuil_min: '', couleur: 'info' as CouleurMention });
+  const [mentionForm, setMentionForm] = useState({ libelle_fr: '', libelle_ar: '', seuil_min: '', couleur: 'info' as CouleurMention });
   const [savingMention, setSavingMention] = useState(false);
   const [confirmDeleteMention, setConfirmDeleteMention] = useState<Mention | null>(null);
   const [deletingMention, setDeletingMention] = useState(false);
@@ -523,7 +632,7 @@ export function ParametresPage() {
 
   const resetMentionForm = () => {
     setEditMention(null);
-    setMentionForm({ libelle_fr: '', seuil_min: '', couleur: 'info' });
+    setMentionForm({ libelle_fr: '', libelle_ar: '', seuil_min: '', couleur: 'info' });
     setShowMentionForm(false);
   };
 
@@ -538,6 +647,7 @@ export function ParametresPage() {
       if (editMention) {
         await api.patch(`/api/v1/mentions/${editMention.id}`, {
           libelle_fr: mentionForm.libelle_fr,
+          libelle_ar: mentionForm.libelle_ar.trim() || null,
           seuil_min:  seuil,
           couleur:    mentionForm.couleur,
         });
@@ -545,6 +655,7 @@ export function ParametresPage() {
       } else {
         await api.post('/api/v1/mentions', {
           libelle_fr: mentionForm.libelle_fr,
+          libelle_ar: mentionForm.libelle_ar.trim() || null,
           seuil_min:  seuil,
           couleur:    mentionForm.couleur,
         });
@@ -645,6 +756,10 @@ export function ParametresPage() {
         code: etab.code.trim().toUpperCase(),
         adresse: etab.adresse,
         telephone: etab.telephone, devise: etab.devise,
+        email: etab.email?.trim() || null,
+        numero_autorisation: etab.numero_autorisation?.trim() || null,
+        entete_bulletin_fr: etab.entete_bulletin_fr?.trim() || null,
+        entete_bulletin_ar: etab.entete_bulletin_ar?.trim() || null,
         nom_directeur: etab.nom_directeur || null,
         civilite_directeur: etab.civilite_directeur || null,
         logo_url: etab.logo_url || undefined,
@@ -840,6 +955,21 @@ export function ParametresPage() {
                   />
                 </div>
                 <div className="grid-2">
+                  <Input
+                    label="Email"
+                    type="email"
+                    placeholder="ex: contact@ecole.sn"
+                    value={etab.email ?? ''}
+                    onChange={e => setEtab(p => p ? { ...p, email: e.target.value } : p)}
+                  />
+                  <Input
+                    label="N° d'autorisation"
+                    placeholder="Autorisation d'enseigner / d'ouverture"
+                    value={etab.numero_autorisation ?? ''}
+                    onChange={e => setEtab(p => p ? { ...p, numero_autorisation: e.target.value } : p)}
+                  />
+                </div>
+                <div className="grid-2">
                   <Select
                     label="Civilité"
                     value={etab.civilite_directeur ?? ''}
@@ -868,6 +998,36 @@ export function ParametresPage() {
                   value={etab.devise}
                   onChange={e => setEtab(p => p ? { ...p, devise: e.target.value } : p)}
                 />
+                <div style={{ borderTop: '1px solid var(--rule)', paddingTop: 12, marginTop: 4 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2 }}>En-tête des bulletins</div>
+                  <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 10 }}>
+                    Texte officiel affiché en haut des bulletins (mentions République, Ministère, IEF…).
+                    Le FR s'affiche sur les bulletins français, l'AR sur les arabes, les deux sur un bulletin combiné.
+                  </div>
+                  <div className="grid-2">
+                    <div className="field">
+                      <label className="field-label">Texte d'en-tête (FR)</label>
+                      <textarea
+                        className="input"
+                        rows={4}
+                        placeholder={'République du Sénégal\nUn Peuple — Un But — Une Foi\nMinistère de l\'Éducation nationale\nIEF de …'}
+                        value={etab.entete_bulletin_fr ?? ''}
+                        onChange={e => setEtab(p => p ? { ...p, entete_bulletin_fr: e.target.value } : p)}
+                      />
+                    </div>
+                    <div className="field">
+                      <label className="field-label">Texte d'en-tête (AR)</label>
+                      <textarea
+                        className="input"
+                        rows={4}
+                        dir="rtl"
+                        placeholder={'الجمهورية السنغالية\nشعب — هدف — إيمان\nوزارة التربية الوطنية'}
+                        value={etab.entete_bulletin_ar ?? ''}
+                        onChange={e => setEtab(p => p ? { ...p, entete_bulletin_ar: e.target.value } : p)}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1094,6 +1254,9 @@ export function ParametresPage() {
                   <td>{n.ordre}</td>
                   <td style={{ textAlign: 'right' }}>
                     <span style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <Button size="sm" variant="ghost" onClick={() => setMentionsNiveau(n)}>
+                        Mentions
+                      </Button>
                       <Button size="sm" variant="ghost" onClick={() => { setEditNiveau(n); setNiveauLibelle(n.libelle); setNiveauOrdre(String(n.ordre)); }}>
                         Modifier
                       </Button>
@@ -1436,10 +1599,17 @@ export function ParametresPage() {
                 border: '1px solid var(--rule)',
               }}>
                 <Input
-                  label="Libellé"
+                  label="Libellé (FR)"
                   value={mentionForm.libelle_fr}
                   onChange={e => setMentionForm(f => ({ ...f, libelle_fr: e.target.value }))}
                   placeholder="Ex: Excellent"
+                />
+                <Input
+                  label="Libellé (AR)"
+                  value={mentionForm.libelle_ar}
+                  onChange={e => setMentionForm(f => ({ ...f, libelle_ar: e.target.value }))}
+                  placeholder="ممتاز"
+                  style={{ direction: 'rtl' }}
                 />
                 <Input
                   label={`Seuil min (sur ${config.note_max})`}
@@ -1489,7 +1659,10 @@ export function ParametresPage() {
                     const invalide = !m.is_system && m.seuil_min >= config.note_max;
                     return (
                       <tr key={m.id} style={invalide ? { background: 'var(--danger-soft, #fee2e2)' } : undefined}>
-                        <td><span className={`badge badge-${m.couleur}`}>{m.libelle_fr}</span></td>
+                        <td>
+                          <span className={`badge badge-${m.couleur}`}>{m.libelle_fr}</span>
+                          {m.libelle_ar && <span dir="rtl" style={{ marginInlineStart: 8, color: 'var(--ink-3)', fontSize: 13 }}>{m.libelle_ar}</span>}
+                        </td>
                         <td style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>
                           {m.is_system ? (
                             <span style={{ color: 'var(--ink-3)' }}>0</span>
@@ -1512,7 +1685,7 @@ export function ParametresPage() {
                             <span style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                               <Button size="sm" variant="ghost" onClick={() => {
                                 setEditMention(m);
-                                setMentionForm({ libelle_fr: m.libelle_fr, seuil_min: String(m.seuil_min), couleur: m.couleur });
+                                setMentionForm({ libelle_fr: m.libelle_fr, libelle_ar: m.libelle_ar ?? '', seuil_min: String(m.seuil_min), couleur: m.couleur });
                                 setShowMentionForm(true);
                               }}>
                                 Modifier
@@ -1869,6 +2042,16 @@ export function ParametresPage() {
         title="Supprimer la mention"
         message={`Supprimer la mention "${confirmDeleteMention?.libelle_fr ?? ''}" ? Cette action est irréversible.`}
       />
+
+      {mentionsNiveau && (
+        <NiveauMentionsModal
+          niveau={mentionsNiveau}
+          noteMax={Number(config?.note_max ?? 20)}
+          defaults={mentions}
+          api={api}
+          onClose={() => setMentionsNiveau(null)}
+        />
+      )}
     </>
   );
 }

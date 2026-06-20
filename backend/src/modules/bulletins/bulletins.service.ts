@@ -45,12 +45,29 @@ export function extractSeuilsMentions(config: { seuil_tres_bien?: unknown; seuil
   };
 }
 
-export type MentionDef = { libelle_fr: string; seuil_min: number };
+export type MentionDef = { libelle_fr: string; libelle_ar?: string | null; seuil_min: number };
 
-/** Mentions configurables de l'établissement (table Mention), triées par seuil décroissant. */
+/** Mentions par défaut de l'établissement (niveau_id null), triées par seuil décroissant. */
 async function getMentions(etablissement_id: string): Promise<MentionDef[]> {
-  const rows = await prisma.mention.findMany({ where: { etablissement_id }, orderBy: { seuil_min: 'desc' } });
-  return rows.map(r => ({ libelle_fr: r.libelle_fr, seuil_min: Number(r.seuil_min) }));
+  const rows = await prisma.mention.findMany({ where: { etablissement_id, niveau_id: null }, orderBy: { seuil_min: 'desc' } });
+  return rows.map(r => ({ libelle_fr: r.libelle_fr, libelle_ar: r.libelle_ar, seuil_min: Number(r.seuil_min) }));
+}
+
+/** Mentions effectives pour un niveau : celles du niveau si définies, sinon défauts établissement. */
+async function getMentionsForNiveau(etablissement_id: string, niveau_id: string | null | undefined): Promise<MentionDef[]> {
+  if (niveau_id) {
+    const rows = await prisma.mention.findMany({ where: { etablissement_id, niveau_id }, orderBy: { seuil_min: 'desc' } });
+    if (rows.length > 0) return rows.map(r => ({ libelle_fr: r.libelle_fr, libelle_ar: r.libelle_ar, seuil_min: Number(r.seuil_min) }));
+  }
+  return getMentions(etablissement_id);
+}
+
+/** niveau_id de la classe FR (prioritaire) ou AR pour résoudre les mentions du bulletin. */
+async function niveauPourBulletin(classe_fr_id?: string | null, classe_ar_id?: string | null): Promise<string | null> {
+  const cid = classe_fr_id ?? classe_ar_id;
+  if (!cid) return null;
+  const c = await prisma.classe.findUnique({ where: { id: cid }, select: { niveau_id: true } });
+  return c?.niveau_id ?? null;
 }
 
 /** Libellé de mention pour une moyenne (sur l'échelle de l'établissement). */
@@ -857,6 +874,35 @@ ${pageContents.map(c => `<div class="a4-page"><div class="a4-fit">${c}</div></di
 </body></html>`;
 }
 
+// Maître(s) d'une classe = personnel affecté à la classe (affectation par classe).
+// Retourne les noms distincts joints, ou null si aucun.
+async function getMaitresClasse(classe_id: string | null | undefined, annee_scolaire_id: string): Promise<string | null> {
+  if (!classe_id) return null;
+  const liens = await prisma.personnelMatiereClasse.findMany({
+    where: { classe_id, annee_scolaire_id },
+    select: { personnel: { select: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } } } },
+  });
+  const noms = new Set<string>();
+  for (const l of liens) {
+    const u = l.personnel.utilisateur;
+    const nom = [u.prenom_fr, u.nom_fr].filter(Boolean).join(' ').trim();
+    if (nom) noms.add(nom);
+  }
+  return noms.size ? [...noms].join(', ') : null;
+}
+
+// Absences cumulées de l'élève sur l'année (statut 'absent'), réparties justifiées/non.
+async function getAbsences(eleve_id: string, annee_scolaire_id: string): Promise<{ j: number; nj: number }> {
+  const rows = await prisma.absenceEleve.groupBy({
+    by: ['justifiee'],
+    where: { eleve_id, annee_scolaire_id, statut: 'absent' },
+    _count: { _all: true },
+  });
+  let j = 0, nj = 0;
+  for (const r of rows) { if (r.justifiee) j += r._count._all; else nj += r._count._all; }
+  return { j, nj };
+}
+
 export async function genererPdfBulletin(id: string, etablissement_id: string): Promise<Buffer> {
   const data = await getBulletin(id, etablissement_id);
   const etab = await prisma.etablissement.findUnique({ where: { id: etablissement_id } });
@@ -867,14 +913,16 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
   const nbPeriodes = config?.nb_periodes ?? 3;
   const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
 
-  const mentions = await getMentions(etablissement_id);
-
   // Barème + coefficient EFFECTIFS par matière (override de classe/période prioritaire),
   // résolus depuis les classes FR et AR de l'élève. Sans ça, l'affichage retombe sur un
   // défaut plat (/20), avec des appréciations et des moyennes par filière fausses.
   const insc = data.eleve.inscriptions.find(
     i => i.annee_scolaire_id === data.annee_scolaire_id
   ) as { classe_fr_id?: string | null; classe_ar_id?: string | null } | undefined;
+
+  // Mentions effectives : celles du niveau de la classe (FR prioritaire), sinon défauts établissement.
+  const niveauId = await niveauPourBulletin(insc?.classe_fr_id, insc?.classe_ar_id);
+  const mentions = await getMentionsForNiveau(etablissement_id, niveauId);
   const periodeForBareme = data.periode === 0 ? undefined : data.periode;
   const effMap = new Map<string, { coeff: number; note_max: number; evaluee: boolean }>();
   for (const [cid, f] of [
@@ -889,13 +937,29 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
 
   const { generateBulletinHtml, generateBulletinAnnuelHtml, CSS: BULLETIN_CSS } = await import('./bulletin.template');
 
+  // Maître(s) de la classe : FR + AR (les deux pour un bulletin combiné).
+  const maitre_fr = data.filiere !== 'AR' ? await getMaitresClasse(insc?.classe_fr_id, data.annee_scolaire_id) : null;
+  const maitre_ar = data.filiere !== 'FR' ? await getMaitresClasse(insc?.classe_ar_id, data.annee_scolaire_id) : null;
+  const abs = await getAbsences(data.eleve_id, data.annee_scolaire_id);
+
   const base = {
     etablissement_nom_fr: etab.nom_fr,
+    etablissement_logo_url: etab.logo_url,
+    entete_bulletin_fr: etab.entete_bulletin_fr,
+    entete_bulletin_ar: etab.entete_bulletin_ar,
     eleve_nom_fr: `${data.eleve.prenom_fr} ${data.eleve.nom_fr}`,
-    eleve_matricule: data.eleve.matricule, annee_libelle: data.annee_scolaire.libelle,
+    eleve_matricule: data.eleve.matricule,
+    eleve_date_naissance: data.eleve.date_naissance ? new Date(data.eleve.date_naissance).toLocaleDateString('fr-FR') : null,
+    eleve_lieu_naissance: data.eleve.lieu_naissance ?? null,
+    annee_libelle: data.annee_scolaire.libelle,
     moyenne: data.moyenne !== null ? Number(data.moyenne) : null, rang: data.rang,
     appreciation: data.appreciation, devise: etab.devise,
     note_max_etab: baseNote, mentions,
+    etablissement_telephone: etab.telephone,
+    etablissement_email: etab.email,
+    etablissement_autorisation: etab.numero_autorisation,
+    maitre_fr, maitre_ar,
+    absences_justifiees: abs.j, absences_non_justifiees: abs.nj,
   };
 
   type NoteRaw = { matiere_id: string; valeur: unknown; periode: number; evaluee?: boolean; matiere: { nom_fr: string; nom_ar: string | null; coeff_defaut: unknown } };
@@ -963,7 +1027,9 @@ export async function genererPdfClasse(
   if (!etab) throw new NotFoundError('Établissement introuvable');
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
   const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
-  const mentions = await getMentions(etablissement_id);
+  // Mentions effectives = celles du niveau de la classe imprimée, sinon défauts établissement.
+  const classeNiveau = await prisma.classe.findUnique({ where: { id: classe_id }, select: { niveau_id: true } });
+  const mentions = await getMentionsForNiveau(etablissement_id, classeNiveau?.niveau_id);
 
   const bulletins = await prisma.bulletin.findMany({
     where: {
@@ -974,6 +1040,19 @@ export async function genererPdfClasse(
     orderBy: [{ rang: 'asc' }, { eleve: { nom_fr: 'asc' } }],
   });
   if (bulletins.length === 0) throw new Error('Aucun bulletin trouvé');
+
+  // Absences cumulées (année) par élève — une seule requête groupée.
+  const absRows = await prisma.absenceEleve.groupBy({
+    by: ['eleve_id', 'justifiee'],
+    where: { eleve_id: { in: bulletins.map(b => b.eleve_id) }, annee_scolaire_id, statut: 'absent' },
+    _count: { _all: true },
+  });
+  const absByEleve = new Map<string, { j: number; nj: number }>();
+  for (const r of absRows) {
+    const e = absByEleve.get(r.eleve_id) ?? { j: 0, nj: 0 };
+    if (r.justifiee) e.j += r._count._all; else e.nj += r._count._all;
+    absByEleve.set(r.eleve_id, e);
+  }
 
   const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
 
@@ -986,6 +1065,12 @@ export async function genererPdfClasse(
     select: { eleve_id: true, classe_fr_id: true, classe_ar_id: true },
   });
   const inscByEleve = new Map(inscriptions.map(i => [i.eleve_id, i]));
+  const maitreCache = new Map<string, string | null>();
+  const maitrePour = async (classId: string | null | undefined) => {
+    if (!classId) return null;
+    if (!maitreCache.has(classId)) maitreCache.set(classId, await getMaitresClasse(classId, annee_scolaire_id));
+    return maitreCache.get(classId)!;
+  };
   const matCache = new Map<string, MatiereAvecCoeff[]>();
   const matieresPour = async (classId: string | null | undefined, f: 'FR' | 'AR') => {
     if (!classId) return [];
@@ -1021,14 +1106,29 @@ export async function genererPdfClasse(
     }
     const toRows = (f: 'FR' | 'AR') => rowsByFiliere[f] ?? [];
 
+    const maitre_fr = filiere !== 'AR' ? await maitrePour(insc?.classe_fr_id) : null;
+    const maitre_ar = filiere !== 'FR' ? await maitrePour(insc?.classe_ar_id) : null;
+    const abs = absByEleve.get(bulletin.eleve_id) ?? { j: 0, nj: 0 };
+
     pages.push(generateBulletinHtml({
       type: filiere as 'FR' | 'AR' | 'COMBINE', periode: bulletin.periode,
       etablissement_nom_fr: etab.nom_fr,
+      etablissement_logo_url: etab.logo_url,
+      entete_bulletin_fr: etab.entete_bulletin_fr,
+      entete_bulletin_ar: etab.entete_bulletin_ar,
       eleve_nom_fr: `${bulletin.eleve.prenom_fr} ${bulletin.eleve.nom_fr}`,
-      eleve_matricule: bulletin.eleve.matricule, annee_libelle: bulletin.annee_scolaire.libelle,
+      eleve_matricule: bulletin.eleve.matricule,
+      eleve_date_naissance: bulletin.eleve.date_naissance ? new Date(bulletin.eleve.date_naissance).toLocaleDateString('fr-FR') : null,
+      eleve_lieu_naissance: bulletin.eleve.lieu_naissance ?? null,
+      annee_libelle: bulletin.annee_scolaire.libelle,
       moyenne: bulletin.moyenne !== null ? Number(bulletin.moyenne) : null,
       rang: bulletin.rang, appreciation: bulletin.appreciation, devise: etab.devise,
       note_max_etab: baseNote, mentions,
+      etablissement_telephone: etab.telephone,
+      etablissement_email: etab.email,
+      etablissement_autorisation: etab.numero_autorisation,
+      maitre_fr, maitre_ar,
+      absences_justifiees: abs.j, absences_non_justifiees: abs.nj,
       notes_fr: filiere !== 'AR' ? toRows('FR') : undefined,
       notes_ar: filiere !== 'FR' ? toRows('AR') : undefined,
     }));

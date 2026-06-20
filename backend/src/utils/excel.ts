@@ -131,3 +131,41 @@ export async function exportFinancesExcel(paiements: Array<{
 
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
+
+const MOIS_COURTS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+
+export async function exportReliquatsExcel(reliquats: Array<{
+  eleve: { nom_fr: string; prenom_fr: string; matricule: string };
+  nb_mois_dus: number;
+  mois_manquants: { mois: number; annee: number }[];
+  montant_du: number;
+}>, etablissementNom = ''): Promise<Buffer> {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = etablissementNom || 'DaaraGest';
+  const ws = wb.addWorksheet('Reliquats');
+
+  ws.columns = [
+    { header: 'Élève',             key: 'eleve',     width: 28 },
+    { header: 'Matricule',         key: 'matricule', width: 16 },
+    { header: 'Mois dus',          key: 'nb',        width: 10 },
+    { header: 'Mois manquants',    key: 'manquants', width: 42 },
+    { header: 'Montant dû (FCFA)', key: 'montant',   width: 18 },
+  ];
+  ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB91C1C' } };
+
+  for (const r of reliquats) {
+    ws.addRow({
+      eleve: `${r.eleve.prenom_fr} ${r.eleve.nom_fr}`,
+      matricule: r.eleve.matricule,
+      nb: r.nb_mois_dus,
+      manquants: r.mois_manquants.map(m => `${MOIS_COURTS[m.mois - 1]} ${m.annee}`).join(', '),
+      montant: r.montant_du,
+    });
+  }
+  const total = reliquats.reduce((s, r) => s + r.montant_du, 0);
+  const totalRow = ws.addRow({ eleve: 'TOTAL', montant: total });
+  totalRow.font = { bold: true };
+
+  return Buffer.from(await wb.xlsx.writeBuffer());
+}
