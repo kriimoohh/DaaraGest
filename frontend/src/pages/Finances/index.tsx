@@ -334,6 +334,7 @@ export function FinancesPage() {
   const [filterStatut, setFilterStatut] = useState('');
   const [mois, setMois] = useState('');
   const [annee, setAnnee] = useState(String(now.getFullYear()));
+  const [exporting, setExporting] = useState<'excel' | 'pdf' | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Modal création (multi-élèves)
@@ -470,6 +471,34 @@ export function FinancesPage() {
     } catch (err) {
       toast.error((err as Error).message || 'Erreur');
     } finally { setEditSaving(false); }
+  };
+
+  // Télécharge (Excel) ou imprime (PDF) la liste des paiements selon les filtres courants.
+  const exportPaiements = async (format: 'excel' | 'pdf') => {
+    setExporting(format);
+    try {
+      const params = new URLSearchParams();
+      if (search) params.set('search', search);
+      if (filterType) params.set('type', filterType);
+      if (filterStatut) params.set('statut', filterStatut);
+      if (mois) params.set('mois', mois);
+      if (annee) params.set('annee', annee);
+      const endpoint = format === 'excel' ? 'export-excel' : 'export-pdf';
+      const resp = await fetch(
+        `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/api/v1/finances/${endpoint}?${params}`,
+        { credentials: 'include' },
+      );
+      if (!resp.ok) throw new Error('Erreur lors de l\'export');
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = format === 'excel' ? 'paiements.xlsx' : 'paiements.pdf';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error((e as Error).message || 'Erreur export');
+    } finally { setExporting(null); }
   };
 
   const stopQrScanner = useCallback(async () => {
@@ -690,11 +719,15 @@ export function FinancesPage() {
             ))}
           </div>
 
-          <div className="row" style={{ gap: 12 }}>
+          <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>Période :</span>
             <Select value={mois} onChange={e => setMois(e.target.value)}
               options={[{ value: '', label: 'Tous les mois' }, ...MOIS.map((m, i) => ({ value: String(i+1), label: m }))]} />
             <Input label="" type="number" value={annee} onChange={e => setAnnee(e.target.value)} />
+            <div style={{ marginInlineStart: 'auto', display: 'flex', gap: 8 }}>
+              <Button variant="secondary" onClick={() => exportPaiements('excel')} loading={exporting === 'excel'}>⬇ Excel</Button>
+              <Button variant="secondary" onClick={() => exportPaiements('pdf')} loading={exporting === 'pdf'}>🖨 Imprimer</Button>
+            </div>
           </div>
 
           <div className="card">

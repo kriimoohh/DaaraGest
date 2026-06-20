@@ -2,7 +2,8 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
 import { paiementEleveSchema, bulkPaiementEleveSchema, updatePaiementEleveSchema, paiementPersonnelSchema } from './finances.schema';
 import {
-  listerPaiementsEleves, creerPaiementEleve, bulkCreerPaiementEleve, modifierPaiementEleve, supprimerPaiementEleve,
+  listerPaiementsEleves, listerTousPaiementsElevesFiltres, genererPdfPaiementsEleves,
+  creerPaiementEleve, bulkCreerPaiementEleve, modifierPaiementEleve, supprimerPaiementEleve,
   listerPaiementsPersonnel, creerPaiementPersonnel,
   getStatsFinances, getReliquats, getStatsMensuels,
 } from './finances.service';
@@ -15,19 +16,38 @@ export async function statsMensuelsHandler(request: FastifyRequest, reply: Fasti
 
 export async function exportExcelHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
-  const { type, mois, annee, statut } = request.query as Record<string, string | undefined>;
+  const { search, type, mois, annee, statut } = request.query as Record<string, string | undefined>;
   try {
-    const { data } = await listerPaiementsEleves(
-      etablissement_id, 1, undefined, type,
-      mois ? parseInt(mois) : undefined,
-      annee ? parseInt(annee) : undefined,
+    const data = await listerTousPaiementsElevesFiltres(etablissement_id, {
+      search, type,
+      mois: mois ? parseInt(mois) : undefined,
+      annee: annee ? parseInt(annee) : undefined,
       statut,
-    );
+    });
     const { exportFinancesExcel } = await import('../../utils/excel');
     const buffer = await exportFinancesExcel(data);
     reply
       .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
       .header('Content-Disposition', 'attachment; filename="paiements.xlsx"')
+      .send(buffer);
+  } catch (err) {
+    return reply.status(500).send({ error: (err as Error).message });
+  }
+}
+
+export async function exportPdfHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { search, type, mois, annee, statut } = request.query as Record<string, string | undefined>;
+  try {
+    const buffer = await genererPdfPaiementsEleves(etablissement_id, {
+      search, type,
+      mois: mois ? parseInt(mois) : undefined,
+      annee: annee ? parseInt(annee) : undefined,
+      statut,
+    });
+    reply
+      .header('Content-Type', 'application/pdf')
+      .header('Content-Disposition', 'attachment; filename="paiements.pdf"')
       .send(buffer);
   } catch (err) {
     return reply.status(500).send({ error: (err as Error).message });

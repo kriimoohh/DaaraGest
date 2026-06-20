@@ -6,7 +6,7 @@ import {
   listerPaiementsElevesHandler, creerPaiementEleveHandler,
   bulkCreerPaiementEleveHandler, modifierPaiementEleveHandler, supprimerPaiementEleveHandler,
   listerPaiementsPersonnelHandler, creerPaiementPersonnelHandler,
-  statsHandler, reliquatsHandler, statsMensuelsHandler, exportExcelHandler,
+  statsHandler, reliquatsHandler, statsMensuelsHandler, exportExcelHandler, exportPdfHandler,
 } from './finances.controller';
 
 const scolarite  = requireRole(...ROLE_GROUPS.SCOLARITE);
@@ -28,6 +28,7 @@ export async function financesRoutes(fastify: FastifyInstance) {
   fastify.post('/paiements-professeurs',  { preHandler: [authMiddleware, gestion] },    creerPaiementPersonnelHandler);
 
   fastify.get('/export-excel',            { preHandler: [authMiddleware, scolarite] },  exportExcelHandler);
+  fastify.get('/export-pdf',              { preHandler: [authMiddleware, scolarite] },  exportPdfHandler);
   fastify.get('/stats',                   { preHandler: [authMiddleware, scolarite] },  statsHandler);
   fastify.get('/reliquats',               { preHandler: [authMiddleware, scolarite] },  reliquatsHandler);
   fastify.get('/stats-mensuels',          { preHandler: [authMiddleware, scolarite] },  statsMensuelsHandler);
