@@ -162,7 +162,6 @@ body { font-family:Arial,sans-serif;font-size:11.5px;color:#111;padding:18px 28p
 /* ── Titre principal ── */
 .doc-title-wrap { border:2px solid #0F172A;border-radius:4px;margin-bottom:12px;overflow:hidden }
 .doc-title-main { background:#0F172A;color:#fff;text-align:center;padding:6px 10px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.4px }
-.doc-title-year { text-align:center;padding:4px;font-size:11px;color:#374151 }
 
 /* ── Bandeau contact école ── */
 .school-band { display:flex;justify-content:center;flex-wrap:wrap;gap:4px 18px;font-size:10px;color:#374151;margin-bottom:10px;padding:5px 8px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px }
@@ -271,19 +270,19 @@ function headerHtml(data: BulletinBaseData, filiere: 'FR' | 'AR' | 'COMBINE'): s
   <hr class="divider"/>`;
 }
 
-function titleHtml(periode: string, annee: string): string {
+// L'année scolaire n'est PAS répétée ici : elle figure dans l'encadré identité
+// de l'élève (studentInfoHtml).
+function titleHtml(periode: string): string {
   return `
   <div class="doc-title-wrap">
     <div class="doc-title-main">Tableau récapitulatif des notes &mdash; ${periode}</div>
-    <div class="doc-title-year">Année scolaire : <strong>${escapeHtml(annee)}</strong></div>
   </div>`;
 }
 
-function titleAnnuelHtml(annee: string): string {
+function titleAnnuelHtml(): string {
   return `
   <div class="doc-title-wrap">
     <div class="doc-title-main">Bulletin annuel &mdash; 3 trimestres</div>
-    <div class="doc-title-year">Année scolaire : <strong>${escapeHtml(annee)}</strong></div>
   </div>`;
 }
 
@@ -571,7 +570,7 @@ export function generateBulletinHtml(data: BulletinTrimestreData): string {
   if (data.type === 'FR') {
     return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><style>${CSS}</style></head><body>
       ${headerHtml(data, 'FR')}
-      ${titleHtml(periodeStr, data.annee_libelle)}
+      ${titleHtml(periodeStr)}
       ${schoolBandHtml(data)}
     ${studentInfoHtml(data)}
       ${tableFR(data.notes_fr ?? [])}
@@ -586,7 +585,7 @@ export function generateBulletinHtml(data: BulletinTrimestreData): string {
     // Filière arabe : noms de matières affichés en bilingue (FR + AR à côté).
     return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><style>${CSS}</style></head><body>
       ${headerHtml(data, 'AR')}
-      ${titleHtml(periodeStr, data.annee_libelle)}
+      ${titleHtml(periodeStr)}
       ${schoolBandHtml(data)}
     ${studentInfoHtml(data)}
       ${tableFR(data.notes_ar ?? [], 'Évaluation des acquis — Filière Arabe', true)}
@@ -605,7 +604,7 @@ export function generateBulletinHtml(data: BulletinTrimestreData): string {
 
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><style>${CSS}</style></head><body>
     ${headerHtml(data, 'COMBINE')}
-    ${titleHtml(`${periodeStr} — Filières FR &amp; AR`, data.annee_libelle)}
+    ${titleHtml(`${periodeStr} — Filières FR &amp; AR`)}
     ${schoolBandHtml(data)}
     ${studentInfoHtml(data)}
     ${tableFR(notesFR)}
@@ -636,7 +635,7 @@ export function generateBulletinAnnuelHtml(data: BulletinAnnuelData): string {
   // Bulletins strictement en français, y compris la filière arabe (libellés FR, LTR).
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><style>${CSS}</style></head><body>
     ${headerHtml(data, isAR ? 'AR' : isCombine ? 'COMBINE' : 'FR')}
-    ${titleAnnuelHtml(data.annee_libelle)}
+    ${titleAnnuelHtml()}
     ${schoolBandHtml(data)}
     ${studentInfoHtml(data)}
 
