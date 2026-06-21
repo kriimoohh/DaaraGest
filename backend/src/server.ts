@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
+import crypto from 'crypto';
 import { Prisma } from '@prisma/client';
 import prisma from './config/database';
 import { env, isProd } from './config/env';
@@ -104,11 +105,35 @@ async function build() {
     cookie: { cookieName: 'daaragest_token', signed: false },
   });
 
+  // Rate-limit global. La clé est PAR UTILISATEUR connecté (cookie/JWT) et non
+  // par IP : tout l'établissement passe par une unique IP publique (NAT), donc
+  // une clé par IP ferait partager un seul quota à tout le personnel (et le
+  // polling des notifications l'épuisait à lui seul → cascade de 500). Les
+  // routes publiques (login, portail parent) n'ont pas de cookie → repli sur
+  // l'IP, ce qui préserve la protection anti-brute-force par IP de ces routes.
   await fastify.register(rateLimit, {
     global: true,
-    max: 100,
+    max: 1000,
     timeWindow: '15 minutes',
-    errorResponseBuilder: () => ({ error: 'Trop de requêtes. Réessayez dans quelques minutes.' }),
+    keyGenerator: (req) => {
+      const token =
+        req.cookies?.daaragest_token ||
+        (req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+      return token
+        ? `u:${crypto.createHash('sha256').update(token).digest('hex').slice(0, 16)}`
+        : `ip:${req.ip}`;
+    },
+    // Le plugin fait `throw errorResponseBuilder(...)` : on renvoie une vraie
+    // Error porteuse du statusCode (429, ou 403 si banni) pour que le
+    // gestionnaire d'erreurs global réponde 429 — et non 500 (cas où l'objet
+    // renvoyé n'avait pas de statusCode → error.statusCode ?? 500).
+    errorResponseBuilder: (_req, context) => {
+      const err = new Error('Trop de requêtes. Réessayez dans quelques minutes.') as Error & {
+        statusCode: number;
+      };
+      err.statusCode = context.statusCode;
+      return err;
+    },
   });
 
   // Headers de sécurité HTTP sur toutes les réponses
