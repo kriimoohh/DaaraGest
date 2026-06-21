@@ -761,7 +761,7 @@ model Evaluation {
   annee_scolaire_id String
   periode           Int
   titre             String
-  type              String // 'DS' | 'INTERRO' | 'DM' | 'EXAMEN'
+  type              String // 'DS'|'INTERRO'|'DM'|'EXAMEN'|'CONTROLE'|'TEST_ENTREE' ou saisie libre
   date              DateTime @db.Date
   coefficient       Decimal  @default(1) @db.Decimal(4, 2)
   note_max          Decimal  @default(20) @db.Decimal(5, 2)
