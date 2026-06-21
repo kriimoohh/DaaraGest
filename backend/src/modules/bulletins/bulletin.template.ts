@@ -150,7 +150,9 @@ body { font-family:Arial,sans-serif;font-size:11.5px;color:#111;padding:18px 28p
 .header-top { display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px }
 .entete-text { font-size:10px;color:#374151;line-height:1.45;flex:1 }
 .entete-fr { text-align:left }
-.entete-ar { text-align:right;direction:rtl;font-size:11px }
+/* L'arabe rend des traits fins en Chromium headless : couleur plus sombre,
+   taille et graisse augmentées pour une lisibilité équivalente au français. */
+.entete-ar { text-align:right;direction:rtl;font-size:12.5px;color:#1f2937;font-weight:600;line-height:1.6 }
 .header-logo { flex-shrink:0;align-self:center }
 .school-name-line { text-align:center;font-size:15px;font-weight:bold;color:#0F172A;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px }
 .school-block { flex:1 }
