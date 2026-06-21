@@ -44,7 +44,7 @@ const evaluationSchema = z.object({
   annee_scolaire_id: z.string().min(1),
   periode: z.number().int().min(1),
   titre: z.string().min(1).max(200),
-  type: z.enum(['DS', 'INTERRO', 'DM', 'EXAMEN']),
+  type: z.string().trim().min(1).max(50),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format date invalide'),
   coefficient: z.number().min(0.5).max(10).default(1),
   note_max: z.number().min(1).max(100).default(20),
@@ -288,12 +288,13 @@ describe('Validation — Évaluation', () => {
     expect(evaluationSchema.safeParse(evalValide).success).toBe(true);
   });
 
-  it('rejette type invalide', () => {
-    expect(evaluationSchema.safeParse({ ...evalValide, type: 'CONTROLE' }).success).toBe(false);
+  it('rejette un type vide', () => {
+    expect(evaluationSchema.safeParse({ ...evalValide, type: '' }).success).toBe(false);
+    expect(evaluationSchema.safeParse({ ...evalValide, type: 'x'.repeat(51) }).success).toBe(false);
   });
 
-  it('accepte tous les types valides', () => {
-    for (const type of ['DS', 'INTERRO', 'DM', 'EXAMEN']) {
+  it('accepte les types prédéfinis et la saisie libre', () => {
+    for (const type of ['DS', 'INTERRO', 'DM', 'EXAMEN', 'CONTROLE', 'TEST_ENTREE', 'Récitation']) {
       expect(evaluationSchema.safeParse({ ...evalValide, type }).success).toBe(true);
     }
   });

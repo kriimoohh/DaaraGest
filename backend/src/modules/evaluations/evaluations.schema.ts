@@ -8,7 +8,10 @@ export const evaluationSchema = z.object({
   annee_scolaire_id: z.string().uuid(),
   periode:           z.number().int().min(1),
   titre:             z.string().min(1).max(200),
-  type:              z.enum(['DS', 'INTERRO', 'DM', 'EXAMEN']),
+  // Types prédéfinis ('DS' | 'INTERRO' | 'DM' | 'EXAMEN' | 'CONTROLE' |
+  // 'TEST_ENTREE') OU saisie libre (« Autre ») : on accepte donc tout libellé
+  // non vide et borné. L'affichage retombe sur le libellé brut si inconnu.
+  type:              z.string().trim().min(1).max(50),
   date:              z.string().regex(dateRegex, 'Format date invalide (YYYY-MM-DD)'),
   coefficient:       z.number().min(0.5).max(10).default(1),
   note_max:          z.number().min(1).max(100).default(20),

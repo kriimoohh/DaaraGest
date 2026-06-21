@@ -32,10 +32,17 @@ const TYPE_LABEL_KEYS: Record<string, string> = {
   INTERRO: 'evaluation.type_court_interro',
   DM: 'evaluation.type_court_dm',
   EXAMEN: 'evaluation.type_court_examen',
+  CONTROLE: 'evaluation.type_court_controle',
+  TEST_ENTREE: 'evaluation.type_court_test_entree',
 };
 const TYPE_VARIANTS: Record<string, 'info' | 'warning' | 'neutral' | 'accent'> = {
   DS: 'info', INTERRO: 'warning', DM: 'neutral', EXAMEN: 'accent',
+  CONTROLE: 'warning', TEST_ENTREE: 'info',
 };
+// Types prédéfinis proposés dans le menu. Tout autre valeur (« Autre ») est une
+// saisie libre, stockée telle quelle et affichée brute (variant 'neutral').
+const KNOWN_TYPES = ['DS', 'INTERRO', 'DM', 'EXAMEN', 'CONTROLE', 'TEST_ENTREE'];
+const AUTRE = '__AUTRE__';
 
 const EMPTY_FORM = { titre: '', type: 'DS', date: '', coefficient: '1', note_max: '20', periode: '1' };
 
@@ -167,7 +174,7 @@ export function EvaluationsPage() {
   };
 
   const submitForm = async () => {
-    if (!form.titre || !form.date || !classeId || !matiereId || !anneeId) {
+    if (!form.titre || !form.type.trim() || !form.date || !classeId || !matiereId || !anneeId) {
       toast.error(t('evaluation.err_champs_obligatoires')); return;
     }
     setSubmitting(true);
@@ -425,13 +432,16 @@ export function EvaluationsPage() {
           <div className="grid-2">
             <Select
               label={t('evaluation.type_label')}
-              value={form.type}
-              onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
+              value={KNOWN_TYPES.includes(form.type) ? form.type : AUTRE}
+              onChange={e => setForm(f => ({ ...f, type: e.target.value === AUTRE ? '' : e.target.value }))}
               options={[
-                { value: 'DS',     label: t('evaluation.type_ds') },
-                { value: 'INTERRO',label: t('evaluation.type_interro') },
-                { value: 'DM',     label: t('evaluation.type_dm') },
-                { value: 'EXAMEN', label: t('evaluation.type_examen') },
+                { value: 'DS',          label: t('evaluation.type_ds') },
+                { value: 'INTERRO',     label: t('evaluation.type_interro') },
+                { value: 'DM',          label: t('evaluation.type_dm') },
+                { value: 'EXAMEN',      label: t('evaluation.type_examen') },
+                { value: 'CONTROLE',    label: t('evaluation.type_controle') },
+                { value: 'TEST_ENTREE', label: t('evaluation.type_test_entree') },
+                { value: AUTRE,         label: t('evaluation.type_autre_option') },
               ]}
             />
             <Select
@@ -441,6 +451,14 @@ export function EvaluationsPage() {
               options={Array.from({ length: nbPeriodes }, (_, i) => ({ value: String(i + 1), label: t('evaluation.periode_n', { n: i + 1 }) }))}
             />
           </div>
+          {!KNOWN_TYPES.includes(form.type) && (
+            <Input
+              label={t('evaluation.type_autre_label')}
+              value={form.type}
+              onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
+              placeholder={t('evaluation.type_autre_placeholder')}
+            />
+          )}
           <Input
             label={t('evaluation.date_label')} type="date"
             value={form.date}
