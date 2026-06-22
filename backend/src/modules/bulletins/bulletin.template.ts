@@ -86,6 +86,11 @@ function mentionForBilingue(scaled: number | null): string {
   const fr = escapeHtml(m.libelle_fr);
   return m.libelle_ar ? `${fr} <span dir="rtl">/ ${escapeHtml(m.libelle_ar)}</span>` : fr;
 }
+// Libellé AR d'une appréciation FR déjà calculée (ex. « Bien » → « جيد »),
+// retrouvé par correspondance dans les mentions configurées. Vide si absent.
+function appreciationArFor(fr: string): string {
+  return RENDER_MENTIONS.find(m => m.libelle_fr === fr)?.libelle_ar ?? '';
+}
 // Moyenne pondérée normalisée sur l'échelle établissement (notes saisies sur leur barème).
 // Les matières non évaluées (evaluee === false) sont exclues du calcul.
 function moyenneNorm(notes: { valeur: number | null; coeff: number; note_max?: number; evaluee?: boolean }[]): number | null {
@@ -235,7 +240,7 @@ tr:nth-child(even) { background:#f9fafb }
 
 // ─── Header commun ─────────────────────────────────────────────────────────
 
-const LOGO_MARK_SVG = `<svg width="56" height="64" viewBox="0 0 56 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
+const LOGO_MARK_SVG = `<svg width="79" height="90" viewBox="0 0 56 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
   <rect x="20" y="0" width="16" height="8" rx="4" fill="#B85433"/>
   <rect x="4" y="6" width="48" height="52" rx="6" fill="#B85433"/>
   <rect x="18" y="6" width="20" height="6" rx="2" fill="#FAF6EE" opacity="0.25"/>
@@ -250,7 +255,7 @@ const LOGO_MARK_SVG = `<svg width="56" height="64" viewBox="0 0 56 64" fill="non
 // Logo : logo uploadé de l'établissement si présent, sinon le mark générique.
 function logoHtml(data: BulletinBaseData): string {
   return data.etablissement_logo_url
-    ? `<img src="${escapeHtml(data.etablissement_logo_url)}" alt="" style="width:56px;height:64px;object-fit:contain;flex-shrink:0"/>`
+    ? `<img src="${escapeHtml(data.etablissement_logo_url)}" alt="" style="width:90px;height:90px;object-fit:contain;flex-shrink:0"/>`
     : LOGO_MARK_SVG;
 }
 
@@ -560,10 +565,15 @@ function absencesHtml(data: BulletinBaseData): string {
 }
 
 function observationHtml(appr: string | null): string {
+  const fr = appr ? escapeHtml(appr) : '';
+  const ar = appr ? appreciationArFor(appr) : '';
   return `
   <div class="appreciation-box">
-    <div class="appreciation-label" style="display:flex;justify-content:space-between;gap:10px"><span>Observation / Appréciation du conseil de classe</span><span dir="rtl">ملاحظات مجلس القسم</span></div>
-    <div style="font-size:11.5px;font-style:italic;color:#374151;margin-top:3px;min-height:16px">${appr ? escapeHtml(appr) : ''}</div>
+    <div class="appreciation-label" style="display:flex;justify-content:space-between;gap:10px;align-items:center"><span>Observation / Appréciation du conseil de classe</span><span dir="rtl" style="font-size:12px;color:#1f2937;text-transform:none">ملاحظات مجلس القسم</span></div>
+    <div style="display:flex;justify-content:space-between;gap:10px;margin-top:3px;min-height:16px">
+      <span style="font-size:11.5px;font-style:italic;color:#374151">${fr}</span>
+      ${ar ? `<span dir="rtl" style="font-size:13px;color:#1f2937">${escapeHtml(ar)}</span>` : ''}
+    </div>
     <div class="observation-line"></div>
   </div>`;
 }
