@@ -43,6 +43,9 @@ async function getBrowser(): Promise<Browser> {
 // Réduit (transform: scale) chaque `.a4-fit` dont le contenu dépasse la hauteur
 // imprimable d'une page A4, pour garantir « 1 bulletin = 1 page ». La hauteur
 // imprimable = 297mm - 2×10mm de marges = 277mm ≈ 1046px @96dpi.
+// `transform: scale(s)` réduit AUSSI la largeur → on élargit le bloc d'autant
+// (width = 100/s %) pour qu'une fois réduit il occupe toute la largeur de la
+// page (sinon bande blanche à droite sur les bulletins denses, scale < 1).
 const FIT_A4_SCRIPT = `(() => {
   var PRINTABLE_H = 1046;
   document.querySelectorAll('.a4-page').forEach(function (el) {
@@ -53,6 +56,7 @@ const FIT_A4_SCRIPT = `(() => {
       var s = PRINTABLE_H / h;
       fit.style.transformOrigin = 'top left';
       fit.style.transform = 'scale(' + s + ')';
+      fit.style.width = (100 / s) + '%';
       el.style.height = PRINTABLE_H + 'px';
       el.style.overflow = 'hidden';
     }

@@ -142,17 +142,22 @@ function apprClass(note: number | null, noteMax: number): string {
 // ─── CSS commun ─────────────────────────────────────────────────────────────
 
 export const CSS = `
+/* Police arabe Naskh dédiée (lisible pour un document officiel). Le latin reste
+   en Arial ; l'arabe, absent d'Arial, retombe sur Noto Naskh Arabic. Chargée au
+   rendu (réseau dispo, cf. logo distant) ; à défaut, repli sur la police système. */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;700&display=swap');
 * { margin:0;padding:0;box-sizing:border-box }
-body { font-family:Arial,sans-serif;font-size:11.5px;color:#111;padding:18px 28px }
+body { font-family:Arial,'Noto Naskh Arabic',sans-serif;font-size:11.5px;color:#111;padding:18px 28px }
 
 /* ── En-tête ── */
 .header { display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px }
 .header-top { display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px }
 .entete-text { font-size:10px;color:#374151;line-height:1.45;flex:1 }
 .entete-fr { text-align:left }
-/* L'arabe rend des traits fins en Chromium headless : couleur plus sombre,
-   taille et graisse augmentées pour une lisibilité équivalente au français. */
-.entete-ar { text-align:right;direction:rtl;font-size:12.5px;color:#1f2937;font-weight:600;line-height:1.6 }
+/* Arabe : couleur sombre pour la visibilité, mais graisse NORMALE (le gras
+   casse le rendu/chaînage des glyphes arabes) et taille mesurée (pas « grosse »).
+   La lisibilité vient surtout de la police Noto Naskh Arabic (cf. @import). */
+.entete-ar { text-align:right;direction:rtl;font-size:11.5px;color:#1f2937;line-height:1.7 }
 .header-logo { flex-shrink:0;align-self:center }
 .school-name-line { text-align:center;font-size:15px;font-weight:bold;color:#0F172A;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px }
 .school-block { flex:1 }
@@ -211,7 +216,7 @@ tr:nth-child(even) { background:#f9fafb }
 .combined-summary td { padding:5px 6px;text-align:center;font-size:11px;border-right:1px solid #d1d5db;border-top:1px solid #d1d5db }
 .combined-summary td:last-child, .combined-summary th:last-child { border-right:none }
 .mention-cell { font-weight:700;font-size:12px }
-.th-ar { font-weight:400;font-size:8.5px;opacity:.85 }
+.th-ar { font-weight:400;font-size:9.5px;opacity:1 }
 
 /* ── Boîte appréciation ── */
 .appreciation-box { border:1px solid #e5e7eb;border-radius:6px;padding:8px 12px;background:#fafafa;margin:10px 0 }
