@@ -410,7 +410,7 @@ export async function deverrouillerPeriode(
 
 // ─── Pré-vol avant génération ────────────────────────────────────────────────
 
-export type PreflightWarning = { code: 'matieres_non_evaluees' | 'matieres_sans_notes' | 'eleves_sans_aucune_note'; message: string };
+export type PreflightWarning = { code: 'matieres_non_evaluees' | 'matieres_sans_notes' | 'eleves_sans_aucune_note' | 'periodes_vides'; message: string };
 
 export type PreflightResult = {
   classe_id: string; periode: number; filiere: string;
@@ -418,6 +418,9 @@ export type PreflightResult = {
   matieres_non_evaluees: { id: string; nom_fr: string; nom_ar: string | null; filiere: 'FR' | 'AR'; source: 'periode' | 'classe' }[];
   matieres_sans_notes: { id: string; nom_fr: string; nom_ar: string | null; filiere: 'FR' | 'AR' }[];
   eleves_sans_aucune_note: { id: string; nom_fr: string; prenom_fr: string; matricule: string }[];
+  // Bulletin annuel (periode 0) : périodes entièrement sans notes → exclues silencieusement
+  // du calcul de la moyenne annuelle. Le front avertit mais laisse générer.
+  periodes_vides: { periode: number; libelle: string }[];
   total_eleves: number;
   warnings: PreflightWarning[];
 };
@@ -519,7 +522,28 @@ export async function preflightBulletins(etablissement_id: string, data: Preflig
     .filter(i => !elevesAvecAuMoinsUneNote.has(i.eleve_id))
     .map(i => ({ id: i.eleve.id, nom_fr: i.eleve.nom_fr, prenom_fr: i.eleve.prenom_fr, matricule: i.eleve.matricule }));
 
+  // Bulletin annuel (periode 0) : repérer les périodes entièrement sans notes.
+  // Elles sont sinon exclues silencieusement de la moyenne annuelle (cf. genererBulletinsAnnuels).
+  const periodes_vides: PreflightResult['periodes_vides'] = [];
+  if (periode === 0 && periodes.length > 1) {
+    const periodesAvecNotes = new Set(notes.map(n => n.periode));
+    const labelsFr = Array.isArray((config?.noms_periodes as { fr?: unknown } | null)?.fr)
+      ? ((config!.noms_periodes as { fr: string[] }).fr)
+      : [];
+    for (const p of periodes) {
+      if (!periodesAvecNotes.has(p)) {
+        periodes_vides.push({ periode: p, libelle: labelsFr[p - 1] ?? `Période ${p}` });
+      }
+    }
+  }
+
   const warnings: PreflightWarning[] = [];
+  if (periodes_vides.length > 0) {
+    warnings.push({
+      code: 'periodes_vides',
+      message: `${periodes_vides.length} période(s) sans aucune note (${periodes_vides.map(p => p.libelle).join(', ')}) — exclue(s) de la moyenne annuelle, qui ne portera que sur les périodes saisies.`,
+    });
+  }
   if (matieres_non_evaluees.length > 0) {
     warnings.push({
       code: 'matieres_non_evaluees',
@@ -542,7 +566,7 @@ export async function preflightBulletins(etablissement_id: string, data: Preflig
   return {
     classe_id, periode, filiere,
     matieres_evaluees, matieres_non_evaluees, matieres_sans_notes,
-    eleves_sans_aucune_note, total_eleves, warnings,
+    eleves_sans_aucune_note, periodes_vides, total_eleves, warnings,
   };
 }
 
@@ -862,7 +886,12 @@ function bodyContent(html: string): string {
  * que renderPdfHtml(..., { fitToA4:true }) réduit si le contenu dépasse une page
  * → garantit « 1 bulletin = 1 page A4 ».
  */
-function wrapBulletinsA4(pageContents: string[], css: string): string {
+function wrapBulletinsA4(pageContents: string[], css: string, opts: { policeEchelle?: number } = {}): string {
+  // Échelle de police configurable (Paramètres → Bulletins) appliquée via `zoom` :
+  // agrandit tout le contenu. Sur un bulletin dense, fitToA4 recompresse ensuite
+  // pour tenir sur une page ; sur un bulletin aéré, l'agrandissement est conservé.
+  const zoom = Math.min(1.5, Math.max(0.7, (opts.policeEchelle ?? 100) / 100));
+  const zoomCss = zoom !== 1 ? `zoom: ${zoom};` : '';
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><style>
 ${css}
 body { padding: 0; margin: 0 }
@@ -871,7 +900,7 @@ body { padding: 0; margin: 0 }
 /* min-height ≈ hauteur imprimable (277mm ≈ 1046px @96dpi, marge de sécurité)
    + colonne flex : le bulletin remplit la page A4 au lieu de flotter en haut.
    Le pied de page (date + signatures) est poussé en bas via margin-top:auto. */
-.a4-fit { transform-origin: top left; padding: 18px 28px; display: flex; flex-direction: column; min-height: 1040px }
+.a4-fit { transform-origin: top left; padding: 18px 28px; display: flex; flex-direction: column; min-height: 1040px; ${zoomCss} }
 .a4-fit > .footer-date { margin-top: auto }
 </style></head><body>
 ${pageContents.map(c => `<div class="a4-page"><div class="a4-fit">${c}</div></div>`).join('\n')}
@@ -964,6 +993,12 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
     etablissement_autorisation: etab.numero_autorisation,
     maitre_fr, maitre_ar,
     absences_justifiees: abs.j, absences_non_justifiees: abs.nj,
+    // Réglages de rendu (Paramètres → Bulletins).
+    afficher_rang: config?.bulletin_afficher_rang ?? true,
+    afficher_absences: config?.bulletin_afficher_absences ?? true,
+    logo_echelle: config?.bulletin_logo_echelle ?? 100,
+    nb_periodes: nbPeriodes,
+    template_html: (await prisma.bulletinTemplate.findUnique({ where: { etablissement_id } }))?.contenu_html ?? null,
   };
 
   type NoteRaw = { matiere_id: string; valeur: unknown; periode: number; evaluee?: boolean; matiere: { nom_fr: string; nom_ar: string | null; coeff_defaut: unknown } };
@@ -1015,7 +1050,7 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
   }
 
   return renderPdfHtml(
-    wrapBulletinsA4([bodyContent(html)], BULLETIN_CSS),
+    wrapBulletinsA4([bodyContent(html)], BULLETIN_CSS, { policeEchelle: config?.bulletin_police_echelle ?? 100 }),
     { format: 'A4', printBackground: true, margin: { top: '10mm', bottom: '10mm', left: '8mm', right: '8mm' } },
     { fitToA4: true },
   );
@@ -1031,6 +1066,7 @@ export async function genererPdfClasse(
   if (!etab) throw new NotFoundError('Établissement introuvable');
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
   const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
+  const templateHtml = (await prisma.bulletinTemplate.findUnique({ where: { etablissement_id } }))?.contenu_html ?? null;
   // Mentions effectives = celles du niveau de la classe imprimée, sinon défauts établissement.
   const classeNiveau = await prisma.classe.findUnique({ where: { id: classe_id }, select: { niveau_id: true } });
   const mentions = await getMentionsForNiveau(etablissement_id, classeNiveau?.niveau_id);
@@ -1133,6 +1169,10 @@ export async function genererPdfClasse(
       etablissement_autorisation: etab.numero_autorisation,
       maitre_fr, maitre_ar,
       absences_justifiees: abs.j, absences_non_justifiees: abs.nj,
+      afficher_rang: config?.bulletin_afficher_rang ?? true,
+      afficher_absences: config?.bulletin_afficher_absences ?? true,
+      logo_echelle: config?.bulletin_logo_echelle ?? 100,
+      template_html: templateHtml,
       notes_fr: filiere !== 'AR' ? toRows('FR') : undefined,
       notes_ar: filiere !== 'FR' ? toRows('AR') : undefined,
     }));
@@ -1149,8 +1189,82 @@ export async function genererPdfClasse(
     return m ? m[1] : p;
   });
   return renderPdfHtml(
-    wrapBulletinsA4(pageContents, BULLETIN_CSS),
+    wrapBulletinsA4(pageContents, BULLETIN_CSS, { policeEchelle: config?.bulletin_police_echelle ?? 100 }),
     { format: 'A4', printBackground: true, margin: { top: '10mm', bottom: '10mm', left: '8mm', right: '8mm' } },
     { fitToA4: true },
   );
+}
+
+// ─── Modèle HTML du bulletin (Étape 2 : rendu éditable) ──────────────────────
+
+export async function getBulletinTemplate(etablissement_id: string) {
+  const tpl = await prisma.bulletinTemplate.findUnique({ where: { etablissement_id } });
+  const { DEFAULT_BULLETIN_TEMPLATE_EDITABLE, BULLETIN_BLOCS } = await import('./bulletin.template');
+  return {
+    contenu_html: tpl?.contenu_html ?? DEFAULT_BULLETIN_TEMPLATE_EDITABLE,
+    is_custom: !!tpl,
+    blocs: BULLETIN_BLOCS,
+  };
+}
+
+export async function upsertBulletinTemplate(etablissement_id: string, contenu_html: string) {
+  return prisma.bulletinTemplate.upsert({
+    where: { etablissement_id },
+    create: { etablissement_id, contenu_html },
+    update: { contenu_html },
+  });
+}
+
+export async function resetBulletinTemplate(etablissement_id: string) {
+  await prisma.bulletinTemplate.deleteMany({ where: { etablissement_id } });
+}
+
+// Aperçu HTML du modèle avec des données d'exemple (en-tête / logo / échelle réels
+// de l'établissement) — pour l'iframe de prévisualisation côté éditeur.
+export async function apercuBulletinTemplate(etablissement_id: string, contenu_html: string): Promise<{ html: string }> {
+  const etab = await prisma.etablissement.findUnique({ where: { id: etablissement_id } });
+  if (!etab) throw new NotFoundError('Établissement introuvable');
+  const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
+  const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
+  const mentions = await getMentionsEtab(etablissement_id);
+  const { generateBulletinHtml } = await import('./bulletin.template');
+
+  const demoNotes = [
+    { nom_fr: 'Mathématiques', nom_ar: 'الرياضيات', coeff: 4, valeur: Math.round(baseNote * 0.78 * 100) / 100, note_max: baseNote, evaluee: true },
+    { nom_fr: 'Français', nom_ar: 'الفرنسية', coeff: 4, valeur: Math.round(baseNote * 0.65 * 100) / 100, note_max: baseNote, evaluee: true },
+    { nom_fr: 'Sciences de la Vie et de la Terre', nom_ar: 'علوم الحياة والأرض', coeff: 2, valeur: Math.round(baseNote * 0.80 * 100) / 100, note_max: baseNote, evaluee: true },
+    { nom_fr: 'Histoire-Géographie', nom_ar: 'التاريخ والجغرافيا', coeff: 2, valeur: Math.round(baseNote * 0.57 * 100) / 100, note_max: baseNote, evaluee: true },
+    { nom_fr: 'Anglais', nom_ar: 'الإنجليزية', coeff: 2, valeur: Math.round(baseNote * 0.70 * 100) / 100, note_max: baseNote, evaluee: true },
+    { nom_fr: 'Éducation Physique et Sportive', nom_ar: 'التربية البدنية', coeff: 1, valeur: Math.round(baseNote * 0.85 * 100) / 100, note_max: baseNote, evaluee: true },
+  ];
+
+  const html = generateBulletinHtml({
+    type: 'FR', periode: 1,
+    etablissement_nom_fr: etab.nom_fr,
+    etablissement_logo_url: etab.logo_url,
+    entete_bulletin_fr: etab.entete_bulletin_fr,
+    entete_bulletin_ar: etab.entete_bulletin_ar,
+    eleve_nom_fr: 'Amadou FALL (exemple)',
+    eleve_matricule: `${etab.code}-2026-014`,
+    eleve_date_naissance: '15/05/2011',
+    eleve_lieu_naissance: 'Touba',
+    annee_libelle: '2025-2026',
+    moyenne: Math.round(baseNote * 0.716 * 100) / 100,
+    rang: 3,
+    appreciation: mentions[1]?.libelle_fr ?? 'Bien',
+    devise: etab.devise,
+    note_max_etab: baseNote,
+    mentions,
+    etablissement_telephone: etab.telephone,
+    etablissement_email: etab.email,
+    etablissement_autorisation: etab.numero_autorisation,
+    maitre_fr: 'Mme Aïssatou NDIAYE',
+    absences_justifiees: 2, absences_non_justifiees: 1,
+    afficher_rang: config?.bulletin_afficher_rang ?? true,
+    afficher_absences: config?.bulletin_afficher_absences ?? true,
+    logo_echelle: config?.bulletin_logo_echelle ?? 100,
+    template_html: contenu_html,
+    notes_fr: demoNotes,
+  });
+  return { html };
 }

@@ -10,7 +10,7 @@ import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 
-type Tab = 'etablissement' | 'pedagogie' | 'niveaux' | 'fonctions' | 'compte' | 'bareme' | 'tarifs' | 'notifications' | 'securite';
+type Tab = 'etablissement' | 'pedagogie' | 'niveaux' | 'fonctions' | 'compte' | 'bulletins' | 'tarifs' | 'notifications' | 'securite';
 
 interface Niveau {
   id: string;
@@ -78,6 +78,11 @@ interface ConfigNotes {
   seuil_passable: number;
   autoriser_toutes_matieres: boolean;
   autoriser_toutes_classes: boolean;
+  // Rendu des bulletins PDF (onglet Bulletins).
+  bulletin_afficher_rang: boolean;
+  bulletin_afficher_absences: boolean;
+  bulletin_logo_echelle: number;
+  bulletin_police_echelle: number;
 }
 
 type CouleurMention = 'success' | 'info' | 'warning' | 'error';
@@ -149,7 +154,7 @@ function NiveauMentionsModal({ niveau, noteMax, defaults, api, onClose }: {
     <Modal isOpen onClose={onClose} title={`Mentions — ${niveau.libelle}`} size="md">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-          Mentions spécifiques à ce niveau. Si aucune n'est définie, le niveau hérite des mentions par défaut de l'établissement (onglet Barème).
+          Mentions spécifiques à ce niveau. Si aucune n'est définie, le niveau hérite des mentions par défaut de l'établissement (onglet Bulletins).
         </p>
         {loading ? <div className="muted" style={{ fontSize: 13 }}>Chargement…</div> : (
           <>
@@ -255,6 +260,150 @@ function Toggle({ checked, onChange, label, description }: {
           display: 'block',
         }} />
       </button>
+    </div>
+  );
+}
+
+// Éditeur HTML du modèle de bulletin (Étape 2). Corps à base de blocs {{...}}
+// calculés par le moteur ; aperçu rendu côté serveur avec des données d'exemple.
+const BULLETIN_BLOC_LABELS: Record<string, string> = {
+  en_tete: 'En-tête (logo + textes officiels)',
+  titre: 'Titre du bulletin',
+  bandeau_ecole: 'Bandeau contact école',
+  infos_eleve: 'Informations de l\'élève',
+  tableau_notes: 'Tableau des notes (calculé)',
+  resume: 'Résumé (moyenne / rang / mention)',
+  absences: 'Tableau des absences',
+  observation: 'Observation / appréciation',
+  pied_de_page: 'Pied de page (signatures)',
+};
+
+function BulletinTemplateEditor() {
+  const api = useApi();
+  const canEdit = useAuthStore(s => ['admin', 'directeur'].includes(s.user?.role ?? ''));
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [html, setHtml] = useState('');
+  const [blocs, setBlocs] = useState<string[]>([]);
+  const [isCustom, setIsCustom] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    api.get<{ contenu_html: string; is_custom: boolean; blocs: string[] }>('/api/v1/bulletins/template')
+      .then(d => { setHtml(d.contenu_html); setIsCustom(d.is_custom); setBlocs(d.blocs); setDirty(false); })
+      .catch(() => toast.error('Impossible de charger le modèle'))
+      .finally(() => setLoading(false));
+  }, [api]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const insertBloc = (key: string) => {
+    const ta = textareaRef.current;
+    const token = `{{${key}}}`;
+    if (!ta) { setHtml(h => h + token); setDirty(true); return; }
+    const start = ta.selectionStart, end = ta.selectionEnd;
+    const next = html.substring(0, start) + token + html.substring(end);
+    setHtml(next); setDirty(true);
+    setTimeout(() => { ta.focus(); const pos = start + token.length; ta.selectionStart = ta.selectionEnd = pos; }, 0);
+  };
+
+  const handlePreview = async () => {
+    setPreviewing(true);
+    try {
+      const res = await api.post<{ html: string }>('/api/v1/bulletins/template/apercu', { contenu_html: html });
+      const url = URL.createObjectURL(new Blob([res.html], { type: 'text/html' }));
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } catch (err) { toast.error((err as Error).message || 'Aperçu impossible'); }
+    finally { setPreviewing(false); }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.put('/api/v1/bulletins/template', { contenu_html: html });
+      toast.success('Modèle enregistré'); setDirty(false); setIsCustom(true);
+    } catch (err) { toast.error((err as Error).message || 'Erreur'); }
+    finally { setSaving(false); }
+  };
+
+  const handleReset = async () => {
+    if (!confirm('Supprimer le modèle personnalisé et revenir au modèle par défaut ?')) return;
+    setResetting(true);
+    try {
+      await api.delete('/api/v1/bulletins/template/reset');
+      toast.success('Modèle réinitialisé');
+      load();
+    } catch (err) { toast.error((err as Error).message || 'Erreur'); }
+    finally { setResetting(false); }
+  };
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card-hd">
+        <div>
+          <h3 style={{ margin: 0 }}>
+            Modèle avancé (HTML)
+            {isCustom && <span style={{ fontSize: 11, marginInlineStart: 8, padding: '1px 7px', borderRadius: 4, background: 'var(--success-soft)', color: 'var(--success-text)' }}>✓ personnalisé</span>}
+            {dirty && <span style={{ fontSize: 11, marginInlineStart: 8, color: 'var(--warning)' }}>● non enregistré</span>}
+          </h3>
+          <span className="sub">Réorganisez ou personnalisez le rendu. Chaque {'{{bloc}}'} est calculé automatiquement ; vous pouvez ajouter du texte, du HTML ou un &lt;style&gt;.</span>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button variant="ghost" onClick={handlePreview} loading={previewing}>Aperçu</Button>
+          {canEdit && isCustom && <Button variant="ghost" onClick={handleReset} loading={resetting} style={{ color: '#dc2626' }}>Réinitialiser</Button>}
+          {canEdit && <Button onClick={handleSave} loading={saving} disabled={!dirty}>Enregistrer</Button>}
+        </div>
+      </div>
+      <div className="card-pad">
+        {loading ? (
+          <div style={{ padding: 30, textAlign: 'center', color: 'var(--ink-3)', fontSize: 14 }}>Chargement du modèle…</div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 250px', gap: 12, alignItems: 'start' }}>
+            <textarea
+              ref={textareaRef}
+              value={html}
+              onChange={e => { setHtml(e.target.value); setDirty(true); }}
+              spellCheck={false}
+              disabled={!canEdit}
+              style={{
+                width: '100%', minHeight: 380, padding: '12px 14px',
+                border: '1px solid var(--rule)', borderRadius: 'var(--r-md)', resize: 'vertical',
+                fontFamily: '"JetBrains Mono","Fira Code",monospace', fontSize: 12, lineHeight: 1.6,
+                background: 'var(--paper)', color: 'var(--ink)', boxSizing: 'border-box',
+              }}
+            />
+            <div style={{ border: '1px solid var(--rule)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
+              <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--rule)', fontSize: 11, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'var(--paper-2)' }}>
+                Blocs disponibles
+              </div>
+              <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {blocs.map(key => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => insertBloc(key)}
+                    disabled={!canEdit}
+                    title={`Insérer {{${key}}}`}
+                    style={{
+                      display: 'flex', flexDirection: 'column', gap: 2, padding: '6px 8px',
+                      border: '1px solid var(--rule)', borderRadius: 6, background: 'var(--paper-2)',
+                      cursor: canEdit ? 'pointer' : 'default', textAlign: 'start',
+                    }}
+                  >
+                    <code style={{ fontSize: 10, color: 'var(--info-text)', fontWeight: 600 }}>{`{{${key}}}`}</code>
+                    <span style={{ fontSize: 10, color: 'var(--ink-3)', lineHeight: 1.3 }}>{BULLETIN_BLOC_LABELS[key] ?? key}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -536,6 +685,10 @@ export function ParametresPage() {
             seuil_passable:   Number(rawNotes.seuil_passable   ?? 10),
             autoriser_toutes_matieres: Boolean(rawNotes.autoriser_toutes_matieres),
             autoriser_toutes_classes:  Boolean(rawNotes.autoriser_toutes_classes),
+            bulletin_afficher_rang:     rawNotes.bulletin_afficher_rang     !== undefined ? Boolean(rawNotes.bulletin_afficher_rang)     : true,
+            bulletin_afficher_absences: rawNotes.bulletin_afficher_absences !== undefined ? Boolean(rawNotes.bulletin_afficher_absences) : true,
+            bulletin_logo_echelle:      Number(rawNotes.bulletin_logo_echelle   ?? 100),
+            bulletin_police_echelle:    Number(rawNotes.bulletin_police_echelle ?? 100),
           });
         }
         if (rawNotif) {
@@ -866,7 +1019,7 @@ export function ParametresPage() {
             { key: 'pedagogie', label: t('parametre.pedagogie') },
             { key: 'niveaux', label: 'Niveaux' },
             { key: 'fonctions', label: 'Fonctions personnel' },
-            { key: 'bareme', label: t('parametre.bareme_mentions') },
+            { key: 'bulletins', label: t('parametre.bulletins_section') },
             { key: 'tarifs', label: t('parametre.tarifs') },
             { key: 'compte', label: t('parametre.mon_compte') },
             { key: 'notifications', label: t('parametre.notifications_section') },
@@ -998,36 +1151,6 @@ export function ParametresPage() {
                   value={etab.devise}
                   onChange={e => setEtab(p => p ? { ...p, devise: e.target.value } : p)}
                 />
-                <div style={{ borderTop: '1px solid var(--rule)', paddingTop: 12, marginTop: 4 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2 }}>En-tête des bulletins</div>
-                  <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 10 }}>
-                    Texte officiel affiché en haut des bulletins (mentions République, Ministère, IEF…).
-                    Le FR s'affiche sur les bulletins français, l'AR sur les arabes, les deux sur un bulletin combiné.
-                  </div>
-                  <div className="grid-2">
-                    <div className="field">
-                      <label className="field-label">Texte d'en-tête (FR)</label>
-                      <textarea
-                        className="input"
-                        rows={4}
-                        placeholder={'République du Sénégal\nUn Peuple — Un But — Une Foi\nMinistère de l\'Éducation nationale\nIEF de …'}
-                        value={etab.entete_bulletin_fr ?? ''}
-                        onChange={e => setEtab(p => p ? { ...p, entete_bulletin_fr: e.target.value } : p)}
-                      />
-                    </div>
-                    <div className="field">
-                      <label className="field-label">Texte d'en-tête (AR)</label>
-                      <textarea
-                        className="input"
-                        rows={4}
-                        dir="rtl"
-                        placeholder={'الجمهورية السنغالية\nشعب — هدف — إيمان\nوزارة التربية الوطنية'}
-                        value={etab.entete_bulletin_ar ?? ''}
-                        onChange={e => setEtab(p => p ? { ...p, entete_bulletin_ar: e.target.value } : p)}
-                      />
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -1539,8 +1662,96 @@ export function ParametresPage() {
         </>
       )}
 
-      {/* ── Barème des mentions ── */}
-      {!loading && tab === 'bareme' && config && (() => {
+      {/* ── Onglet Bulletins : rendu du PDF ── */}
+      {!loading && tab === 'bulletins' && config && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="card-hd">
+            <div>
+              <h3 style={{ margin: 0 }}>{t('parametre.bulletin_rendu_titre')}</h3>
+              <span className="sub">{t('parametre.bulletin_rendu_desc')}</span>
+            </div>
+            <Button onClick={saveConfig} loading={saving === 'notes'}>{t('actions.enregistrer')}</Button>
+          </div>
+          <div className="card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <Toggle
+              label={t('parametre.bulletin_afficher_rang')}
+              description={t('parametre.bulletin_afficher_rang_desc')}
+              checked={config.bulletin_afficher_rang}
+              onChange={v => setConfig(c => c ? { ...c, bulletin_afficher_rang: v } : c)}
+            />
+            <Toggle
+              label={t('parametre.bulletin_afficher_absences')}
+              description={t('parametre.bulletin_afficher_absences_desc')}
+              checked={config.bulletin_afficher_absences}
+              onChange={v => setConfig(c => c ? { ...c, bulletin_afficher_absences: v } : c)}
+            />
+            <div className="grid-2">
+              <div className="field">
+                <label className="field-label">{t('parametre.bulletin_logo_echelle')} — {config.bulletin_logo_echelle}%</label>
+                <input
+                  type="range" min={50} max={200} step={5}
+                  value={config.bulletin_logo_echelle}
+                  onChange={e => setConfig(c => c ? { ...c, bulletin_logo_echelle: Number(e.target.value) } : c)}
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div className="field">
+                <label className="field-label">{t('parametre.bulletin_police_echelle')} — {config.bulletin_police_echelle}%</label>
+                <input
+                  type="range" min={70} max={150} step={5}
+                  value={config.bulletin_police_echelle}
+                  onChange={e => setConfig(c => c ? { ...c, bulletin_police_echelle: Number(e.target.value) } : c)}
+                  style={{ width: '100%' }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Onglet Bulletins : en-tête officiel (déplacé depuis Établissement) ── */}
+      {!loading && tab === 'bulletins' && etab && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="card-hd">
+            <div>
+              <h3 style={{ margin: 0 }}>{t('parametre.bulletin_entete_titre')}</h3>
+              <span className="sub">{t('parametre.bulletin_entete_desc')}</span>
+            </div>
+            <Button onClick={saveEtab} loading={saving === 'etab'}>{t('actions.enregistrer')}</Button>
+          </div>
+          <div className="card-pad">
+            <div className="grid-2">
+              <div className="field">
+                <label className="field-label">Texte d'en-tête (FR)</label>
+                <textarea
+                  className="input"
+                  rows={4}
+                  placeholder={'République du Sénégal\nUn Peuple — Un But — Une Foi\nMinistère de l\'Éducation nationale\nIEF de …'}
+                  value={etab.entete_bulletin_fr ?? ''}
+                  onChange={e => setEtab(p => p ? { ...p, entete_bulletin_fr: e.target.value } : p)}
+                />
+              </div>
+              <div className="field">
+                <label className="field-label">Texte d'en-tête (AR)</label>
+                <textarea
+                  className="input"
+                  rows={4}
+                  dir="rtl"
+                  placeholder={'الجمهورية السنغالية\nشعب — هدف — إيمان\nوزارة التربية الوطنية'}
+                  value={etab.entete_bulletin_ar ?? ''}
+                  onChange={e => setEtab(p => p ? { ...p, entete_bulletin_ar: e.target.value } : p)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Onglet Bulletins : modèle HTML avancé (Étape 2) ── */}
+      {!loading && tab === 'bulletins' && <BulletinTemplateEditor />}
+
+      {/* ── Onglet Bulletins : mentions & appréciations (déplacé depuis Barème) ── */}
+      {!loading && tab === 'bulletins' && config && (() => {
         const sorted = [...mentions].sort((a, b) => b.seuil_min - a.seuil_min);
         const COULEUR_OPTIONS: { value: CouleurMention; label: string }[] = [
           { value: 'success', label: 'Vert (Très bien)' },

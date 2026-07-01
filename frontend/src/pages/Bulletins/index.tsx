@@ -35,6 +35,7 @@ interface PreflightResult {
   matieres_non_evaluees: { id: string; nom_fr: string; nom_ar: string | null; filiere: 'FR' | 'AR'; source: 'periode' | 'classe' }[];
   matieres_sans_notes: { id: string; nom_fr: string; nom_ar: string | null; filiere: 'FR' | 'AR' }[];
   eleves_sans_aucune_note: { id: string; nom_fr: string; prenom_fr: string; matricule: string }[];
+  periodes_vides?: { periode: number; libelle: string }[];
   warnings: { code: string; message: string }[];
 }
 
@@ -579,6 +580,19 @@ export function BulletinsPage() {
                 <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>
                   {preflight.eleves_sans_aucune_note.slice(0, 8).map(e => `${e.prenom_fr} ${e.nom_fr}`).join(' · ')}
                   {preflight.eleves_sans_aucune_note.length > 8 && ` … et ${preflight.eleves_sans_aucune_note.length - 8} autre(s)`}
+                </div>
+              </div>
+            )}
+
+            {/* Trimestre(s) entièrement vide(s) — bulletin annuel uniquement */}
+            {preflight.periodes_vides && preflight.periodes_vides.length > 0 && (
+              <div style={{ padding: 12, background: 'var(--warning-soft)', borderRadius: 'var(--r-md)' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--warning-text)', marginBottom: 6 }}>
+                  ⚠️ Période(s) sans aucune note ({preflight.periodes_vides.length})
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>
+                  {preflight.periodes_vides.map(p => p.libelle).join(' · ')} — exclue(s) du calcul.
+                  La moyenne annuelle ne portera que sur les périodes saisies.
                 </div>
               </div>
             )}

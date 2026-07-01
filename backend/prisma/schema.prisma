@@ -59,6 +59,7 @@ model Etablissement {
   activites             Activite[]
   document_templates    DocumentTemplate[]
   documents_generes     DocumentGenere[]
+  bulletin_template     BulletinTemplate?
   demandes_absence      DemandeAbsencePersonnel[]
   fonctions             Fonction[]
   mentions              Mention[]
@@ -312,6 +313,13 @@ model ConfigNotes {
   // Dès qu'au moins un des deux est true, insertOnly est levé (le prof peut modifier).
   autoriser_toutes_matieres Boolean  @default(false)
   autoriser_toutes_classes  Boolean  @default(false)
+  // Rendu des bulletins PDF (panneau Paramètres → Bulletins).
+  // afficher_rang : masque la colonne Rang sur le PDF sans perdre le classement calculé.
+  // logo/police_echelle : facteur d'échelle en % (100 = taille de base) pour le logo et la police.
+  bulletin_afficher_rang     Boolean @default(true)
+  bulletin_afficher_absences Boolean @default(true)
+  bulletin_logo_echelle      Int     @default(100)
+  bulletin_police_echelle    Int     @default(100)
   updated_at              DateTime @updatedAt
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
@@ -1000,6 +1008,20 @@ model DocumentTemplate {
   documents_generes DocumentGenere[]
 
   @@unique([etablissement_id, type])
+}
+
+// Modèle HTML personnalisable du bulletin (un seul par établissement).
+// Le corps utilise des placeholders de blocs ({{en_tete}}, {{tableau_notes}}, {{resume}}…)
+// que le moteur calcule par variante (FR/AR/COMBINE/annuel). Absent → modèle par défaut.
+model BulletinTemplate {
+  id               String   @id @default(uuid())
+  etablissement_id String   @unique
+  contenu_html     String
+  actif            Boolean  @default(true)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
 }
 
 model DocumentGenere {

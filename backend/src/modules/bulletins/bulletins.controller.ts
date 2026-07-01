@@ -1,10 +1,11 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
-import { genererBulletinSchema, genererBulletinAnnuelSchema, observationSchema, preflightSchema, deverrouillerPeriodeSchema } from './bulletins.schema';
+import { genererBulletinSchema, genererBulletinAnnuelSchema, observationSchema, preflightSchema, deverrouillerPeriodeSchema, bulletinTemplateSchema } from './bulletins.schema';
 import {
   listerBulletins, genererBulletins, genererBulletinsAnnuels,
   getBulletin, genererPdfBulletin, genererPdfClasse, mettreAJourObservation,
   preflightBulletins, deverrouillerPeriode,
+  getBulletinTemplate, upsertBulletinTemplate, resetBulletinTemplate, apercuBulletinTemplate,
 } from './bulletins.service';
 
 export async function listerHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -94,6 +95,35 @@ export async function deverrouillerPeriodeHandler(request: FastifyRequest, reply
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
   try {
     return reply.send(await deverrouillerPeriode(etablissement_id, parsed.data, acteur_id));
+  } catch (err) {
+    return reply.status(400).send({ error: (err as Error).message });
+  }
+}
+
+export async function getTemplateHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  return reply.send(await getBulletinTemplate(etablissement_id));
+}
+
+export async function upsertTemplateHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const parsed = bulletinTemplateSchema.safeParse(request.body);
+  if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  return reply.send(await upsertBulletinTemplate(etablissement_id, parsed.data.contenu_html));
+}
+
+export async function resetTemplateHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  await resetBulletinTemplate(etablissement_id);
+  return reply.send({ success: true });
+}
+
+export async function apercuTemplateHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const parsed = bulletinTemplateSchema.safeParse(request.body);
+  if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  try {
+    return reply.send(await apercuBulletinTemplate(etablissement_id, parsed.data.contenu_html));
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
   }

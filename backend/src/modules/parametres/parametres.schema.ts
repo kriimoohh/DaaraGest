@@ -48,6 +48,11 @@ export const configNotesSchema = z.object({
   seuil_passable:   zodSeuil.optional(),
   autoriser_toutes_matieres: z.boolean().optional(),
   autoriser_toutes_classes:  z.boolean().optional(),
+  // Rendu des bulletins PDF. Échelles bornées pour éviter un rendu cassé.
+  bulletin_afficher_rang:     z.boolean().optional(),
+  bulletin_afficher_absences: z.boolean().optional(),
+  bulletin_logo_echelle:      z.number().int().min(50).max(200).optional(),
+  bulletin_police_echelle:    z.number().int().min(70).max(150).optional(),
 }).refine(
   (d) => {
     // Si on touche aux seuils, ils doivent être dans l'ordre décroissant strict
