@@ -48,6 +48,11 @@ interface BulletinBaseData {
   // Absences cumulées sur l'année scolaire (justifiées / non justifiées).
   absences_justifiees?: number;
   absences_non_justifiees?: number;
+  // Réglages de rendu (panneau Paramètres → Bulletins). Absents = valeurs par défaut.
+  afficher_rang?: boolean;      // défaut true → colonne Rang visible
+  afficher_absences?: boolean;  // défaut true → tableau des absences visible
+  logo_echelle?: number;        // % (100 = taille de base)
+  nb_periodes?: number;         // pour le titre du bulletin annuel
 }
 
 // Libellé d'une matière, avec sa traduction arabe à côté (filière arabe) quand
@@ -152,12 +157,12 @@ export const CSS = `
    rendu (réseau dispo, cf. logo distant) ; à défaut, repli sur la police système. */
 @import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;700&display=swap');
 * { margin:0;padding:0;box-sizing:border-box }
-body { font-family:Arial,'Noto Naskh Arabic',sans-serif;font-size:11.5px;color:#111;padding:18px 28px }
+body { font-family:Arial,'Noto Naskh Arabic',sans-serif;font-size:12.5px;color:#111;padding:18px 28px }
 
 /* ── En-tête ── */
 .header { display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px }
 .header-top { display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px }
-.entete-text { font-size:10px;color:#374151;line-height:1.45;flex:1 }
+.entete-text { font-size:10.5px;color:#374151;line-height:1.45;flex:1 }
 .entete-fr { text-align:left }
 /* Arabe : couleur sombre pour la visibilité, mais graisse NORMALE (le gras
    casse le rendu/chaînage des glyphes arabes) et taille mesurée (pas « grosse »).
@@ -182,22 +187,22 @@ body { font-family:Arial,'Noto Naskh Arabic',sans-serif;font-size:11.5px;color:#
 /* ── Infos élève ── */
 .student-info { display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin-bottom:12px;border:1px solid #d1d5db;border-radius:6px;padding:10px 14px }
 .si-row { display:flex;gap:6px;align-items:baseline }
-.si-label { font-weight:700;font-size:10.5px;white-space:nowrap }
-.si-value { font-size:11.5px;border-bottom:1px dotted #9ca3af;flex:1;min-width:80px }
+.si-label { font-weight:700;font-size:11px;white-space:nowrap }
+.si-value { font-size:12px;border-bottom:1px dotted #9ca3af;flex:1;min-width:80px }
 
 /* ── Tableau d'évaluation ── */
 .eval-section { margin-bottom:14px }
 .eval-header { background:#0F172A;color:#fff;text-align:center;padding:5px 8px;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;border-radius:4px 4px 0 0 }
 table { width:100%;border-collapse:collapse }
 thead { background:#f0fdf4 }
-th { padding:6px 8px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#374151;border-bottom:2px solid #10B981;border-right:1px solid #d1d5db }
+th { padding:6px 8px;text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:#374151;border-bottom:2px solid #10B981;border-right:1px solid #d1d5db }
 th:last-child { border-right:none }
-td { padding:5px 8px;border-bottom:1px solid #e5e7eb;border-right:1px solid #f3f4f6;font-size:11px }
+td { padding:5px 8px;border-bottom:1px solid #e5e7eb;border-right:1px solid #f3f4f6;font-size:12px }
 td:last-child { border-right:none }
 tr:last-child td { border-bottom:none }
 tr:nth-child(even) { background:#f9fafb }
 .center { text-align:center }
-.grade { font-weight:700;font-size:12px }
+.grade { font-weight:700;font-size:13px }
 .pass { color:#059669 }
 .fail { color:#dc2626 }
 .appr-tb { color:#059669;font-size:10px }
@@ -217,11 +222,11 @@ tr:nth-child(even) { background:#f9fafb }
 
 /* ── Résumé (combiné) ── */
 .combined-summary { width:100%;border-collapse:collapse;margin-top:12px;border:1.5px solid #0F172A;border-radius:4px;overflow:hidden }
-.combined-summary th { background:#0F172A;color:#fff;padding:5px 6px;font-size:9.5px;text-align:center;border-right:1px solid #374151;text-transform:uppercase }
-.combined-summary td { padding:5px 6px;text-align:center;font-size:11px;border-right:1px solid #d1d5db;border-top:1px solid #d1d5db }
+.combined-summary th { background:#0F172A;color:#fff;padding:5px 6px;font-size:10.5px;text-align:center;border-right:1px solid #374151;text-transform:uppercase }
+.combined-summary td { padding:5px 6px;text-align:center;font-size:12px;border-right:1px solid #d1d5db;border-top:1px solid #d1d5db }
 .combined-summary td:last-child, .combined-summary th:last-child { border-right:none }
-.mention-cell { font-weight:700;font-size:12px }
-.th-ar { font-weight:400;font-size:9.5px;opacity:1 }
+.mention-cell { font-weight:700;font-size:13px }
+.th-ar { font-weight:400;font-size:10px;opacity:1 }
 
 /* ── Boîte appréciation ── */
 .appreciation-box { border:1px solid #e5e7eb;border-radius:6px;padding:8px 12px;background:#fafafa;margin:10px 0 }
@@ -240,7 +245,10 @@ tr:nth-child(even) { background:#f9fafb }
 
 // ─── Header commun ─────────────────────────────────────────────────────────
 
-const LOGO_MARK_SVG = `<svg width="79" height="90" viewBox="0 0 56 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
+// Mark générique « lawh + Dg ». Dimensionné dynamiquement (viewBox 56×64).
+function logoMarkSvg(hauteurPx: number): string {
+  const w = Math.round((hauteurPx * 56) / 64);
+  return `<svg width="${w}" height="${hauteurPx}" viewBox="0 0 56 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
   <rect x="20" y="0" width="16" height="8" rx="4" fill="#B85433"/>
   <rect x="4" y="6" width="48" height="52" rx="6" fill="#B85433"/>
   <rect x="18" y="6" width="20" height="6" rx="2" fill="#FAF6EE" opacity="0.25"/>
@@ -251,12 +259,16 @@ const LOGO_MARK_SVG = `<svg width="79" height="90" viewBox="0 0 56 64" fill="non
   </g>
   <text x="28" y="22" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="13" fill="#FAF6EE">Dg</text>
 </svg>`;
+}
 
 // Logo : logo uploadé de l'établissement si présent, sinon le mark générique.
+// Taille de base 96px (agrandie), mise à l'échelle par `logo_echelle` (% ; défaut 100).
 function logoHtml(data: BulletinBaseData): string {
+  const facteur = (data.logo_echelle ?? 100) / 100;
+  const px = Math.round(96 * facteur);
   return data.etablissement_logo_url
-    ? `<img src="${escapeHtml(data.etablissement_logo_url)}" alt="" style="width:90px;height:90px;object-fit:contain;flex-shrink:0"/>`
-    : LOGO_MARK_SVG;
+    ? `<img src="${escapeHtml(data.etablissement_logo_url)}" alt="" style="width:${px}px;height:${px}px;object-fit:contain;flex-shrink:0"/>`
+    : logoMarkSvg(px);
 }
 
 // Bloc de texte d'en-tête configurable : échappé, sauts de ligne → <br>.
@@ -291,10 +303,12 @@ function titleHtml(periode: string): string {
   </div>`;
 }
 
-function titleAnnuelHtml(): string {
+function titleAnnuelHtml(nbPeriodes = 3): string {
+  // Libellé adapté au découpage de l'établissement (2 = semestres, 6 = bimestres…).
+  const motPeriode = nbPeriodes === 2 ? 'semestres' : nbPeriodes === 6 ? 'bimestres' : 'trimestres';
   return `
   <div class="doc-title-wrap">
-    <div class="doc-title-main">Bulletin annuel &mdash; 3 trimestres</div>
+    <div class="doc-title-main">Bulletin annuel &mdash; ${nbPeriodes} ${motPeriode}</div>
   </div>`;
 }
 
@@ -491,19 +505,20 @@ function resultsSummaryHtml(data: BulletinBaseData): string {
   const moy = data.moyenne;
   const mention = getMention(moy);
   const color = moy !== null && moy >= RENDER_BASE / 2 ? '#059669' : '#dc2626';
+  const showRang = data.afficher_rang !== false;
   return `
   <table class="combined-summary">
     <thead>
       <tr>
         <th>Moyenne Générale<br><span class="th-ar">المعدل العام</span></th>
-        <th>Rang<br><span class="th-ar">الرتبة</span></th>
+        ${showRang ? '<th>Rang<br><span class="th-ar">الرتبة</span></th>' : ''}
         <th>Mention<br><span class="th-ar">التقدير</span></th>
       </tr>
     </thead>
     <tbody>
       <tr>
         <td style="font-weight:700;font-size:13px;color:${color}">${moy !== null ? `${Number(moy).toFixed(2)} / ${RENDER_BASE}` : '—'}</td>
-        <td>${data.rang ?? '—'}</td>
+        ${showRang ? `<td>${data.rang ?? '—'}</td>` : ''}
         <td class="mention-cell" style="color:${color}">${mention}</td>
       </tr>
     </tbody>
@@ -514,6 +529,7 @@ function combinedSummaryHtml(data: BulletinBaseData, frMoy: number | null, arMoy
   const globalMoy = data.moyenne;
   const mention = getMention(globalMoy);
   const mentionColor = globalMoy !== null && globalMoy >= 10 ? '#059669' : '#dc2626';
+  const showRang = data.afficher_rang !== false;
 
   return `
   <table class="combined-summary">
@@ -523,7 +539,7 @@ function combinedSummaryHtml(data: BulletinBaseData, frMoy: number | null, arMoy
         <th>Moy. FR<br><span class="th-ar">معدل الفرنسية</span></th>
         <th>Moy. AR<br><span class="th-ar">معدل العربية</span></th>
         <th>Moyenne Générale<br><span class="th-ar">المعدل العام</span></th>
-        <th>Rang<br><span class="th-ar">الرتبة</span></th>
+        ${showRang ? '<th>Rang<br><span class="th-ar">الرتبة</span></th>' : ''}
         <th>Mention<br><span class="th-ar">التقدير</span></th>
       </tr>
     </thead>
@@ -533,7 +549,7 @@ function combinedSummaryHtml(data: BulletinBaseData, frMoy: number | null, arMoy
         <td>${frMoy !== null ? Number(frMoy).toFixed(2) : '—'}</td>
         <td>${arMoy !== null ? Number(arMoy).toFixed(2) : '—'}</td>
         <td style="font-weight:700;font-size:13px;color:${mentionColor}">${globalMoy !== null ? `${Number(globalMoy).toFixed(2)} / ${RENDER_BASE}` : '—'}</td>
-        <td>${data.rang ?? '—'}</td>
+        ${showRang ? `<td>${data.rang ?? '—'}</td>` : ''}
         <td class="mention-cell" style="color:${mentionColor}">${mention}</td>
       </tr>
     </tbody>
@@ -541,7 +557,9 @@ function combinedSummaryHtml(data: BulletinBaseData, frMoy: number | null, arMoy
 }
 
 // Récapitulatif des absences (cumul année), justifiées / non justifiées, bilingue.
+// Masqué si le réglage `afficher_absences` est désactivé.
 function absencesHtml(data: BulletinBaseData): string {
+  if (data.afficher_absences === false) return '';
   const j = data.absences_justifiees ?? 0;
   const nj = data.absences_non_justifiees ?? 0;
   const total = j + nj;
@@ -652,7 +670,7 @@ export function generateBulletinAnnuelHtml(data: BulletinAnnuelData): string {
   // Bulletins strictement en français, y compris la filière arabe (libellés FR, LTR).
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><style>${CSS}</style></head><body>
     ${headerHtml(data, isAR ? 'AR' : isCombine ? 'COMBINE' : 'FR')}
-    ${titleAnnuelHtml()}
+    ${titleAnnuelHtml(data.nb_periodes)}
     ${schoolBandHtml(data)}
     ${studentInfoHtml(data)}
 

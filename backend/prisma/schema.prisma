@@ -312,6 +312,13 @@ model ConfigNotes {
   // Dès qu'au moins un des deux est true, insertOnly est levé (le prof peut modifier).
   autoriser_toutes_matieres Boolean  @default(false)
   autoriser_toutes_classes  Boolean  @default(false)
+  // Rendu des bulletins PDF (panneau Paramètres → Bulletins).
+  // afficher_rang : masque la colonne Rang sur le PDF sans perdre le classement calculé.
+  // logo/police_echelle : facteur d'échelle en % (100 = taille de base) pour le logo et la police.
+  bulletin_afficher_rang     Boolean @default(true)
+  bulletin_afficher_absences Boolean @default(true)
+  bulletin_logo_echelle      Int     @default(100)
+  bulletin_police_echelle    Int     @default(100)
   updated_at              DateTime @updatedAt
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])

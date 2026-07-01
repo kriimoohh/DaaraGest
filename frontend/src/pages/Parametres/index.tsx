@@ -10,7 +10,7 @@ import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 
-type Tab = 'etablissement' | 'pedagogie' | 'niveaux' | 'fonctions' | 'compte' | 'bareme' | 'tarifs' | 'notifications' | 'securite';
+type Tab = 'etablissement' | 'pedagogie' | 'niveaux' | 'fonctions' | 'compte' | 'bulletins' | 'tarifs' | 'notifications' | 'securite';
 
 interface Niveau {
   id: string;
@@ -78,6 +78,11 @@ interface ConfigNotes {
   seuil_passable: number;
   autoriser_toutes_matieres: boolean;
   autoriser_toutes_classes: boolean;
+  // Rendu des bulletins PDF (onglet Bulletins).
+  bulletin_afficher_rang: boolean;
+  bulletin_afficher_absences: boolean;
+  bulletin_logo_echelle: number;
+  bulletin_police_echelle: number;
 }
 
 type CouleurMention = 'success' | 'info' | 'warning' | 'error';
@@ -149,7 +154,7 @@ function NiveauMentionsModal({ niveau, noteMax, defaults, api, onClose }: {
     <Modal isOpen onClose={onClose} title={`Mentions — ${niveau.libelle}`} size="md">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-          Mentions spécifiques à ce niveau. Si aucune n'est définie, le niveau hérite des mentions par défaut de l'établissement (onglet Barème).
+          Mentions spécifiques à ce niveau. Si aucune n'est définie, le niveau hérite des mentions par défaut de l'établissement (onglet Bulletins).
         </p>
         {loading ? <div className="muted" style={{ fontSize: 13 }}>Chargement…</div> : (
           <>
@@ -536,6 +541,10 @@ export function ParametresPage() {
             seuil_passable:   Number(rawNotes.seuil_passable   ?? 10),
             autoriser_toutes_matieres: Boolean(rawNotes.autoriser_toutes_matieres),
             autoriser_toutes_classes:  Boolean(rawNotes.autoriser_toutes_classes),
+            bulletin_afficher_rang:     rawNotes.bulletin_afficher_rang     !== undefined ? Boolean(rawNotes.bulletin_afficher_rang)     : true,
+            bulletin_afficher_absences: rawNotes.bulletin_afficher_absences !== undefined ? Boolean(rawNotes.bulletin_afficher_absences) : true,
+            bulletin_logo_echelle:      Number(rawNotes.bulletin_logo_echelle   ?? 100),
+            bulletin_police_echelle:    Number(rawNotes.bulletin_police_echelle ?? 100),
           });
         }
         if (rawNotif) {
@@ -866,7 +875,7 @@ export function ParametresPage() {
             { key: 'pedagogie', label: t('parametre.pedagogie') },
             { key: 'niveaux', label: 'Niveaux' },
             { key: 'fonctions', label: 'Fonctions personnel' },
-            { key: 'bareme', label: t('parametre.bareme_mentions') },
+            { key: 'bulletins', label: t('parametre.bulletins_section') },
             { key: 'tarifs', label: t('parametre.tarifs') },
             { key: 'compte', label: t('parametre.mon_compte') },
             { key: 'notifications', label: t('parametre.notifications_section') },
@@ -998,36 +1007,6 @@ export function ParametresPage() {
                   value={etab.devise}
                   onChange={e => setEtab(p => p ? { ...p, devise: e.target.value } : p)}
                 />
-                <div style={{ borderTop: '1px solid var(--rule)', paddingTop: 12, marginTop: 4 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2 }}>En-tête des bulletins</div>
-                  <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 10 }}>
-                    Texte officiel affiché en haut des bulletins (mentions République, Ministère, IEF…).
-                    Le FR s'affiche sur les bulletins français, l'AR sur les arabes, les deux sur un bulletin combiné.
-                  </div>
-                  <div className="grid-2">
-                    <div className="field">
-                      <label className="field-label">Texte d'en-tête (FR)</label>
-                      <textarea
-                        className="input"
-                        rows={4}
-                        placeholder={'République du Sénégal\nUn Peuple — Un But — Une Foi\nMinistère de l\'Éducation nationale\nIEF de …'}
-                        value={etab.entete_bulletin_fr ?? ''}
-                        onChange={e => setEtab(p => p ? { ...p, entete_bulletin_fr: e.target.value } : p)}
-                      />
-                    </div>
-                    <div className="field">
-                      <label className="field-label">Texte d'en-tête (AR)</label>
-                      <textarea
-                        className="input"
-                        rows={4}
-                        dir="rtl"
-                        placeholder={'الجمهورية السنغالية\nشعب — هدف — إيمان\nوزارة التربية الوطنية'}
-                        value={etab.entete_bulletin_ar ?? ''}
-                        onChange={e => setEtab(p => p ? { ...p, entete_bulletin_ar: e.target.value } : p)}
-                      />
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -1539,8 +1518,93 @@ export function ParametresPage() {
         </>
       )}
 
-      {/* ── Barème des mentions ── */}
-      {!loading && tab === 'bareme' && config && (() => {
+      {/* ── Onglet Bulletins : rendu du PDF ── */}
+      {!loading && tab === 'bulletins' && config && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="card-hd">
+            <div>
+              <h3 style={{ margin: 0 }}>{t('parametre.bulletin_rendu_titre')}</h3>
+              <span className="sub">{t('parametre.bulletin_rendu_desc')}</span>
+            </div>
+            <Button onClick={saveConfig} loading={saving === 'notes'}>{t('actions.enregistrer')}</Button>
+          </div>
+          <div className="card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <Toggle
+              label={t('parametre.bulletin_afficher_rang')}
+              description={t('parametre.bulletin_afficher_rang_desc')}
+              checked={config.bulletin_afficher_rang}
+              onChange={v => setConfig(c => c ? { ...c, bulletin_afficher_rang: v } : c)}
+            />
+            <Toggle
+              label={t('parametre.bulletin_afficher_absences')}
+              description={t('parametre.bulletin_afficher_absences_desc')}
+              checked={config.bulletin_afficher_absences}
+              onChange={v => setConfig(c => c ? { ...c, bulletin_afficher_absences: v } : c)}
+            />
+            <div className="grid-2">
+              <div className="field">
+                <label className="field-label">{t('parametre.bulletin_logo_echelle')} — {config.bulletin_logo_echelle}%</label>
+                <input
+                  type="range" min={50} max={200} step={5}
+                  value={config.bulletin_logo_echelle}
+                  onChange={e => setConfig(c => c ? { ...c, bulletin_logo_echelle: Number(e.target.value) } : c)}
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div className="field">
+                <label className="field-label">{t('parametre.bulletin_police_echelle')} — {config.bulletin_police_echelle}%</label>
+                <input
+                  type="range" min={70} max={150} step={5}
+                  value={config.bulletin_police_echelle}
+                  onChange={e => setConfig(c => c ? { ...c, bulletin_police_echelle: Number(e.target.value) } : c)}
+                  style={{ width: '100%' }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Onglet Bulletins : en-tête officiel (déplacé depuis Établissement) ── */}
+      {!loading && tab === 'bulletins' && etab && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="card-hd">
+            <div>
+              <h3 style={{ margin: 0 }}>{t('parametre.bulletin_entete_titre')}</h3>
+              <span className="sub">{t('parametre.bulletin_entete_desc')}</span>
+            </div>
+            <Button onClick={saveEtab} loading={saving === 'etab'}>{t('actions.enregistrer')}</Button>
+          </div>
+          <div className="card-pad">
+            <div className="grid-2">
+              <div className="field">
+                <label className="field-label">Texte d'en-tête (FR)</label>
+                <textarea
+                  className="input"
+                  rows={4}
+                  placeholder={'République du Sénégal\nUn Peuple — Un But — Une Foi\nMinistère de l\'Éducation nationale\nIEF de …'}
+                  value={etab.entete_bulletin_fr ?? ''}
+                  onChange={e => setEtab(p => p ? { ...p, entete_bulletin_fr: e.target.value } : p)}
+                />
+              </div>
+              <div className="field">
+                <label className="field-label">Texte d'en-tête (AR)</label>
+                <textarea
+                  className="input"
+                  rows={4}
+                  dir="rtl"
+                  placeholder={'الجمهورية السنغالية\nشعب — هدف — إيمان\nوزارة التربية الوطنية'}
+                  value={etab.entete_bulletin_ar ?? ''}
+                  onChange={e => setEtab(p => p ? { ...p, entete_bulletin_ar: e.target.value } : p)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Onglet Bulletins : mentions & appréciations (déplacé depuis Barème) ── */}
+      {!loading && tab === 'bulletins' && config && (() => {
         const sorted = [...mentions].sort((a, b) => b.seuil_min - a.seuil_min);
         const COULEUR_OPTIONS: { value: CouleurMention; label: string }[] = [
           { value: 'success', label: 'Vert (Très bien)' },
