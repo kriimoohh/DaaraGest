@@ -53,6 +53,9 @@ interface BulletinBaseData {
   afficher_absences?: boolean;  // défaut true → tableau des absences visible
   logo_echelle?: number;        // % (100 = taille de base)
   nb_periodes?: number;         // pour le titre du bulletin annuel
+  // Modèle HTML personnalisé (Étape 2). Absent → DEFAULT_BULLETIN_TEMPLATE.
+  // Le corps contient des placeholders de blocs ({{en_tete}}, {{tableau_notes}}…).
+  template_html?: string | null;
 }
 
 // Libellé d'une matière, avec sa traduction arabe à côté (filière arabe) quand
@@ -596,59 +599,93 @@ function observationHtml(appr: string | null): string {
   </div>`;
 }
 
+// ─── Modèle par blocs (Étape 2 : rendu éditable) ────────────────────────────
+
+// Placeholders reconnus par le moteur. L'ordre ci-dessous est celui du rendu
+// historique — c'est le modèle par défaut, réutilisé tant qu'aucun modèle
+// personnalisé n'est enregistré (sortie identique au rendu d'origine).
+export const BULLETIN_BLOCS = [
+  'en_tete', 'titre', 'bandeau_ecole', 'infos_eleve',
+  'tableau_notes', 'resume', 'absences', 'observation', 'pied_de_page',
+] as const;
+
+export const DEFAULT_BULLETIN_TEMPLATE = BULLETIN_BLOCS.map(b => `{{${b}}}`).join('\n');
+
+// Version commentée servie à l'éditeur (point de départ pédagogique). Les commentaires
+// HTML sont invisibles au rendu ; les {{blocs}} sont calculés par le moteur. Vous pouvez
+// réordonner les blocs, ajouter du texte/HTML, ou insérer un <style> pour surcharger le CSS.
+export const DEFAULT_BULLETIN_TEMPLATE_EDITABLE = `<!-- Modele du bulletin : chaque bloc entre doubles accolades est calcule automatiquement.
+     Blocs disponibles : ${BULLETIN_BLOCS.join(', ')} -->
+{{en_tete}}
+{{titre}}
+{{bandeau_ecole}}
+{{infos_eleve}}
+{{tableau_notes}}
+{{resume}}
+{{absences}}
+{{observation}}
+{{pied_de_page}}`;
+
+// Substitue les {{bloc}} connus par leur HTML calculé ; retire tout placeholder
+// inconnu (évite d'imprimer des accolades brutes si le modèle en contient).
+function substituteBlocs(tpl: string, blocs: Record<string, string>): string {
+  return tpl.replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (_, k: string) => blocs[k] ?? '');
+}
+
+// Assemble le document final : calcule les blocs communs, fusionne avec les
+// blocs propres à la variante, puis substitue dans le modèle (custom ou défaut).
+function renderBulletinDoc(
+  data: BulletinBaseData,
+  filiere: 'FR' | 'AR' | 'COMBINE',
+  variant: { titre: string; tableau_notes: string; resume: string },
+): string {
+  const blocs: Record<string, string> = {
+    en_tete: headerHtml(data, filiere),
+    titre: variant.titre,
+    bandeau_ecole: schoolBandHtml(data),
+    infos_eleve: studentInfoHtml(data),
+    tableau_notes: variant.tableau_notes,
+    resume: variant.resume,
+    absences: absencesHtml(data),
+    observation: observationHtml(data.appreciation),
+    pied_de_page: footerHtml(data),
+  };
+  const tpl = data.template_html && data.template_html.trim() ? data.template_html : DEFAULT_BULLETIN_TEMPLATE;
+  const body = substituteBlocs(tpl, blocs);
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><style>${CSS}</style></head><body>${body}</body></html>`;
+}
+
 // ─── Exports principaux ─────────────────────────────────────────────────────
 
 export function generateBulletinHtml(data: BulletinTrimestreData): string {
   setRenderContext(data);
   const periodeStr = periodeLabel(data.periode);
+  const notesFR = data.notes_fr ?? [];
+  const notesAR = data.notes_ar ?? [];
 
   if (data.type === 'FR') {
-    return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><style>${CSS}</style></head><body>
-      ${headerHtml(data, 'FR')}
-      ${titleHtml(periodeStr)}
-      ${schoolBandHtml(data)}
-    ${studentInfoHtml(data)}
-      ${tableFR(data.notes_fr ?? [])}
-      ${resultsSummaryHtml(data)}
-      ${absencesHtml(data)}
-      ${observationHtml(data.appreciation)}
-      ${footerHtml(data)}
-    </body></html>`;
+    return renderBulletinDoc(data, 'FR', {
+      titre: titleHtml(periodeStr),
+      tableau_notes: tableFR(notesFR),
+      resume: resultsSummaryHtml(data),
+    });
   }
 
   if (data.type === 'AR') {
     // Filière arabe : noms de matières affichés en bilingue (FR + AR à côté).
-    return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><style>${CSS}</style></head><body>
-      ${headerHtml(data, 'AR')}
-      ${titleHtml(periodeStr)}
-      ${schoolBandHtml(data)}
-    ${studentInfoHtml(data)}
-      ${tableFR(data.notes_ar ?? [], 'Évaluation des acquis — Filière Arabe', true)}
-      ${resultsSummaryHtml(data)}
-      ${absencesHtml(data)}
-      ${observationHtml(data.appreciation)}
-      ${footerHtml(data)}
-    </body></html>`;
+    return renderBulletinDoc(data, 'AR', {
+      titre: titleHtml(periodeStr),
+      tableau_notes: tableFR(notesAR, 'Évaluation des acquis — Filière Arabe', true),
+      resume: resultsSummaryHtml(data),
+    });
   }
 
-  // COMBINE — compute sub-moyennes
-  const notesFR = data.notes_fr ?? [];
-  const notesAR = data.notes_ar ?? [];
-  const frMoy = moyenneNorm(notesFR);
-  const arMoy = moyenneNorm(notesAR);
-
-  return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><style>${CSS}</style></head><body>
-    ${headerHtml(data, 'COMBINE')}
-    ${titleHtml(`${periodeStr} — Filières FR &amp; AR`)}
-    ${schoolBandHtml(data)}
-    ${studentInfoHtml(data)}
-    ${tableFR(notesFR)}
-    ${tableFR(notesAR, 'Évaluation des acquis — Filière Arabe', true)}
-    ${combinedSummaryHtml(data, frMoy, arMoy)}
-    ${absencesHtml(data)}
-    ${observationHtml(data.appreciation)}
-    ${footerHtml(data)}
-  </body></html>`;
+  // COMBINE — deux tableaux + résumé combiné.
+  return renderBulletinDoc(data, 'COMBINE', {
+    titre: titleHtml(`${periodeStr} — Filières FR &amp; AR`),
+    tableau_notes: tableFR(notesFR) + tableFR(notesAR, 'Évaluation des acquis — Filière Arabe', true),
+    resume: combinedSummaryHtml(data, moyenneNorm(notesFR), moyenneNorm(notesAR)),
+  });
 }
 
 export function generateBulletinAnnuelHtml(data: BulletinAnnuelData): string {
@@ -667,20 +704,14 @@ export function generateBulletinAnnuelHtml(data: BulletinAnnuelData): string {
   const frMoy = frCoeff > 0 ? frWithMoy.reduce((s, m) => s + m.moyenne_annuelle! * m.coeff, 0) / frCoeff : null;
   const arMoy = arCoeff > 0 ? arWithMoy.reduce((s, m) => s + m.moyenne_annuelle! * m.coeff, 0) / arCoeff : null;
 
+  const tableau_notes =
+    (!isAR && mFR.length > 0 ? tableAnnuelFR(mFR) : '') +
+    ((isAR || isCombine) && mAR.length > 0 ? tableAnnuelFR(mAR, 'Évaluation annuelle — Filière Arabe', true) : '');
+
   // Bulletins strictement en français, y compris la filière arabe (libellés FR, LTR).
-  return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><style>${CSS}</style></head><body>
-    ${headerHtml(data, isAR ? 'AR' : isCombine ? 'COMBINE' : 'FR')}
-    ${titleAnnuelHtml(data.nb_periodes)}
-    ${schoolBandHtml(data)}
-    ${studentInfoHtml(data)}
-
-    ${!isAR && mFR.length > 0 ? tableAnnuelFR(mFR) : ''}
-    ${(isAR || isCombine) && mAR.length > 0 ? tableAnnuelFR(mAR, 'Évaluation annuelle — Filière Arabe', true) : ''}
-
-    ${isCombine ? combinedSummaryHtml(data, frMoy, arMoy) : resultsSummaryHtml(data)}
-
-    ${absencesHtml(data)}
-    ${observationHtml(data.appreciation)}
-    ${footerHtml(data)}
-  </body></html>`;
+  return renderBulletinDoc(data, isAR ? 'AR' : isCombine ? 'COMBINE' : 'FR', {
+    titre: titleAnnuelHtml(data.nb_periodes),
+    tableau_notes,
+    resume: isCombine ? combinedSummaryHtml(data, frMoy, arMoy) : resultsSummaryHtml(data),
+  });
 }

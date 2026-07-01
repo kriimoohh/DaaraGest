@@ -40,6 +40,12 @@ export const deverrouillerPeriodeSchema = z.object({
   filiere: z.enum(['FR', 'AR', 'COMBINE']),
 });
 
+// Modèle HTML du bulletin (Étape 2). Borné pour éviter un payload abusif.
+export const bulletinTemplateSchema = z.object({
+  contenu_html: z.string().min(1).max(100_000),
+});
+
+export type BulletinTemplateInput = z.infer<typeof bulletinTemplateSchema>;
 export type GenererBulletinInput = z.infer<typeof genererBulletinSchema>;
 export type GenererBulletinAnnuelInput = z.infer<typeof genererBulletinAnnuelSchema>;
 export type ObservationInput = z.infer<typeof observationSchema>;

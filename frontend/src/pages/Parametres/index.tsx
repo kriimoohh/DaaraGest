@@ -264,6 +264,150 @@ function Toggle({ checked, onChange, label, description }: {
   );
 }
 
+// Éditeur HTML du modèle de bulletin (Étape 2). Corps à base de blocs {{...}}
+// calculés par le moteur ; aperçu rendu côté serveur avec des données d'exemple.
+const BULLETIN_BLOC_LABELS: Record<string, string> = {
+  en_tete: 'En-tête (logo + textes officiels)',
+  titre: 'Titre du bulletin',
+  bandeau_ecole: 'Bandeau contact école',
+  infos_eleve: 'Informations de l\'élève',
+  tableau_notes: 'Tableau des notes (calculé)',
+  resume: 'Résumé (moyenne / rang / mention)',
+  absences: 'Tableau des absences',
+  observation: 'Observation / appréciation',
+  pied_de_page: 'Pied de page (signatures)',
+};
+
+function BulletinTemplateEditor() {
+  const api = useApi();
+  const canEdit = useAuthStore(s => ['admin', 'directeur'].includes(s.user?.role ?? ''));
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [html, setHtml] = useState('');
+  const [blocs, setBlocs] = useState<string[]>([]);
+  const [isCustom, setIsCustom] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    api.get<{ contenu_html: string; is_custom: boolean; blocs: string[] }>('/api/v1/bulletins/template')
+      .then(d => { setHtml(d.contenu_html); setIsCustom(d.is_custom); setBlocs(d.blocs); setDirty(false); })
+      .catch(() => toast.error('Impossible de charger le modèle'))
+      .finally(() => setLoading(false));
+  }, [api]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const insertBloc = (key: string) => {
+    const ta = textareaRef.current;
+    const token = `{{${key}}}`;
+    if (!ta) { setHtml(h => h + token); setDirty(true); return; }
+    const start = ta.selectionStart, end = ta.selectionEnd;
+    const next = html.substring(0, start) + token + html.substring(end);
+    setHtml(next); setDirty(true);
+    setTimeout(() => { ta.focus(); const pos = start + token.length; ta.selectionStart = ta.selectionEnd = pos; }, 0);
+  };
+
+  const handlePreview = async () => {
+    setPreviewing(true);
+    try {
+      const res = await api.post<{ html: string }>('/api/v1/bulletins/template/apercu', { contenu_html: html });
+      const url = URL.createObjectURL(new Blob([res.html], { type: 'text/html' }));
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } catch (err) { toast.error((err as Error).message || 'Aperçu impossible'); }
+    finally { setPreviewing(false); }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.put('/api/v1/bulletins/template', { contenu_html: html });
+      toast.success('Modèle enregistré'); setDirty(false); setIsCustom(true);
+    } catch (err) { toast.error((err as Error).message || 'Erreur'); }
+    finally { setSaving(false); }
+  };
+
+  const handleReset = async () => {
+    if (!confirm('Supprimer le modèle personnalisé et revenir au modèle par défaut ?')) return;
+    setResetting(true);
+    try {
+      await api.delete('/api/v1/bulletins/template/reset');
+      toast.success('Modèle réinitialisé');
+      load();
+    } catch (err) { toast.error((err as Error).message || 'Erreur'); }
+    finally { setResetting(false); }
+  };
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card-hd">
+        <div>
+          <h3 style={{ margin: 0 }}>
+            Modèle avancé (HTML)
+            {isCustom && <span style={{ fontSize: 11, marginInlineStart: 8, padding: '1px 7px', borderRadius: 4, background: 'var(--success-soft)', color: 'var(--success-text)' }}>✓ personnalisé</span>}
+            {dirty && <span style={{ fontSize: 11, marginInlineStart: 8, color: 'var(--warning)' }}>● non enregistré</span>}
+          </h3>
+          <span className="sub">Réorganisez ou personnalisez le rendu. Chaque {'{{bloc}}'} est calculé automatiquement ; vous pouvez ajouter du texte, du HTML ou un &lt;style&gt;.</span>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button variant="ghost" onClick={handlePreview} loading={previewing}>Aperçu</Button>
+          {canEdit && isCustom && <Button variant="ghost" onClick={handleReset} loading={resetting} style={{ color: '#dc2626' }}>Réinitialiser</Button>}
+          {canEdit && <Button onClick={handleSave} loading={saving} disabled={!dirty}>Enregistrer</Button>}
+        </div>
+      </div>
+      <div className="card-pad">
+        {loading ? (
+          <div style={{ padding: 30, textAlign: 'center', color: 'var(--ink-3)', fontSize: 14 }}>Chargement du modèle…</div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 250px', gap: 12, alignItems: 'start' }}>
+            <textarea
+              ref={textareaRef}
+              value={html}
+              onChange={e => { setHtml(e.target.value); setDirty(true); }}
+              spellCheck={false}
+              disabled={!canEdit}
+              style={{
+                width: '100%', minHeight: 380, padding: '12px 14px',
+                border: '1px solid var(--rule)', borderRadius: 'var(--r-md)', resize: 'vertical',
+                fontFamily: '"JetBrains Mono","Fira Code",monospace', fontSize: 12, lineHeight: 1.6,
+                background: 'var(--paper)', color: 'var(--ink)', boxSizing: 'border-box',
+              }}
+            />
+            <div style={{ border: '1px solid var(--rule)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
+              <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--rule)', fontSize: 11, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'var(--paper-2)' }}>
+                Blocs disponibles
+              </div>
+              <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {blocs.map(key => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => insertBloc(key)}
+                    disabled={!canEdit}
+                    title={`Insérer {{${key}}}`}
+                    style={{
+                      display: 'flex', flexDirection: 'column', gap: 2, padding: '6px 8px',
+                      border: '1px solid var(--rule)', borderRadius: 6, background: 'var(--paper-2)',
+                      cursor: canEdit ? 'pointer' : 'default', textAlign: 'start',
+                    }}
+                  >
+                    <code style={{ fontSize: 10, color: 'var(--info-text)', fontWeight: 600 }}>{`{{${key}}}`}</code>
+                    <span style={{ fontSize: 10, color: 'var(--ink-3)', lineHeight: 1.3 }}>{BULLETIN_BLOC_LABELS[key] ?? key}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function LoadingSkeleton() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1602,6 +1746,9 @@ export function ParametresPage() {
           </div>
         </div>
       )}
+
+      {/* ── Onglet Bulletins : modèle HTML avancé (Étape 2) ── */}
+      {!loading && tab === 'bulletins' && <BulletinTemplateEditor />}
 
       {/* ── Onglet Bulletins : mentions & appréciations (déplacé depuis Barème) ── */}
       {!loading && tab === 'bulletins' && config && (() => {
