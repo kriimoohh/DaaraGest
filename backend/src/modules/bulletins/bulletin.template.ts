@@ -424,24 +424,40 @@ function tableFR(notes: NoteRow[], headerTitle = 'Évaluation des acquis — Fil
   const ptStr  = totalPoints > 0 ? Number(totalPoints).toFixed(2) : '—';
   const cfStr  = totalCoeff > 0 ? Number(totalCoeff).toFixed(1) : '—';
 
+  // Libellés arabes de la filière arabe (bilingue). Vides pour la filière française.
+  const arSub = (txt: string) => `<br><span class="th-ar" dir="rtl">${txt}</span>`;
+  const arInline = (txt: string) => ` <span class="th-ar" dir="rtl">${txt}</span>`;
+  const ar = {
+    header:    bilingue ? ' <span dir="rtl" style="font-weight:400">— تقييم أداء التلاميذ في القسم العربي</span>' : '',
+    matiere:   bilingue ? arSub('المجال')    : '',
+    coeff:     bilingue ? arSub('معامل')     : '',
+    note:      bilingue ? arSub('الدرجات')   : '',
+    max:       bilingue ? arSub('على')       : '',
+    appr:      bilingue ? arSub('التقدير')   : '',
+    resultats: bilingue ? arSub('النتائج')   : '',
+    coefR:     bilingue ? arInline('معامل')  : '',
+    total:     bilingue ? arInline('المجموع'): '',
+    moyenne:   bilingue ? arInline('التقدير'): '',
+  };
+
   return `
   <div class="eval-section">
-    <div class="eval-header">${headerTitle}</div>
+    <div class="eval-header">${headerTitle}${ar.header}</div>
     <table>
       <thead><tr>
-        <th style="width:42%">Matières</th>
-        <th class="center" style="width:8%">Coeff.</th>
-        <th class="center" style="width:10%">Note</th>
-        <th class="center" style="width:8%">/ Max</th>
-        <th style="width:32%">Appréciation</th>
+        <th style="width:42%">Matières${ar.matiere}</th>
+        <th class="center" style="width:8%">Coeff.${ar.coeff}</th>
+        <th class="center" style="width:10%">Note${ar.note}</th>
+        <th class="center" style="width:8%">/ Max${ar.max}</th>
+        <th style="width:32%">Appréciation${ar.appr}</th>
       </tr></thead>
       <tbody>
         ${rows || '<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:10px">Aucune note saisie</td></tr>'}
         <tr class="results-row">
-          <td>Résultats</td>
-          <td class="center">Coef: ${cfStr}</td>
-          <td class="center" colspan="2">Total: ${ptStr}</td>
-          <td class="center">Moyenne: ${moyStr} / ${RENDER_BASE}</td>
+          <td>Résultats${ar.resultats}</td>
+          <td class="center">Coef: ${cfStr}${ar.coefR}</td>
+          <td class="center" colspan="2">Total: ${ptStr}${ar.total}</td>
+          <td class="center">Moyenne: ${moyStr} / ${RENDER_BASE}${ar.moyenne}</td>
         </tr>
       </tbody>
     </table>
@@ -514,7 +530,7 @@ function resultsSummaryHtml(data: BulletinBaseData): string {
     <thead>
       <tr>
         <th>Moyenne Générale<br><span class="th-ar">المعدل العام</span></th>
-        ${showRang ? '<th>Rang<br><span class="th-ar">الرتبة</span></th>' : ''}
+        ${showRang ? '<th>Rang<br><span class="th-ar">الترتيب</span></th>' : ''}
         <th>Mention<br><span class="th-ar">التقدير</span></th>
       </tr>
     </thead>
@@ -540,9 +556,9 @@ function combinedSummaryHtml(data: BulletinBaseData, frMoy: number | null, arMoy
       <tr>
         <th>Résultats FR — AR</th>
         <th>Moy. FR<br><span class="th-ar">معدل الفرنسية</span></th>
-        <th>Moy. AR<br><span class="th-ar">معدل العربية</span></th>
+        <th>Moy. AR<br><span class="th-ar">معدل المواد العربية</span></th>
         <th>Moyenne Générale<br><span class="th-ar">المعدل العام</span></th>
-        ${showRang ? '<th>Rang<br><span class="th-ar">الرتبة</span></th>' : ''}
+        ${showRang ? '<th>Rang<br><span class="th-ar">الترتيب</span></th>' : ''}
         <th>Mention<br><span class="th-ar">التقدير</span></th>
       </tr>
     </thead>
