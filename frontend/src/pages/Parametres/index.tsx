@@ -291,13 +291,17 @@ function BulletinTemplateEditor() {
   const [resetting, setResetting] = useState(false);
   const [previewing, setPreviewing] = useState(false);
 
+  // `useApi()` renvoie un nouvel objet à chaque render : ne PAS le mettre en dépendance
+  // (sinon `load` change à chaque render → l'effet reboucle → flot de requêtes / 429).
+  // Les méthodes délèguent à un singleton stable, on peut donc capturer `api` une fois.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const load = useCallback(() => {
     setLoading(true);
     api.get<{ contenu_html: string; is_custom: boolean; blocs: string[] }>('/api/v1/bulletins/template')
       .then(d => { setHtml(d.contenu_html); setIsCustom(d.is_custom); setBlocs(d.blocs); setDirty(false); })
       .catch(() => toast.error('Impossible de charger le modèle'))
       .finally(() => setLoading(false));
-  }, [api]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
