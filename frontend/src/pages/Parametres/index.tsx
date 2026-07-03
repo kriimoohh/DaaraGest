@@ -154,7 +154,7 @@ function NiveauMentionsModal({ niveau, noteMax, defaults, api, onClose }: {
     <Modal isOpen onClose={onClose} title={`Mentions — ${niveau.libelle}`} size="md">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-          Mentions spécifiques à ce niveau. Si aucune n'est définie, le niveau hérite des mentions par défaut de l'établissement (onglet Bulletins).
+          Mentions spécifiques à ce niveau. Si aucune n'est définie, le niveau hérite des mentions par défaut de l'établissement (section « Barème des mentions » ci-dessous).
         </p>
         {loading ? <div className="muted" style={{ fontSize: 13 }}>Chargement…</div> : (
           <>
@@ -1754,8 +1754,9 @@ export function ParametresPage() {
       {/* ── Onglet Bulletins : modèle HTML avancé (Étape 2) ── */}
       {!loading && tab === 'bulletins' && <BulletinTemplateEditor />}
 
-      {/* ── Onglet Bulletins : mentions & appréciations (déplacé depuis Barème) ── */}
-      {!loading && tab === 'bulletins' && config && (() => {
+      {/* ── Onglet Niveaux : mentions par défaut de l'établissement (les mentions par
+             niveau se configurent via le bouton « Mentions » de chaque niveau ci-dessus) ── */}
+      {!loading && tab === 'niveaux' && config && (() => {
         const sorted = [...mentions].sort((a, b) => b.seuil_min - a.seuil_min);
         const COULEUR_OPTIONS: { value: CouleurMention; label: string }[] = [
           { value: 'success', label: 'Vert (Très bien)' },
