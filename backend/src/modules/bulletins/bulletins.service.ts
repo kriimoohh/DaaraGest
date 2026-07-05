@@ -1199,11 +1199,11 @@ export async function genererPdfClasse(
 
 export async function getBulletinTemplate(etablissement_id: string) {
   const tpl = await prisma.bulletinTemplate.findUnique({ where: { etablissement_id } });
-  const { DEFAULT_BULLETIN_TEMPLATE_EDITABLE, BULLETIN_BLOCS } = await import('./bulletin.template');
+  const { DEFAULT_BULLETIN_TEMPLATE_EDITABLE, BULLETIN_PLACEHOLDERS } = await import('./bulletin.template');
   return {
     contenu_html: tpl?.contenu_html ?? DEFAULT_BULLETIN_TEMPLATE_EDITABLE,
     is_custom: !!tpl,
-    blocs: BULLETIN_BLOCS,
+    placeholders: BULLETIN_PLACEHOLDERS,
   };
 }
 

@@ -264,26 +264,15 @@ function Toggle({ checked, onChange, label, description }: {
   );
 }
 
-// Éditeur HTML du modèle de bulletin (Étape 2). Corps à base de blocs {{...}}
-// calculés par le moteur ; aperçu rendu côté serveur avec des données d'exemple.
-const BULLETIN_BLOC_LABELS: Record<string, string> = {
-  en_tete: 'En-tête (logo + textes officiels)',
-  titre: 'Titre du bulletin',
-  bandeau_ecole: 'Bandeau contact école',
-  infos_eleve: 'Informations de l\'élève',
-  tableau_notes: 'Tableau des notes (calculé)',
-  resume: 'Résumé (moyenne / rang / mention)',
-  absences: 'Tableau des absences',
-  observation: 'Observation / appréciation',
-  pied_de_page: 'Pied de page (signatures)',
-};
-
+// Éditeur HTML du modèle de bulletin. Le corps est du HTML complet éditable ;
+// le moteur remplit les lignes/valeurs calculées. Les libellés à insérer (token +
+// description) viennent du backend. Aperçu rendu côté serveur (données d'exemple).
 function BulletinTemplateEditor() {
   const api = useApi();
   const canEdit = useAuthStore(s => ['admin', 'directeur'].includes(s.user?.role ?? ''));
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [html, setHtml] = useState('');
-  const [blocs, setBlocs] = useState<string[]>([]);
+  const [placeholders, setPlaceholders] = useState<{ token: string; desc: string }[]>([]);
   const [isCustom, setIsCustom] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -297,17 +286,16 @@ function BulletinTemplateEditor() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const load = useCallback(() => {
     setLoading(true);
-    api.get<{ contenu_html: string; is_custom: boolean; blocs: string[] }>('/api/v1/bulletins/template')
-      .then(d => { setHtml(d.contenu_html); setIsCustom(d.is_custom); setBlocs(d.blocs); setDirty(false); })
+    api.get<{ contenu_html: string; is_custom: boolean; placeholders: { token: string; desc: string }[] }>('/api/v1/bulletins/template')
+      .then(d => { setHtml(d.contenu_html); setIsCustom(d.is_custom); setPlaceholders(d.placeholders); setDirty(false); })
       .catch(() => toast.error('Impossible de charger le modèle'))
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const insertBloc = (key: string) => {
+  const insertBloc = (token: string) => {
     const ta = textareaRef.current;
-    const token = `{{${key}}}`;
     if (!ta) { setHtml(h => h + token); setDirty(true); return; }
     const start = ta.selectionStart, end = ta.selectionEnd;
     const next = html.substring(0, start) + token + html.substring(end);
@@ -355,7 +343,7 @@ function BulletinTemplateEditor() {
             {isCustom && <span style={{ fontSize: 11, marginInlineStart: 8, padding: '1px 7px', borderRadius: 4, background: 'var(--success-soft)', color: 'var(--success-text)' }}>✓ personnalisé</span>}
             {dirty && <span style={{ fontSize: 11, marginInlineStart: 8, color: 'var(--warning)' }}>● non enregistré</span>}
           </h3>
-          <span className="sub">Réorganisez ou personnalisez le rendu. Chaque {'{{bloc}}'} est calculé automatiquement ; vous pouvez ajouter du texte, du HTML ou un &lt;style&gt;.</span>
+          <span className="sub">Modifiez directement le HTML : en-têtes de colonnes, titres de section, libellés, traductions FR/AR… Les blocs {'{{{...}}}'} et les {'{{{lignes}}}'} sont calculés ; {'{{#tableaux}}'} / {'{{#bilingue}}'} sont gérés par le moteur. Réinitialisez à tout moment.</span>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <Button variant="ghost" onClick={handlePreview} loading={previewing}>Aperçu</Button>
@@ -383,24 +371,24 @@ function BulletinTemplateEditor() {
             />
             <div style={{ border: '1px solid var(--rule)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
               <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--rule)', fontSize: 11, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em', background: 'var(--paper-2)' }}>
-                Blocs disponibles
+                Blocs à insérer
               </div>
               <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {blocs.map(key => (
+                {placeholders.map(p => (
                   <button
-                    key={key}
+                    key={p.token}
                     type="button"
-                    onClick={() => insertBloc(key)}
+                    onClick={() => insertBloc(p.token)}
                     disabled={!canEdit}
-                    title={`Insérer {{${key}}}`}
+                    title={`Insérer ${p.token}`}
                     style={{
                       display: 'flex', flexDirection: 'column', gap: 2, padding: '6px 8px',
                       border: '1px solid var(--rule)', borderRadius: 6, background: 'var(--paper-2)',
                       cursor: canEdit ? 'pointer' : 'default', textAlign: 'start',
                     }}
                   >
-                    <code style={{ fontSize: 10, color: 'var(--info-text)', fontWeight: 600 }}>{`{{${key}}}`}</code>
-                    <span style={{ fontSize: 10, color: 'var(--ink-3)', lineHeight: 1.3 }}>{BULLETIN_BLOC_LABELS[key] ?? key}</span>
+                    <code style={{ fontSize: 10, color: 'var(--info-text)', fontWeight: 600 }}>{p.token}</code>
+                    <span style={{ fontSize: 10, color: 'var(--ink-3)', lineHeight: 1.3 }}>{p.desc}</span>
                   </button>
                 ))}
               </div>
