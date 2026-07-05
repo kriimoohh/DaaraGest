@@ -1,5 +1,6 @@
 import { escapeHtml } from '../../utils/escapeHtml';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
+import { renderMicroTemplate } from '../../utils/microTemplate';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -385,17 +386,18 @@ function footerHtml(data: BulletinBaseData): string {
 
 // ─── Tableau FR ─────────────────────────────────────────────────────────────
 
-function tableFR(notes: NoteRow[], headerTitle = 'Évaluation des acquis — Filière Française', bilingue = false): string {
-  // Matières évaluées uniquement → contribuent aux totaux et à la moyenne.
-  const evalueesAvecNote = notes.filter(n => n.evaluee !== false && n.valeur !== null);
-  const totalCoeff = evalueesAvecNote.reduce((s, n) => s + n.coeff, 0);
-  const totalPoints = evalueesAvecNote.reduce((s, n) => s + (n.valeur! * n.coeff), 0);
+// Contexte d'un tableau trimestriel : lignes calculées (HTML brut) + totaux formatés.
+// Le « décor » (en-tête de section, libellés de colonnes, ligne Résultats) est
+// désormais dans le modèle éditable (cf. DEFAULT_BULLETIN_TEMPLATE).
+function ctxTableauTrim(notes: NoteRow[], bilingue: boolean) {
+  const evaluees = notes.filter(n => n.evaluee !== false && n.valeur !== null);
+  const totalCoeff = evaluees.reduce((s, n) => s + n.coeff, 0);
+  const totalPoints = evaluees.reduce((s, n) => s + (n.valeur! * n.coeff), 0);
   const moy = moyenneNorm(notes);
 
   const rows = notes.map(n => {
     const nmax = n.note_max ?? RENDER_BASE;
-    const nonEvaluee = n.evaluee === false;
-    if (nonEvaluee) {
+    if (n.evaluee === false) {
       return `
       <tr>
         <td style="font-weight:500;color:#6b7280">${matiereLabel(n.nom_fr, n.nom_ar, bilingue)}</td>
@@ -406,7 +408,6 @@ function tableFR(notes: NoteRow[], headerTitle = 'Évaluation des acquis — Fil
       </tr>`;
     }
     const isFail = n.valeur !== null && n.valeur < nmax / 2;
-    const appr = getApprNom(n.valeur, nmax);
     const cls = n.valeur !== null ? apprClass(n.valeur, nmax) : '';
     return `
     <tr>
@@ -416,60 +417,25 @@ function tableFR(notes: NoteRow[], headerTitle = 'Évaluation des acquis — Fil
         ${n.valeur !== null ? Number(n.valeur).toFixed(2) : '—'}
       </td>
       <td class="center" style="font-size:10px;color:#6b7280">/${nmax}</td>
-      <td class="${cls}">${appr}</td>
+      <td class="${cls}">${getApprNom(n.valeur, nmax)}</td>
     </tr>`;
   }).join('');
 
-  const moyStr = moy !== null ? Number(moy).toFixed(2) : '—';
-  const ptStr  = totalPoints > 0 ? Number(totalPoints).toFixed(2) : '—';
-  const cfStr  = totalCoeff > 0 ? Number(totalCoeff).toFixed(1) : '—';
-
-  // Libellés arabes de la filière arabe (bilingue). Vides pour la filière française.
-  const arSub = (txt: string) => `<br><span class="th-ar" dir="rtl">${txt}</span>`;
-  const arInline = (txt: string) => ` <span class="th-ar" dir="rtl">${txt}</span>`;
-  const ar = {
-    header:    bilingue ? ' <span dir="rtl" style="font-weight:400">— تقييم أداء التلاميذ في القسم العربي</span>' : '',
-    matiere:   bilingue ? arSub('المجال')    : '',
-    coeff:     bilingue ? arSub('معامل')     : '',
-    note:      bilingue ? arSub('الدرجات')   : '',
-    max:       bilingue ? arSub('على')       : '',
-    appr:      bilingue ? arSub('التقدير')   : '',
-    resultats: bilingue ? arSub('النتائج')   : '',
-    coefR:     bilingue ? arInline('معامل')  : '',
-    total:     bilingue ? arInline('المجموع'): '',
-    moyenne:   bilingue ? arInline('التقدير'): '',
+  return {
+    bilingue,
+    lignes: rows || '<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:10px">Aucune note saisie</td></tr>',
+    coef_total: totalCoeff > 0 ? Number(totalCoeff).toFixed(1) : '—',
+    total: totalPoints > 0 ? Number(totalPoints).toFixed(2) : '—',
+    moyenne: moy !== null ? Number(moy).toFixed(2) : '—',
   };
-
-  return `
-  <div class="eval-section">
-    <div class="eval-header">${headerTitle}${ar.header}</div>
-    <table>
-      <thead><tr>
-        <th style="width:42%">Matières${ar.matiere}</th>
-        <th class="center" style="width:8%">Coeff.${ar.coeff}</th>
-        <th class="center" style="width:10%">Note${ar.note}</th>
-        <th class="center" style="width:8%">/ Max${ar.max}</th>
-        <th style="width:32%">Appréciation${ar.appr}</th>
-      </tr></thead>
-      <tbody>
-        ${rows || '<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:10px">Aucune note saisie</td></tr>'}
-        <tr class="results-row">
-          <td>Résultats${ar.resultats}</td>
-          <td class="center">Coef: ${cfStr}${ar.coefR}</td>
-          <td class="center" colspan="2">Total: ${ptStr}${ar.total}</td>
-          <td class="center">Moyenne: ${moyStr} / ${RENDER_BASE}${ar.moyenne}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>`;
 }
 
 // ─── Tableau annuel ──────────────────────────────────────────────────────────
 
-function tableAnnuelFR(matieres: TrimestreRow[], headerTitle = 'Évaluation annuelle — Filière Française', bilingue = false): string {
+// Contexte d'un tableau annuel : lignes calculées (HTML brut) + libellés de périodes.
+function ctxTableauAnnuel(matieres: TrimestreRow[], bilingue: boolean, nbPeriodes: number) {
   const rows = matieres.map(m => {
-    const nonEvaluee = m.evaluee === false;
-    if (nonEvaluee) {
+    if (m.evaluee === false) {
       const cells = m.valeurs.map(() => '<td class="center" style="color:#9ca3af">—</td>').join('');
       return `
       <tr>
@@ -493,22 +459,11 @@ function tableAnnuelFR(matieres: TrimestreRow[], headerTitle = 'Évaluation annu
       </td>
     </tr>`;
   }).join('');
-  return `
-  <div class="eval-section">
-    <div class="eval-header">${headerTitle}</div>
-    <table>
-      <thead><tr>
-        <th style="width:35%">Matière</th>
-        <th class="center" style="width:7%">Coeff.</th>
-        <th class="center">T1</th>
-        <th class="center">T2</th>
-        <th class="center">T3</th>
-        <th class="center" style="background:#f0fdf4;color:#059669">Moy. Ann.</th>
-        <th style="width:22%">Appréciation</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  </div>`;
+  return {
+    bilingue,
+    periodes: Array.from({ length: nbPeriodes }, (_, i) => ({ label: `T${i + 1}` })),
+    lignes: rows,
+  };
 }
 
 // ─── Résumé combiné ──────────────────────────────────────────────────────────
@@ -518,61 +473,11 @@ function getMention(moyenne: number | null): string {
   return mentionForBilingue(moyenne) || '—';
 }
 
-// Ligne de résultats bas de page pour les bulletins simples (FR ou AR) — porte
-// désormais le rang (retiré de l'en-tête), avec libellés bilingues FR/AR.
-function resultsSummaryHtml(data: BulletinBaseData): string {
-  const moy = data.moyenne;
-  const mention = getMention(moy);
-  const color = moy !== null && moy >= RENDER_BASE / 2 ? '#059669' : '#dc2626';
-  const showRang = data.afficher_rang !== false;
-  return `
-  <table class="combined-summary">
-    <thead>
-      <tr>
-        <th>Moyenne Générale<br><span class="th-ar">المعدل العام</span></th>
-        ${showRang ? '<th>Rang<br><span class="th-ar">الترتيب</span></th>' : ''}
-        <th>Mention<br><span class="th-ar">التقدير</span></th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td style="font-weight:700;font-size:13px;color:${color}">${moy !== null ? `${Number(moy).toFixed(2)} / ${RENDER_BASE}` : '—'}</td>
-        ${showRang ? `<td>${data.rang ?? '—'}</td>` : ''}
-        <td class="mention-cell" style="color:${color}">${mention}</td>
-      </tr>
-    </tbody>
-  </table>`;
-}
-
-function combinedSummaryHtml(data: BulletinBaseData, frMoy: number | null, arMoy: number | null): string {
-  const globalMoy = data.moyenne;
-  const mention = getMention(globalMoy);
-  const mentionColor = globalMoy !== null && globalMoy >= 10 ? '#059669' : '#dc2626';
-  const showRang = data.afficher_rang !== false;
-
-  return `
-  <table class="combined-summary">
-    <thead>
-      <tr>
-        <th>Résultats FR — AR</th>
-        <th>Moy. FR<br><span class="th-ar">معدل الفرنسية</span></th>
-        <th>Moy. AR<br><span class="th-ar">معدل المواد العربية</span></th>
-        <th>Moyenne Générale<br><span class="th-ar">المعدل العام</span></th>
-        ${showRang ? '<th>Rang<br><span class="th-ar">الترتيب</span></th>' : ''}
-        <th>Mention<br><span class="th-ar">التقدير</span></th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td style="font-weight:600">${escapeHtml(data.annee_libelle)}</td>
-        <td>${frMoy !== null ? Number(frMoy).toFixed(2) : '—'}</td>
-        <td>${arMoy !== null ? Number(arMoy).toFixed(2) : '—'}</td>
-        <td style="font-weight:700;font-size:13px;color:${mentionColor}">${globalMoy !== null ? `${Number(globalMoy).toFixed(2)} / ${RENDER_BASE}` : '—'}</td>
-        ${showRang ? `<td>${data.rang ?? '—'}</td>` : ''}
-        <td class="mention-cell" style="color:${mentionColor}">${mention}</td>
-      </tr>
-    </tbody>
-  </table>`;
+// Les résumés (simple FR/AR et combiné) sont désormais décrits dans le modèle
+// éditable (DEFAULT_BULLETIN_TEMPLATE) ; le contexte fournit les valeurs calculées
+// (moyenne_generale, rang, mention, moy_fr, moy_ar…). Couleur du résumé :
+function couleurMoyenne(m: number | null, seuil: number): string {
+  return m !== null && m >= seuil ? '#059669' : '#dc2626';
 }
 
 // Récapitulatif des absences (cumul année), justifiées / non justifiées, bilingue.
@@ -615,59 +520,146 @@ function observationHtml(appr: string | null): string {
   </div>`;
 }
 
-// ─── Modèle par blocs (Étape 2 : rendu éditable) ────────────────────────────
+// ─── Modèle éditable (moteur micro-gabarit) ─────────────────────────────────
 
-// Placeholders reconnus par le moteur. L'ordre ci-dessous est celui du rendu
-// historique — c'est le modèle par défaut, réutilisé tant qu'aucun modèle
-// personnalisé n'est enregistré (sortie identique au rendu d'origine).
-export const BULLETIN_BLOCS = [
-  'en_tete', 'titre', 'bandeau_ecole', 'infos_eleve',
-  'tableau_notes', 'resume', 'absences', 'observation', 'pied_de_page',
+// Placeholders « bloc » (HTML calculé) insérables depuis l'éditeur, avec le token
+// EXACT à insérer (triple accolade = HTML brut, non échappé).
+export const BULLETIN_PLACEHOLDERS = [
+  { token: '{{{en_tete}}}',       desc: 'En-tête (logo + textes officiels)' },
+  { token: '{{{titre}}}',         desc: 'Titre du bulletin (période / annuel)' },
+  { token: '{{{bandeau_ecole}}}', desc: 'Bandeau contact école' },
+  { token: '{{{infos_eleve}}}',   desc: "Informations de l'élève" },
+  { token: '{{{absences}}}',      desc: 'Tableau des absences' },
+  { token: '{{{observation}}}',   desc: 'Observation / appréciation du conseil' },
+  { token: '{{{pied_de_page}}}',  desc: 'Pied de page (signatures)' },
 ] as const;
 
-export const DEFAULT_BULLETIN_TEMPLATE = BULLETIN_BLOCS.map(b => `{{${b}}}`).join('\n');
+// Modèle par défaut : HTML COMPLET et éditable. Les en-têtes de colonnes, titres de
+// section et libellés (FR + AR) sont modifiables ici ; le moteur remplit les lignes
+// calculées ({{{lignes}}}) et les valeurs ({{moyenne}}, {{rang}}…). Sections :
+//   {{#tableaux}}          → 1 tableau trimestriel par filière (FR/AR)
+//   {{#tableaux_annuels}}  → 1 tableau annuel par filière
+//   {{#bilingue}}…{{/bilingue}} → partie affichée seulement en filière arabe
+//   {{#est_combine}} / {{^est_combine}} → résumé combiné vs simple
+//   {{#afficher_rang}}     → colonne Rang (réglage Paramètres)
+export const DEFAULT_BULLETIN_TEMPLATE = `{{{en_tete}}}
+{{{titre}}}
+{{{bandeau_ecole}}}
+{{{infos_eleve}}}
+{{#tableaux}}
+<div class="eval-section">
+  <div class="eval-header">Évaluation des acquis — {{#bilingue}}Filière Arabe <span dir="rtl" style="font-weight:400">— تقييم أداء التلاميذ في القسم العربي</span>{{/bilingue}}{{^bilingue}}Filière Française{{/bilingue}}</div>
+  <table>
+    <thead><tr>
+      <th style="width:42%">Matières{{#bilingue}}<br><span class="th-ar" dir="rtl">المجال</span>{{/bilingue}}</th>
+      <th class="center" style="width:8%">Coeff.{{#bilingue}}<br><span class="th-ar" dir="rtl">معامل</span>{{/bilingue}}</th>
+      <th class="center" style="width:10%">Note{{#bilingue}}<br><span class="th-ar" dir="rtl">الدرجات</span>{{/bilingue}}</th>
+      <th class="center" style="width:8%">/ Max{{#bilingue}}<br><span class="th-ar" dir="rtl">على</span>{{/bilingue}}</th>
+      <th style="width:32%">Appréciation{{#bilingue}}<br><span class="th-ar" dir="rtl">التقدير</span>{{/bilingue}}</th>
+    </tr></thead>
+    <tbody>
+      {{{lignes}}}
+      <tr class="results-row">
+        <td>Résultats{{#bilingue}}<br><span class="th-ar" dir="rtl">النتائج</span>{{/bilingue}}</td>
+        <td class="center">Coef: {{coef_total}}{{#bilingue}} <span class="th-ar" dir="rtl">معامل</span>{{/bilingue}}</td>
+        <td class="center" colspan="2">Total: {{total}}{{#bilingue}} <span class="th-ar" dir="rtl">المجموع</span>{{/bilingue}}</td>
+        <td class="center">Moyenne: {{moyenne}} / {{note_max_etab}}{{#bilingue}} <span class="th-ar" dir="rtl">التقدير</span>{{/bilingue}}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+{{/tableaux}}
+{{#tableaux_annuels}}
+<div class="eval-section">
+  <div class="eval-header">Évaluation annuelle — {{#bilingue}}Filière Arabe <span dir="rtl" style="font-weight:400">— تقييم أداء التلاميذ في القسم العربي</span>{{/bilingue}}{{^bilingue}}Filière Française{{/bilingue}}</div>
+  <table>
+    <thead><tr>
+      <th style="width:35%">Matière{{#bilingue}}<br><span class="th-ar" dir="rtl">المجال</span>{{/bilingue}}</th>
+      <th class="center" style="width:7%">Coeff.{{#bilingue}}<br><span class="th-ar" dir="rtl">معامل</span>{{/bilingue}}</th>
+      {{#periodes}}<th class="center">{{label}}</th>{{/periodes}}
+      <th class="center" style="background:#f0fdf4;color:#059669">Moy. Ann.</th>
+      <th style="width:22%">Appréciation{{#bilingue}}<br><span class="th-ar" dir="rtl">التقدير</span>{{/bilingue}}</th>
+    </tr></thead>
+    <tbody>{{{lignes}}}</tbody>
+  </table>
+</div>
+{{/tableaux_annuels}}
+{{#est_combine}}
+<table class="combined-summary">
+  <thead><tr>
+    <th>Résultats FR — AR</th>
+    <th>Moy. FR<br><span class="th-ar">معدل الفرنسية</span></th>
+    <th>Moy. AR<br><span class="th-ar">معدل المواد العربية</span></th>
+    <th>Moyenne Générale<br><span class="th-ar">المعدل العام</span></th>
+    {{#afficher_rang}}<th>Rang<br><span class="th-ar">الترتيب</span></th>{{/afficher_rang}}
+    <th>Mention<br><span class="th-ar">التقدير</span></th>
+  </tr></thead>
+  <tbody><tr>
+    <td style="font-weight:600">{{annee}}</td>
+    <td>{{moy_fr}}</td>
+    <td>{{moy_ar}}</td>
+    <td style="font-weight:700;font-size:13px;color:{{moy_color}}">{{moyenne_generale}}</td>
+    {{#afficher_rang}}<td>{{rang}}</td>{{/afficher_rang}}
+    <td class="mention-cell" style="color:{{moy_color}}">{{{mention}}}</td>
+  </tr></tbody>
+</table>
+{{/est_combine}}
+{{^est_combine}}
+<table class="combined-summary">
+  <thead><tr>
+    <th>Moyenne Générale<br><span class="th-ar">المعدل العام</span></th>
+    {{#afficher_rang}}<th>Rang<br><span class="th-ar">الترتيب</span></th>{{/afficher_rang}}
+    <th>Mention<br><span class="th-ar">التقدير</span></th>
+  </tr></thead>
+  <tbody><tr>
+    <td style="font-weight:700;font-size:13px;color:{{moy_color}}">{{moyenne_generale}}</td>
+    {{#afficher_rang}}<td>{{rang}}</td>{{/afficher_rang}}
+    <td class="mention-cell" style="color:{{moy_color}}">{{{mention}}}</td>
+  </tr></tbody>
+</table>
+{{/est_combine}}
+{{{absences}}}
+{{{observation}}}
+{{{pied_de_page}}}`;
 
-// Version commentée servie à l'éditeur (point de départ pédagogique). Les commentaires
-// HTML sont invisibles au rendu ; les {{blocs}} sont calculés par le moteur. Vous pouvez
-// réordonner les blocs, ajouter du texte/HTML, ou insérer un <style> pour surcharger le CSS.
-export const DEFAULT_BULLETIN_TEMPLATE_EDITABLE = `<!-- Modele du bulletin : chaque bloc entre doubles accolades est calcule automatiquement.
-     Blocs disponibles : ${BULLETIN_BLOCS.join(', ')} -->
-{{en_tete}}
-{{titre}}
-{{bandeau_ecole}}
-{{infos_eleve}}
-{{tableau_notes}}
-{{resume}}
-{{absences}}
-{{observation}}
-{{pied_de_page}}`;
+// Servi à l'éditeur (identique au défaut : c'est déjà du HTML complet éditable).
+export const DEFAULT_BULLETIN_TEMPLATE_EDITABLE = DEFAULT_BULLETIN_TEMPLATE;
 
-// Substitue les {{bloc}} connus par leur HTML calculé ; retire tout placeholder
-// inconnu (évite d'imprimer des accolades brutes si le modèle en contient).
-function substituteBlocs(tpl: string, blocs: Record<string, string>): string {
-  return tpl.replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (_, k: string) => blocs[k] ?? '');
-}
-
-// Assemble le document final : calcule les blocs communs, fusionne avec les
-// blocs propres à la variante, puis substitue dans le modèle (custom ou défaut).
-function renderBulletinDoc(
-  data: BulletinBaseData,
-  filiere: 'FR' | 'AR' | 'COMBINE',
-  variant: { titre: string; tableau_notes: string; resume: string },
-): string {
-  const blocs: Record<string, string> = {
+// Blocs « décor » calculés (HTML brut) communs à toutes les variantes.
+function chromeCtx(data: BulletinBaseData, filiere: 'FR' | 'AR' | 'COMBINE', titre: string): Record<string, unknown> {
+  return {
     en_tete: headerHtml(data, filiere),
-    titre: variant.titre,
+    titre,
     bandeau_ecole: schoolBandHtml(data),
     infos_eleve: studentInfoHtml(data),
-    tableau_notes: variant.tableau_notes,
-    resume: variant.resume,
     absences: absencesHtml(data),
     observation: observationHtml(data.appreciation),
     pied_de_page: footerHtml(data),
+    note_max_etab: RENDER_BASE,
+    afficher_rang: data.afficher_rang !== false,
   };
-  const tpl = data.template_html && data.template_html.trim() ? data.template_html : DEFAULT_BULLETIN_TEMPLATE;
-  const body = substituteBlocs(tpl, blocs);
+}
+
+// Valeurs du résumé (moyenne générale, rang, mention, sous-moyennes) partagées
+// par les variantes simple et combinée.
+function resumeCtx(data: BulletinBaseData, estCombine: boolean, frMoy: number | null, arMoy: number | null): Record<string, unknown> {
+  const m = data.moyenne;
+  return {
+    est_combine: estCombine,
+    annee: data.annee_libelle,
+    moy_fr: frMoy !== null ? Number(frMoy).toFixed(2) : '—',
+    moy_ar: arMoy !== null ? Number(arMoy).toFixed(2) : '—',
+    moyenne_generale: m !== null ? `${Number(m).toFixed(2)} / ${RENDER_BASE}` : '—',
+    moy_color: couleurMoyenne(m, estCombine ? 10 : RENDER_BASE / 2),
+    rang: data.rang ?? '—',
+    mention: getMention(m),
+  };
+}
+
+// Assemble le document final : modèle (custom ou défaut) rendu via le moteur.
+function renderBulletinDoc(tpl: string | null | undefined, ctx: Record<string, unknown>): string {
+  const template = tpl && tpl.trim() ? tpl : DEFAULT_BULLETIN_TEMPLATE;
+  const body = renderMicroTemplate(template, ctx);
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><style>${CSS}</style></head><body>${body}</body></html>`;
 }
 
@@ -679,28 +671,35 @@ export function generateBulletinHtml(data: BulletinTrimestreData): string {
   const notesFR = data.notes_fr ?? [];
   const notesAR = data.notes_ar ?? [];
 
+  let filiere: 'FR' | 'AR' | 'COMBINE';
+  let titre: string;
+  let estCombine = false;
+  let frMoy: number | null = null;
+  let arMoy: number | null = null;
+  const tableaux: ReturnType<typeof ctxTableauTrim>[] = [];
+
   if (data.type === 'FR') {
-    return renderBulletinDoc(data, 'FR', {
-      titre: titleHtml(periodeStr),
-      tableau_notes: tableFR(notesFR),
-      resume: resultsSummaryHtml(data),
-    });
+    filiere = 'FR';
+    titre = titleHtml(periodeStr);
+    tableaux.push(ctxTableauTrim(notesFR, false));
+  } else if (data.type === 'AR') {
+    filiere = 'AR';
+    titre = titleHtml(periodeStr);
+    tableaux.push(ctxTableauTrim(notesAR, true));
+  } else {
+    filiere = 'COMBINE';
+    estCombine = true;
+    titre = titleHtml(`${periodeStr} — Filières FR &amp; AR`);
+    tableaux.push(ctxTableauTrim(notesFR, false), ctxTableauTrim(notesAR, true));
+    frMoy = moyenneNorm(notesFR);
+    arMoy = moyenneNorm(notesAR);
   }
 
-  if (data.type === 'AR') {
-    // Filière arabe : noms de matières affichés en bilingue (FR + AR à côté).
-    return renderBulletinDoc(data, 'AR', {
-      titre: titleHtml(periodeStr),
-      tableau_notes: tableFR(notesAR, 'Évaluation des acquis — Filière Arabe', true),
-      resume: resultsSummaryHtml(data),
-    });
-  }
-
-  // COMBINE — deux tableaux + résumé combiné.
-  return renderBulletinDoc(data, 'COMBINE', {
-    titre: titleHtml(`${periodeStr} — Filières FR &amp; AR`),
-    tableau_notes: tableFR(notesFR) + tableFR(notesAR, 'Évaluation des acquis — Filière Arabe', true),
-    resume: combinedSummaryHtml(data, moyenneNorm(notesFR), moyenneNorm(notesAR)),
+  return renderBulletinDoc(data.template_html, {
+    ...chromeCtx(data, filiere, titre),
+    ...resumeCtx(data, estCombine, frMoy, arMoy),
+    tableaux,
+    tableaux_annuels: [],
   });
 }
 
@@ -708,11 +707,12 @@ export function generateBulletinAnnuelHtml(data: BulletinAnnuelData): string {
   setRenderContext(data);
   const isCombine = data.type === 'ANNUEL_COMBINE';
   const isAR = data.type === 'ANNUEL_AR';
+  const nbPeriodes = data.nb_periodes ?? 3;
 
   const mFR = data.matieres_fr ?? [];
   const mAR = data.matieres_ar ?? [];
 
-  // Compute sub-moyennes for combined summary — matières non évaluées exclues.
+  // Sous-moyennes pour le résumé combiné — matières non évaluées exclues.
   const frWithMoy = mFR.filter(m => m.evaluee !== false && m.moyenne_annuelle !== null);
   const arWithMoy = mAR.filter(m => m.evaluee !== false && m.moyenne_annuelle !== null);
   const frCoeff = frWithMoy.reduce((s, m) => s + m.coeff, 0);
@@ -720,14 +720,15 @@ export function generateBulletinAnnuelHtml(data: BulletinAnnuelData): string {
   const frMoy = frCoeff > 0 ? frWithMoy.reduce((s, m) => s + m.moyenne_annuelle! * m.coeff, 0) / frCoeff : null;
   const arMoy = arCoeff > 0 ? arWithMoy.reduce((s, m) => s + m.moyenne_annuelle! * m.coeff, 0) / arCoeff : null;
 
-  const tableau_notes =
-    (!isAR && mFR.length > 0 ? tableAnnuelFR(mFR) : '') +
-    ((isAR || isCombine) && mAR.length > 0 ? tableAnnuelFR(mAR, 'Évaluation annuelle — Filière Arabe', true) : '');
+  const tableaux_annuels: ReturnType<typeof ctxTableauAnnuel>[] = [];
+  if (!isAR && mFR.length > 0) tableaux_annuels.push(ctxTableauAnnuel(mFR, false, nbPeriodes));
+  if ((isAR || isCombine) && mAR.length > 0) tableaux_annuels.push(ctxTableauAnnuel(mAR, true, nbPeriodes));
 
-  // Bulletins strictement en français, y compris la filière arabe (libellés FR, LTR).
-  return renderBulletinDoc(data, isAR ? 'AR' : isCombine ? 'COMBINE' : 'FR', {
-    titre: titleAnnuelHtml(data.nb_periodes),
-    tableau_notes,
-    resume: isCombine ? combinedSummaryHtml(data, frMoy, arMoy) : resultsSummaryHtml(data),
+  const filiere = isAR ? 'AR' : isCombine ? 'COMBINE' : 'FR';
+  return renderBulletinDoc(data.template_html, {
+    ...chromeCtx(data, filiere, titleAnnuelHtml(nbPeriodes)),
+    ...resumeCtx(data, isCombine, frMoy, arMoy),
+    tableaux: [],
+    tableaux_annuels,
   });
 }
