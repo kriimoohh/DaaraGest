@@ -273,6 +273,8 @@ function BulletinTemplateEditor() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [html, setHtml] = useState('');
   const [placeholders, setPlaceholders] = useState<{ token: string; desc: string }[]>([]);
+  const [types, setTypes] = useState<{ type: string; label: string; is_custom: boolean }[]>([]);
+  const [type, setType] = useState<'FR' | 'AR' | 'COMBINE' | 'ANNUEL'>('FR');
   const [isCustom, setIsCustom] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -281,18 +283,23 @@ function BulletinTemplateEditor() {
   const [previewing, setPreviewing] = useState(false);
 
   // `useApi()` renvoie un nouvel objet à chaque render : ne PAS le mettre en dépendance
-  // (sinon `load` change à chaque render → l'effet reboucle → flot de requêtes / 429).
-  // Les méthodes délèguent à un singleton stable, on peut donc capturer `api` une fois.
+  // (sinon l'effet reboucle → flot de requêtes / 429). On dépend uniquement de `type`.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const load = useCallback(() => {
     setLoading(true);
-    api.get<{ contenu_html: string; is_custom: boolean; placeholders: { token: string; desc: string }[] }>('/api/v1/bulletins/template')
-      .then(d => { setHtml(d.contenu_html); setIsCustom(d.is_custom); setPlaceholders(d.placeholders); setDirty(false); })
+    api.get<{ contenu_html: string; is_custom: boolean; placeholders: { token: string; desc: string }[]; types: { type: string; label: string; is_custom: boolean }[] }>(`/api/v1/bulletins/template/${type}`)
+      .then(d => { setHtml(d.contenu_html); setIsCustom(d.is_custom); setPlaceholders(d.placeholders); setTypes(d.types); setDirty(false); })
       .catch(() => toast.error('Impossible de charger le modèle'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [type]);
 
   useEffect(() => { load(); }, [load]);
+
+  const changeType = (t: 'FR' | 'AR' | 'COMBINE' | 'ANNUEL') => {
+    if (t === type) return;
+    if (dirty && !confirm('Des changements ne sont pas enregistrés. Changer de type et les perdre ?')) return;
+    setType(t);
+  };
 
   const insertBloc = (token: string) => {
     const ta = textareaRef.current;
@@ -306,7 +313,7 @@ function BulletinTemplateEditor() {
   const handlePreview = async () => {
     setPreviewing(true);
     try {
-      const res = await api.post<{ html: string }>('/api/v1/bulletins/template/apercu', { contenu_html: html });
+      const res = await api.post<{ html: string }>(`/api/v1/bulletins/template/${type}/apercu`, { contenu_html: html });
       const url = URL.createObjectURL(new Blob([res.html], { type: 'text/html' }));
       window.open(url, '_blank');
       setTimeout(() => URL.revokeObjectURL(url), 30000);
@@ -317,18 +324,20 @@ function BulletinTemplateEditor() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await api.put('/api/v1/bulletins/template', { contenu_html: html });
+      await api.put(`/api/v1/bulletins/template/${type}`, { contenu_html: html });
       toast.success('Modèle enregistré'); setDirty(false); setIsCustom(true);
+      setTypes(ts => ts.map(x => x.type === type ? { ...x, is_custom: true } : x));
     } catch (err) { toast.error((err as Error).message || 'Erreur'); }
     finally { setSaving(false); }
   };
 
   const handleReset = async () => {
-    if (!confirm('Supprimer le modèle personnalisé et revenir au modèle par défaut ?')) return;
+    if (!confirm('Supprimer le modèle personnalisé de ce type et revenir au modèle par défaut ?')) return;
     setResetting(true);
     try {
-      await api.delete('/api/v1/bulletins/template/reset');
+      await api.delete(`/api/v1/bulletins/template/${type}/reset`);
       toast.success('Modèle réinitialisé');
+      setTypes(ts => ts.map(x => x.type === type ? { ...x, is_custom: false } : x));
       load();
     } catch (err) { toast.error((err as Error).message || 'Erreur'); }
     finally { setResetting(false); }
@@ -343,7 +352,7 @@ function BulletinTemplateEditor() {
             {isCustom && <span style={{ fontSize: 11, marginInlineStart: 8, padding: '1px 7px', borderRadius: 4, background: 'var(--success-soft)', color: 'var(--success-text)' }}>✓ personnalisé</span>}
             {dirty && <span style={{ fontSize: 11, marginInlineStart: 8, color: 'var(--warning)' }}>● non enregistré</span>}
           </h3>
-          <span className="sub">Modifiez directement le HTML : en-têtes de colonnes, titres de section, libellés, traductions FR/AR… Les blocs {'{{{...}}}'} et les {'{{{lignes}}}'} sont calculés ; {'{{#tableaux}}'} / {'{{#bilingue}}'} sont gérés par le moteur. Réinitialisez à tout moment.</span>
+          <span className="sub">Un modèle <strong>distinct par type de bulletin</strong> (sélecteur ci-dessous). Modifiez directement le HTML : en-têtes de colonnes, titres, libellés, traductions FR/AR… Les {'{{{lignes}}}'} et valeurs sont calculées. Réinitialisez à tout moment.</span>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <Button variant="ghost" onClick={handlePreview} loading={previewing}>Aperçu</Button>
@@ -352,6 +361,24 @@ function BulletinTemplateEditor() {
         </div>
       </div>
       <div className="card-pad">
+        <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
+          {types.map(t => (
+            <button
+              key={t.type}
+              type="button"
+              onClick={() => changeType(t.type as 'FR' | 'AR' | 'COMBINE' | 'ANNUEL')}
+              style={{
+                padding: '6px 12px', borderRadius: 'var(--r-sm)', fontSize: 13, cursor: 'pointer',
+                border: `1px solid ${t.type === type ? 'var(--terra)' : 'var(--rule)'}`,
+                background: t.type === type ? 'var(--terra)' : 'var(--paper-2)',
+                color: t.type === type ? '#fff' : 'var(--ink)',
+                fontWeight: t.type === type ? 600 : 400,
+              }}
+            >
+              {t.label}{t.is_custom && <span style={{ marginInlineStart: 6, fontSize: 11 }} title="Personnalisé">✓</span>}
+            </button>
+          ))}
+        </div>
         {loading ? (
           <div style={{ padding: 30, textAlign: 'center', color: 'var(--ink-3)', fontSize: 14 }}>Chargement du modèle…</div>
         ) : (

@@ -1,4 +1,5 @@
 import prisma from '../../config/database';
+import type { TypeModeleBulletin } from './bulletin.template';
 import { GenererBulletinInput, GenererBulletinAnnuelInput, ObservationInput, PreflightInput } from './bulletins.schema';
 import { renderPdfHtml } from '../../utils/browserPool';
 import { assertProfPeutAccederClasse } from '../../utils/teachingPolicy';
@@ -998,7 +999,7 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
     afficher_absences: config?.bulletin_afficher_absences ?? true,
     logo_echelle: config?.bulletin_logo_echelle ?? 100,
     nb_periodes: nbPeriodes,
-    template_html: (await prisma.bulletinTemplate.findUnique({ where: { etablissement_id } }))?.contenu_html ?? null,
+    template_html: (await prisma.bulletinTemplate.findUnique({ where: { etablissement_id_type: { etablissement_id, type: data.periode === 0 ? 'ANNUEL' : data.filiere } } }))?.contenu_html ?? null,
   };
 
   type NoteRaw = { matiere_id: string; valeur: unknown; periode: number; evaluee?: boolean; matiere: { nom_fr: string; nom_ar: string | null; coeff_defaut: unknown } };
@@ -1066,7 +1067,7 @@ export async function genererPdfClasse(
   if (!etab) throw new NotFoundError('Établissement introuvable');
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
   const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
-  const templateHtml = (await prisma.bulletinTemplate.findUnique({ where: { etablissement_id } }))?.contenu_html ?? null;
+  const templateHtml = (await prisma.bulletinTemplate.findUnique({ where: { etablissement_id_type: { etablissement_id, type: periode === 0 ? 'ANNUEL' : filiere } } }))?.contenu_html ?? null;
   // Mentions effectives = celles du niveau de la classe imprimée, sinon défauts établissement.
   const classeNiveau = await prisma.classe.findUnique({ where: { id: classe_id }, select: { niveau_id: true } });
   const mentions = await getMentionsForNiveau(etablissement_id, classeNiveau?.niveau_id);
@@ -1197,49 +1198,50 @@ export async function genererPdfClasse(
 
 // ─── Modèle HTML du bulletin (Étape 2 : rendu éditable) ──────────────────────
 
-export async function getBulletinTemplate(etablissement_id: string) {
-  const tpl = await prisma.bulletinTemplate.findUnique({ where: { etablissement_id } });
-  const { DEFAULT_BULLETIN_TEMPLATE_EDITABLE, BULLETIN_PLACEHOLDERS } = await import('./bulletin.template');
+export async function getBulletinTemplate(etablissement_id: string, type: TypeModeleBulletin) {
+  const { DEFAULT_BULLETIN_TEMPLATES, BULLETIN_PLACEHOLDERS, BULLETIN_TYPES, BULLETIN_TYPE_LABELS } = await import('./bulletin.template');
+  const tpl = await prisma.bulletinTemplate.findUnique({ where: { etablissement_id_type: { etablissement_id, type } } });
+  const customs = await prisma.bulletinTemplate.findMany({ where: { etablissement_id }, select: { type: true } });
+  const customSet = new Set(customs.map(c => c.type));
   return {
-    contenu_html: tpl?.contenu_html ?? DEFAULT_BULLETIN_TEMPLATE_EDITABLE,
+    type,
+    contenu_html: tpl?.contenu_html ?? DEFAULT_BULLETIN_TEMPLATES[type],
     is_custom: !!tpl,
     placeholders: BULLETIN_PLACEHOLDERS,
+    // Tous les types + lesquels sont personnalisés (pour le sélecteur de l'éditeur).
+    types: BULLETIN_TYPES.map(t => ({ type: t, label: BULLETIN_TYPE_LABELS[t], is_custom: customSet.has(t) })),
   };
 }
 
-export async function upsertBulletinTemplate(etablissement_id: string, contenu_html: string) {
+export async function upsertBulletinTemplate(etablissement_id: string, type: TypeModeleBulletin, contenu_html: string) {
   return prisma.bulletinTemplate.upsert({
-    where: { etablissement_id },
-    create: { etablissement_id, contenu_html },
+    where: { etablissement_id_type: { etablissement_id, type } },
+    create: { etablissement_id, type, contenu_html },
     update: { contenu_html },
   });
 }
 
-export async function resetBulletinTemplate(etablissement_id: string) {
-  await prisma.bulletinTemplate.deleteMany({ where: { etablissement_id } });
+export async function resetBulletinTemplate(etablissement_id: string, type: TypeModeleBulletin) {
+  await prisma.bulletinTemplate.deleteMany({ where: { etablissement_id, type } });
 }
 
-// Aperçu HTML du modèle avec des données d'exemple (en-tête / logo / échelle réels
-// de l'établissement) — pour l'iframe de prévisualisation côté éditeur.
-export async function apercuBulletinTemplate(etablissement_id: string, contenu_html: string): Promise<{ html: string }> {
+// Aperçu HTML d'un modèle (pour le type donné) avec des données d'exemple —
+// en-tête / logo / échelle réels de l'établissement. Pour l'iframe de l'éditeur.
+export async function apercuBulletinTemplate(etablissement_id: string, type: TypeModeleBulletin, contenu_html: string): Promise<{ html: string }> {
   const etab = await prisma.etablissement.findUnique({ where: { id: etablissement_id } });
   if (!etab) throw new NotFoundError('Établissement introuvable');
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
   const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
   const mentions = await getMentionsEtab(etablissement_id);
-  const { generateBulletinHtml } = await import('./bulletin.template');
+  const nbPeriodes = config?.nb_periodes ?? 3;
+  const { generateBulletinHtml, generateBulletinAnnuelHtml } = await import('./bulletin.template');
 
-  const demoNotes = [
-    { nom_fr: 'Mathématiques', nom_ar: 'الرياضيات', coeff: 4, valeur: Math.round(baseNote * 0.78 * 100) / 100, note_max: baseNote, evaluee: true },
-    { nom_fr: 'Français', nom_ar: 'الفرنسية', coeff: 4, valeur: Math.round(baseNote * 0.65 * 100) / 100, note_max: baseNote, evaluee: true },
-    { nom_fr: 'Sciences de la Vie et de la Terre', nom_ar: 'علوم الحياة والأرض', coeff: 2, valeur: Math.round(baseNote * 0.80 * 100) / 100, note_max: baseNote, evaluee: true },
-    { nom_fr: 'Histoire-Géographie', nom_ar: 'التاريخ والجغرافيا', coeff: 2, valeur: Math.round(baseNote * 0.57 * 100) / 100, note_max: baseNote, evaluee: true },
-    { nom_fr: 'Anglais', nom_ar: 'الإنجليزية', coeff: 2, valeur: Math.round(baseNote * 0.70 * 100) / 100, note_max: baseNote, evaluee: true },
-    { nom_fr: 'Éducation Physique et Sportive', nom_ar: 'التربية البدنية', coeff: 1, valeur: Math.round(baseNote * 0.85 * 100) / 100, note_max: baseNote, evaluee: true },
-  ];
+  const note = (nom_fr: string, nom_ar: string, coeff: number, pct: number) =>
+    ({ nom_fr, nom_ar, coeff, valeur: Math.round(baseNote * pct * 100) / 100, note_max: baseNote, evaluee: true });
+  const demoFR = [note('Mathématiques', 'الرياضيات', 4, 0.78), note('Français', 'الفرنسية', 4, 0.65), note('Histoire-Géographie', 'التاريخ والجغرافيا', 2, 0.57)];
+  const demoAR = [note('Coran', 'القرآن', 3, 0.80), note('Langue arabe', 'اللغة العربية', 3, 0.70)];
 
-  const html = generateBulletinHtml({
-    type: 'FR', periode: 1,
+  const common = {
     etablissement_nom_fr: etab.nom_fr,
     etablissement_logo_url: etab.logo_url,
     entete_bulletin_fr: etab.entete_bulletin_fr,
@@ -1259,12 +1261,31 @@ export async function apercuBulletinTemplate(etablissement_id: string, contenu_h
     etablissement_email: etab.email,
     etablissement_autorisation: etab.numero_autorisation,
     maitre_fr: 'Mme Aïssatou NDIAYE',
+    maitre_ar: 'الأستاذ سيسي',
     absences_justifiees: 2, absences_non_justifiees: 1,
     afficher_rang: config?.bulletin_afficher_rang ?? true,
     afficher_absences: config?.bulletin_afficher_absences ?? true,
     logo_echelle: config?.bulletin_logo_echelle ?? 100,
+    nb_periodes: nbPeriodes,
     template_html: contenu_html,
-    notes_fr: demoNotes,
-  });
+  };
+
+  let html: string;
+  if (type === 'ANNUEL') {
+    const p = (pct: number) => Math.round(baseNote * pct * 100) / 100;
+    const ann = (nom_fr: string, nom_ar: string, coeff: number, vals: number[]) =>
+      ({ nom_fr, nom_ar, coeff, note_max: baseNote, valeurs: vals, moyenne_annuelle: Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 100) / 100, evaluee: true });
+    html = generateBulletinAnnuelHtml({
+      ...common, type: 'ANNUEL_COMBINE',
+      matieres_fr: [ann('Mathématiques', 'الرياضيات', 4, [p(0.75), p(0.70), p(0.80)])],
+      matieres_ar: [ann('Coran', 'القرآن', 3, [p(0.80), p(0.75), p(0.85)])],
+    });
+  } else {
+    html = generateBulletinHtml({
+      ...common, type, periode: 1,
+      notes_fr: type !== 'AR' ? demoFR : undefined,
+      notes_ar: type !== 'FR' ? demoAR : undefined,
+    });
+  }
   return { html };
 }
