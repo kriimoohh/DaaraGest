@@ -59,7 +59,7 @@ model Etablissement {
   activites             Activite[]
   document_templates    DocumentTemplate[]
   documents_generes     DocumentGenere[]
-  bulletin_template     BulletinTemplate?
+  bulletin_templates    BulletinTemplate[]
   demandes_absence      DemandeAbsencePersonnel[]
   fonctions             Fonction[]
   mentions              Mention[]
@@ -1010,18 +1010,21 @@ model DocumentTemplate {
   @@unique([etablissement_id, type])
 }
 
-// Modèle HTML personnalisable du bulletin (un seul par établissement).
-// Le corps utilise des placeholders de blocs ({{en_tete}}, {{tableau_notes}}, {{resume}}…)
-// que le moteur calcule par variante (FR/AR/COMBINE/annuel). Absent → modèle par défaut.
+// Modèle HTML personnalisable du bulletin, UN par type (FR | AR | COMBINE | ANNUEL).
+// Le corps est du HTML complet ; le moteur (utils/microTemplate) remplit les lignes
+// et valeurs calculées. Absent pour un type → modèle par défaut de ce type.
 model BulletinTemplate {
   id               String   @id @default(uuid())
-  etablissement_id String   @unique
+  etablissement_id String
+  type             String   // 'FR' | 'AR' | 'COMBINE' | 'ANNUEL'
   contenu_html     String
   actif            Boolean  @default(true)
   created_at       DateTime @default(now())
   updated_at       DateTime @updatedAt
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
+
+  @@unique([etablissement_id, type])
 }
 
 model DocumentGenere {
