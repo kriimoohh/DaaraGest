@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
-import { genererBulletinSchema, genererBulletinAnnuelSchema, observationSchema, preflightSchema, deverrouillerPeriodeSchema, bulletinTemplateSchema } from './bulletins.schema';
+import { genererBulletinSchema, genererBulletinAnnuelSchema, observationSchema, preflightSchema, deverrouillerPeriodeSchema, bulletinTemplateSchema, bulletinTemplateTypeSchema } from './bulletins.schema';
 import {
   listerBulletins, genererBulletins, genererBulletinsAnnuels,
   getBulletin, genererPdfBulletin, genererPdfClasse, mettreAJourObservation,
@@ -100,30 +100,40 @@ export async function deverrouillerPeriodeHandler(request: FastifyRequest, reply
   }
 }
 
+function parseType(request: FastifyRequest, reply: FastifyReply): 'FR' | 'AR' | 'COMBINE' | 'ANNUEL' | null {
+  const parsed = bulletinTemplateTypeSchema.safeParse((request.params as { type?: string }).type);
+  if (!parsed.success) { reply.status(400).send({ error: 'Type de bulletin invalide (FR, AR, COMBINE ou ANNUEL)' }); return null; }
+  return parsed.data;
+}
+
 export async function getTemplateHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
-  return reply.send(await getBulletinTemplate(etablissement_id));
+  const type = parseType(request, reply); if (!type) return;
+  return reply.send(await getBulletinTemplate(etablissement_id, type));
 }
 
 export async function upsertTemplateHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
+  const type = parseType(request, reply); if (!type) return;
   const parsed = bulletinTemplateSchema.safeParse(request.body);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
-  return reply.send(await upsertBulletinTemplate(etablissement_id, parsed.data.contenu_html));
+  return reply.send(await upsertBulletinTemplate(etablissement_id, type, parsed.data.contenu_html));
 }
 
 export async function resetTemplateHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
-  await resetBulletinTemplate(etablissement_id);
+  const type = parseType(request, reply); if (!type) return;
+  await resetBulletinTemplate(etablissement_id, type);
   return reply.send({ success: true });
 }
 
 export async function apercuTemplateHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
+  const type = parseType(request, reply); if (!type) return;
   const parsed = bulletinTemplateSchema.safeParse(request.body);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
   try {
-    return reply.send(await apercuBulletinTemplate(etablissement_id, parsed.data.contenu_html));
+    return reply.send(await apercuBulletinTemplate(etablissement_id, type, parsed.data.contenu_html));
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
   }
