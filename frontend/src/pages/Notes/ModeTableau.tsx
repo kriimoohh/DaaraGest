@@ -157,21 +157,25 @@ export function ModeTableau({
     [programme, periode],
   );
 
-  // Moyenne pondérée par coefficient et normalisée sur l'échelle de l'établissement
-  // — IDENTIQUE au calcul du bulletin. Retourne aussi Σ(note×coeff) et Σ coeff pour
-  // aider le prof à vérifier. Matières non évaluées / notes manquantes exclues.
-  const moyenneEleve = (eleveId: string): { moyenne: number; totalCoeff: number; totalPoints: number } | null => {
-    let totalNorm = 0, totalCoeff = 0, totalPoints = 0;
+  // Agrégats par élève :
+  //  - moyenne  : pondérée par coeff + normalisée sur l'échelle (IDENTIQUE au bulletin) ;
+  //  - totalPoints / totalCoeff : Σ(note×coeff) et Σ coeff (vérification de la moyenne) ;
+  //  - totalBrut : SOMME BRUTE de toutes les notes saisies, sans coefficient — comme le
+  //    « Total » du relevé de notes (module Rapports).
+  // Le calcul pondéré exclut les matières non évaluées ; le total brut compte toutes les notes.
+  const moyenneEleve = (eleveId: string): { moyenne: number | null; totalCoeff: number; totalPoints: number; totalBrut: number } | null => {
+    let totalNorm = 0, totalCoeff = 0, totalPoints = 0, totalBrut = 0, nbNotes = 0;
     for (const row of programme) {
-      const eff = effByMat.get(row.matiere_id);
-      if (!eff || !eff.evaluee || eff.coeff === 0) continue;
       const v = getValeurNumerique(eleveId, row.matiere_id);
-      if (v === null) continue;
+      if (v !== null) { totalBrut += v; nbNotes++; }
+      const eff = effByMat.get(row.matiere_id);
+      if (!eff || !eff.evaluee || eff.coeff === 0 || v === null) continue;
       totalNorm   += (v / eff.note_max) * echelle * eff.coeff;
       totalCoeff  += eff.coeff;
       totalPoints += v * eff.coeff;
     }
-    return totalCoeff > 0 ? { moyenne: totalNorm / totalCoeff, totalCoeff, totalPoints } : null;
+    if (nbNotes === 0) return null;
+    return { moyenne: totalCoeff > 0 ? totalNorm / totalCoeff : null, totalCoeff, totalPoints, totalBrut };
   };
 
   // Stats classe (par matière) — sur la base brute (échelle de la matière)
@@ -348,7 +352,8 @@ export function ModeTableau({
                         </th>
                       );
                     })}
-                    <th style={{ textAlign: 'center', background: 'var(--paper-2)' }} title="Total pondéré : Σ (note × coefficient)">Total</th>
+                    <th style={{ textAlign: 'center', background: 'var(--paper-2)' }} title="Somme brute de toutes les notes saisies, sans coefficient (comme le relevé de notes)">Total notes</th>
+                    <th style={{ textAlign: 'center', background: 'var(--paper-2)' }} title="Total pondéré : Σ (note × coefficient)">Total ×c</th>
                     <th style={{ textAlign: 'center', background: 'var(--paper-2)' }}>Moy. /{echelle}</th>
                     <th style={{ textAlign: 'center' }}>{t('note.col_appreciation_court')}</th>
                   </tr>
@@ -407,17 +412,21 @@ export function ModeTableau({
                             </td>
                           );
                         })}
+                        <td style={{ textAlign: 'center', background: 'var(--paper-2)', fontVariantNumeric: 'tabular-nums', fontSize: 12, fontWeight: 600 }}
+                            title="Somme des notes saisies (sans coefficient)">
+                          {agg === null ? '—' : agg.totalBrut.toFixed(2)}
+                        </td>
                         <td style={{ textAlign: 'center', background: 'var(--paper-2)', fontVariantNumeric: 'tabular-nums', fontSize: 12 }}
                             title={agg ? `Σ (note × coeff) = ${agg.totalPoints.toFixed(2)} · Σ coeff = ${agg.totalCoeff}` : undefined}>
                           {agg === null ? '—' : agg.totalPoints.toFixed(2)}
                         </td>
                         <td style={{ textAlign: 'center', fontWeight: 600, background: 'var(--paper-2)', fontVariantNumeric: 'tabular-nums' }}
-                            title={agg ? `${agg.moyenne.toFixed(2)} / ${echelle} · Σ coeff = ${agg.totalCoeff}` : undefined}>
+                            title={agg && agg.moyenne !== null ? `${agg.moyenne.toFixed(2)} / ${echelle} · Σ coeff = ${agg.totalCoeff}` : undefined}>
                           {fmt(agg?.moyenne ?? null)}
                         </td>
                         <td style={{ textAlign: 'center', fontSize: 11 }}>
-                          {agg !== null && (() => {
-                            const app = appreciation(agg.moyenne, echelle);
+                          {agg !== null && agg.moyenne !== null && (() => {
+                            const app = appreciation(agg.moyenne as number, echelle);
                             return <span style={{ color: app.color, fontWeight: 500 }}>{t(app.key)}</span>;
                           })()}
                         </td>
@@ -434,6 +443,7 @@ export function ModeTableau({
                         {ms.moy === null ? '—' : ms.moy.toFixed(2)}
                       </td>
                     ))}
+                    <td></td>
                     <td style={{ textAlign: 'center', fontWeight: 600, fontSize: 11, color: 'var(--ink-3)' }} title="Somme des coefficients du programme (matières évaluées)">
                       Σcoeff {[...effByMat.values()].filter(e => e.evaluee && e.coeff > 0).reduce((s, e) => s + e.coeff, 0)}
                     </td>
@@ -449,7 +459,7 @@ export function ModeTableau({
                         {ms.saisi} / {eleves.length}
                       </td>
                     ))}
-                    <td colSpan={3}></td>
+                    <td colSpan={4}></td>
                   </tr>
                 </tbody>
               </table>
