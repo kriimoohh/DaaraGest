@@ -120,47 +120,59 @@ export async function bulkUpsertNotes(
     }
   }
 
-  const results = await prisma.$transaction(async (tx) => {
-    const saved: unknown[] = [];
+  const keyOf = (n: { eleve_id: string; matiere_id: string; periode: number; annee_scolaire_id: string }) =>
+    `${n.eleve_id}|${n.matiere_id}|${n.periode}|${n.annee_scolaire_id}`;
+
+  // Transaction efficace : une boucle de N upsert (findUnique + upsert par note) sur
+  // une classe entière (ex. 507 notes → ~1000 allers-retours séquentiels) dépasse le
+  // timeout de transaction (5 s par défaut) → « Transaction not found ». On précharge
+  // donc les notes existantes en UNE requête, puis createMany (nouvelles) + update
+  // ciblés (existantes modifiées). Le timeout est aussi relevé par sécurité.
+  const { created, updated } = await prisma.$transaction(async (tx) => {
+    const existing = await tx.note.findMany({
+      where: {
+        eleve_id:          { in: [...new Set(notes.map(n => n.eleve_id))] },
+        matiere_id:        { in: matiereIds },
+        periode:           { in: [...new Set(notes.map(n => n.periode))] },
+        annee_scolaire_id: { in: [...new Set(notes.map(n => n.annee_scolaire_id))] },
+      },
+      select: { id: true, eleve_id: true, matiere_id: true, periode: true, annee_scolaire_id: true, valeur: true, commentaire: true },
+    });
+    const existingMap = new Map(existing.map(e => [keyOf(e), e]));
+
+    const toCreate: { eleve_id: string; matiere_id: string; periode: number; annee_scolaire_id: string; valeur: number; commentaire?: string | null }[] = [];
+    const toUpdate: { id: string; valeur: number; commentaire?: string | null }[] = [];
     for (const note of notes) {
-      const uniqueKey = {
-        eleve_id_matiere_id_periode_annee_scolaire_id: {
-          eleve_id: note.eleve_id,
-          matiere_id: note.matiere_id,
-          periode: note.periode,
-          annee_scolaire_id: note.annee_scolaire_id,
-        },
-      };
-
-      // En mode insertOnly (professeur), ignorer les notes qui existent déjà
-      if (insertOnly) {
-        const existing = await tx.note.findUnique({ where: uniqueKey });
-        if (existing) continue;
-      }
-
-      const result = await tx.note.upsert({
-        where: uniqueKey,
-        create: {
+      const ex = existingMap.get(keyOf(note));
+      if (!ex) {
+        toCreate.push({
           eleve_id: note.eleve_id, matiere_id: note.matiere_id,
           periode: note.periode, annee_scolaire_id: note.annee_scolaire_id,
           valeur: note.valeur, commentaire: note.commentaire,
-        },
-        update: { valeur: note.valeur, commentaire: note.commentaire },
-      });
-      saved.push(result);
+        });
+      } else if (!insertOnly) {
+        // Mise à jour seulement si la valeur ou le commentaire change (évite des écritures inutiles).
+        if (Number(ex.valeur) !== note.valeur || (ex.commentaire ?? null) !== (note.commentaire ?? null)) {
+          toUpdate.push({ id: ex.id, valeur: note.valeur, commentaire: note.commentaire });
+        }
+      }
+      // insertOnly + note déjà existante → ignorée (verrou professeur).
     }
-    return saved;
-  });
 
-  if (results.length > 0 && acteurId && etablissement_id) {
+    if (toCreate.length > 0) await tx.note.createMany({ data: toCreate, skipDuplicates: true });
+    for (const u of toUpdate) {
+      await tx.note.update({ where: { id: u.id }, data: { valeur: u.valeur, commentaire: u.commentaire } });
+    }
+    return { created: toCreate.length, updated: toUpdate.length };
+  }, { timeout: 20000, maxWait: 10000 });
+
+  const count = created + updated;
+  if (count > 0 && acteurId && etablissement_id) {
     await logAction(etablissement_id, acteurId, insertOnly ? 'CREATE' : 'UPDATE', 'Note', 'bulk', {
-      count: results.length,
-      insertOnly,
-      matiere_ids: matiereIds,
-      politique: politiqueAppliquee,
+      count, created, updated, insertOnly, matiere_ids: matiereIds, politique: politiqueAppliquee,
     });
   }
-  return results;
+  return { count, created, updated };
 }
 
 export async function listerNotesEleve(eleve_id: string, etablissement_id: string, annee_scolaire_id?: string) {
