@@ -31,7 +31,7 @@ export async function bulkUpsertHandler(request: FastifyRequest, reply: FastifyR
   try {
     const insertOnly = role === 'professeur';
     const data = await bulkUpsertNotes(parsed.data.notes, insertOnly, acteurId, etablissement_id, parsed.data.classe_id, role);
-    return reply.send({ count: data.length, notes: data });
+    return reply.send(data);
   } catch (err) {
     const status = (err as { statusCode?: number }).statusCode ?? 400;
     return reply.status(status).send({ error: (err as Error).message });
