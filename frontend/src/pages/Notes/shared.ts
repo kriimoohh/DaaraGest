@@ -1,13 +1,21 @@
 export interface AnneeScolaire { id: string; libelle: string; active: boolean }
 export interface Classe { id: string; nom_fr: string; filiere: string }
-export interface Matiere { id: string; nom_fr: string; nom_ar: string; filiere: string; note_max: number; note_min: number }
-export interface ClasseMatiere { matiere_id: string; coeff_override: number | null; matiere: Matiere }
+export interface Matiere { id: string; nom_fr: string; nom_ar: string; filiere: string; note_max: number; note_min: number; coeff_defaut?: number }
+export interface ClasseMatiere {
+  matiere_id: string;
+  coeff_override: number | null;
+  note_max_effectif?: number;
+  evaluee?: boolean;
+  periodes_override?: { periode: number; coeff: number; note_max: number; evaluee: boolean | null }[];
+  matiere: Matiere;
+}
 export interface Eleve { id: string; nom_fr: string; prenom_fr: string; matricule: string }
 export interface Note { id: string; eleve_id: string; matiere_id: string; periode: number; valeur: number; commentaire?: string }
 
 export interface PolitiqueSaisieNotes {
   autoriser_toutes_matieres: boolean;
   autoriser_toutes_classes: boolean;
+  note_max?: number; // échelle de l'établissement (ConfigNotes.note_max)
 }
 
 export function appreciation(valeur: number, max: number): { key: string; color: string } {

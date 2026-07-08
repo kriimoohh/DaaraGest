@@ -38,6 +38,7 @@ export function ModeTableau({
 
   const [eleves, setEleves] = useState<Eleve[]>([]);
   const [matieres, setMatieres] = useState<Matiere[]>([]);
+  const [programme, setProgramme] = useState<ClasseMatiere[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -52,13 +53,13 @@ export function ModeTableau({
   const editable = (canEdit || isProfesseur) && !modeAnnuel;
 
   useEffect(() => {
-    if (!classeId) { setEleves([]); setMatieres([]); return; }
+    if (!classeId) { setEleves([]); setMatieres([]); setProgramme([]); return; }
     setProgrammeSansMatiere(false);
     api.get<ClasseMatiere[]>(`/api/v1/classes/${classeId}/matieres`)
       .then(rows => {
-        const mats = rows.map(r => r.matiere);
-        setMatieres(mats);
-        if (mats.length === 0) setProgrammeSansMatiere(true);
+        setProgramme(rows);
+        setMatieres(rows.map(r => r.matiere));
+        if (rows.length === 0) setProgrammeSansMatiere(true);
       })
       .catch((err) => toast.error((err as Error).message || t('note.err_chargement')));
     api.get<{ data: Eleve[] }>(`/api/v1/eleves?classe_id=${classeId}&limit=200`)
@@ -132,19 +133,43 @@ export function ModeTableau({
     return getNoteAffichee(eleveId, matiereId);
   };
 
-  // Moyenne normalisée sur /10 par élève : chaque note ramenée à l'échelle /10
-  // puis simple moyenne arithmétique. La pondération par coefficient reste
-  // l'affaire des bulletins.
-  const moyenneEleve = (eleveId: string): number | null => {
-    let total = 0, count = 0;
-    for (const m of matieres) {
-      const v = getValeurNumerique(eleveId, m.id);
+  // Échelle de l'établissement (ConfigNotes.note_max) — pour aligner la moyenne
+  // affichée sur celle du bulletin (ex : /10).
+  const echelle = politique?.note_max ?? 20;
+
+  // Coeff / barème / évalué EFFECTIFS d'une matière pour la période courante, avec
+  // les MÊMES règles de résolution que le bulletin : override de période > override
+  // de classe > défaut de la matière.
+  const effProg = (row: ClasseMatiere) => {
+    const p = periode ? Number(periode) : null;
+    const ov = p != null ? row.periodes_override?.find(o => o.periode === p) : undefined;
+    return {
+      coeff:    ov?.coeff ?? (row.coeff_override ?? row.matiere.coeff_defaut ?? 1),
+      note_max: ov?.note_max ?? row.note_max_effectif ?? row.matiere.note_max,
+      evaluee:  ov?.evaluee != null ? ov.evaluee : (row.evaluee ?? true),
+    };
+  };
+  const effByMat = useMemo(
+    () => new Map(programme.map(r => [r.matiere_id, effProg(r)])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [programme, periode],
+  );
+
+  // Moyenne pondérée par coefficient et normalisée sur l'échelle de l'établissement
+  // — IDENTIQUE au calcul du bulletin. Retourne aussi Σ(note×coeff) et Σ coeff pour
+  // aider le prof à vérifier. Matières non évaluées / notes manquantes exclues.
+  const moyenneEleve = (eleveId: string): { moyenne: number; totalCoeff: number; totalPoints: number } | null => {
+    let totalNorm = 0, totalCoeff = 0, totalPoints = 0;
+    for (const row of programme) {
+      const eff = effByMat.get(row.matiere_id);
+      if (!eff || !eff.evaluee || eff.coeff === 0) continue;
+      const v = getValeurNumerique(eleveId, row.matiere_id);
       if (v === null) continue;
-      const max = m.note_max || 20;
-      total += (v / max) * 10;
-      count++;
+      totalNorm   += (v / eff.note_max) * echelle * eff.coeff;
+      totalCoeff  += eff.coeff;
+      totalPoints += v * eff.coeff;
     }
-    return count > 0 ? total / count : null;
+    return totalCoeff > 0 ? { moyenne: totalNorm / totalCoeff, totalCoeff, totalPoints } : null;
   };
 
   // Stats classe (par matière) — sur la base brute (échelle de la matière)
@@ -312,19 +337,23 @@ export function ModeTableau({
                   <tr>
                     <th style={{ position: 'sticky', insetInlineStart: 0, background: 'var(--paper)', zIndex: 2 }}>{t('note.col_matricule')}</th>
                     <th style={{ position: 'sticky', insetInlineStart: 84, background: 'var(--paper)', zIndex: 2, minWidth: 180 }}>{t('note.col_eleve')}</th>
-                    {matieres.map(m => (
-                      <th key={m.id} title={m.nom_fr} style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-                        <div style={{ fontSize: 11, fontWeight: 600 }}>{m.nom_fr}</div>
-                        <div style={{ fontSize: 10, fontWeight: 400, color: 'var(--ink-4)' }}>/{m.note_max}</div>
-                      </th>
-                    ))}
-                    <th style={{ textAlign: 'center', background: 'var(--paper-2)' }}>{t('note.moy_10')}</th>
+                    {matieres.map(m => {
+                      const eff = effByMat.get(m.id);
+                      return (
+                        <th key={m.id} title={m.nom_fr} style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: 11, fontWeight: 600 }}>{m.nom_fr}</div>
+                          <div style={{ fontSize: 10, fontWeight: 400, color: 'var(--ink-4)' }}>/{m.note_max}{eff ? ` · coeff ${eff.coeff}` : ''}</div>
+                        </th>
+                      );
+                    })}
+                    <th style={{ textAlign: 'center', background: 'var(--paper-2)' }} title="Total pondéré : Σ (note × coefficient)">Total</th>
+                    <th style={{ textAlign: 'center', background: 'var(--paper-2)' }}>Moy. /{echelle}</th>
                     <th style={{ textAlign: 'center' }}>{t('note.col_appreciation_court')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {eleves.map(eleve => {
-                    const moy = moyenneEleve(eleve.id);
+                    const agg = moyenneEleve(eleve.id);
                     return (
                       <tr key={eleve.id}>
                         <td style={{ fontFamily: 'var(--font-mono)', fontSize: 11, position: 'sticky', insetInlineStart: 0, background: 'var(--paper)', zIndex: 1 }}>
@@ -376,12 +405,17 @@ export function ModeTableau({
                             </td>
                           );
                         })}
-                        <td style={{ textAlign: 'center', fontWeight: 600, background: 'var(--paper-2)', fontVariantNumeric: 'tabular-nums' }}>
-                          {fmt(moy)}
+                        <td style={{ textAlign: 'center', background: 'var(--paper-2)', fontVariantNumeric: 'tabular-nums', fontSize: 12 }}
+                            title={agg ? `Σ (note × coeff) = ${agg.totalPoints.toFixed(2)} · Σ coeff = ${agg.totalCoeff}` : undefined}>
+                          {agg === null ? '—' : agg.totalPoints.toFixed(2)}
+                        </td>
+                        <td style={{ textAlign: 'center', fontWeight: 600, background: 'var(--paper-2)', fontVariantNumeric: 'tabular-nums' }}
+                            title={agg ? `${agg.moyenne.toFixed(2)} / ${echelle} · Σ coeff = ${agg.totalCoeff}` : undefined}>
+                          {fmt(agg?.moyenne ?? null)}
                         </td>
                         <td style={{ textAlign: 'center', fontSize: 11 }}>
-                          {moy !== null && (() => {
-                            const app = appreciation(moy, 10);
+                          {agg !== null && (() => {
+                            const app = appreciation(agg.moyenne, echelle);
                             return <span style={{ color: app.color, fontWeight: 500 }}>{t(app.key)}</span>;
                           })()}
                         </td>
@@ -398,6 +432,9 @@ export function ModeTableau({
                         {ms.moy === null ? '—' : ms.moy.toFixed(2)}
                       </td>
                     ))}
+                    <td style={{ textAlign: 'center', fontWeight: 600, fontSize: 11, color: 'var(--ink-3)' }} title="Somme des coefficients du programme (matières évaluées)">
+                      Σcoeff {[...effByMat.values()].filter(e => e.evaluee && e.coeff > 0).reduce((s, e) => s + e.coeff, 0)}
+                    </td>
                     <td style={{ background: 'var(--paper-3)' }}></td>
                     <td></td>
                   </tr>
@@ -410,7 +447,7 @@ export function ModeTableau({
                         {ms.saisi} / {eleves.length}
                       </td>
                     ))}
-                    <td colSpan={2}></td>
+                    <td colSpan={3}></td>
                   </tr>
                 </tbody>
               </table>
