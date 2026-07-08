@@ -141,7 +141,7 @@ export async function bulkUpsertNotesEvaluation(
       saved.push(result);
     }
     return saved;
-  });
+  }, { timeout: 20000, maxWait: 10000 }); // marge pour une classe entière (cf. bulkUpsertNotes)
 }
 
 export async function calculerMoyenneEvaluation(
