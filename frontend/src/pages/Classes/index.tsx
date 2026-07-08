@@ -4,6 +4,7 @@ import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
 import { useAnneeCourante } from '../../store/anneeStore';
 import { API_BASE, ApiError } from '../../lib/api';
+import { nomClasse } from '../../lib/noms';
 import { toast } from '../../store/toastStore';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { PageHeader } from '../../components/ui/PageHeader';
@@ -75,6 +76,7 @@ interface Niveau {
 interface Classe {
   id: string;
   nom_fr: string;
+  nom_ar?: string | null;
   filiere: 'FR' | 'AR';
   niveau_id: string | null;
   niveau?: Niveau | null;
@@ -86,6 +88,7 @@ interface Classe {
 
 interface ClasseFormData {
   nom_fr: string;
+  nom_ar: string;
   filiere: string;
   niveau_id: string;
   capacite: string;
@@ -98,6 +101,7 @@ type FormErrors = Partial<Record<keyof ClasseFormData, string>>;
 
 const EMPTY_FORM: ClasseFormData = {
   nom_fr: '',
+  nom_ar: '',
   filiere: '',
   niveau_id: '',
   capacite: '',
@@ -246,6 +250,7 @@ export function ClassesPage() {
     setEditTarget(classe);
     setForm({
       nom_fr: classe.nom_fr,
+      nom_ar: classe.nom_ar ?? '',
       filiere: classe.filiere,
       niveau_id: classe.niveau_id ?? '',
       capacite: String(classe.capacite ?? ''),
@@ -270,6 +275,7 @@ export function ClassesPage() {
     try {
       const payload = {
         nom_fr: form.nom_fr,
+        nom_ar: form.nom_ar.trim() || null,
         filiere: form.filiere,
         niveau_id: form.niveau_id || null,
         capacite: form.capacite ? Number(form.capacite) : undefined,
@@ -896,7 +902,7 @@ export function ClassesPage() {
                 </div>
 
                 <div>
-                  <div className="font-display" style={{ fontSize: 28, letterSpacing: '-0.02em', lineHeight: 1 }}>{c.nom_fr}</div>
+                  <div className="font-display" style={{ fontSize: 28, letterSpacing: '-0.02em', lineHeight: 1 }}>{nomClasse(c)}</div>
                   <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
                     Niveau {c.niveau?.libelle ?? '—'}
                   </div>
@@ -951,6 +957,13 @@ export function ClassesPage() {
             value={form.nom_fr}
             onChange={(e) => setField('nom_fr', e.target.value)}
             error={formErrors.nom_fr}
+          />
+          <Input
+            label={t('common.nom_ar')}
+            value={form.nom_ar}
+            onChange={(e) => setField('nom_ar', e.target.value)}
+            style={{ direction: 'rtl' }}
+            placeholder="القسم…"
           />
 
           <div className="grid-2">
