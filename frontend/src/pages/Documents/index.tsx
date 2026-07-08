@@ -8,6 +8,7 @@ import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 import { useAnneeCourante } from '../../store/anneeStore';
 import { API_BASE } from '../../lib/api';
+import { nomClasse } from '../../lib/noms';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -29,7 +30,7 @@ type DestType = 'eleve' | 'professeur' | 'classe';
 interface TemplateInfo { type: TypeDocument; nom: string; has_custom: boolean }
 interface Eleve { id: string; nom_fr: string; prenom_fr: string; matricule: string }
 interface Professeur { id: string; nom_fr: string; prenom_fr?: string; identifiant: string }
-interface Classe { id: string; nom_fr: string; filiere: string; annee_scolaire_id?: string }
+interface Classe { id: string; nom_fr: string; nom_ar?: string | null; filiere: string; annee_scolaire_id?: string }
 interface AnneeScolaire { id: string; libelle: string; active: boolean }
 interface HistoriqueItem {
   id: string; type: TypeDocument; destinataire_type: string; destinataire_id: string;
@@ -740,7 +741,7 @@ export function DocumentsPage() {
                       <label className="field-label">{t('document.classe_label')}</label>
                       <select className="input" value={selectedClasseId} onChange={e => setSelectedClasseId(e.target.value)}>
                         <option value="">Sélectionner une classe…</option>
-                        {classes.filter(c => !extraParams.annee_scolaire_id || c.annee_scolaire_id === extraParams.annee_scolaire_id).map(c => <option key={c.id} value={c.id}>{c.nom_fr} ({c.filiere})</option>)}
+                        {classes.filter(c => !extraParams.annee_scolaire_id || c.annee_scolaire_id === extraParams.annee_scolaire_id).map(c => <option key={c.id} value={c.id}>{nomClasse(c)} ({c.filiere})</option>)}
                       </select>
                     </div>
                     <div className="field">

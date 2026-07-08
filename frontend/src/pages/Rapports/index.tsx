@@ -6,8 +6,9 @@ import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
 import { useAnneeScolaire } from '../../store/anneeStore';
 import { API_BASE } from '../../lib/api';
+import { nomClasse } from '../../lib/noms';
 
-interface Classe { id: string; nom_fr: string; annee_scolaire_id?: string; }
+interface Classe { id: string; nom_fr: string; nom_ar?: string | null; annee_scolaire_id?: string; }
 interface AnneeScolaire { id: string; libelle: string; active: boolean; }
 
 const MOIS_LABELS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
@@ -302,7 +303,7 @@ export function RapportsPage() {
                 onChange={e => setClasseId(e.target.value)}
                 options={[
                   { value: '', label: 'Toutes les classes' },
-                  ...classes.filter(c => !anneeId || c.annee_scolaire_id === anneeId).map(c => ({ value: c.id, label: c.nom_fr })),
+                  ...classes.filter(c => !anneeId || c.annee_scolaire_id === anneeId).map(c => ({ value: c.id, label: nomClasse(c) })),
                 ]}
               />
             )}

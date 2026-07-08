@@ -1,5 +1,5 @@
 export interface AnneeScolaire { id: string; libelle: string; active: boolean }
-export interface Classe { id: string; nom_fr: string; filiere: string }
+export interface Classe { id: string; nom_fr: string; nom_ar?: string | null; filiere: string }
 export interface Matiere { id: string; nom_fr: string; nom_ar: string; filiere: string; note_max: number; note_min: number; coeff_defaut?: number }
 export interface ClasseMatiere {
   matiere_id: string;

@@ -8,7 +8,7 @@ import {
   AnneeScolaire, Classe, Matiere, ClasseMatiere, Eleve, Note,
   PolitiqueSaisieNotes, appreciation, estModeStrict,
 } from './shared';
-import { nomMatiere } from '../../lib/noms';
+import { nomMatiere, nomClasse } from '../../lib/noms';
 
 interface Props {
   annees: AnneeScolaire[];
@@ -277,7 +277,7 @@ export function ModeTableau({
             label={t('nav.classes')}
             value={classeId}
             onChange={(e) => setClasseId(e.target.value)}
-            options={[{ value: '', label: t('common.selectionner') }, ...classes.map((c) => ({ value: c.id, label: c.nom_fr }))]}
+            options={[{ value: '', label: t('common.selectionner') }, ...classes.map((c) => ({ value: c.id, label: nomClasse(c) }))]}
             disabled={!anneeId}
           />
           <Select
