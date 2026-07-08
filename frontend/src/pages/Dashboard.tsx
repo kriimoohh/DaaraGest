@@ -1,8 +1,37 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 import { useAnneeCourante } from '../store/anneeStore';
 import { useApi } from '../hooks/useApi';
+
+// Ce que chaque rôle voit sur le tableau de bord — source unique (évite les
+// `if (role === …)` éparpillés). Aligné sur les permissions API : les endpoints
+// finances sont gardés par SCOLARITE, les analytics par la DIRECTION.
+function dashboardCaps(role: string | undefined) {
+  return {
+    finances:  ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'].includes(role ?? ''),
+    analytics: ['admin', 'directeur'].includes(role ?? ''),
+  };
+}
+
+// Accès rapides proposés aux rôles dont le dashboard n'a ni finances ni analytics
+// (professeur, pointeur) — sinon leur vue serait quasi vide. Clés = libellés Sidebar.
+const RACCOURCIS: Record<string, { to: string; navKey: string }[]> = {
+  professeur: [
+    { to: '/notes', navKey: 'notes' },
+    { to: '/bulletins', navKey: 'bulletins' },
+    { to: '/absences', navKey: 'absences' },
+    { to: '/emploi-du-temps', navKey: 'emploi_du_temps' },
+    { to: '/messagerie', navKey: 'messagerie' },
+  ],
+  pointeur: [
+    { to: '/pointage', navKey: 'pointage' },
+    { to: '/absences', navKey: 'absences' },
+    { to: '/emploi-du-temps', navKey: 'emploi_du_temps' },
+    { to: '/messagerie', navKey: 'messagerie' },
+  ],
+};
 
 interface Stats { nb_eleves: number; nb_personnel: number; nb_classes: number; }
 interface MoisStat { label: string; mois: number; annee: number; total: number; }
@@ -71,7 +100,8 @@ export function Dashboard() {
     return fmtNum(n);
   };
 
-  const isDirection = ['admin', 'directeur'].includes(user?.role ?? '');
+  const caps = dashboardCaps(user?.role);
+  const raccourcis = RACCOURCIS[user?.role ?? ''] ?? [];
 
   const [stats, setStats]               = useState<Stats>({ nb_eleves: 0, nb_personnel: 0, nb_classes: 0 });
   const [statsMois, setStatsMois]       = useState<StatsMois | null>(null);
@@ -81,27 +111,37 @@ export function Dashboard() {
   const [tdbLoading, setTdbLoading]     = useState(false);
 
   useEffect(() => {
+    // Compteurs + établissement (universels). /parametres reste admin-only → un 403
+    // toléré pour les autres rôles (le nom d'établissement ne s'affiche alors pas).
     Promise.allSettled([
       api.get<{ total: number }>('/api/v1/eleves?limit=1'),
       api.get<{ total: number }>('/api/v1/personnel?limit=1'),
       // Scopé à l'année courante : « CE1 A » existe chaque année, sans scope le
       // compteur de classes additionnerait toutes les années.
       api.get<unknown[]>(`/api/v1/classes${anneeCouranteId ? `?annee_scolaire_id=${anneeCouranteId}` : ''}`),
-      api.get<StatsMois>('/api/v1/finances/stats'),
       api.get<{ nom_fr: string }>('/api/v1/parametres'),
-      api.get<MoisStat[]>('/api/v1/finances/stats-mensuels'),
-    ]).then(([eleves, profs, classes, finances, etab, mensuels]) => {
+    ]).then(([eleves, profs, classes, etab]) => {
       setStats({
         nb_eleves:    eleves.status  === 'fulfilled' ? (eleves.value as { total: number }).total : 0,
         nb_personnel: profs.status   === 'fulfilled' ? (profs.value as { total: number }).total : 0,
         nb_classes:   classes.status === 'fulfilled' ? (classes.value as unknown[]).length : 0,
       });
-      if (finances.status === 'fulfilled') setStatsMois(finances.value as StatsMois);
       if (etab.status === 'fulfilled') setEtablissement(etab.value as { nom_fr: string });
-      if (mensuels.status === 'fulfilled') setStatsMensuels(mensuels.value as MoisStat[]);
     });
 
-    if (isDirection) {
+    // Finances : uniquement les rôles autorisés (sinon 403 inutile pour prof/pointeur).
+    if (caps.finances) {
+      Promise.allSettled([
+        api.get<StatsMois>('/api/v1/finances/stats'),
+        api.get<MoisStat[]>('/api/v1/finances/stats-mensuels'),
+      ]).then(([finances, mensuels]) => {
+        if (finances.status === 'fulfilled') setStatsMois(finances.value as StatsMois);
+        if (mensuels.status === 'fulfilled') setStatsMensuels(mensuels.value as MoisStat[]);
+      });
+    }
+
+    // Analytics (présences, moyennes, top/bottom) : direction uniquement.
+    if (caps.analytics) {
       setTdbLoading(true);
       api.get<TableauDeBord>('/api/v1/stats/tableau-de-bord')
         .then(setTdb)
@@ -136,8 +176,8 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid-4 mb-4">
+      {/* Stat cards — la carte finances n'apparaît que pour les rôles autorisés */}
+      <div className={`${caps.finances ? 'grid-4' : 'grid-3'} mb-4`}>
         <div className="card stat">
           <div className="stat-label">
             <svg width={13} height={13} viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C9.79 3 8 4.79 8 7s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 10c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg>
@@ -162,23 +202,44 @@ export function Dashboard() {
           <div className="stat-value font-display">{fmtNum(stats.nb_classes)}</div>
           <div className="stat-foot"><span className="muted">{t('dashboard.kpi_ouvertes')}</span></div>
         </div>
-        <div className="card stat">
-          <div className="stat-label">
-            <svg width={13} height={13} viewBox="0 0 24 24" fill="currentColor"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" /></svg>
-            {t('dashboard.encaisse_ce_mois')}
+        {caps.finances && (
+          <div className="card stat">
+            <div className="stat-label">
+              <svg width={13} height={13} viewBox="0 0 24 24" fill="currentColor"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" /></svg>
+              {t('dashboard.encaisse_ce_mois')}
+            </div>
+            <div className="stat-value font-display">
+              {fmtCompact(statsMois?.total_encaisse_eleves ?? 0)}
+              <span className="unit">FCFA</span>
+            </div>
+            <div className="stat-foot">
+              <span className="muted">{t('dashboard.kpi_paiements_count', { count: statsMois?.nb_paiements_eleves ?? 0 })}</span>
+            </div>
           </div>
-          <div className="stat-value font-display">
-            {fmtCompact(statsMois?.total_encaisse_eleves ?? 0)}
-            <span className="unit">FCFA</span>
-          </div>
-          <div className="stat-foot">
-            <span className="muted">{t('dashboard.kpi_paiements_count', { count: statsMois?.nb_paiements_eleves ?? 0 })}</span>
-          </div>
-        </div>
+        )}
       </div>
 
+      {/* Accès rapides — pour les rôles sans finances ni analytics (prof, pointeur) */}
+      {raccourcis.length > 0 && (
+        <div className="card mb-4">
+          <div className="card-hd"><h3>{t('dashboard.acces_rapides')}</h3></div>
+          <div className="card-pad" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {raccourcis.map(r => (
+              <Link
+                key={r.to}
+                to={r.to}
+                className="btn btn-ghost"
+                style={{ textDecoration: 'none' }}
+              >
+                {t(`nav.${r.navKey}`)}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Analytics (admin / directeur uniquement) ─────────────────────────── */}
-      {isDirection && (
+      {caps.analytics && (
         <>
           {tdbLoading ? (
             <div className="card" style={{ padding: 24, textAlign: 'center', color: 'var(--ink-3)', marginBottom: 16 }}>{t('dashboard.chargement_analytics')}</div>
@@ -307,7 +368,8 @@ export function Dashboard() {
         </>
       )}
 
-      {/* Charts row — Finances */}
+      {/* Charts row — Finances (rôles autorisés uniquement) */}
+      {caps.finances && (
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }} className="mb-4">
         <div className="card">
           <div className="card-hd">
@@ -319,7 +381,7 @@ export function Dashboard() {
                 </div>
               )}
             </div>
-            {isDirection && tdb && tdb.finances.evolution_pct !== null && (
+            {caps.analytics && tdb && tdb.finances.evolution_pct !== null && (
               <div style={{ fontSize: 12, color: tdb.finances.evolution_pct >= 0 ? 'var(--success-text)' : 'var(--danger)' }}>
                 {t('dashboard.vs_mois_prec', {
                   pct: `${tdb.finances.evolution_pct >= 0 ? '+' : ''}${tdb.finances.evolution_pct}`,
@@ -385,6 +447,7 @@ export function Dashboard() {
           </div>
         </div>
       </div>
+      )}
     </>
   );
 }

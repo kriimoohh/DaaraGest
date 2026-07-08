@@ -67,6 +67,7 @@
     "kpi_ouvertes": "مفتوحة",
     "kpi_paiements_count": "{{count}} مدفوعات",
     "encaisse_ce_mois": "المحصل هذا الشهر",
+    "acces_rapides": "روابط سريعة",
     "presence_eleves": "حضور التلاميذ",
     "presence_personnel": "حضور الموظفين",
     "presence_summary": "الأسبوع: {{presents}}/{{total}} · الشهر: {{mois}}",

@@ -67,6 +67,7 @@
     "kpi_ouvertes": "ouvertes",
     "kpi_paiements_count": "{{count}} paiements",
     "encaisse_ce_mois": "Encaissé ce mois",
+    "acces_rapides": "Accès rapides",
     "presence_eleves": "Présence élèves",
     "presence_personnel": "Présence personnel",
     "presence_summary": "Semaine : {{presents}}/{{total}} · Mois : {{mois}}",
