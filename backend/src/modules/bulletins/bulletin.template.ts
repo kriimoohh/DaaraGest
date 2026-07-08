@@ -128,6 +128,10 @@ export interface BulletinAnnuelData extends BulletinBaseData {
 const periodeLabel = (p: number) =>
   ({ 1: '1er Trimestre', 2: '2ème Trimestre', 3: '3ème Trimestre' }[p] ?? `Période ${p}`);
 
+// Nom arabe du trimestre — pour un titre bilingue sur les bulletins de filière arabe.
+const periodeLabelAr = (p: number) =>
+  ({ 1: 'الفصل الأول', 2: 'الفصل الثاني', 3: 'الفصل الثالث' }[p] ?? `الفترة ${p}`);
+
 // Appréciation par matière = mentions configurées de l'établissement (mêmes bandes
 // que la moyenne, ex /10 : Très bien≥10, Bien≥8…), appliquées à la note ramenée
 // sur l'échelle établissement. Les bulletins sont strictement en français,
@@ -733,12 +737,13 @@ export function generateBulletinHtml(data: BulletinTrimestreData): string {
     tableau_fr = ctxTableauTrim(notesFR, false);
   } else if (data.type === 'AR') {
     filiere = 'AR';
-    titre = titleHtml(periodeStr);
+    // Titre bilingue (FR + AR), cohérent avec les libellés arabes du tableau AR.
+    titre = titleHtml(`${periodeStr} — <span dir="rtl">${periodeLabelAr(data.periode)}</span>`);
     tableau_ar = ctxTableauTrim(notesAR, true);
   } else {
     filiere = 'COMBINE';
     estCombine = true;
-    titre = titleHtml(`${periodeStr} — Filières FR &amp; AR`);
+    titre = titleHtml(`${periodeStr} — <span dir="rtl">${periodeLabelAr(data.periode)}</span> · Filières FR &amp; AR`);
     tableau_fr = ctxTableauTrim(notesFR, false);
     tableau_ar = ctxTableauTrim(notesAR, true);
     frMoy = moyenneNorm(notesFR);
