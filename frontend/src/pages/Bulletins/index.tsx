@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { nomClasse } from '../../lib/noms';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
@@ -12,7 +13,7 @@ import { useAnneeScolaire } from '../../store/anneeStore';
 import { toast } from '../../store/toastStore';
 
 interface AnneeScolaire { id: string; libelle: string; }
-interface Classe { id: string; nom_fr: string; filiere: string; }
+interface Classe { id: string; nom_fr: string; nom_ar?: string | null; filiere: string; }
 interface Bulletin {
   id: string; periode: number; filiere: string;
   moyenne: number | null; rang: number | null; appreciation: string | null;
@@ -312,7 +313,7 @@ export function BulletinsPage() {
           />
           <Select label={t('nav.classes')}
             value={classeId} onChange={(e) => { setClasseId(e.target.value); setBulletins([]); }}
-            options={[{ value: '', label: t('common.tous') }, ...classes.map(c => ({ value: c.id, label: c.nom_fr }))]}
+            options={[{ value: '', label: t('common.tous') }, ...classes.map(c => ({ value: c.id, label: nomClasse(c) }))]}
             disabled={!anneeId}
           />
           <Select label="Type de bulletin"

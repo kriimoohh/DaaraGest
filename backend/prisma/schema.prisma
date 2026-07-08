@@ -396,6 +396,7 @@ model Classe {
   etablissement_id  String
   annee_scolaire_id String
   nom_fr            String
+  nom_ar            String?  // nom affiché en langue arabe (optionnel ; repli sur nom_fr)
   filiere           String
   niveau_id         String?
   capacite          Int     @default(30)
