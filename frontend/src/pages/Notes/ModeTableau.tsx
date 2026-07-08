@@ -8,6 +8,7 @@ import {
   AnneeScolaire, Classe, Matiere, ClasseMatiere, Eleve, Note,
   PolitiqueSaisieNotes, appreciation, estModeStrict,
 } from './shared';
+import { nomMatiere } from '../../lib/noms';
 
 interface Props {
   annees: AnneeScolaire[];
@@ -346,8 +347,8 @@ export function ModeTableau({
                     {matieres.map(m => {
                       const eff = effByMat.get(m.id);
                       return (
-                        <th key={m.id} title={m.nom_fr} style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-                          <div style={{ fontSize: 11, fontWeight: 600 }}>{m.nom_fr}</div>
+                        <th key={m.id} title={nomMatiere(m)} style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: 11, fontWeight: 600 }}>{nomMatiere(m)}</div>
                           <div style={{ fontSize: 10, fontWeight: 400, color: 'var(--ink-4)' }}>/{m.note_max}{eff ? ` · coeff ${eff.coeff}` : ''}</div>
                         </th>
                       );

@@ -8,6 +8,7 @@ import {
   AnneeScolaire, Classe, Matiere, ClasseMatiere, Eleve, Note,
   PolitiqueSaisieNotes, appreciation, estModeStrict,
 } from './shared';
+import { nomMatiere } from '../../lib/noms';
 
 interface Props {
   annees: AnneeScolaire[];
@@ -133,7 +134,7 @@ export function ModeMatiere({
             label={t('nav.matieres')}
             value={matiereId}
             onChange={(e) => setMatiereId(e.target.value)}
-            options={[{ value: '', label: t('common.selectionner') }, ...matieres.map((m) => ({ value: m.id, label: m.nom_fr }))]}
+            options={[{ value: '', label: t('common.selectionner') }, ...matieres.map((m) => ({ value: m.id, label: nomMatiere(m) }))]}
             disabled={!classeId}
           />
         </div>

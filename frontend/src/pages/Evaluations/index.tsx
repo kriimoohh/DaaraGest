@@ -10,6 +10,7 @@ import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
 import { useAuthStore } from '../../store/authStore';
 import { useAnneeScolaire } from '../../store/anneeStore';
+import { nomMatiere } from '../../lib/noms';
 
 interface AnneeScolaire { id: string; libelle: string; active: boolean; }
 interface Classe        { id: string; nom_fr: string; filiere: string; }
@@ -228,7 +229,7 @@ export function EvaluationsPage() {
 
         <div className="card" style={{ marginBottom: 16, padding: '12px 16px' }}>
           <div className="row" style={{ gap: 24, flexWrap: 'wrap', fontSize: 13, color: 'var(--ink-2)' }}>
-            <span><strong>{t('evaluation.info_matiere')} :</strong> {activeEval.matiere.nom_fr}</span>
+            <span><strong>{t('evaluation.info_matiere')} :</strong> {nomMatiere(activeEval.matiere)}</span>
             <span><strong>{t('evaluation.info_classe')} :</strong> {activeEval.classe.nom_fr}</span>
             <span><strong>{t('evaluation.info_type')} :</strong> <Badge label={TYPE_LABEL_KEYS[activeEval.type] ? t(TYPE_LABEL_KEYS[activeEval.type]) : activeEval.type} variant={TYPE_VARIANTS[activeEval.type] ?? 'neutral'} /></span>
             <span><strong>{t('evaluation.info_coeff')} :</strong> {activeEval.coefficient}</span>
@@ -320,7 +321,7 @@ export function EvaluationsPage() {
             label={t('nav.matieres')}
             value={matiereId}
             onChange={e => setMatiereId(e.target.value)}
-            options={[{ value: '', label: t('evaluation.matiere_toutes') }, ...matieres.map(m => ({ value: m.id, label: m.nom_fr }))]}
+            options={[{ value: '', label: t('evaluation.matiere_toutes') }, ...matieres.map(m => ({ value: m.id, label: nomMatiere(m) }))]}
             disabled={!classeId}
           />
           <Select
@@ -360,7 +361,7 @@ export function EvaluationsPage() {
                   <tr key={ev.id}>
                     <td style={{ fontWeight: 500 }}>{ev.titre}</td>
                     <td><Badge label={TYPE_LABEL_KEYS[ev.type] ? t(TYPE_LABEL_KEYS[ev.type]) : ev.type} variant={TYPE_VARIANTS[ev.type] ?? 'neutral'} /></td>
-                    <td style={{ color: 'var(--ink-2)', fontSize: 13 }}>{ev.matiere.nom_fr}</td>
+                    <td style={{ color: 'var(--ink-2)', fontSize: 13 }}>{nomMatiere(ev.matiere)}</td>
                     <td style={{ color: 'var(--ink-2)', fontSize: 13 }}>{t('evaluation.periode_p_court', { n: ev.periode })}</td>
                     <td style={{ color: 'var(--ink-2)', fontSize: 13 }}>{new Date(ev.date).toLocaleDateString(locale)}</td>
                     <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 13 }}>{ev.coefficient}</td>
