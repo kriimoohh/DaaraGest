@@ -8,6 +8,7 @@ import {
   AnneeScolaire, Classe, Matiere, ClasseMatiere, Eleve, Note,
   PolitiqueSaisieNotes, appreciation, estModeStrict,
 } from './shared';
+import { nomMatiere } from '../../lib/noms';
 
 interface Props {
   annees: AnneeScolaire[];
@@ -217,7 +218,7 @@ export function ModeEleve({
                     return (
                       <tr key={mat.id}>
                         <td>
-                          <span>{mat.nom_fr}</span>
+                          <span>{nomMatiere(mat)}</span>
                           <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--ink-4)' }}>/{mat.note_max}</span>
                         </td>
                         <td>

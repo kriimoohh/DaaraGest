@@ -1047,8 +1047,10 @@ export async function rapportReleveNotes(
     fetchInscriptions(classe_id, annee_scolaire_id),
     prisma.classeMatiere.findMany({
       where: { classe_id },
-      include: { matiere: { select: { id: true, nom_fr: true, code_court: true, ordre_bulletin: true } } },
-      orderBy: { matiere: { ordre_bulletin: 'asc' } },
+      include: { matiere: { select: { id: true, nom_fr: true, nom_ar: true, code_court: true, ordre_bulletin: true } } },
+      // Ordre du Programme (réorganisation par classe) puis ordre_bulletin — identique à
+      // la saisie et au relevé « documents », pour que le prof retrouve le même ordre.
+      orderBy: [{ ordre_override: 'asc' }, { matiere: { ordre_bulletin: 'asc' } }],
     }),
     getTitulaire(classe_id, annee_scolaire_id),
   ]);
