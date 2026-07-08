@@ -51,7 +51,11 @@ export async function updateConfigNotesHandler(request: FastifyRequest, reply: F
 export async function getPolitiqueSaisieNotesHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
   const politique = await getPolitiqueSaisieNotes(etablissement_id);
-  return reply.send(politique);
+  // Échelle de l'établissement (ConfigNotes.note_max) : exposée ici car /parametres/notes
+  // est admin-only, or les écrans de saisie (prof) en ont besoin pour aligner la moyenne
+  // affichée sur celle du bulletin.
+  const config = await getConfigNotes(etablissement_id) as { note_max?: number | string } | null;
+  return reply.send({ ...politique, note_max: Number(config?.note_max ?? 20) });
 }
 
 export async function getConfigNotificationsHandler(request: FastifyRequest, reply: FastifyReply) {
