@@ -395,9 +395,11 @@ export async function getStatsFinances(etablissement_id: string) {
   return {
     mois: moisCourant,
     annee: anneeCourante,
-    total_encaisse_eleves: totalEncaisse._sum.montant ?? 0,
+    // Number() obligatoire : _sum d'un Decimal Prisma est sérialisé en string dans le
+    // JSON (le type annoncé est number). Sans conversion, tout calcul futur concaténerait.
+    total_encaisse_eleves: Number(totalEncaisse._sum.montant ?? 0),
     nb_paiements_eleves: nbPaiements,
-    total_paye_professeurs: totalProfesseurs._sum.net_a_payer ?? 0,
+    total_paye_professeurs: Number(totalProfesseurs._sum.net_a_payer ?? 0),
   };
 }
 
