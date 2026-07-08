@@ -59,12 +59,6 @@ const TYPE_OPTIONS = [
   { value: 'ANNUEL_COMBINE', label: '🗓 Annuel — Combiné FR+AR' },
 ];
 
-const PERIODES = [
-  { value: '1', label: '1er Trimestre' },
-  { value: '2', label: '2ème Trimestre' },
-  { value: '3', label: '3ème Trimestre' },
-];
-
 // Seuils relatifs à l'échelle de l'établissement (base, ex: 10) : 0.7 = "bien"
 // (14/20), 0.5 = "moyenne" (10/20). Évite les seuils /20 codés en dur.
 function moyenneVariant(m: number | null, base = 20): 'success' | 'error' | 'warning' | 'neutral' {
@@ -328,7 +322,11 @@ export function BulletinsPage() {
           {!isAnnuel && (
             <Select label={t('note.periode')}
               value={periode} onChange={(e) => { setPeriode(e.target.value); setBulletins([]); }}
-              options={PERIODES}
+              options={[
+                { value: '1', label: t('common.trimestre_1') },
+                { value: '2', label: t('common.trimestre_2') },
+                { value: '3', label: t('common.trimestre_3') },
+              ]}
             />
           )}
         </div>
@@ -407,7 +405,7 @@ export function BulletinsPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {filiereChip(b.filiere)}
                     <span style={{ fontSize: 12, color: 'var(--ink-4)' }}>
-                      {b.periode === 0 ? 'Annuel' : `Trimestre ${b.periode}`}
+                      {b.periode === 0 ? t('common.annuel') : t(`common.trimestre_${b.periode}`)}
                     </span>
                   </div>
 

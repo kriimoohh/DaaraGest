@@ -345,10 +345,10 @@ export function RapportsPage() {
                 value={periode}
                 onChange={e => setPeriode(e.target.value)}
                 options={[
-                  { value: '', label: annuelOnly ? 'Annuel (obligatoire)' : 'Annuel (toutes périodes)' },
-                  { value: '1', label: '1er Trimestre' },
-                  { value: '2', label: '2ème Trimestre' },
-                  { value: '3', label: '3ème Trimestre' },
+                  { value: '', label: `${t('common.annuel')}${annuelOnly ? '' : ` (${t('common.tous')})`}` },
+                  { value: '1', label: t('common.trimestre_1') },
+                  { value: '2', label: t('common.trimestre_2') },
+                  { value: '3', label: t('common.trimestre_3') },
                 ]}
               />
             )}
