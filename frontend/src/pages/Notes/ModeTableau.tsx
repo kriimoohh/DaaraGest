@@ -143,9 +143,11 @@ export function ModeTableau({
   const effProg = (row: ClasseMatiere) => {
     const p = periode ? Number(periode) : null;
     const ov = p != null ? row.periodes_override?.find(o => o.periode === p) : undefined;
+    // Number() obligatoire : les Decimal Prisma (coeff_override, note_max) arrivent
+    // en STRING dans le JSON — sans conversion, `totalCoeff += coeff` concatène → NaN.
     return {
-      coeff:    ov?.coeff ?? (row.coeff_override ?? row.matiere.coeff_defaut ?? 1),
-      note_max: ov?.note_max ?? row.note_max_effectif ?? row.matiere.note_max,
+      coeff:    Number(ov?.coeff ?? row.coeff_override ?? row.matiere.coeff_defaut ?? 1),
+      note_max: Number(ov?.note_max ?? row.note_max_effectif ?? row.matiere.note_max),
       evaluee:  ov?.evaluee != null ? ov.evaluee : (row.evaluee ?? true),
     };
   };
