@@ -16,27 +16,27 @@ datasource db {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Etablissement {
-  id                 String   @id @default(uuid())
-  nom_fr             String
-  adresse            String?
-  telephone          String?
-  email              String?
+  id                  String   @id @default(uuid())
+  nom_fr              String
+  adresse             String?
+  telephone           String?
+  email               String?
   numero_autorisation String? // n° d'autorisation d'ouverture / d'enseigner de l'école
-  entete_bulletin_fr String? // bloc de texte officiel (FR) en en-tête de bulletin
-  entete_bulletin_ar String? // bloc de texte officiel (AR) en en-tête de bulletin
-  logo_url           String?
-  signature_url      String?
-  cachet_url         String?
+  entete_bulletin_fr  String? // bloc de texte officiel (FR) en en-tête de bulletin
+  entete_bulletin_ar  String? // bloc de texte officiel (AR) en en-tête de bulletin
+  logo_url            String?
+  signature_url       String?
+  cachet_url          String?
   // Champs deprecated : conservés pour rétro-compat tant que tous les établissements
   // n'ont pas un directeur Personnel associé. À supprimer dans une migration ultérieure.
-  nom_directeur      String?
-  civilite_directeur String?
-  directeur_id       String? // FK vers Personnel (fonction=DIRECTEUR). Si défini, override nom_directeur/civilite_directeur pour les documents.
-  code               String   @unique // Préfixe des matricules, ex: "FIC", "TBK". Configurable dans Paramètres.
-  devise             String   @default("FCFA")
-  actif              Boolean  @default(true)
-  created_at         DateTime @default(now())
-  updated_at         DateTime @updatedAt
+  nom_directeur       String?
+  civilite_directeur  String?
+  directeur_id        String? // FK vers Personnel (fonction=DIRECTEUR). Si défini, override nom_directeur/civilite_directeur pour les documents.
+  code                String   @unique // Préfixe des matricules, ex: "FIC", "TBK". Configurable dans Paramètres.
+  devise              String   @default("FCFA")
+  actif               Boolean  @default(true)
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
 
   directeur             Personnel?                @relation("EtablissementDirecteur", fields: [directeur_id], references: [id])
   utilisateurs          Utilisateur[]
@@ -63,6 +63,35 @@ model Etablissement {
   demandes_absence      DemandeAbsencePersonnel[]
   fonctions             Fonction[]
   mentions              Mention[]
+  filieres              Filiere[]
+}
+
+// Filière = piste académique d'un établissement (langue d'enseignement propre,
+// matières, barème et mentions potentiellement distincts). Remplace à terme la
+// chaîne libre `filiere` ('FR'/'AR') câblée en dur. Un établissement active le jeu
+// de filières qu'il utilise : FR seule, AR seule, EN seule, ou combinaisons.
+// note_max null = repli sur l'échelle de l'établissement (ConfigNotes.note_max).
+model Filiere {
+  id               String   @id @default(uuid())
+  etablissement_id String
+  code             String // 'FR' | 'AR' | 'EN' | … (propre à l'établissement)
+  nom_fr           String
+  nom_ar           String?
+  langue           String   @default("fr") // langue d'enseignement/affichage : fr, ar, en
+  sens_ecriture    String   @default("LTR") // 'LTR' | 'RTL'
+  note_max         Decimal? @db.Decimal(5, 2)
+  couleur          String   @default("#DDE2F1")
+  ordre            Int      @default(0)
+  actif            Boolean  @default(true)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
+  classes       Classe[]
+  matieres      Matiere[]
+
+  @@unique([etablissement_id, code])
+  @@index([etablissement_id])
 }
 
 model Role {
@@ -128,30 +157,30 @@ model Fonction {
 }
 
 model Personnel {
-  id               String    @id @default(uuid())
-  utilisateur_id   String    @unique
-  fonction         String    @default("ENSEIGNANT") // code Fonction (configurable par établissement, cf. table Fonction)
-  specialite_fr    String?
-  telephone        String?
-  date_embauche    DateTime?
-  type_contrat     String    @default("permanent")
-  salaire_base     Decimal?  @db.Decimal(10, 2)
-  photo_url        String?
-  matricule        String?   @unique
-  qr_token         String?   @unique
-  poste_fr         String?
-  date_fin_contrat DateTime?
-  date_debut_stage DateTime?
-  date_fin_stage   DateTime?
+  id                    String    @id @default(uuid())
+  utilisateur_id        String    @unique
+  fonction              String    @default("ENSEIGNANT") // code Fonction (configurable par établissement, cf. table Fonction)
+  specialite_fr         String?
+  telephone             String?
+  date_embauche         DateTime?
+  type_contrat          String    @default("permanent")
+  salaire_base          Decimal?  @db.Decimal(10, 2)
+  photo_url             String?
+  matricule             String?   @unique
+  qr_token              String?   @unique
+  poste_fr              String?
+  date_fin_contrat      DateTime?
+  date_debut_stage      DateTime?
+  date_fin_stage        DateTime?
   // État civil (tout le personnel)
-  date_naissance   DateTime? @db.Date
-  lieu_naissance   String?
-  cni              String?
+  date_naissance        DateTime? @db.Date
+  lieu_naissance        String?
+  cni                   String?
   // Qualifications (principalement les enseignants)
   numero_autorisation   String? // n° d'autorisation d'enseigner
   diplome_academique    String?
   diplome_professionnel String?
-  created_at       DateTime  @default(now())
+  created_at            DateTime  @default(now())
 
   utilisateur           Utilisateur               @relation(fields: [utilisateur_id], references: [id])
   cartes_nfc            PersonnelCarte[]
@@ -285,42 +314,42 @@ model Tarif {
 }
 
 model ConfigNotes {
-  id                      String   @id @default(uuid())
-  etablissement_id        String   @unique
-  note_max                Decimal  @default(20) @db.Decimal(5, 2)
-  note_min                Decimal  @default(0) @db.Decimal(5, 2)
-  nb_periodes             Int      @default(3)
-  noms_periodes           Json     @default("{\"fr\":[\"1er Trimestre\",\"2ème Trimestre\",\"3ème Trimestre\"]}")
-  arrondi                 Int      @default(2)
-  chiffres_arabes         Boolean  @default(false)
-  montant_mensualite      Decimal  @default(7500) @db.Decimal(10, 2)
-  seuil_absences_alerte   Int      @default(3)
-  seuil_note_insuffisante Decimal  @default(10) @db.Decimal(5, 2)
-  seuil_tres_bien         Decimal  @default(16) @db.Decimal(5, 2)
-  seuil_bien              Decimal  @default(14) @db.Decimal(5, 2)
-  seuil_assez_bien        Decimal  @default(12) @db.Decimal(5, 2)
-  seuil_passable          Decimal  @default(10) @db.Decimal(5, 2)
-  jours_cours             Json     @default("[\"lundi\",\"mardi\",\"mercredi\",\"jeudi\",\"vendredi\"]")
-  notif_paiement_retard   Boolean  @default(true)
-  notif_absences_eleves   Boolean  @default(true)
-  notif_messages          Boolean  @default(true)
-  notif_inscriptions      Boolean  @default(false)
+  id                         String   @id @default(uuid())
+  etablissement_id           String   @unique
+  note_max                   Decimal  @default(20) @db.Decimal(5, 2)
+  note_min                   Decimal  @default(0) @db.Decimal(5, 2)
+  nb_periodes                Int      @default(3)
+  noms_periodes              Json     @default("{\"fr\":[\"1er Trimestre\",\"2ème Trimestre\",\"3ème Trimestre\"]}")
+  arrondi                    Int      @default(2)
+  chiffres_arabes            Boolean  @default(false)
+  montant_mensualite         Decimal  @default(7500) @db.Decimal(10, 2)
+  seuil_absences_alerte      Int      @default(3)
+  seuil_note_insuffisante    Decimal  @default(10) @db.Decimal(5, 2)
+  seuil_tres_bien            Decimal  @default(16) @db.Decimal(5, 2)
+  seuil_bien                 Decimal  @default(14) @db.Decimal(5, 2)
+  seuil_assez_bien           Decimal  @default(12) @db.Decimal(5, 2)
+  seuil_passable             Decimal  @default(10) @db.Decimal(5, 2)
+  jours_cours                Json     @default("[\"lundi\",\"mardi\",\"mercredi\",\"jeudi\",\"vendredi\"]")
+  notif_paiement_retard      Boolean  @default(true)
+  notif_absences_eleves      Boolean  @default(true)
+  notif_messages             Boolean  @default(true)
+  notif_inscriptions         Boolean  @default(false)
   // Politique de saisie des notes par les professeurs.
   // false/false = strict (chacun ses matières dans ses classes, insertOnly actif).
   // true/false  = prof peut noter toutes matières, mais classes où il enseigne ≥ 1 matière.
   // false/true  = prof peut noter ses matières dans toutes les classes de l'établissement.
   // true/true   = prof peut tout noter dans toute l'école.
   // Dès qu'au moins un des deux est true, insertOnly est levé (le prof peut modifier).
-  autoriser_toutes_matieres Boolean  @default(false)
-  autoriser_toutes_classes  Boolean  @default(false)
+  autoriser_toutes_matieres  Boolean  @default(false)
+  autoriser_toutes_classes   Boolean  @default(false)
   // Rendu des bulletins PDF (panneau Paramètres → Bulletins).
   // afficher_rang : masque la colonne Rang sur le PDF sans perdre le classement calculé.
   // logo/police_echelle : facteur d'échelle en % (100 = taille de base) pour le logo et la police.
-  bulletin_afficher_rang     Boolean @default(true)
-  bulletin_afficher_absences Boolean @default(true)
-  bulletin_logo_echelle      Int     @default(100)
-  bulletin_police_echelle    Int     @default(100)
-  updated_at              DateTime @updatedAt
+  bulletin_afficher_rang     Boolean  @default(true)
+  bulletin_afficher_absences Boolean  @default(true)
+  bulletin_logo_echelle      Int      @default(100)
+  bulletin_police_echelle    Int      @default(100)
+  updated_at                 DateTime @updatedAt
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
 }
@@ -349,6 +378,10 @@ model Matiere {
   nom_fr           String
   nom_ar           String?
   filiere          String
+  // Phase 0 refonte filières : FK vers l'entité Filiere (nullable + backfillée le
+  // temps de la transition ; `filiere` string reste la source de vérité jusqu'à ce
+  // que tous les usages basculent sur filiere_id). Voir migration filiere_entite.
+  filiere_id       String?
   coeff_defaut     Decimal @default(1) @db.Decimal(4, 2)
   note_min         Decimal @default(0) @db.Decimal(5, 2)
   ordre_bulletin   Int     @default(0)
@@ -362,6 +395,7 @@ model Matiere {
   code_court       String?
 
   etablissement   Etablissement            @relation(fields: [etablissement_id], references: [id])
+  filiere_ref     Filiere?                 @relation(fields: [filiere_id], references: [id])
   domaine         Domaine?                 @relation(fields: [domaine_id], references: [id])
   prof_matieres   PersonnelMatiereClasse[]
   notes           Note[]
@@ -372,6 +406,7 @@ model Matiere {
   @@index([etablissement_id])
   @@index([etablissement_id, active])
   @@index([domaine_id])
+  @@index([filiere_id])
 }
 
 model Niveau {
@@ -396,8 +431,11 @@ model Classe {
   etablissement_id  String
   annee_scolaire_id String
   nom_fr            String
-  nom_ar            String?  // nom affiché en langue arabe (optionnel ; repli sur nom_fr)
+  nom_ar            String? // nom affiché en langue arabe (optionnel ; repli sur nom_fr)
   filiere           String
+  // Phase 0 refonte filières : FK vers l'entité Filiere (nullable + backfillée ;
+  // `filiere` string reste la source de vérité pendant la transition).
+  filiere_id        String?
   niveau_id         String?
   capacite          Int     @default(30)
   active            Boolean @default(true)
@@ -409,6 +447,7 @@ model Classe {
   code              String?
 
   etablissement   Etablissement            @relation(fields: [etablissement_id], references: [id])
+  filiere_ref     Filiere?                 @relation(fields: [filiere_id], references: [id])
   annee_scolaire  AnneeScolaire            @relation(fields: [annee_scolaire_id], references: [id])
   niveau          Niveau?                  @relation(fields: [niveau_id], references: [id])
   inscriptions_fr Inscription[]            @relation("ClasseFR")
@@ -422,14 +461,15 @@ model Classe {
   @@index([etablissement_id])
   @@index([etablissement_id, annee_scolaire_id])
   @@index([etablissement_id, code])
+  @@index([filiere_id])
 }
 
 model ClasseMatiere {
-  id             String   @id @default(uuid())
-  classe_id      String
-  matiere_id     String
-  coeff_override Decimal? @db.Decimal(4, 2)
-  ordre_override Int?
+  id                String   @id @default(uuid())
+  classe_id         String
+  matiere_id        String
+  coeff_override    Decimal? @db.Decimal(4, 2)
+  ordre_override    Int?
   // Barème de la matière spécifique à cette classe (ex: RLC /60 en CE, /40 en CM).
   // Si null, on retombe sur l'échelle de l'établissement (ConfigNotes.note_max).
   // Sert à normaliser les notes brutes (saisies sur leur barème) avant le calcul
@@ -438,7 +478,7 @@ model ClasseMatiere {
   // Matière enseignée mais non évaluée (n'entre pas dans la moyenne du bulletin).
   // Reste visible sur le bulletin avec la mention "Non évaluée".
   // Override possible par période via ClasseMatierePeriode.evaluee.
-  evaluee Boolean @default(true)
+  evaluee           Boolean  @default(true)
 
   classe  Classe  @relation(fields: [classe_id], references: [id])
   matiere Matiere @relation(fields: [matiere_id], references: [id])
@@ -1017,7 +1057,7 @@ model DocumentTemplate {
 model BulletinTemplate {
   id               String   @id @default(uuid())
   etablissement_id String
-  type             String   // 'FR' | 'AR' | 'COMBINE' | 'ANNUEL'
+  type             String // 'FR' | 'AR' | 'COMBINE' | 'ANNUEL'
   contenu_html     String
   actif            Boolean  @default(true)
   created_at       DateTime @default(now())

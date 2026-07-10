@@ -6,6 +6,7 @@ import { bulletinsImpactesParMatiere } from '../bulletins/bulletins.service';
 import { logAction } from '../../utils/audit';
 import { NotFoundError } from '../../utils/errors';
 import { classeCode } from '../../utils/classeCode';
+import { resolveFiliereId } from '../../utils/filiere';
 
 // Erreur typée pour exposer le détail de l'impact (front affiche les options).
 function bulletinsImpactError(payload: unknown): Error {
@@ -77,12 +78,15 @@ export async function getClasse(id: string, etablissement_id: string) {
 }
 
 export async function creerClasse(etablissement_id: string, data: ClasseInput) {
+  // Double-écriture Phase 0 : on renseigne filiere (chaîne) ET filiere_id (FK).
+  const filiere_id = await resolveFiliereId(etablissement_id, data.filiere);
   return prisma.classe.create({
     data: {
       etablissement_id,
       nom_fr: data.nom_fr,
       nom_ar: data.nom_ar ?? null,
       filiere: data.filiere,
+      filiere_id,
       niveau_id: data.niveau_id ?? null,
       annee_scolaire_id: data.annee_scolaire_id,
       capacite: data.capacite ?? 30,
@@ -95,12 +99,14 @@ export async function modifierClasse(id: string, etablissement_id: string, data:
   const existing = await prisma.classe.findFirst({ where: { id, etablissement_id } });
   if (!existing) throw new NotFoundError('Classe introuvable');
 
+  const filiere_id = await resolveFiliereId(etablissement_id, data.filiere);
   return prisma.classe.update({
     where: { id },
     data: {
       nom_fr: data.nom_fr,
       nom_ar: data.nom_ar ?? null,
       filiere: data.filiere,
+      filiere_id,
       niveau_id: data.niveau_id ?? null,
       annee_scolaire_id: data.annee_scolaire_id,
       capacite: data.capacite,
@@ -429,6 +435,9 @@ export async function dupliquerClasseFrEnAr(
     statut: 'actif',
   };
 
+  // Résolu hors transaction (dépend seulement de l'établissement + code 'AR').
+  const filiere_id_ar = await resolveFiliereId(etablissement_id, 'AR');
+
   return prisma.$transaction(async (tx) => {
     const nomAr = data.nom_fr ?? `${source.nom_fr} (AR)`;
 
@@ -438,6 +447,7 @@ export async function dupliquerClasseFrEnAr(
         annee_scolaire_id: source.annee_scolaire_id,
         nom_fr: nomAr,
         filiere: 'AR',
+        filiere_id: filiere_id_ar,
         niveau_id: source.niveau_id ?? null,
         capacite: source.capacite,
         code: classeCode(nomAr, 'AR'),
