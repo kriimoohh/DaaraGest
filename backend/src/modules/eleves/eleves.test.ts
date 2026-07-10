@@ -59,6 +59,33 @@ describe('transfert élève — schéma & champ ciblé', () => {
   });
 });
 
+describe('Phase 2a — jointure InscriptionClasse (double-écriture)', () => {
+  // Réplique la règle : une ligne par classe assignée, filière déduite de la classe,
+  // classe null ignorée (no-op).
+  function liens(cf: string | null, ca: string | null) {
+    const out: { filiere: 'FR' | 'AR'; classe_id: string }[] = [];
+    if (cf) out.push({ filiere: 'FR', classe_id: cf });
+    if (ca) out.push({ filiere: 'AR', classe_id: ca });
+    return out;
+  }
+
+  it('FR + AR → deux liens (un par filière)', () => {
+    const l = liens('c-fr', 'c-ar');
+    expect(l).toHaveLength(2);
+    expect(l.map(x => x.filiere)).toEqual(['FR', 'AR']);
+  });
+
+  it('FR seul → un lien FR', () => {
+    const l = liens('c-fr', null);
+    expect(l).toHaveLength(1);
+    expect(l[0]).toEqual({ filiere: 'FR', classe_id: 'c-fr' });
+  });
+
+  it('aucune classe → aucun lien', () => {
+    expect(liens(null, null)).toHaveLength(0);
+  });
+});
+
 describe('validation élève', () => {
   function validateEleve(data: Record<string, string>) {
     const errors: string[] = [];

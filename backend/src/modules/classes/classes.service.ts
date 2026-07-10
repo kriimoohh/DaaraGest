@@ -460,6 +460,19 @@ export async function dupliquerClasseFrEnAr(
       data: { classe_ar_id: nouvelleClasse.id },
     });
 
+    // Double-écriture jointure (Phase 2a) : rattacher ces inscriptions à la
+    // nouvelle classe AR. On (re)crée les lignes InscriptionClasse manquantes.
+    const inscriptionsAr = await tx.inscription.findMany({
+      where: { ...whereInscriptions, classe_ar_id: nouvelleClasse.id },
+      select: { id: true },
+    });
+    if (inscriptionsAr.length > 0) {
+      await tx.inscriptionClasse.createMany({
+        data: inscriptionsAr.map(i => ({ inscription_id: i.id, filiere_id: filiere_id_ar, classe_id: nouvelleClasse.id })),
+        skipDuplicates: true,
+      });
+    }
+
     const total = await tx.inscription.count({ where: whereInscriptions });
 
     return {
