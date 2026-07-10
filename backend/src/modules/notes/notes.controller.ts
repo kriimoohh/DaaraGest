@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
-import { bulkNotesSchema } from './notes.schema';
-import { listerNotes, bulkUpsertNotes, listerNotesEleve } from './notes.service';
+import { bulkNotesSchema, bulkDeleteNotesSchema } from './notes.schema';
+import { listerNotes, bulkUpsertNotes, supprimerNotes, listerNotesEleve } from './notes.service';
 
 export async function listerHandler(
   request: FastifyRequest, reply: FastifyReply
@@ -31,6 +31,21 @@ export async function bulkUpsertHandler(request: FastifyRequest, reply: FastifyR
   try {
     const insertOnly = role === 'professeur';
     const data = await bulkUpsertNotes(parsed.data.notes, insertOnly, acteurId, etablissement_id, parsed.data.classe_id, role);
+    return reply.send(data);
+  } catch (err) {
+    const status = (err as { statusCode?: number }).statusCode ?? 400;
+    return reply.status(status).send({ error: (err as Error).message });
+  }
+}
+
+export async function bulkSupprimerHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { id: acteurId, etablissement_id } = request.user as JwtPayload;
+  const parsed = bulkDeleteNotesSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: parsed.error.errors[0].message });
+  }
+  try {
+    const data = await supprimerNotes(parsed.data, etablissement_id, acteurId);
     return reply.send(data);
   } catch (err) {
     const status = (err as { statusCode?: number }).statusCode ?? 400;

@@ -182,6 +182,52 @@ export async function bulkUpsertNotes(
   return { count, created, updated, ignored };
 }
 
+/**
+ * Suppression multiple de notes — réservée à la direction/gestion (garde de rôle
+ * appliquée en amont dans la route). Deux modes exclusifs :
+ *  - `note_ids` : suppression ciblée d'une sélection (cases à cocher) ;
+ *  - `criteres` : « vider une colonne » (toutes les notes d'une classe × matière ×
+ *    période × année).
+ * Le filtre `matiere.etablissement_id` garantit qu'on ne touche jamais aux données
+ * d'un autre établissement, même si un id étranger est fourni.
+ */
+export async function supprimerNotes(
+  input: { note_ids?: string[]; criteres?: { classe_id: string; matiere_id: string; periode: number; annee_scolaire_id: string } },
+  etablissement_id: string,
+  acteurId: string,
+) {
+  let where: Record<string, unknown>;
+
+  if (input.note_ids && input.note_ids.length > 0) {
+    where = { id: { in: input.note_ids }, matiere: { etablissement_id } };
+  } else if (input.criteres) {
+    const { classe_id, matiere_id, periode, annee_scolaire_id } = input.criteres;
+    const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
+    if (!classe) throw new NotFoundError('Classe introuvable');
+    where = {
+      matiere_id,
+      periode,
+      annee_scolaire_id,
+      matiere: { etablissement_id },
+      eleve: { inscriptions: { some: { OR: [{ classe_fr_id: classe_id }, { classe_ar_id: classe_id }] } } },
+    };
+  } else {
+    throw new Error('Fournir note_ids ou criteres');
+  }
+
+  const { count } = await prisma.note.deleteMany({ where });
+
+  if (count > 0) {
+    await logAction(etablissement_id, acteurId, 'DELETE', 'Note', 'bulk', {
+      count,
+      mode: input.note_ids ? 'ids' : 'criteres',
+      note_ids: input.note_ids,
+      criteres: input.criteres,
+    });
+  }
+  return { count };
+}
+
 export async function listerNotesEleve(eleve_id: string, etablissement_id: string, annee_scolaire_id?: string) {
   const eleve = await prisma.eleve.findFirst({ where: { id: eleve_id, etablissement_id } });
   if (!eleve) throw new NotFoundError('Élève introuvable');
