@@ -6,7 +6,7 @@ import { bulletinsImpactesParMatiere } from '../bulletins/bulletins.service';
 import { logAction } from '../../utils/audit';
 import { NotFoundError } from '../../utils/errors';
 import { classeCode } from '../../utils/classeCode';
-import { resolveFiliereId } from '../../utils/filiere';
+import { getFiliereActiveId, getFiliereId } from '../../utils/filiere';
 
 // Erreur typée pour exposer le détail de l'impact (front affiche les options).
 function bulletinsImpactError(payload: unknown): Error {
@@ -78,8 +78,8 @@ export async function getClasse(id: string, etablissement_id: string) {
 }
 
 export async function creerClasse(etablissement_id: string, data: ClasseInput) {
-  // Double-écriture Phase 0 : on renseigne filiere (chaîne) ET filiere_id (FK).
-  const filiere_id = await resolveFiliereId(etablissement_id, data.filiere);
+  // La filière doit être configurée et active (double-écriture filiere + filiere_id).
+  const filiere_id = await getFiliereActiveId(etablissement_id, data.filiere);
   return prisma.classe.create({
     data: {
       etablissement_id,
@@ -99,7 +99,7 @@ export async function modifierClasse(id: string, etablissement_id: string, data:
   const existing = await prisma.classe.findFirst({ where: { id, etablissement_id } });
   if (!existing) throw new NotFoundError('Classe introuvable');
 
-  const filiere_id = await resolveFiliereId(etablissement_id, data.filiere);
+  const filiere_id = await getFiliereId(etablissement_id, data.filiere);
   return prisma.classe.update({
     where: { id },
     data: {
@@ -436,7 +436,7 @@ export async function dupliquerClasseFrEnAr(
   };
 
   // Résolu hors transaction (dépend seulement de l'établissement + code 'AR').
-  const filiere_id_ar = await resolveFiliereId(etablissement_id, 'AR');
+  const filiere_id_ar = await getFiliereActiveId(etablissement_id, 'AR');
 
   return prisma.$transaction(async (tx) => {
     const nomAr = data.nom_fr ?? `${source.nom_fr} (AR)`;
