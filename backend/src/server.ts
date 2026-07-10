@@ -15,6 +15,7 @@ import { anneeScolaireRoutes } from './modules/annees-scolaires/annees-scolaires
 import { matiereRoutes } from './modules/matieres/matieres.routes';
 import { domainesRoutes } from './modules/domaines/domaines.routes';
 import { classeRoutes } from './modules/classes/classes.routes';
+import { filiereRoutes } from './modules/filieres/filieres.routes';
 import { eleveRoutes } from './modules/eleves/eleves.routes';
 import { personnelRoutes } from './modules/personnel/personnel.routes';
 import { noteRoutes } from './modules/notes/notes.routes';
@@ -181,6 +182,7 @@ async function build() {
       await api.register(matiereRoutes, { prefix: '/matieres' });
       await api.register(domainesRoutes, { prefix: '/domaines' });
       await api.register(classeRoutes, { prefix: '/classes' });
+      await api.register(filiereRoutes, { prefix: '/filieres' });
       await api.register(eleveRoutes, { prefix: '/eleves' });
       await api.register(personnelRoutes, { prefix: '/personnel' });
       await api.register(fonctionsRoutes,  { prefix: '/fonctions' });

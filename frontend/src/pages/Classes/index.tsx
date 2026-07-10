@@ -4,11 +4,11 @@ import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
 import { useAnneeCourante } from '../../store/anneeStore';
 import { API_BASE, ApiError } from '../../lib/api';
-import { nomClasse } from '../../lib/noms';
+import { nomClasse, nomBilingue } from '../../lib/noms';
+import { useFilieres } from '../../hooks/useFilieres';
 import { toast } from '../../store/toastStore';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { PageHeader } from '../../components/ui/PageHeader';
-import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
@@ -21,7 +21,7 @@ interface Matiere {
   id: string;
   nom_fr: string;
   nom_ar: string;
-  filiere: 'FR' | 'AR';
+  filiere: string;
   coeff_defaut: number;
   note_min: number;
   ordre_bulletin: number;
@@ -77,7 +77,7 @@ interface Classe {
   id: string;
   nom_fr: string;
   nom_ar?: string | null;
-  filiere: 'FR' | 'AR';
+  filiere: string;
   niveau_id: string | null;
   niveau?: Niveau | null;
   capacite: number;
@@ -129,6 +129,8 @@ export function ClassesPage() {
   const api = useApi();
   const isAdmin    = useAuthStore(s => s.user?.role === 'admin');
   const isGestion  = useAuthStore(s => ['admin', 'directeur', 'gestionnaire'].includes(s.user?.role ?? ''));
+  const { filieres, actives: filieresActives } = useFilieres();
+  const filiereByCode = new Map(filieres.map(f => [f.code, f]));
 
   const [classes, setClasses] = useState<Classe[]>([]);
   const [total, setTotal] = useState(0);
@@ -551,12 +553,12 @@ export function ClassesPage() {
   function buildListeHtml(data: ListeElevesResponse, withPrintScript: boolean): string {
     const { classe, eleves, total } = data;
     const anneeLabel = typeof classe.annee_scolaire === 'object' ? classe.annee_scolaire.libelle : '';
-    const filiereLabel = classe.filiere === 'FR' ? 'Filière Française' : 'Filière Arabe';
+    const filiereLabel = filiereByCode.get(classe.filiere)?.nom_fr ?? classe.filiere;
     const dateImpression = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
     const nbM = eleves.filter(e => e.sexe === 'M').length;
     const nbF = total - nbM;
-    const badgeBg = classe.filiere === 'FR' ? '#DDE2F1' : '#DCEBDF';
-    const badgeColor = classe.filiere === 'FR' ? '#1B254A' : '#2D5938';
+    const badgeBg = filiereByCode.get(classe.filiere)?.couleur ?? '#DDE2F1';
+    const badgeColor = '#1B254A';
 
     const rows = eleves.map(e => `
       <tr>
@@ -728,12 +730,12 @@ export function ClassesPage() {
       const pages = allData.map(data => {
         const { classe, eleves, total } = data;
         const anneeLabel = typeof classe.annee_scolaire === 'object' ? classe.annee_scolaire.libelle : '';
-        const filiereLabel = classe.filiere === 'FR' ? 'Filière Française' : 'Filière Arabe';
+        const filiereLabel = filiereByCode.get(classe.filiere)?.nom_fr ?? classe.filiere;
         const dateImpression = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
         const nbM = eleves.filter(e => e.sexe === 'M').length;
         const nbF = total - nbM;
-        const badgeBg = classe.filiere === 'FR' ? '#DDE2F1' : '#DCEBDF';
-        const badgeColor = classe.filiere === 'FR' ? '#1B254A' : '#2D5938';
+        const badgeBg = filiereByCode.get(classe.filiere)?.couleur ?? '#DDE2F1';
+        const badgeColor = '#1B254A';
         const rows = eleves.map(e => `
           <tr>
             <td>${e.rang}</td><td class="mono">${e.matricule}</td>
@@ -839,8 +841,7 @@ export function ClassesPage() {
           <Select
             options={[
             { value: '', label: t('classe.toutes_filieres') },
-            { value: 'FR', label: t('classe.filiere_fr') },
-            { value: 'AR', label: t('classe.filiere_ar') },
+            ...filieresActives.map(f => ({ value: f.code, label: nomBilingue(f) })),
           ]}
             value={filiereFilter}
             onChange={(e) => setFiliereFilter(e.target.value)}
@@ -890,11 +891,15 @@ export function ClassesPage() {
             return (
               <div key={c.id} className="card card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div className="row" style={{ justifyContent: 'space-between' }}>
-                  <Badge
-                    label={c.filiere === 'AR' ? t('classe.filiere_ar') : t('classe.filiere_fr')}
-                    variant={c.filiere === 'AR' ? 'warning' : 'info'}
-                    dot
-                  />
+                  {(() => {
+                    const f = filiereByCode.get(c.filiere);
+                    return (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 10px', borderRadius: 99, fontSize: 12, fontWeight: 600, background: f?.couleur ?? 'var(--paper-3)', color: '#1B254A' }}>
+                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#1B254A', opacity: 0.55 }} />
+                        {f ? nomBilingue(f) : c.filiere}
+                      </span>
+                    );
+                  })()}
                   <div className="row gap-2">
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)}>{t('actions.modifier')}</button>
                     {isAdmin && <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger-text)' }} onClick={() => setConfirmDelete(c)}>✕</button>}
@@ -972,10 +977,7 @@ export function ClassesPage() {
               value={form.filiere}
               onChange={(e) => setField('filiere', e.target.value)}
               error={formErrors.filiere}
-              options={[
-                { value: 'FR', label: t('classe.filiere_fr') },
-                { value: 'AR', label: t('classe.filiere_ar') },
-              ]}
+              options={filieresActives.map(f => ({ value: f.code, label: nomBilingue(f) }))}
               placeholder={t('common.selectionner')}
             />
             <Select

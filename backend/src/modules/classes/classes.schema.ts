@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const classeSchema = z.object({
   nom_fr: z.string().min(1),
   nom_ar: z.string().optional().nullable(),
-  filiere: z.enum(['FR', 'AR']),
+  filiere: z.enum(['FR', 'AR', 'EN']),
   niveau_id: z.string().optional().nullable(),
   annee_scolaire_id: z.string().uuid(),
   capacite: z.number().int().positive().optional(),

@@ -8,7 +8,7 @@ export const TYPE_NOTE = ['SIMPLE', 'RESSOURCE', 'COMPETENCE'] as const;
 export const matiereSchema = z.object({
   nom_fr: z.string().min(1),
   nom_ar: z.string().optional(),
-  filiere: z.enum(['FR', 'AR']),
+  filiere: z.enum(['FR', 'AR', 'EN']),
   coeff_defaut: z.number().positive().optional(),
   note_min: z.number().min(0).optional(),
   ordre_bulletin: z.number().int().optional(),

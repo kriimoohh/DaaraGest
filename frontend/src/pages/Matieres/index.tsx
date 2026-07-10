@@ -10,6 +10,8 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { useFilieres } from '../../hooks/useFilieres';
+import { nomBilingue } from '../../lib/noms';
 
 interface Domaine {
   id: string;
@@ -22,7 +24,7 @@ interface Matiere {
   id: string;
   nom_fr: string;
   nom_ar: string | null;
-  filiere: 'FR' | 'AR';
+  filiere: string;
   coeff_defaut: number;
   note_min: number;
   ordre_bulletin: number;
@@ -51,6 +53,8 @@ export function MatieresPage() {
   const { t } = useTranslation();
   const api = useApi();
   const isAdmin = useAuthStore(s => s.user?.role === 'admin');
+  const { filieres, actives: filieresActives } = useFilieres();
+  const filiereByCode = new Map(filieres.map(f => [f.code, f]));
   const [matieres, setMatieres] = useState<Matiere[]>([]);
   const [domaines, setDomaines] = useState<Domaine[]>([]);
   const [filiere, setFiliere] = useState('');
@@ -88,7 +92,7 @@ export function MatieresPage() {
   useEffect(() => { charger(); }, [filiere]);
   useEffect(() => { chargerDomaines(); }, []);
 
-  const openAdd = () => { setEdit(null); setForm(EMPTY); setModal(true); };
+  const openAdd = () => { setEdit(null); setForm({ ...EMPTY, filiere: filieresActives[0]?.code ?? 'FR' }); setModal(true); };
   const openEdit = (m: Matiere) => {
     setEdit(m);
     setForm({
@@ -192,12 +196,11 @@ export function MatieresPage() {
         <button className={`tab${filiere === '' ? ' active' : ''}`} onClick={() => setFiliere('')}>
           {t('matiere.tab_toutes')} <span className="count">{matieres.length}</span>
         </button>
-        <button className={`tab${filiere === 'FR' ? ' active' : ''}`} onClick={() => setFiliere('FR')}>
-          {t('matiere.tab_francaise')} <span className="count">{matieres.filter(m => m.filiere === 'FR').length}</span>
-        </button>
-        <button className={`tab${filiere === 'AR' ? ' active' : ''}`} onClick={() => setFiliere('AR')}>
-          {t('matiere.tab_arabe')} <span className="count">{matieres.filter(m => m.filiere === 'AR').length}</span>
-        </button>
+        {filieresActives.map(f => (
+          <button key={f.id} className={`tab${filiere === f.code ? ' active' : ''}`} onClick={() => setFiliere(f.code)}>
+            {nomBilingue(f)} <span className="count">{matieres.filter(m => m.filiere === f.code).length}</span>
+          </button>
+        ))}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, maxWidth: 320 }}>
@@ -237,7 +240,14 @@ export function MatieresPage() {
                     <td>{m.nom_fr}</td>
                     <td dir="rtl">{m.nom_ar}</td>
                     <td>
-                      <Badge label={m.filiere} variant={m.filiere === 'FR' ? 'info' : 'warning'} />
+                      {(() => {
+                        const f = filiereByCode.get(m.filiere);
+                        return (
+                          <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 99, fontSize: 12, fontWeight: 600, background: f?.couleur ?? 'var(--paper-3)', color: '#1B254A' }}>
+                            {m.filiere}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td>
                       {m.domaine ? (
@@ -298,7 +308,7 @@ export function MatieresPage() {
               label={t('classe.filiere')}
               value={form.filiere}
               onChange={(e) => setForm((f) => ({ ...f, filiere: e.target.value }))}
-              options={[{ value: 'FR', label: t('classe.filiere_fr') }, { value: 'AR', label: t('classe.filiere_ar') }]}
+              options={filieresActives.map(f => ({ value: f.code, label: nomBilingue(f) }))}
             />
             <Input
               label={t('note.coefficient')}
