@@ -1,6 +1,6 @@
 import prisma from '../../config/database';
 import { logAction } from '../../utils/audit';
-import { assertProfPeutSaisirNotes, getPolitiqueSaisieNotes, estModeStrict } from '../../utils/teachingPolicy';
+import { assertProfPeutSaisirNotes, getPolitiqueSaisieNotes } from '../../utils/teachingPolicy';
 import { NoteItem } from './notes.schema';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 import { NotFoundError } from '../../utils/errors';
@@ -47,15 +47,16 @@ export async function bulkUpsertNotes(
 
   // Politique de saisie : strict (chacun ses matières/classes) ou variantes
   // libérées définies par ConfigNotes.autoriser_toutes_matieres/_classes.
-  let insertOnly = insertOnlyHint;
+  // Le verrou insertOnly (professeur) est DÉCOUPLÉ de la politique : un professeur
+  // ne peut JAMAIS réécrire une note déjà enregistrée, quelle que soit la config.
+  // Seuls admin/directeur/gestionnaire peuvent modifier une note existante — c'est
+  // ce qui empêche un enseignant de retoucher une note par favoritisme. La politique
+  // ne fait que définir QUELLES classes/matières un prof peut saisir (notes neuves).
+  const insertOnly = insertOnlyHint;
   let politiqueAppliquee = { autoriser_toutes_matieres: false, autoriser_toutes_classes: false };
   if (role && acteurId && classe_id && etablissement_id) {
     await assertProfPeutSaisirNotes(role, acteurId, classe_id, matiereIds, etablissement_id);
     politiqueAppliquee = await getPolitiqueSaisieNotes(etablissement_id);
-    // insertOnly couplé : seul le mode strict conserve le verrou anti-modification.
-    if (insertOnlyHint && !estModeStrict(politiqueAppliquee)) {
-      insertOnly = false;
-    }
   }
 
   // Si classe_id fourni, vérifier que toutes les matières sont dans le programme de la classe
@@ -128,7 +129,7 @@ export async function bulkUpsertNotes(
   // timeout de transaction (5 s par défaut) → « Transaction not found ». On précharge
   // donc les notes existantes en UNE requête, puis createMany (nouvelles) + update
   // ciblés (existantes modifiées). Le timeout est aussi relevé par sécurité.
-  const { created, updated } = await prisma.$transaction(async (tx) => {
+  const { created, updated, ignored } = await prisma.$transaction(async (tx) => {
     const existing = await tx.note.findMany({
       where: {
         eleve_id:          { in: [...new Set(notes.map(n => n.eleve_id))] },
@@ -142,8 +143,12 @@ export async function bulkUpsertNotes(
 
     const toCreate: { eleve_id: string; matiere_id: string; periode: number; annee_scolaire_id: string; valeur: number; commentaire?: string | null }[] = [];
     const toUpdate: { id: string; valeur: number; commentaire?: string | null }[] = [];
+    // Notes qu'un professeur a tenté de modifier mais qui existaient déjà (verrou) :
+    // on les compte pour informer l'UI sans jamais les écraser.
+    let ignoredCount = 0;
     for (const note of notes) {
       const ex = existingMap.get(keyOf(note));
+      const changed = ex && (Number(ex.valeur) !== note.valeur || (ex.commentaire ?? null) !== (note.commentaire ?? null));
       if (!ex) {
         toCreate.push({
           eleve_id: note.eleve_id, matiere_id: note.matiere_id,
@@ -152,27 +157,29 @@ export async function bulkUpsertNotes(
         });
       } else if (!insertOnly) {
         // Mise à jour seulement si la valeur ou le commentaire change (évite des écritures inutiles).
-        if (Number(ex.valeur) !== note.valeur || (ex.commentaire ?? null) !== (note.commentaire ?? null)) {
+        if (changed) {
           toUpdate.push({ id: ex.id, valeur: note.valeur, commentaire: note.commentaire });
         }
+      } else if (changed) {
+        // insertOnly + note déjà existante avec une valeur différente → ignorée (verrou professeur).
+        ignoredCount++;
       }
-      // insertOnly + note déjà existante → ignorée (verrou professeur).
     }
 
     if (toCreate.length > 0) await tx.note.createMany({ data: toCreate, skipDuplicates: true });
     for (const u of toUpdate) {
       await tx.note.update({ where: { id: u.id }, data: { valeur: u.valeur, commentaire: u.commentaire } });
     }
-    return { created: toCreate.length, updated: toUpdate.length };
+    return { created: toCreate.length, updated: toUpdate.length, ignored: ignoredCount };
   }, { timeout: 20000, maxWait: 10000 });
 
   const count = created + updated;
   if (count > 0 && acteurId && etablissement_id) {
     await logAction(etablissement_id, acteurId, insertOnly ? 'CREATE' : 'UPDATE', 'Note', 'bulk', {
-      count, created, updated, insertOnly, matiere_ids: matiereIds, politique: politiqueAppliquee,
+      count, created, updated, ignored, insertOnly, matiere_ids: matiereIds, politique: politiqueAppliquee,
     });
   }
-  return { count, created, updated };
+  return { count, created, updated, ignored };
 }
 
 export async function listerNotesEleve(eleve_id: string, etablissement_id: string, annee_scolaire_id?: string) {
