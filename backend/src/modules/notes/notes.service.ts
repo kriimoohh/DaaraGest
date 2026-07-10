@@ -22,7 +22,7 @@ export async function listerNotes(
   if (periode !== undefined) where.periode = periode;
   if (annee_scolaire_id) where.annee_scolaire_id = annee_scolaire_id;
   if (classe_id) {
-    where.eleve = { inscriptions: { some: { OR: [{ classe_fr_id: classe_id }, { classe_ar_id: classe_id }] } } };
+    where.eleve = { inscriptions: { some: { classes: { some: { classe_id } } } } };
   }
 
   return prisma.note.findMany({
@@ -209,7 +209,7 @@ export async function supprimerNotes(
       periode,
       annee_scolaire_id,
       matiere: { etablissement_id },
-      eleve: { inscriptions: { some: { OR: [{ classe_fr_id: classe_id }, { classe_ar_id: classe_id }] } } },
+      eleve: { inscriptions: { some: { classes: { some: { classe_id } } } } },
     };
   } else {
     throw new Error('Fournir note_ids ou criteres');
