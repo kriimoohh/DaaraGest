@@ -849,6 +849,16 @@ export function ParametresPage() {
     setFiliereForm({ ...emptyFiliereForm, code, nom_fr: p.nom_fr, langue: p.langue, sens_ecriture: p.sens_ecriture, couleur: p.couleur, ordre: p.ordre });
   };
 
+  // Préremplit le formulaire d'ajout sur le premier code disponible dès que les
+  // filières sont chargées : sinon le code par défaut ('FR') est déjà actif, le
+  // menu n'affiche que 'EN' sans déclencher onChange, nom_fr reste vide et le
+  // bouton « Ajouter » est grisé.
+  useEffect(() => {
+    if (editFiliere || codesDisponibles.length === 0) return;
+    if (!codesDisponibles.includes(filiereForm.code)) resetFiliereForm();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filieres]);
+
   // Choix du code → préremplit les champs depuis le preset.
   const onFiliereCode = (code: FiliereCode) => {
     const p = FILIERE_PRESETS[code];
