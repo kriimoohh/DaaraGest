@@ -20,3 +20,21 @@ export const bulkNotesSchema = z.object({
 export type NoteItem = z.infer<typeof noteItemSchema>;
 export type BulkNotesInput = z.infer<typeof bulkNotesSchema>;
 export type BulkNotesPayload = BulkNotesInput;
+
+// Suppression multiple (réservée à la direction/gestion). Deux modes :
+//  - par identifiants explicites (sélection à la case) ;
+//  - par critères = « vider une colonne » (classe × matière × période × année).
+export const bulkDeleteNotesSchema = z.object({
+  note_ids: z.array(z.string().uuid()).min(1).optional(),
+  criteres: z.object({
+    classe_id: z.string().uuid(),
+    matiere_id: z.string().uuid(),
+    periode: z.number().int().min(1),
+    annee_scolaire_id: z.string().uuid(),
+  }).optional(),
+}).refine(
+  (d) => (d.note_ids && d.note_ids.length > 0) || d.criteres,
+  { message: 'Fournir note_ids ou criteres' },
+);
+
+export type BulkDeleteNotesInput = z.infer<typeof bulkDeleteNotesSchema>;
