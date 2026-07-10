@@ -6,7 +6,7 @@ import { getQrSecret } from '../../utils/qrSecret';
 import { EleveInput, InscriptionInput, TransfertInput } from './eleves.schema';
 import { NotFoundError, ValidationError } from '../../utils/errors';
 import { genererMatricule } from '../../utils/matricule';
-import { syncInscriptionClasse } from '../../utils/inscriptionClasse';
+import { syncInscriptionClasse, selectLiensClasseObjet, classeParFiliere } from '../../utils/inscriptionClasse';
 
 const VALID_SORT_FIELDS = ['nom_fr', 'prenom_fr', 'matricule', 'sexe', 'date_naissance'];
 
@@ -56,7 +56,7 @@ export async function listerEleves(
       include: {
         parents: true,
         inscriptions: {
-          include: { classe_fr: true, classe_ar: true, annee_scolaire: true },
+          include: { ...selectLiensClasseObjet, annee_scolaire: true },
           orderBy: { date_inscription: 'desc' },
           take: 1,
         },
@@ -65,7 +65,16 @@ export async function listerEleves(
     }),
   ]);
 
-  return { total, page, limit, data: items };
+  // Rétro-compat d'affichage : on réexpose classe_fr / classe_ar dérivés de la jointure.
+  const data = items.map(e => ({
+    ...e,
+    inscriptions: e.inscriptions.map(i => ({
+      ...i,
+      classe_fr: classeParFiliere(i.classes, 'FR'),
+      classe_ar: classeParFiliere(i.classes, 'AR'),
+    })),
+  }));
+  return { total, page, limit, data };
 }
 
 export async function getEleve(id: string, etablissement_id: string) {
@@ -76,14 +85,21 @@ export async function getEleve(id: string, etablissement_id: string) {
       inscriptions: {
         include: {
           annee_scolaire: true,
-          classe_fr: true,
-          classe_ar: true,
+          ...selectLiensClasseObjet,
         },
       },
     },
   });
   if (!eleve) throw new NotFoundError('Élève introuvable');
-  return eleve;
+  // Rétro-compat d'affichage : classe_fr / classe_ar dérivés de la jointure.
+  return {
+    ...eleve,
+    inscriptions: eleve.inscriptions.map(i => ({
+      ...i,
+      classe_fr: classeParFiliere(i.classes, 'FR'),
+      classe_ar: classeParFiliere(i.classes, 'AR'),
+    })),
+  };
 }
 
 export async function getProgressionEleve(id: string, etablissement_id: string) {
@@ -97,8 +113,7 @@ export async function getProgressionEleve(id: string, etablissement_id: string) 
     where: { eleve_id: id },
     include: {
       annee_scolaire: true,
-      classe_fr: { select: { id: true, nom_fr: true, filiere: true, niveau: true } },
-      classe_ar: { select: { id: true, nom_fr: true, filiere: true, niveau: true } },
+      ...selectLiensClasseObjet,
     },
     orderBy: { annee_scolaire: { date_debut: 'asc' } },
   });
@@ -153,8 +168,8 @@ export async function getProgressionEleve(id: string, etablissement_id: string) 
 
   const progression = inscriptions.map(insc => ({
     annee_scolaire: insc.annee_scolaire,
-    classe_fr: insc.classe_fr,
-    classe_ar: insc.classe_ar,
+    classe_fr: classeParFiliere(insc.classes, 'FR'),
+    classe_ar: classeParFiliere(insc.classes, 'AR'),
     bulletins: bulletinByAnnee.get(insc.annee_scolaire_id) ?? [],
     absences: absencesByAnnee.get(insc.annee_scolaire_id) ?? { absents: 0, presents: 0 },
     progression_decision: decisionByAnnee.get(insc.annee_scolaire_id) ?? null,

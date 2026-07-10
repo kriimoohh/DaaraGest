@@ -7,6 +7,7 @@ import { logAction } from '../../utils/audit';
 import { NotFoundError } from '../../utils/errors';
 import { classeCode } from '../../utils/classeCode';
 import { getFiliereActiveId, getFiliereId } from '../../utils/filiere';
+import { selectLiensClasseObjet, classeParFiliere } from '../../utils/inscriptionClasse';
 
 // Erreur typée pour exposer le détail de l'impact (front affiche les options).
 function bulletinsImpactError(payload: unknown): Error {
@@ -396,8 +397,7 @@ export async function listerElevesDeClasse(
     include: {
       eleve: { include: { parents: true } },
       annee_scolaire: true,
-      classe_fr: true,
-      classe_ar: true,
+      ...selectLiensClasseObjet,
     },
     orderBy: [{ eleve: { nom_fr: 'asc' } }, { eleve: { prenom_fr: 'asc' } }],
   });
@@ -409,8 +409,8 @@ export async function listerElevesDeClasse(
       rang: idx + 1,
       ...i.eleve,
       annee_scolaire: i.annee_scolaire,
-      classe_fr: i.classe_fr,
-      classe_ar: i.classe_ar,
+      classe_fr: classeParFiliere(i.classes, 'FR'),
+      classe_ar: classeParFiliere(i.classes, 'AR'),
     })),
   };
 }
