@@ -3,8 +3,8 @@ import crypto from 'crypto';
 import QRCode from 'qrcode';
 import { logAction } from '../../utils/audit';
 import { getQrSecret } from '../../utils/qrSecret';
-import { EleveInput, InscriptionInput } from './eleves.schema';
-import { NotFoundError } from '../../utils/errors';
+import { EleveInput, InscriptionInput, TransfertInput } from './eleves.schema';
+import { NotFoundError, ValidationError } from '../../utils/errors';
 import { genererMatricule } from '../../utils/matricule';
 
 const VALID_SORT_FIELDS = ['nom_fr', 'prenom_fr', 'matricule', 'sexe', 'date_naissance'];
@@ -278,6 +278,73 @@ export async function inscrireEleve(id: string, etablissement_id: string, data: 
     },
     include: { annee_scolaire: true, classe_fr: true, classe_ar: true },
   });
+}
+
+/**
+ * Transfert d'un élève d'une classe vers une autre EN COURS D'ANNÉE, pour une
+ * seule filière (FR ou AR). L'autre filière et les notes déjà saisies restent
+ * inchangées : les notes sont rattachées à (élève + matière), pas à la classe,
+ * donc elles suivent l'élève. On MET À JOUR l'inscription de l'année (ou on la
+ * crée si aucune n'existe) plutôt que d'en empiler une nouvelle.
+ */
+export async function transfererEleve(
+  id: string,
+  etablissement_id: string,
+  data: TransfertInput,
+  acteurId: string,
+) {
+  const eleve = await prisma.eleve.findFirst({ where: { id, etablissement_id } });
+  if (!eleve) throw new NotFoundError('Élève introuvable');
+
+  // La classe cible doit exister, appartenir à l'établissement, à la bonne
+  // filière et à la bonne année scolaire.
+  const classe = await prisma.classe.findFirst({
+    where: { id: data.nouvelle_classe_id, etablissement_id },
+  });
+  if (!classe) throw new NotFoundError('Classe de destination introuvable');
+  if (classe.filiere !== data.filiere) {
+    throw new ValidationError(`La classe de destination n'est pas de la filière ${data.filiere}`);
+  }
+  if (classe.annee_scolaire_id !== data.annee_scolaire_id) {
+    throw new ValidationError("La classe de destination n'appartient pas à cette année scolaire");
+  }
+
+  const champClasse = data.filiere === 'FR' ? 'classe_fr_id' : 'classe_ar_id';
+
+  // Inscription existante pour cette année (la plus récente si doublon historique).
+  const inscription = await prisma.inscription.findFirst({
+    where: { eleve_id: id, annee_scolaire_id: data.annee_scolaire_id },
+    orderBy: { date_inscription: 'desc' },
+  });
+
+  const ancienneClasseId = inscription ? inscription[champClasse] : null;
+  if (ancienneClasseId === data.nouvelle_classe_id) {
+    throw new ValidationError('L\'élève est déjà inscrit dans cette classe');
+  }
+
+  const resultat = inscription
+    ? await prisma.inscription.update({
+        where: { id: inscription.id },
+        data: { [champClasse]: data.nouvelle_classe_id },
+        include: { annee_scolaire: true, classe_fr: true, classe_ar: true },
+      })
+    : await prisma.inscription.create({
+        data: {
+          eleve_id: id,
+          annee_scolaire_id: data.annee_scolaire_id,
+          [champClasse]: data.nouvelle_classe_id,
+        },
+        include: { annee_scolaire: true, classe_fr: true, classe_ar: true },
+      });
+
+  await logAction(etablissement_id, acteurId, 'UPDATE', 'Inscription', resultat.id, {
+    action: 'transfert',
+    filiere: data.filiere,
+    ancienne_classe_id: ancienneClasseId,
+    nouvelle_classe_id: data.nouvelle_classe_id,
+  });
+
+  return resultat;
 }
 
 export async function bulkDesactiverEleves(ids: string[], etablissement_id: string) {

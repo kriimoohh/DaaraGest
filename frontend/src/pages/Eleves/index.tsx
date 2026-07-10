@@ -324,6 +324,11 @@ export function ElevesPage() {
   const [inscForm, setInscForm] = useState({ annee_scolaire_id: '', classe_fr_id: '', classe_ar_id: '' });
   const [inscSaving, setInscSaving] = useState(false);
 
+  // Transfert (changement de classe en cours d'année, une filière à la fois)
+  const [transfertModal, setTransfertModal] = useState<Eleve | null>(null);
+  const [transfertForm, setTransfertForm] = useState<{ annee_scolaire_id: string; filiere: 'FR' | 'AR'; nouvelle_classe_id: string }>({ annee_scolaire_id: '', filiere: 'FR', nouvelle_classe_id: '' });
+  const [transfertSaving, setTransfertSaving] = useState(false);
+
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -560,6 +565,37 @@ export function ElevesPage() {
     }
   };
 
+  const openTransfert = async (eleve: Eleve) => {
+    setTransfertModal(eleve);
+    setTransfertForm({ annee_scolaire_id: '', filiere: 'FR', nouvelle_classe_id: '' });
+    try {
+      const [ans, cls] = await Promise.all([
+        api.get<{ id: string; libelle: string }[]>('/api/v1/annees-scolaires'),
+        api.get<{ id: string; nom_fr: string; filiere: string; annee_scolaire_id: string }[]>('/api/v1/classes'),
+      ]);
+      setAnnees(ans);
+      setClassesDisp(cls);
+    } catch { /**/ }
+  };
+
+  const handleTransfert = async () => {
+    if (!transfertModal || !transfertForm.annee_scolaire_id || !transfertForm.nouvelle_classe_id) {
+      toast.error(t('eleve.transfert_champs_requis'));
+      return;
+    }
+    setTransfertSaving(true);
+    try {
+      await api.patch(`/api/v1/eleves/${transfertModal.id}/transferer`, transfertForm);
+      toast.success(t('eleve.transfert_ok'));
+      setTransfertModal(null);
+      fetchEleves();
+    } catch (err) {
+      toast.error((err as Error).message || t('eleve.transfert_err'));
+    } finally {
+      setTransfertSaving(false);
+    }
+  };
+
   const openPortail = async (eleve: Eleve) => {
     setPortailModal(eleve);
     setPortailUrl(null);
@@ -740,6 +776,11 @@ export function ElevesPage() {
             label: t('actions.inscrire'),
             icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx={9} cy={7} r={4}/><line x1={19} y1={8} x2={19} y2={14}/><line x1={22} y1={11} x2={16} y2={11}/></svg>,
             onClick: () => openInscription(e),
+          }] : []),
+          ...(canInscrire ? [{
+            label: t('actions.transferer'),
+            icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>,
+            onClick: () => openTransfert(e),
           }] : []),
           ...(canPortail ? [{
             label: 'Portail parent',
@@ -1382,6 +1423,29 @@ export function ElevesPage() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingTop: 8 }}>
               <Button variant="secondary" onClick={() => setInscModal(null)}>{t('actions.annuler')}</Button>
               <Button onClick={handleInscrire} loading={inscSaving}>{t('actions.inscrire')}</Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {transfertModal && (
+        <Modal isOpen={!!transfertModal} onClose={() => setTransfertModal(null)}
+          title={`${t('actions.transferer')} — ${transfertModal.prenom_fr} ${transfertModal.nom_fr}`} size="md">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <p style={{ fontSize: 13, color: 'var(--ink-3)', margin: 0 }}>{t('eleve.transfert_info')}</p>
+            <Select label={t('classe.annee_scolaire')} value={transfertForm.annee_scolaire_id}
+              onChange={(e) => setTransfertForm(f => ({ ...f, annee_scolaire_id: e.target.value, nouvelle_classe_id: '' }))}
+              options={[{ value: '', label: t('common.selectionner') }, ...annees.map(a => ({ value: a.id, label: a.libelle }))]} />
+            <Select label={t('eleve.filiere')} value={transfertForm.filiere}
+              onChange={(e) => setTransfertForm(f => ({ ...f, filiere: e.target.value as 'FR' | 'AR', nouvelle_classe_id: '' }))}
+              options={[{ value: 'FR', label: t('eleve.filiere_fr') }, { value: 'AR', label: t('eleve.filiere_ar') }]} />
+            <Select label={t('eleve.transfert_nouvelle_classe')} value={transfertForm.nouvelle_classe_id}
+              disabled={!transfertForm.annee_scolaire_id}
+              onChange={(e) => setTransfertForm(f => ({ ...f, nouvelle_classe_id: e.target.value }))}
+              options={[{ value: '', label: t('common.selectionner') }, ...classesDisp.filter(cl => cl.filiere === transfertForm.filiere && cl.annee_scolaire_id === transfertForm.annee_scolaire_id).map(cl => ({ value: cl.id, label: cl.nom_fr }))]} />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingTop: 8 }}>
+              <Button variant="secondary" onClick={() => setTransfertModal(null)}>{t('actions.annuler')}</Button>
+              <Button onClick={handleTransfert} loading={transfertSaving}>{t('actions.transferer')}</Button>
             </div>
           </div>
         </Modal>
