@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
 import {
@@ -36,12 +37,21 @@ export function ModeMatiere({
   const [eleves, setEleves] = useState<Eleve[]>([]);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [existingNoteIds, setExistingNoteIds] = useState<Set<string>>(new Set());
+  // eleve_id → id de la note enregistrée (nécessaire pour la suppression ciblée).
+  const [noteIdByEleve, setNoteIdByEleve] = useState<Record<string, string>>({});
 
   const [matiereId, setMatiereId] = useState('');
   const [programmeSansMatiere, setProgrammeSansMatiere] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  // Suppression (direction/gestion uniquement)
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [confirmMode, setConfirmMode] = useState<null | 'selection' | 'tout'>(null);
+  const canDelete = canEdit; // admin / directeur / gestionnaire
 
   // Verrou insertOnly : un professeur ne peut jamais réécrire une note déjà
   // enregistrée (seule la direction/gestion le peut). S'applique quelle que
@@ -68,18 +78,21 @@ export function ModeMatiere({
   useEffect(() => {
     if (!classeId || !matiereId || !anneeId) return;
     setExistingNoteIds(new Set());
+    setSelected(new Set());
     setLoading(true);
     api.get<Note[]>(`/api/v1/notes?classe_id=${classeId}&matiere_id=${matiereId}&periode=${periode}&annee_scolaire_id=${anneeId}`)
       .then((data) => {
         const map: Record<string, string> = {};
+        const idByEleve: Record<string, string> = {};
         const ids = new Set<string>();
-        data.forEach((n) => { map[n.eleve_id] = String(n.valeur); ids.add(n.eleve_id); });
+        data.forEach((n) => { map[n.eleve_id] = String(n.valeur); idByEleve[n.eleve_id] = n.id; ids.add(n.eleve_id); });
         setNotes(map);
+        setNoteIdByEleve(idByEleve);
         setExistingNoteIds(ids);
       })
       .catch(() => null)
       .finally(() => setLoading(false));
-  }, [classeId, matiereId, periode, anneeId]);
+  }, [classeId, matiereId, periode, anneeId, reloadKey]);
 
   const selectedMat = matieres.find(m => m.id === matiereId);
   const matMax = selectedMat?.note_max ?? 20;
@@ -109,6 +122,46 @@ export function ModeMatiere({
       toast.error((err as Error).message || t('note.err_enregistrement'));
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Élèves ayant une note enregistrée (seuls susceptibles d'être supprimés).
+  const elevesAvecNote = eleves.filter((e) => existingNoteIds.has(e.id));
+  const tousSelectionnes = elevesAvecNote.length > 0 && elevesAvecNote.every((e) => selected.has(e.id));
+
+  const toggleSelection = (eleveId: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(eleveId)) next.delete(eleveId); else next.add(eleveId);
+      return next;
+    });
+  };
+
+  const toggleTout = () => {
+    setSelected(tousSelectionnes ? new Set() : new Set(elevesAvecNote.map((e) => e.id)));
+  };
+
+  const executerSuppression = async () => {
+    setDeleting(true);
+    try {
+      let res: { count: number };
+      if (confirmMode === 'tout') {
+        res = await api.post<{ count: number }>('/api/v1/notes/bulk-supprimer', {
+          criteres: { classe_id: classeId, matiere_id: matiereId, periode: parseInt(periode), annee_scolaire_id: anneeId },
+        });
+      } else {
+        const note_ids = [...selected].map((id) => noteIdByEleve[id]).filter(Boolean);
+        if (note_ids.length === 0) { setConfirmMode(null); setDeleting(false); return; }
+        res = await api.post<{ count: number }>('/api/v1/notes/bulk-supprimer', { note_ids });
+      }
+      toast.success(t('note.notes_supprimees', { count: res.count }));
+      setSelected(new Set());
+      setReloadKey((k) => k + 1);
+    } catch (err) {
+      toast.error((err as Error).message || t('note.err_suppression'));
+    } finally {
+      setDeleting(false);
+      setConfirmMode(null);
     }
   };
 
@@ -187,6 +240,16 @@ export function ModeMatiere({
                   ✓ {t('note.notes_enregistrees')}
                 </span>
               )}
+              {canDelete && selected.size > 0 && (
+                <Button variant="danger" onClick={() => setConfirmMode('selection')} disabled={deleting}>
+                  {t('note.supprimer_selection', { count: selected.size })}
+                </Button>
+              )}
+              {canDelete && elevesAvecNote.length > 0 && (
+                <Button variant="secondary" onClick={() => setConfirmMode('tout')} disabled={deleting}>
+                  {t('note.supprimer_tout')}
+                </Button>
+              )}
               {(canEdit || isProfesseur) && (
                 <Button onClick={handleSave} loading={saving} disabled={eleves.length === 0}>
                   {t('note.enregistrer_tout')}
@@ -204,6 +267,17 @@ export function ModeMatiere({
               <table className="tbl">
                 <thead>
                   <tr>
+                    {canDelete && (
+                      <th style={{ width: 36 }}>
+                        <input
+                          type="checkbox"
+                          checked={tousSelectionnes}
+                          onChange={toggleTout}
+                          disabled={elevesAvecNote.length === 0}
+                          title={t('note.tout_selectionner')}
+                        />
+                      </th>
+                    )}
                     <th>{t('note.col_matricule')}</th>
                     <th>{t('note.col_eleve')}</th>
                     <th style={{ width: 128 }}>{t('note.col_note')} /{matMax}</th>
@@ -218,6 +292,17 @@ export function ModeMatiere({
                     const isReadOnly = fieldReadOnly || totalReadOnly;
                     return (
                       <tr key={eleve.id}>
+                        {canDelete && (
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={selected.has(eleve.id)}
+                              onChange={() => toggleSelection(eleve.id)}
+                              disabled={!noteExists}
+                              title={noteExists ? t('note.selectionner') : t('note.aucune_note_a_supprimer')}
+                            />
+                          </td>
+                        )}
                         <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{eleve.matricule}</td>
                         <td>{eleve.prenom_fr} {eleve.nom_fr}</td>
                         <td>
@@ -256,6 +341,17 @@ export function ModeMatiere({
           )}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={confirmMode !== null}
+        onClose={() => setConfirmMode(null)}
+        onConfirm={executerSuppression}
+        loading={deleting}
+        title={t('note.confirmer_suppression_titre')}
+        message={confirmMode === 'tout'
+          ? t('note.confirmer_suppression_tout', { count: elevesAvecNote.length, matiere: selectedMat ? nomMatiere(selectedMat) : '' })
+          : t('note.confirmer_suppression_selection', { count: selected.size })}
+      />
     </>
   );
 }

@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { bulkDeleteNotesSchema } from './notes.schema';
+
+const UUID = '11111111-1111-1111-1111-111111111111';
 
 // ── Logique pure extraite pour tests sans DB ──────────────────────────────────
 
@@ -158,6 +161,35 @@ describe('Notes — verrou professeur découplé de la politique', () => {
 
   it('gestion : note existante modifiée → mise à jour', () => {
     expect(classifierNote(true, false, true)).toBe('update');
+  });
+});
+
+describe('Notes — schéma de suppression multiple', () => {
+  it('accepte une liste de note_ids', () => {
+    const r = bulkDeleteNotesSchema.safeParse({ note_ids: [UUID] });
+    expect(r.success).toBe(true);
+  });
+
+  it('accepte des critères (vider une colonne)', () => {
+    const r = bulkDeleteNotesSchema.safeParse({
+      criteres: { classe_id: UUID, matiere_id: UUID, periode: 1, annee_scolaire_id: UUID },
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('rejette un corps vide (ni note_ids ni critères)', () => {
+    const r = bulkDeleteNotesSchema.safeParse({});
+    expect(r.success).toBe(false);
+  });
+
+  it('rejette une liste note_ids vide', () => {
+    const r = bulkDeleteNotesSchema.safeParse({ note_ids: [] });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejette des critères incomplets', () => {
+    const r = bulkDeleteNotesSchema.safeParse({ criteres: { classe_id: UUID, matiere_id: UUID } });
+    expect(r.success).toBe(false);
   });
 });
 
