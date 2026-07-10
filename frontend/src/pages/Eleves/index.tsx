@@ -576,7 +576,8 @@ export function ElevesPage() {
 
   const openTransfert = async (eleve: Eleve) => {
     setTransfertModal(eleve);
-    setTransfertForm({ annee_scolaire_id: '', filiere: 'FR', nouvelle_classe_id: '' });
+    // Défaut = première filière active (robuste pour une école sans FR).
+    setTransfertForm({ annee_scolaire_id: '', filiere: filieresActives[0]?.code ?? 'FR', nouvelle_classe_id: '' });
     try {
       const [ans, cls] = await Promise.all([
         api.get<{ id: string; libelle: string }[]>('/api/v1/annees-scolaires'),
