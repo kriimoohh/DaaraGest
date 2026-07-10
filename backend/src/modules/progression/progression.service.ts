@@ -26,7 +26,7 @@ export async function listerProgressions(
       inscriptions: {
         some: {
           ...(annee_scolaire_id ? { annee_scolaire_id } : {}),
-          ...(filiere === 'FR' ? { classe_fr_id: { not: null } } : { classe_ar_id: { not: null } }),
+          classes: { some: { filiere: { code: filiere } } },
         },
       },
     };
