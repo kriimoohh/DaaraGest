@@ -110,7 +110,7 @@ async function calculerStatsNotes(etablissement_id: string, annee: string) {
 
   for (const c of classes) {
     const inscriptions = await prisma.inscription.findMany({
-      where: { annee_scolaire_id: annee, statut: 'actif', OR: [{ classe_fr_id: c.id }, { classe_ar_id: c.id }] },
+      where: { annee_scolaire_id: annee, statut: 'actif', classes: { some: { classe_id: c.id } } },
       select: { eleve_id: true },
     });
     if (inscriptions.length === 0) {

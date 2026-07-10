@@ -389,7 +389,7 @@ export async function listerElevesDeClasse(
 
   const inscriptions = await prisma.inscription.findMany({
     where: {
-      OR: [{ classe_fr_id: classe_id }, { classe_ar_id: classe_id }],
+      classes: { some: { classe_id } },
       ...(annee_scolaire_id ? { annee_scolaire_id } : { annee_scolaire_id: classe.annee_scolaire_id }),
       eleve: { etablissement_id, actif: true },
     },
