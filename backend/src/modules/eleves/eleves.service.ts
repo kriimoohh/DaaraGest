@@ -6,6 +6,7 @@ import { getQrSecret } from '../../utils/qrSecret';
 import { EleveInput, InscriptionInput, TransfertInput } from './eleves.schema';
 import { NotFoundError, ValidationError } from '../../utils/errors';
 import { genererMatricule } from '../../utils/matricule';
+import { syncInscriptionClasse } from '../../utils/inscriptionClasse';
 
 const VALID_SORT_FIELDS = ['nom_fr', 'prenom_fr', 'matricule', 'sexe', 'date_naissance'];
 
@@ -269,7 +270,7 @@ export async function inscrireEleve(id: string, etablissement_id: string, data: 
   const existing = await prisma.eleve.findFirst({ where: { id, etablissement_id } });
   if (!existing) throw new NotFoundError('Élève introuvable');
 
-  return prisma.inscription.create({
+  const inscription = await prisma.inscription.create({
     data: {
       eleve_id: id,
       annee_scolaire_id: data.annee_scolaire_id,
@@ -278,6 +279,10 @@ export async function inscrireEleve(id: string, etablissement_id: string, data: 
     },
     include: { annee_scolaire: true, classe_fr: true, classe_ar: true },
   });
+  // Double-écriture jointure (Phase 2a).
+  await syncInscriptionClasse(inscription.id, data.classe_fr_id);
+  await syncInscriptionClasse(inscription.id, data.classe_ar_id);
+  return inscription;
 }
 
 /**
@@ -337,6 +342,9 @@ export async function transfererEleve(
         include: { annee_scolaire: true, classe_fr: true, classe_ar: true },
       });
 
+  // Double-écriture jointure (Phase 2a) : la classe de cette filière change.
+  await syncInscriptionClasse(resultat.id, data.nouvelle_classe_id);
+
   await logAction(etablissement_id, acteurId, 'UPDATE', 'Inscription', resultat.id, {
     action: 'transfert',
     filiere: data.filiere,
@@ -382,7 +390,7 @@ export async function bulkInscrireEleves(ids: string[], etablissement_id: string
   });
   const validIds = existing.map(e => e.id);
 
-  return prisma.inscription.createMany({
+  const result = await prisma.inscription.createMany({
     data: validIds.map(eleve_id => ({
       eleve_id,
       annee_scolaire_id: data.annee_scolaire_id,
@@ -391,6 +399,18 @@ export async function bulkInscrireEleves(ids: string[], etablissement_id: string
     })),
     skipDuplicates: true,
   });
+
+  // Double-écriture jointure (Phase 2a) : resync des inscriptions de ces élèves
+  // pour l'année (idempotent, admin-triggered → volume modéré).
+  const inscriptions = await prisma.inscription.findMany({
+    where: { eleve_id: { in: validIds }, annee_scolaire_id: data.annee_scolaire_id },
+    select: { id: true, classe_fr_id: true, classe_ar_id: true },
+  });
+  for (const insc of inscriptions) {
+    await syncInscriptionClasse(insc.id, insc.classe_fr_id);
+    await syncInscriptionClasse(insc.id, insc.classe_ar_id);
+  }
+  return result;
 }
 
 export async function getEleveQR(etablissement_id: string, eleveId: string) {
