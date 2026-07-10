@@ -10,6 +10,24 @@ type Db = Prisma.TransactionClient | typeof prisma;
  * on upsert la ligne (une seule classe par filière via l'unicité inscription+filière).
  * classe_id null/undefined → no-op (rien à rattacher pour cette filière).
  */
+// Include Prisma standard pour charger les rattachements classe↔filière d'une
+// inscription (remplace include: { classe_fr: true, classe_ar: true }).
+export const selectLiensClasse = {
+  classes: { select: { classe_id: true, filiere: { select: { code: true } } } },
+} as const;
+
+export type LienClasseCode = { classe_id: string; filiere: { code: string } | null };
+
+/**
+ * Id de la classe rattachée à une inscription pour un code de filière donné,
+ * dérivé de la jointure InscriptionClasse. Remplace la lecture directe de
+ * classe_fr_id / classe_ar_id (équivalence prouvée : la jointure reflète les
+ * colonnes). Renvoie null si l'élève ne suit pas cette filière.
+ */
+export function classeIdParFiliere(liens: LienClasseCode[] | null | undefined, code: string): string | null {
+  return liens?.find(l => l.filiere?.code === code)?.classe_id ?? null;
+}
+
 export async function syncInscriptionClasse(
   inscription_id: string,
   classe_id: string | null | undefined,

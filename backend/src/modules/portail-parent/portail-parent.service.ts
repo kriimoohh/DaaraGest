@@ -2,6 +2,7 @@ import prisma from '../../config/database';
 import { getBaremesClasse } from '../bulletins/bulletins.service';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 import { NotFoundError } from '../../utils/errors';
+import { selectLiensClasse, classeIdParFiliere } from '../../utils/inscriptionClasse';
 
 // Fallback : si pas d'année scolaire active, expire dans 90 jours (au lieu de 365).
 const TOKEN_FALLBACK_DUREE_MS = 90 * 24 * 60 * 60 * 1000;
@@ -50,11 +51,12 @@ export async function getPortailData(token: string) {
     where: { eleve_id: eleve.id, statut: 'actif' },
     include: {
       annee_scolaire: { select: { id: true, libelle: true } },
-      classe_fr: { select: { id: true, nom_fr: true, filiere: true } },
-      classe_ar: { select: { id: true, nom_fr: true, filiere: true } },
+      ...selectLiensClasse,
     },
     orderBy: { created_at: 'desc' },
   });
+  const classeIdFR = classeIdParFiliere(inscription?.classes, 'FR');
+  const classeIdAR = classeIdParFiliere(inscription?.classes, 'AR');
 
   // Échelle de l'établissement + barèmes/coefficients EFFECTIFS par classe (override
   // de période prioritaire), pour normaliser les notes comme les bulletins.
@@ -66,11 +68,11 @@ export async function getPortailData(token: string) {
   const periodes = Array.from({ length: config?.nb_periodes ?? 3 }, (_, i) => i + 1);
 
   const baremes = new Map<string, { coeff: number; note_max: number; evaluee: boolean }>();
-  if (inscription?.classe_fr_id) {
-    for (const [k, v] of await getBaremesClasse(inscription.classe_fr_id, periodes, ['FR'], noteMaxBase)) baremes.set(k, v);
+  if (classeIdFR) {
+    for (const [k, v] of await getBaremesClasse(classeIdFR, periodes, ['FR'], noteMaxBase)) baremes.set(k, v);
   }
-  if (inscription?.classe_ar_id) {
-    for (const [k, v] of await getBaremesClasse(inscription.classe_ar_id, periodes, ['AR'], noteMaxBase)) baremes.set(k, v);
+  if (classeIdAR) {
+    for (const [k, v] of await getBaremesClasse(classeIdAR, periodes, ['AR'], noteMaxBase)) baremes.set(k, v);
   }
 
   // Get notes
