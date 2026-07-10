@@ -19,6 +19,8 @@ const etabId = `itest-etab-${RUN}`;
 const anneeId = `itest-annee-${RUN}`;
 const classeId = `itest-classe-${RUN}`;
 const classeArId = `itest-classe-ar-${RUN}`; // classe arabe distincte (élève bilingue)
+const filiereFrId = `itest-fil-fr-${RUN}`;
+const filiereArId = `itest-fil-ar-${RUN}`;
 
 const ids = {
   matMath: `itest-mat-math-${RUN}`,
@@ -27,17 +29,22 @@ const ids = {
   matAr: `itest-mat-ar-${RUN}`,   // matière de la filière arabe
   eleveA: `itest-eleve-a-${RUN}`,
   eleveB: `itest-eleve-b-${RUN}`,
+  inscA: `itest-insc-a-${RUN}`,
+  inscB: `itest-insc-b-${RUN}`,
 };
 
 async function nettoyer() {
   // Ordre de suppression : enfants avant parents (aucune cascade côté Eleve).
   await prisma.bulletin.deleteMany({ where: { annee_scolaire_id: anneeId } });
   await prisma.note.deleteMany({ where: { annee_scolaire_id: anneeId } });
+  // Jointure avant inscription/classe/filiere (FK RESTRICT sur classe & filière).
+  await prisma.inscriptionClasse.deleteMany({ where: { inscription: { annee_scolaire_id: anneeId } } });
   await prisma.inscription.deleteMany({ where: { annee_scolaire_id: anneeId } });
   await prisma.classeMatiere.deleteMany({ where: { classe_id: { in: [classeId, classeArId] } } });
   await prisma.note.deleteMany({ where: { matiere: { etablissement_id: etabId } } });
   await prisma.classe.deleteMany({ where: { etablissement_id: etabId } });
   await prisma.matiere.deleteMany({ where: { etablissement_id: etabId } });
+  await prisma.filiere.deleteMany({ where: { etablissement_id: etabId } });
   await prisma.eleve.deleteMany({ where: { etablissement_id: etabId } });
   await prisma.mention.deleteMany({ where: { etablissement_id: etabId } });
   await prisma.configNotes.deleteMany({ where: { etablissement_id: etabId } });
@@ -75,13 +82,21 @@ beforeAll(async () => {
     },
   });
 
+  // Filières (entité Phase 0) + filiere_id sur les classes (jointure Phase 2b lit ceci).
+  await prisma.filiere.createMany({
+    data: [
+      { id: filiereFrId, etablissement_id: etabId, code: 'FR', nom_fr: 'Filière française', langue: 'fr', sens_ecriture: 'LTR' },
+      { id: filiereArId, etablissement_id: etabId, code: 'AR', nom_fr: 'Filière arabe', langue: 'ar', sens_ecriture: 'RTL' },
+    ],
+  });
+
   await prisma.classe.create({
-    data: { id: classeId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1 A', filiere: 'FR' },
+    data: { id: classeId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1 A', filiere: 'FR', filiere_id: filiereFrId },
   });
   // Classe arabe distincte : l'élève bilingue y suit ses matières AR. Sert à
   // vérifier que le bulletin COMBINE agrège bien les DEUX classes de l'élève.
   await prisma.classe.create({
-    data: { id: classeArId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1 Arabe', filiere: 'AR' },
+    data: { id: classeArId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1 Arabe', filiere: 'AR', filiere_id: filiereArId },
   });
 
   // Matières FR. Le barème de saisie est porté par la classe (note_max_override) ;
@@ -118,9 +133,18 @@ beforeAll(async () => {
   await prisma.inscription.createMany({
     data: [
       // Élève A : bilingue (classe FR + classe AR sur la même inscription).
-      { eleve_id: ids.eleveA, classe_fr_id: classeId, classe_ar_id: classeArId, annee_scolaire_id: anneeId, statut: 'actif' },
+      { id: ids.inscA, eleve_id: ids.eleveA, classe_fr_id: classeId, classe_ar_id: classeArId, annee_scolaire_id: anneeId, statut: 'actif' },
       // Élève B : FR uniquement (pas de classe AR) — le COMBINE doit alors valoir le FR seul.
-      { eleve_id: ids.eleveB, classe_fr_id: classeId, annee_scolaire_id: anneeId, statut: 'actif' },
+      { id: ids.inscB, eleve_id: ids.eleveB, classe_fr_id: classeId, annee_scolaire_id: anneeId, statut: 'actif' },
+    ],
+  });
+  // Jointure InscriptionClasse (Phase 2a) : une ligne par classe assignée — c'est
+  // la source lue par les bulletins depuis la Phase 2b (les colonnes ne servent plus).
+  await prisma.inscriptionClasse.createMany({
+    data: [
+      { inscription_id: ids.inscA, filiere_id: filiereFrId, classe_id: classeId },
+      { inscription_id: ids.inscA, filiere_id: filiereArId, classe_id: classeArId },
+      { inscription_id: ids.inscB, filiere_id: filiereFrId, classe_id: classeId },
     ],
   });
 
