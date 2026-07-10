@@ -1,6 +1,7 @@
 import prisma from '../../config/database';
 import { MatiereInput } from './matieres.schema';
 import { NotFoundError } from '../../utils/errors';
+import { resolveFiliereId } from '../../utils/filiere';
 
 export async function listerMatieres(etablissement_id: string, filiere?: string) {
   return prisma.matiere.findMany({
@@ -22,12 +23,15 @@ export async function creerMatiere(etablissement_id: string, data: MatiereInput)
   await verifierDomaine(etablissement_id, data.domaine_id);
   // Récupérer les valeurs globales comme défaut
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
+  // Double-écriture Phase 0 : filiere (chaîne) + filiere_id (FK).
+  const filiere_id = await resolveFiliereId(etablissement_id, data.filiere);
   return prisma.matiere.create({
     data: {
       etablissement_id,
       nom_fr: data.nom_fr,
       nom_ar: data.nom_ar?.trim() ? data.nom_ar.trim() : null,
       filiere: data.filiere,
+      filiere_id,
       coeff_defaut: data.coeff_defaut ?? 1,
       note_min: data.note_min ?? Number(config?.note_min ?? 0),
       ordre_bulletin: data.ordre_bulletin ?? 0,
@@ -43,12 +47,14 @@ export async function modifierMatiere(id: string, etablissement_id: string, data
   const existing = await prisma.matiere.findFirst({ where: { id, etablissement_id } });
   if (!existing) throw new NotFoundError('Matière introuvable');
   await verifierDomaine(etablissement_id, data.domaine_id);
+  const filiere_id = await resolveFiliereId(etablissement_id, data.filiere);
   return prisma.matiere.update({
     where: { id },
     data: {
       nom_fr: data.nom_fr,
       nom_ar: data.nom_ar?.trim() ? data.nom_ar.trim() : null,
       filiere: data.filiere,
+      filiere_id,
       coeff_defaut: data.coeff_defaut,
       note_min: data.note_min,
       ordre_bulletin: data.ordre_bulletin,

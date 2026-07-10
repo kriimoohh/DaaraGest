@@ -155,6 +155,23 @@ async function main() {
   }
   console.log(`✅ Domaines (${LGM_DOMAINES.length})`);
 
+  // ── 5b. Filières (entité Phase 0 refonte filières : FR + AR) ────────────────
+  const FILIERES_SEED = [
+    { code: 'FR', nom_fr: 'Filière française', nom_ar: null,            langue: 'fr', sens_ecriture: 'LTR', couleur: '#DDE2F1', ordre: 0 },
+    { code: 'AR', nom_fr: 'Filière arabe',     nom_ar: 'الشعبة العربية', langue: 'ar', sens_ecriture: 'RTL', couleur: '#DCEBDF', ordre: 1 },
+  ];
+  for (const f of FILIERES_SEED) {
+    await prisma.filiere.upsert({
+      where: { etablissement_id_code: { etablissement_id: ID.etab, code: f.code } },
+      update: {},
+      create: { etablissement_id: ID.etab, ...f },
+    });
+  }
+  const filiereByCode = new Map(
+    (await prisma.filiere.findMany({ where: { etablissement_id: ID.etab } })).map(f => [f.code, f.id]),
+  );
+  console.log(`✅ Filières (${FILIERES_SEED.length})`);
+
   // ── 6. Matières (référentiel LGM — 76 matières classées par domaine) ────────
   const domainesByCode = new Map(
     (await prisma.domaine.findMany({ where: { etablissement_id: ID.etab } }))
@@ -169,6 +186,7 @@ async function main() {
       nom_fr: m.nom_fr,
       nom_ar: m.nom_ar,
       filiere: m.filiere,
+      filiere_id: filiereByCode.get(m.filiere) ?? null,
       coeff_defaut: new Prisma.Decimal(1),
       note_min: new Prisma.Decimal(0),
       ordre_bulletin: m.ordre_bulletin,
@@ -254,7 +272,11 @@ async function main() {
     { id: ID.classes.a6ar,  nom_fr: '6ème Arabe',   filiere: 'AR', capacite: 25, annee_scolaire_id: ID.annees.y2425 },
   ];
   for (const cl of classes) {
-    await prisma.classe.upsert({ where: { id: cl.id }, update: {}, create: { ...cl, etablissement_id: ID.etab } });
+    await prisma.classe.upsert({
+      where: { id: cl.id },
+      update: {},
+      create: { ...cl, etablissement_id: ID.etab, filiere_id: filiereByCode.get(cl.filiere) ?? null },
+    });
   }
 
   // Élèves
