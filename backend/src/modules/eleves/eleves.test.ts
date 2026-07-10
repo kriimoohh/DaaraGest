@@ -48,8 +48,13 @@ describe('transfert élève — schéma & champ ciblé', () => {
     expect(r.success).toBe(true);
   });
 
-  it('rejette une filière inconnue', () => {
+  it('accepte un transfert EN (anglais) valide', () => {
     const r = transfertSchema.safeParse({ annee_scolaire_id: UUID, filiere: 'EN', nouvelle_classe_id: UUID });
+    expect(r.success).toBe(true);
+  });
+
+  it('rejette une filière inconnue', () => {
+    const r = transfertSchema.safeParse({ annee_scolaire_id: UUID, filiere: 'ES', nouvelle_classe_id: UUID });
     expect(r.success).toBe(false);
   });
 

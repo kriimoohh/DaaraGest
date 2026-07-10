@@ -24,6 +24,13 @@ export const inscriptionSchema = z.object({
   annee_scolaire_id: z.string().uuid(),
   classe_fr_id: z.string().optional().transform(v => (v && v.length > 0) ? v : undefined),
   classe_ar_id: z.string().optional().transform(v => (v && v.length > 0) ? v : undefined),
+  // Rattachements génériques par filière (dont l'anglais). Complète/remplace les
+  // deux champs FR/AR ci-dessus : chaque entrée { filiere_code, classe_id } crée
+  // la ligne de jointure ; FR/AR alimentent en plus la colonne dédiée (rétro-compat).
+  classes: z.array(z.object({
+    filiere_code: z.enum(['FR', 'AR', 'EN']),
+    classe_id: z.string().uuid(),
+  })).optional(),
 });
 
 // Transfert d'un élève d'une classe à l'autre EN COURS D'ANNÉE, pour une seule
@@ -31,7 +38,7 @@ export const inscriptionSchema = z.object({
 // de l'année plutôt que d'en créer une nouvelle (évite les doublons).
 export const transfertSchema = z.object({
   annee_scolaire_id: z.string().uuid(),
-  filiere: z.enum(['FR', 'AR']),
+  filiere: z.enum(['FR', 'AR', 'EN']),
   nouvelle_classe_id: z.string().uuid(),
 });
 

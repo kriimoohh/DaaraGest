@@ -2,6 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Papa from 'papaparse';
 import { useApi } from '../../hooks/useApi';
+import { useFilieres } from '../../hooks/useFilieres';
+import { nomBilingue } from '../../lib/noms';
 import { useAuthStore } from '../../store/authStore';
 import { useNoteMax } from '../../store/noteScaleStore';
 import { useAnneeCourante } from '../../store/anneeStore';
@@ -243,6 +245,7 @@ export function ElevesPage() {
   ];
   const api = useApi();
   const noteMax = useNoteMax();
+  const { actives: filieresActives } = useFilieres();
 
   // List state
   const [eleves, setEleves] = useState<Eleve[]>([]);
@@ -321,12 +324,13 @@ export function ElevesPage() {
   const [inscModal, setInscModal] = useState<Eleve | null>(null);
   const [annees, setAnnees] = useState<{ id: string; libelle: string }[]>([]);
   const [classesDisp, setClassesDisp] = useState<{ id: string; nom_fr: string; filiere: string; annee_scolaire_id: string }[]>([]);
-  const [inscForm, setInscForm] = useState({ annee_scolaire_id: '', classe_fr_id: '', classe_ar_id: '' });
+  // classes : classe choisie par code de filière (FR/AR/EN…).
+  const [inscForm, setInscForm] = useState<{ annee_scolaire_id: string; classes: Record<string, string> }>({ annee_scolaire_id: '', classes: {} });
   const [inscSaving, setInscSaving] = useState(false);
 
   // Transfert (changement de classe en cours d'année, une filière à la fois)
   const [transfertModal, setTransfertModal] = useState<Eleve | null>(null);
-  const [transfertForm, setTransfertForm] = useState<{ annee_scolaire_id: string; filiere: 'FR' | 'AR'; nouvelle_classe_id: string }>({ annee_scolaire_id: '', filiere: 'FR', nouvelle_classe_id: '' });
+  const [transfertForm, setTransfertForm] = useState<{ annee_scolaire_id: string; filiere: string; nouvelle_classe_id: string }>({ annee_scolaire_id: '', filiere: 'FR', nouvelle_classe_id: '' });
   const [transfertSaving, setTransfertSaving] = useState(false);
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
@@ -536,7 +540,7 @@ export function ElevesPage() {
 
   const openInscription = async (eleve: Eleve) => {
     setInscModal(eleve);
-    setInscForm({ annee_scolaire_id: '', classe_fr_id: '', classe_ar_id: '' });
+    setInscForm({ annee_scolaire_id: '', classes: {} });
     try {
       const [ans, cls] = await Promise.all([
         api.get<{ id: string; libelle: string }[]>('/api/v1/annees-scolaires'),
@@ -554,8 +558,10 @@ export function ElevesPage() {
     }
     setInscSaving(true);
     try {
-      const payload = Object.fromEntries(Object.entries(inscForm).filter(([, v]) => v !== ''));
-      await api.post(`/api/v1/eleves/${inscModal.id}/inscrire`, payload);
+      const classes = Object.entries(inscForm.classes)
+        .filter(([, classe_id]) => classe_id)
+        .map(([filiere_code, classe_id]) => ({ filiere_code, classe_id }));
+      await api.post(`/api/v1/eleves/${inscModal.id}/inscrire`, { annee_scolaire_id: inscForm.annee_scolaire_id, classes });
       toast.success('Élève inscrit avec succès');
       setInscModal(null);
     } catch (err) {
@@ -1412,14 +1418,13 @@ export function ElevesPage() {
           title={`Inscrire ${inscModal.prenom_fr} ${inscModal.nom_fr}`} size="md">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <Select label={t('classe.annee_scolaire')} value={inscForm.annee_scolaire_id}
-              onChange={(e) => setInscForm(f => ({ ...f, annee_scolaire_id: e.target.value, classe_fr_id: '', classe_ar_id: '' }))}
+              onChange={(e) => setInscForm(f => ({ ...f, annee_scolaire_id: e.target.value, classes: {} }))}
               options={[{ value: '', label: t('common.selectionner') }, ...annees.map(a => ({ value: a.id, label: a.libelle }))]} />
-            <Select label={t('eleve.classe_fr')} value={inscForm.classe_fr_id} disabled={!inscForm.annee_scolaire_id}
-              onChange={(e) => setInscForm(f => ({ ...f, classe_fr_id: e.target.value }))}
-              options={[{ value: '', label: t('common.aucune') }, ...classesDisp.filter(cl => cl.filiere === 'FR' && cl.annee_scolaire_id === inscForm.annee_scolaire_id).map(cl => ({ value: cl.id, label: cl.nom_fr }))]} />
-            <Select label={t('eleve.classe_ar')} value={inscForm.classe_ar_id} disabled={!inscForm.annee_scolaire_id}
-              onChange={(e) => setInscForm(f => ({ ...f, classe_ar_id: e.target.value }))}
-              options={[{ value: '', label: t('common.aucune') }, ...classesDisp.filter(cl => cl.filiere === 'AR' && cl.annee_scolaire_id === inscForm.annee_scolaire_id).map(cl => ({ value: cl.id, label: cl.nom_fr }))]} />
+            {filieresActives.map(fil => (
+              <Select key={fil.id} label={nomBilingue(fil)} value={inscForm.classes[fil.code] ?? ''} disabled={!inscForm.annee_scolaire_id}
+                onChange={(e) => setInscForm(f => ({ ...f, classes: { ...f.classes, [fil.code]: e.target.value } }))}
+                options={[{ value: '', label: t('common.aucune') }, ...classesDisp.filter(cl => cl.filiere === fil.code && cl.annee_scolaire_id === inscForm.annee_scolaire_id).map(cl => ({ value: cl.id, label: cl.nom_fr }))]} />
+            ))}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingTop: 8 }}>
               <Button variant="secondary" onClick={() => setInscModal(null)}>{t('actions.annuler')}</Button>
               <Button onClick={handleInscrire} loading={inscSaving}>{t('actions.inscrire')}</Button>
@@ -1437,8 +1442,8 @@ export function ElevesPage() {
               onChange={(e) => setTransfertForm(f => ({ ...f, annee_scolaire_id: e.target.value, nouvelle_classe_id: '' }))}
               options={[{ value: '', label: t('common.selectionner') }, ...annees.map(a => ({ value: a.id, label: a.libelle }))]} />
             <Select label={t('eleve.filiere')} value={transfertForm.filiere}
-              onChange={(e) => setTransfertForm(f => ({ ...f, filiere: e.target.value as 'FR' | 'AR', nouvelle_classe_id: '' }))}
-              options={[{ value: 'FR', label: t('eleve.filiere_fr') }, { value: 'AR', label: t('eleve.filiere_ar') }]} />
+              onChange={(e) => setTransfertForm(f => ({ ...f, filiere: e.target.value, nouvelle_classe_id: '' }))}
+              options={filieresActives.map(fil => ({ value: fil.code, label: nomBilingue(fil) }))} />
             <Select label={t('eleve.transfert_nouvelle_classe')} value={transfertForm.nouvelle_classe_id}
               disabled={!transfertForm.annee_scolaire_id}
               onChange={(e) => setTransfertForm(f => ({ ...f, nouvelle_classe_id: e.target.value }))}
