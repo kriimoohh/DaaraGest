@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
-import { classeSchema, classeMatiereSchema, classeMatiereUpdateSchema, classeMatierePeriodeSchema, dupliquerArSchema } from './classes.schema';
-import { listerClasses, getClasse, creerClasse, modifierClasse, supprimerClasse, listerElevesDeClasse, genererPdfListeClasse, genererPdfToutesClasses, listerMatieresDeclasse, ajouterMatiereClasse, modifierMatiereClasse, supprimerMatiereClasse, dupliquerClasseFrEnAr, upsertOverridePeriode, supprimerOverridePeriode } from './classes.service';
+import { classeSchema, classeMatiereSchema, classeMatiereUpdateSchema, classeMatierePeriodeSchema, dupliquerClasseSchema } from './classes.schema';
+import { listerClasses, getClasse, creerClasse, modifierClasse, supprimerClasse, listerElevesDeClasse, genererPdfListeClasse, genererPdfToutesClasses, listerMatieresDeclasse, ajouterMatiereClasse, modifierMatiereClasse, supprimerMatiereClasse, dupliquerClasse, upsertOverridePeriode, supprimerOverridePeriode } from './classes.service';
 
 export async function listerHandler(
   request: FastifyRequest, reply: FastifyReply
@@ -116,15 +116,15 @@ export async function pdfToutesClassesHandler(
 
 // ─── Duplication FR → AR ─────────────────────────────────────────────────────
 
-export async function dupliquerArHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function dupliquerHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
-  const parsed = dupliquerArSchema.safeParse(request.body ?? {});
+  const parsed = dupliquerClasseSchema.safeParse(request.body ?? {});
   if (!parsed.success) {
     return reply.status(400).send({ error: parsed.error.errors[0].message });
   }
   try {
-    const result = await dupliquerClasseFrEnAr(id, etablissement_id, parsed.data);
+    const result = await dupliquerClasse(id, etablissement_id, parsed.data);
     return reply.status(201).send(result);
   } catch (err) {
     const msg = (err as Error).message;

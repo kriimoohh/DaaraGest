@@ -33,7 +33,11 @@ export const classeMatierePeriodeSchema = z.object({
   evaluee: z.boolean().nullable().optional(),
 });
 
-export const dupliquerArSchema = z.object({
+// Duplication d'une classe vers une AUTRE filière (générique : AR, EN…). Les
+// élèves de la classe source sont rattachés à la nouvelle classe pour la filière
+// cible (sauf ceux qui y ont déjà une classe).
+export const dupliquerClasseSchema = z.object({
+  filiere_cible: z.enum(['FR', 'AR', 'EN']),
   nom_fr: z.string().min(1).optional(),
 });
 
@@ -41,4 +45,4 @@ export type ClasseInput = z.infer<typeof classeSchema>;
 export type ClasseMatiereInput = z.infer<typeof classeMatiereSchema>;
 export type ClasseMatiereUpdateInput = z.infer<typeof classeMatiereUpdateSchema>;
 export type ClasseMatierePeriodeInput = z.infer<typeof classeMatierePeriodeSchema>;
-export type DupliquerArInput = z.infer<typeof dupliquerArSchema>;
+export type DupliquerClasseInput = z.infer<typeof dupliquerClasseSchema>;
