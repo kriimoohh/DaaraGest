@@ -292,7 +292,7 @@ export function ElevesPage() {
   const [confirmBulkSupprimer, setConfirmBulkSupprimer] = useState(false);
   const [bulkSupprimant, setBulkSupprimant] = useState(false);
   const [bulkInscModal, setBulkInscModal] = useState(false);
-  const [bulkInscForm, setBulkInscForm] = useState({ annee_scolaire_id: '', classe_fr_id: '', classe_ar_id: '' });
+  const [bulkInscForm, setBulkInscForm] = useState<{ annee_scolaire_id: string; classes: Record<string, string> }>({ annee_scolaire_id: '', classes: {} });
   const [bulkInscSaving, setBulkInscSaving] = useState(false);
   const [bulkAnnees, setBulkAnnees] = useState<{ id: string; libelle: string }[]>([]);
   const [bulkClasses, setBulkClasses] = useState<{ id: string; nom_fr: string; filiere: string; annee_scolaire_id: string }[]>([]);
@@ -443,7 +443,7 @@ export function ElevesPage() {
       setBulkAnnees(ans);
       setBulkClasses(cls);
     } catch { /**/ }
-    setBulkInscForm({ annee_scolaire_id: '', classe_fr_id: '', classe_ar_id: '' });
+    setBulkInscForm({ annee_scolaire_id: '', classes: {} });
     setBulkInscModal(true);
   }
 
@@ -451,10 +451,13 @@ export function ElevesPage() {
     if (!bulkInscForm.annee_scolaire_id) { toast.error('Année scolaire requise'); return; }
     setBulkInscSaving(true);
     try {
-      const inscData = Object.fromEntries(Object.entries(bulkInscForm).filter(([, v]) => v !== ''));
+      const classes = Object.entries(bulkInscForm.classes)
+        .filter(([, classe_id]) => classe_id)
+        .map(([filiere_code, classe_id]) => ({ filiere_code, classe_id }));
       const res = await api.post<{ count: number }>('/api/v1/eleves/bulk-inscrire', {
         ids: [...selectedIds],
-        ...inscData,
+        annee_scolaire_id: bulkInscForm.annee_scolaire_id,
+        classes,
       });
       toast.success(`${res.count} élève(s) inscrit(s) avec succès`);
       setSelectedIds(new Set());
@@ -1497,23 +1500,19 @@ export function ElevesPage() {
           <Select
             label="Année scolaire"
             value={bulkInscForm.annee_scolaire_id}
-            onChange={e => setBulkInscForm(f => ({ ...f, annee_scolaire_id: e.target.value, classe_fr_id: '', classe_ar_id: '' }))}
+            onChange={e => setBulkInscForm(f => ({ ...f, annee_scolaire_id: e.target.value, classes: {} }))}
             options={[{ value: '', label: 'Sélectionner...' }, ...bulkAnnees.map(a => ({ value: a.id, label: a.libelle }))]}
           />
-          <Select
-            label="Classe FR"
-            value={bulkInscForm.classe_fr_id}
-            disabled={!bulkInscForm.annee_scolaire_id}
-            onChange={e => setBulkInscForm(f => ({ ...f, classe_fr_id: e.target.value }))}
-            options={[{ value: '', label: 'Aucune' }, ...bulkClasses.filter(c => c.filiere === 'FR' && c.annee_scolaire_id === bulkInscForm.annee_scolaire_id).map(c => ({ value: c.id, label: c.nom_fr }))]}
-          />
-          <Select
-            label="Classe AR"
-            value={bulkInscForm.classe_ar_id}
-            disabled={!bulkInscForm.annee_scolaire_id}
-            onChange={e => setBulkInscForm(f => ({ ...f, classe_ar_id: e.target.value }))}
-            options={[{ value: '', label: 'Aucune' }, ...bulkClasses.filter(c => c.filiere === 'AR' && c.annee_scolaire_id === bulkInscForm.annee_scolaire_id).map(c => ({ value: c.id, label: c.nom_fr }))]}
-          />
+          {filieresActives.map(fil => (
+            <Select
+              key={fil.id}
+              label={nomBilingue(fil)}
+              value={bulkInscForm.classes[fil.code] ?? ''}
+              disabled={!bulkInscForm.annee_scolaire_id}
+              onChange={e => setBulkInscForm(f => ({ ...f, classes: { ...f.classes, [fil.code]: e.target.value } }))}
+              options={[{ value: '', label: 'Aucune' }, ...bulkClasses.filter(c => c.filiere === fil.code && c.annee_scolaire_id === bulkInscForm.annee_scolaire_id).map(c => ({ value: c.id, label: c.nom_fr }))]}
+            />
+          ))}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingTop: 8 }}>
             <Button variant="secondary" onClick={() => setBulkInscModal(false)}>Annuler</Button>
             <Button onClick={handleBulkInscrire} loading={bulkInscSaving}>
