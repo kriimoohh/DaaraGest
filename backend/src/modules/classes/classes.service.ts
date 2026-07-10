@@ -1,10 +1,10 @@
 import prisma from '../../config/database';
-import { ClasseInput, ClasseMatiereInput, ClasseMatiereUpdateInput, ClasseMatierePeriodeInput, DupliquerArInput } from './classes.schema';
+import { ClasseInput, ClasseMatiereInput, ClasseMatiereUpdateInput, ClasseMatierePeriodeInput, DupliquerClasseInput } from './classes.schema';
 import { renderPdfHtml } from '../../utils/browserPool';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 import { bulletinsImpactesParMatiere } from '../bulletins/bulletins.service';
 import { logAction } from '../../utils/audit';
-import { NotFoundError } from '../../utils/errors';
+import { NotFoundError, ValidationError } from '../../utils/errors';
 import { classeCode } from '../../utils/classeCode';
 import { getFiliereActiveId, getFiliereId } from '../../utils/filiere';
 import { selectLiensClasseObjet, classeParFiliere } from '../../utils/inscriptionClasse';
@@ -417,70 +417,82 @@ export async function listerElevesDeClasse(
 
 // ─── Duplication FR → AR ─────────────────────────────────────────────────────
 
-export async function dupliquerClasseFrEnAr(
+/**
+ * Duplique une classe vers une AUTRE filière (générique : AR, EN…). Crée une
+ * nouvelle classe dans la filière cible et y rattache les élèves de la classe
+ * source — SAUF ceux qui ont déjà une classe dans la filière cible (on ne les
+ * réaffecte pas). La colonne FR/AR est alimentée en plus de la jointure ; les
+ * autres filières (anglais…) ne vivent que dans la jointure.
+ */
+export async function dupliquerClasse(
   id: string,
   etablissement_id: string,
-  data: DupliquerArInput
+  data: DupliquerClasseInput,
 ) {
   const source = await prisma.classe.findFirst({
     where: { id, etablissement_id, active: true },
     include: { annee_scolaire: true, niveau: true },
   });
   if (!source) throw new NotFoundError('Classe introuvable');
-  if (source.filiere !== 'FR') throw new Error('La classe source doit être de filière française (FR)');
 
-  const whereInscriptions = {
-    classe_fr_id: id,
-    annee_scolaire_id: source.annee_scolaire_id,
-    statut: 'actif',
-  };
+  const cible = data.filiere_cible;
+  if (cible === source.filiere) {
+    throw new ValidationError('La filière cible doit être différente de la filière de la classe source');
+  }
+  const filiere_id_cible = await getFiliereActiveId(etablissement_id, cible);
 
-  // Résolu hors transaction (dépend seulement de l'établissement + code 'AR').
-  const filiere_id_ar = await getFiliereActiveId(etablissement_id, 'AR');
+  // Élèves de la classe source (via la jointure : source de n'importe quelle filière).
+  const inscriptionsSource = await prisma.inscription.findMany({
+    where: { annee_scolaire_id: source.annee_scolaire_id, statut: 'actif', classes: { some: { classe_id: id } } },
+    select: { id: true },
+  });
+  const sourceIds = inscriptionsSource.map(i => i.id);
+  // Ceux qui ont DÉJÀ une classe dans la filière cible → ignorés (pas d'écrasement).
+  const dejaCible = sourceIds.length
+    ? await prisma.inscriptionClasse.findMany({
+        where: { inscription_id: { in: sourceIds }, filiere_id: filiere_id_cible },
+        select: { inscription_id: true },
+      })
+    : [];
+  const dejaSet = new Set(dejaCible.map(x => x.inscription_id));
+  const aInscrire = sourceIds.filter(iid => !dejaSet.has(iid));
+
+  // Colonne rétro-compat seulement pour FR/AR.
+  const colonne = cible === 'FR' ? 'classe_fr_id' : cible === 'AR' ? 'classe_ar_id' : null;
 
   return prisma.$transaction(async (tx) => {
-    const nomAr = data.nom_fr ?? `${source.nom_fr} (AR)`;
+    const nom = data.nom_fr ?? `${source.nom_fr} (${cible})`;
 
     const nouvelleClasse = await tx.classe.create({
       data: {
         etablissement_id,
         annee_scolaire_id: source.annee_scolaire_id,
-        nom_fr: nomAr,
-        filiere: 'AR',
-        filiere_id: filiere_id_ar,
+        nom_fr: nom,
+        filiere: cible,
+        filiere_id: filiere_id_cible,
         niveau_id: source.niveau_id ?? null,
         capacite: source.capacite,
-        code: classeCode(nomAr, 'AR'),
+        code: classeCode(nom, cible),
       },
       include: { annee_scolaire: true, niveau: true },
     });
 
-    const updated = await tx.inscription.updateMany({
-      where: { ...whereInscriptions, classe_ar_id: null },
-      data: { classe_ar_id: nouvelleClasse.id },
-    });
-
-    // Double-écriture jointure (Phase 2a) : rattacher ces inscriptions à la
-    // nouvelle classe AR. On (re)crée les lignes InscriptionClasse manquantes.
-    const inscriptionsAr = await tx.inscription.findMany({
-      where: { ...whereInscriptions, classe_ar_id: nouvelleClasse.id },
-      select: { id: true },
-    });
-    if (inscriptionsAr.length > 0) {
+    if (aInscrire.length > 0) {
       await tx.inscriptionClasse.createMany({
-        data: inscriptionsAr.map(i => ({ inscription_id: i.id, filiere_id: filiere_id_ar, classe_id: nouvelleClasse.id })),
+        data: aInscrire.map(iid => ({ inscription_id: iid, filiere_id: filiere_id_cible, classe_id: nouvelleClasse.id })),
         skipDuplicates: true,
       });
+      if (colonne) {
+        await tx.inscription.updateMany({ where: { id: { in: aInscrire } }, data: { [colonne]: nouvelleClasse.id } });
+      }
     }
-
-    const total = await tx.inscription.count({ where: whereInscriptions });
 
     return {
       classe: nouvelleClasse,
       stats: {
-        total_eleves_source: total,
-        eleves_inscrits: updated.count,
-        eleves_ignores: total - updated.count,
+        total_eleves_source: sourceIds.length,
+        eleves_inscrits: aInscrire.length,
+        eleves_ignores: sourceIds.length - aInscrire.length,
       },
     };
   }, { timeout: 15000 });
