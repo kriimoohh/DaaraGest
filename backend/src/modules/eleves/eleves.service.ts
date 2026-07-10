@@ -428,25 +428,32 @@ export async function bulkInscrireEleves(ids: string[], etablissement_id: string
   });
   const validIds = existing.map(e => e.id);
 
+  // Normalise les rattachements par filière (FR/AR historiques + `classes` génériques dont EN).
+  const parCode = new Map<string, string>();
+  if (data.classe_fr_id) parCode.set('FR', data.classe_fr_id);
+  if (data.classe_ar_id) parCode.set('AR', data.classe_ar_id);
+  for (const c of data.classes ?? []) parCode.set(c.filiere_code, c.classe_id);
+
   const result = await prisma.inscription.createMany({
     data: validIds.map(eleve_id => ({
       eleve_id,
       annee_scolaire_id: data.annee_scolaire_id,
-      classe_fr_id: data.classe_fr_id ?? null,
-      classe_ar_id: data.classe_ar_id ?? null,
+      classe_fr_id: parCode.get('FR') ?? null,
+      classe_ar_id: parCode.get('AR') ?? null,
     })),
     skipDuplicates: true,
   });
 
-  // Double-écriture jointure (Phase 2a) : resync des inscriptions de ces élèves
-  // pour l'année (idempotent, admin-triggered → volume modéré).
+  // Jointure (source de vérité) : rattache chaque filière (dont EN) à toutes les
+  // inscriptions de ces élèves pour l'année (idempotent, admin-triggered).
   const inscriptions = await prisma.inscription.findMany({
     where: { eleve_id: { in: validIds }, annee_scolaire_id: data.annee_scolaire_id },
-    select: { id: true, classe_fr_id: true, classe_ar_id: true },
+    select: { id: true },
   });
   for (const insc of inscriptions) {
-    await syncInscriptionClasse(insc.id, insc.classe_fr_id);
-    await syncInscriptionClasse(insc.id, insc.classe_ar_id);
+    for (const classe_id of parCode.values()) {
+      await syncInscriptionClasse(insc.id, classe_id);
+    }
   }
   return result;
 }
