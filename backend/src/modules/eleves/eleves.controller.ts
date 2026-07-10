@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
-import { eleveSchema, inscriptionSchema } from './eleves.schema';
+import { eleveSchema, inscriptionSchema, transfertSchema } from './eleves.schema';
 import {
   listerEleves,
   getEleve,
@@ -10,6 +10,7 @@ import {
   supprimerEleve,
   toggleActifEleve,
   inscrireEleve,
+  transfererEleve,
   importerEleves,
   bulkDesactiverEleves,
   bulkSupprimerEleves,
@@ -152,6 +153,24 @@ export async function inscrireHandler(
     return reply.status(201).send(data);
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
+  }
+}
+
+export async function transfererHandler(
+  request: FastifyRequest, reply: FastifyReply
+) {
+  const { id: acteurId, etablissement_id } = request.user as JwtPayload;
+  const { id } = request.params as { id: string };
+  const parsed = transfertSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: parsed.error.errors[0].message });
+  }
+  try {
+    const data = await transfererEleve(id, etablissement_id, parsed.data, acteurId);
+    return reply.send(data);
+  } catch (err) {
+    const status = (err as { statusCode?: number }).statusCode ?? 400;
+    return reply.status(status).send({ error: (err as Error).message });
   }
 }
 

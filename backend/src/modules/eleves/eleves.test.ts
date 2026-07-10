@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { transfertSchema } from './eleves.schema';
+
+const UUID = '11111111-1111-1111-1111-111111111111';
 
 function genererMatricule(code: string, yy: string, count: number): string {
   return `${code}-E-${yy}-${String(count + 1).padStart(3, '0')}`;
@@ -21,6 +24,39 @@ describe('genererMatricule élève', () => {
 describe('genererMatricule personnel', () => {
   it('format CODE-P-AA-NNN', () => expect(genererMatriculePersonnel('FIC', '26', 0)).toBe('FIC-P-26-001'));
   it('type P bien présent', () => expect(genererMatriculePersonnel('FIC', '26', 4)).toBe('FIC-P-26-005'));
+});
+
+describe('transfert élève — schéma & champ ciblé', () => {
+  // Réplique la sélection du champ inscription selon la filière (voir transfererEleve).
+  const champClasse = (filiere: 'FR' | 'AR') => (filiere === 'FR' ? 'classe_fr_id' : 'classe_ar_id');
+
+  it('filière FR cible classe_fr_id', () => {
+    expect(champClasse('FR')).toBe('classe_fr_id');
+  });
+
+  it('filière AR cible classe_ar_id', () => {
+    expect(champClasse('AR')).toBe('classe_ar_id');
+  });
+
+  it('accepte un transfert FR valide', () => {
+    const r = transfertSchema.safeParse({ annee_scolaire_id: UUID, filiere: 'FR', nouvelle_classe_id: UUID });
+    expect(r.success).toBe(true);
+  });
+
+  it('accepte un transfert AR valide', () => {
+    const r = transfertSchema.safeParse({ annee_scolaire_id: UUID, filiere: 'AR', nouvelle_classe_id: UUID });
+    expect(r.success).toBe(true);
+  });
+
+  it('rejette une filière inconnue', () => {
+    const r = transfertSchema.safeParse({ annee_scolaire_id: UUID, filiere: 'EN', nouvelle_classe_id: UUID });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejette une classe de destination manquante', () => {
+    const r = transfertSchema.safeParse({ annee_scolaire_id: UUID, filiere: 'FR' });
+    expect(r.success).toBe(false);
+  });
 });
 
 describe('validation élève', () => {
