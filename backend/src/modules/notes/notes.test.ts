@@ -118,6 +118,49 @@ describe('Notes — mode insertOnly (professeur)', () => {
   });
 });
 
+// Reflète la décision du service bulkUpsertNotes : le verrou insertOnly du
+// professeur est TOUJOURS actif (découplé de la politique de saisie).
+function professeurEstInsertOnly(role: string): boolean {
+  return role === 'professeur';
+}
+
+// Reflète la classification d'une note dans la boucle du service.
+function classifierNote(existe: boolean, insertOnly: boolean, valeurDifferente: boolean):
+  'create' | 'update' | 'ignore' | 'noop' {
+  if (!existe) return 'create';
+  if (!insertOnly) return valeurDifferente ? 'update' : 'noop';
+  return valeurDifferente ? 'ignore' : 'noop';
+}
+
+describe('Notes — verrou professeur découplé de la politique', () => {
+  it('professeur est insert-only quelle que soit la politique', () => {
+    // Le verrou ne dépend plus de autoriser_toutes_matieres/_classes.
+    expect(professeurEstInsertOnly('professeur')).toBe(true);
+  });
+
+  it('admin / directeur / gestionnaire ne sont pas insert-only', () => {
+    expect(professeurEstInsertOnly('admin')).toBe(false);
+    expect(professeurEstInsertOnly('directeur')).toBe(false);
+    expect(professeurEstInsertOnly('gestionnaire')).toBe(false);
+  });
+
+  it('professeur : note existante modifiée → ignorée (jamais écrasée)', () => {
+    expect(classifierNote(true, true, true)).toBe('ignore');
+  });
+
+  it('professeur : note existante inchangée → noop (pas comptée comme ignorée)', () => {
+    expect(classifierNote(true, true, false)).toBe('noop');
+  });
+
+  it('professeur : note nouvelle → créée', () => {
+    expect(classifierNote(false, true, false)).toBe('create');
+  });
+
+  it('gestion : note existante modifiée → mise à jour', () => {
+    expect(classifierNote(true, false, true)).toBe('update');
+  });
+});
+
 describe('Notes — clé d\'unicité', () => {
   it('génère la clé correcte', () => {
     const key = genererCleUnique('e1', 'm1', 1, 'a2025');

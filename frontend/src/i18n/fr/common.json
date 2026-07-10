@@ -561,6 +561,7 @@
     "eleves_count": "{{count}} élève(s)",
     "prof_ajout_only": "Ajout uniquement — les notes déjà saisies ne peuvent pas être modifiées",
     "note_verrouillee": "Note déjà saisie — modification non autorisée",
+    "notes_ignorees": "{{count}} note(s) déjà enregistrée(s) non modifiée(s) — contactez la direction pour toute correction",
     "programme_vide": "Cette classe n'a pas encore de programme de matières. Rendez-vous dans Classes → Programme pour assigner les matières.",
     "err_chargement": "Erreur de chargement",
     "err_enregistrement": "Erreur lors de l'enregistrement",

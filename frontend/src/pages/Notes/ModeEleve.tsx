@@ -6,7 +6,7 @@ import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
 import {
   AnneeScolaire, Classe, Matiere, ClasseMatiere, Eleve, Note,
-  PolitiqueSaisieNotes, appreciation, estModeStrict,
+  PolitiqueSaisieNotes, appreciation,
 } from './shared';
 import { nomMatiere, nomClasse } from '../../lib/noms';
 
@@ -28,7 +28,7 @@ interface Props {
 export function ModeEleve({
   annees, classes, anneeId, classeId, periode,
   setAnneeId, setClasseId, setPeriode,
-  canEdit, isProfesseur, politique,
+  canEdit, isProfesseur,
 }: Props) {
   const { t } = useTranslation();
   const api = useApi();
@@ -45,7 +45,9 @@ export function ModeEleve({
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const insertOnlyActif = isProfesseur && estModeStrict(politique);
+  // Un professeur ne peut jamais réécrire une note déjà enregistrée
+  // (verrou anti-favoritisme) — seule la direction/gestion le peut.
+  const insertOnlyActif = isProfesseur;
 
   useEffect(() => {
     if (!classeId) return;
@@ -104,7 +106,10 @@ export function ModeEleve({
         setSaving(false);
         return;
       }
-      await api.post('/api/v1/notes/bulk', { notes: notesList, classe_id: classeId });
+      const res = await api.post<{ ignored?: number }>('/api/v1/notes/bulk', { notes: notesList, classe_id: classeId });
+      if (res.ignored && res.ignored > 0) {
+        toast.info(t('note.notes_ignorees', { count: res.ignored }));
+      }
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {

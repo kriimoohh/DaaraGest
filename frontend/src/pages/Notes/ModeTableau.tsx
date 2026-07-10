@@ -6,7 +6,7 @@ import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
 import {
   AnneeScolaire, Classe, Matiere, ClasseMatiere, Eleve, Note,
-  PolitiqueSaisieNotes, appreciation, estModeStrict,
+  PolitiqueSaisieNotes, appreciation,
 } from './shared';
 import { nomMatiere, nomClasse } from '../../lib/noms';
 
@@ -48,8 +48,9 @@ export function ModeTableau({
 
   // Édition : map "eleveId|matiereId" → valeur saisie (string pour gérer le champ vide)
   const [edits, setEdits] = useState<Record<string, string>>({});
-  // Verrou insertOnly = mode strict uniquement (cohérent avec ModeMatiere/ModeEleve)
-  const insertOnlyActif = isProfesseur && estModeStrict(politique);
+  // Verrou insertOnly : un professeur ne peut jamais réécrire une note déjà
+  // enregistrée (cohérent avec ModeMatiere/ModeEleve, anti-favoritisme).
+  const insertOnlyActif = isProfesseur;
   const modeAnnuel = periode === '';
   const editable = (canEdit || isProfesseur) && !modeAnnuel;
 
@@ -237,7 +238,10 @@ export function ModeTableau({
     setSaving(true);
     setSuccess(false);
     try {
-      await api.post('/api/v1/notes/bulk', { notes: aEnregistrer, classe_id: classeId });
+      const res = await api.post<{ ignored?: number }>('/api/v1/notes/bulk', { notes: aEnregistrer, classe_id: classeId });
+      if (res.ignored && res.ignored > 0) {
+        toast.info(t('note.notes_ignorees', { count: res.ignored }));
+      }
       // Recharger pour récupérer les ids et synchroniser l'index
       const params = new URLSearchParams({ classe_id: classeId, annee_scolaire_id: anneeId, periode });
       const fresh = await api.get<Note[]>(`/api/v1/notes?${params.toString()}`);
