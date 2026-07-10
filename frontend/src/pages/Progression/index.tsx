@@ -6,6 +6,8 @@ import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { useApi } from '../../hooks/useApi';
+import { useFilieres } from '../../hooks/useFilieres';
+import { nomBilingue } from '../../lib/noms';
 import { useAuthStore } from '../../store/authStore';
 import { useAnneeScolaire } from '../../store/anneeStore';
 import { toast } from '../../store/toastStore';
@@ -35,6 +37,7 @@ export function ProgressionPage() {
   const locale = i18n.language === 'ar' ? 'ar-SN' : 'fr-FR';
   const decisionLabel = (d: string) => t(`progression.decisions.${d}`, { defaultValue: d });
   const api = useApi();
+  const { actives: filieresActives } = useFilieres();
   const canWrite = useAuthStore(s => ['admin', 'directeur'].includes(s.user?.role ?? ''));
 
   const [annees,       setAnnees]       = useState<AnneeScolaire[]>([]);
@@ -160,8 +163,7 @@ export function ProgressionPage() {
             onChange={e => setFiliereFilter(e.target.value)}
             options={[
               { value: '', label: t('progression.toutes_filieres') },
-              { value: 'FR', label: t('progression.filiere_fr') },
-              { value: 'AR', label: t('progression.filiere_ar') },
+              ...filieresActives.map(f => ({ value: f.code, label: nomBilingue(f) })),
             ]}
           />
           <Select
