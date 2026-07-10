@@ -10,12 +10,29 @@ import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 
-type Tab = 'etablissement' | 'pedagogie' | 'niveaux' | 'fonctions' | 'compte' | 'bulletins' | 'tarifs' | 'notifications' | 'securite';
+type Tab = 'etablissement' | 'pedagogie' | 'filieres' | 'niveaux' | 'fonctions' | 'compte' | 'bulletins' | 'tarifs' | 'notifications' | 'securite';
 
 interface Niveau {
   id: string;
   libelle: string;
   ordre: number;
+}
+
+type FiliereCode = 'FR' | 'AR' | 'EN';
+
+interface Filiere {
+  id: string;
+  code: FiliereCode;
+  nom_fr: string;
+  nom_ar: string | null;
+  langue: string;
+  sens_ecriture: 'LTR' | 'RTL';
+  note_max: number | string | null;
+  couleur: string;
+  ordre: number;
+  actif: boolean;
+  nb_classes: number;
+  nb_matieres: number;
 }
 
 interface Fonction {
@@ -633,6 +650,20 @@ export function ParametresPage() {
   const [confirmDeleteFonction, setConfirmDeleteFonction] = useState<Fonction | null>(null);
   const [deletingFonction, setDeletingFonction] = useState(false);
 
+  // ── Filières ───────────────────────────────────────────────────────────────
+  const emptyFiliereForm = { code: 'FR' as FiliereCode, nom_fr: '', nom_ar: '', langue: 'fr', sens_ecriture: 'LTR' as 'LTR' | 'RTL', note_max: '', couleur: '#DDE2F1', ordre: '0' };
+  const FILIERE_PRESETS: Record<FiliereCode, { nom_fr: string; langue: string; sens_ecriture: 'LTR' | 'RTL'; couleur: string; ordre: string }> = {
+    FR: { nom_fr: 'Filière française', langue: 'fr', sens_ecriture: 'LTR', couleur: '#DDE2F1', ordre: '0' },
+    AR: { nom_fr: 'Filière arabe',     langue: 'ar', sens_ecriture: 'RTL', couleur: '#DCEBDF', ordre: '1' },
+    EN: { nom_fr: 'Filière anglaise',  langue: 'en', sens_ecriture: 'LTR', couleur: '#F1E4DD', ordre: '2' },
+  };
+  const [filieres, setFilieres] = useState<Filiere[]>([]);
+  const [filiereForm, setFiliereForm] = useState(emptyFiliereForm);
+  const [editFiliere, setEditFiliere] = useState<Filiere | null>(null);
+  const [savingFiliere, setSavingFiliere] = useState(false);
+  const [confirmDeleteFiliere, setConfirmDeleteFiliere] = useState<Filiere | null>(null);
+  const [deletingFiliere, setDeletingFiliere] = useState(false);
+
   const [mentions, setMentions] = useState<Mention[]>([]);
   const [editMention, setEditMention] = useState<Mention | null>(null);
   const [mentionForm, setMentionForm] = useState({ libelle_fr: '', libelle_ar: '', seuil_min: '', couleur: 'info' as CouleurMention });
@@ -668,6 +699,9 @@ export function ParametresPage() {
   const fetchFonctions = () =>
     api.get<Fonction[]>('/api/v1/fonctions').then(setFonctions).catch(() => {});
 
+  const fetchFilieres = () =>
+    api.get<Filiere[]>('/api/v1/filieres').then(setFilieres).catch(() => {});
+
   const fetchTarifs = () =>
     api.get<Tarif[]>('/api/v1/tarifs').then(setTarifs).catch(() => {});
 
@@ -677,6 +711,7 @@ export function ParametresPage() {
   useEffect(() => {
     fetchNiveaux();
     fetchFonctions();
+    fetchFilieres();
     fetchTarifs();
     fetchMentions();
     Promise.all([
@@ -799,6 +834,84 @@ export function ParametresPage() {
       toast.error((err as Error).message || 'Erreur');
     } finally {
       setDeletingFonction(false);
+    }
+  };
+
+  // ── Filières ───────────────────────────────────────────────────────────────
+  // Codes déjà configurés → retirés du menu d'ajout (liste fermée FR/AR/EN).
+  const codesActifs = new Set(filieres.map(f => f.code));
+  const codesDisponibles = (['FR', 'AR', 'EN'] as FiliereCode[]).filter(c => !codesActifs.has(c));
+
+  const resetFiliereForm = () => {
+    setEditFiliere(null);
+    const code = codesDisponibles[0] ?? 'FR';
+    const p = FILIERE_PRESETS[code];
+    setFiliereForm({ ...emptyFiliereForm, code, nom_fr: p.nom_fr, langue: p.langue, sens_ecriture: p.sens_ecriture, couleur: p.couleur, ordre: p.ordre });
+  };
+
+  // Choix du code → préremplit les champs depuis le preset.
+  const onFiliereCode = (code: FiliereCode) => {
+    const p = FILIERE_PRESETS[code];
+    setFiliereForm(f => ({ ...f, code, nom_fr: p.nom_fr, langue: p.langue, sens_ecriture: p.sens_ecriture, couleur: p.couleur, ordre: p.ordre }));
+  };
+
+  const openEditFiliere = (fi: Filiere) => {
+    setEditFiliere(fi);
+    setFiliereForm({
+      code: fi.code, nom_fr: fi.nom_fr, nom_ar: fi.nom_ar ?? '', langue: fi.langue,
+      sens_ecriture: fi.sens_ecriture, note_max: fi.note_max == null ? '' : String(fi.note_max),
+      couleur: fi.couleur, ordre: String(fi.ordre),
+    });
+  };
+
+  const handleSaveFiliere = async () => {
+    if (!filiereForm.nom_fr.trim()) { toast.error('Le nom (FR) est requis'); return; }
+    setSavingFiliere(true);
+    try {
+      const payload = {
+        nom_fr: filiereForm.nom_fr.trim(),
+        nom_ar: filiereForm.nom_ar.trim() || null,
+        langue: filiereForm.langue,
+        sens_ecriture: filiereForm.sens_ecriture,
+        note_max: filiereForm.note_max.trim() ? Number(filiereForm.note_max) : null,
+        couleur: filiereForm.couleur,
+        ordre: Number(filiereForm.ordre) || 0,
+      };
+      if (editFiliere) {
+        await api.patch(`/api/v1/filieres/${editFiliere.id}`, payload);
+        toast.success('Filière modifiée');
+      } else {
+        await api.post('/api/v1/filieres', { code: filiereForm.code, ...payload });
+        toast.success('Filière ajoutée');
+      }
+      resetFiliereForm();
+      fetchFilieres();
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    } finally { setSavingFiliere(false); }
+  };
+
+  const toggleFiliereActif = async (fi: Filiere) => {
+    try {
+      await api.patch(`/api/v1/filieres/${fi.id}`, { actif: !fi.actif });
+      fetchFilieres();
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    }
+  };
+
+  const performDeleteFiliere = async () => {
+    if (!confirmDeleteFiliere) return;
+    setDeletingFiliere(true);
+    try {
+      await api.delete(`/api/v1/filieres/${confirmDeleteFiliere.id}`);
+      toast.success('Filière supprimée');
+      setConfirmDeleteFiliere(null);
+      fetchFilieres();
+    } catch (err) {
+      toast.error((err as Error).message || 'Erreur');
+    } finally {
+      setDeletingFiliere(false);
     }
   };
 
@@ -1036,6 +1149,7 @@ export function ParametresPage() {
           {([
             { key: 'etablissement', label: t('parametre.etablissement') },
             { key: 'pedagogie', label: t('parametre.pedagogie') },
+            { key: 'filieres', label: 'Filières' },
             { key: 'niveaux', label: 'Niveaux' },
             { key: 'fonctions', label: 'Fonctions personnel' },
             { key: 'bulletins', label: t('parametre.bulletins_section') },
@@ -1411,6 +1525,125 @@ export function ParametresPage() {
               ))}
               {niveaux.length === 0 && (
                 <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Aucun niveau défini</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ── Onglet Filières ── */}
+      {tab === 'filieres' && (
+        <div className="card card-pad">
+          <h3 style={{ marginBottom: 8 }}>Filières de l'établissement</h3>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
+            Les pistes académiques que votre école propose (français, arabe, anglais).
+            Une filière utilisée par des classes ou matières ne peut pas être supprimée — désactivez-la à la place.
+            Le barème est enregistré mais ne s'appliquera aux bulletins qu'ultérieurement.
+          </p>
+
+          {canManageFonctions && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 20, flexWrap: 'wrap' }}>
+              {!editFiliere && (
+                <div>
+                  <label className="field-label">Code</label>
+                  <select
+                    className="input"
+                    value={filiereForm.code}
+                    onChange={e => onFiliereCode(e.target.value as FiliereCode)}
+                    disabled={codesDisponibles.length === 0}
+                    style={{ minWidth: 90 }}
+                  >
+                    {(codesDisponibles.length ? codesDisponibles : [filiereForm.code]).map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <Input label="Nom FR" value={filiereForm.nom_fr} onChange={e => setFiliereForm(f => ({ ...f, nom_fr: e.target.value }))} placeholder="Filière anglaise" />
+              <Input label="Nom AR" value={filiereForm.nom_ar} onChange={e => setFiliereForm(f => ({ ...f, nom_ar: e.target.value }))} placeholder="اختياري" style={{ direction: 'rtl' }} />
+              <div>
+                <label className="field-label">Sens</label>
+                <select className="input" value={filiereForm.sens_ecriture} onChange={e => setFiliereForm(f => ({ ...f, sens_ecriture: e.target.value as 'LTR' | 'RTL' }))}>
+                  <option value="LTR">LTR</option>
+                  <option value="RTL">RTL</option>
+                </select>
+              </div>
+              <Input label="Barème /" type="number" value={filiereForm.note_max} onChange={e => setFiliereForm(f => ({ ...f, note_max: e.target.value }))} placeholder="20" style={{ width: 90 }} />
+              <div>
+                <label className="field-label">Couleur</label>
+                <input type="color" value={filiereForm.couleur} onChange={e => setFiliereForm(f => ({ ...f, couleur: e.target.value }))} style={{ width: 44, height: 38, padding: 2, border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', background: 'var(--paper)' }} />
+              </div>
+              <Input label="Ordre" type="number" value={filiereForm.ordre} onChange={e => setFiliereForm(f => ({ ...f, ordre: e.target.value }))} placeholder="0" style={{ width: 80 }} />
+              <div style={{ paddingTop: 22 }}>
+                <Button onClick={handleSaveFiliere} loading={savingFiliere} disabled={!filiereForm.nom_fr.trim() || (!editFiliere && codesDisponibles.length === 0)}>
+                  {editFiliere ? 'Modifier' : 'Ajouter'}
+                </Button>
+              </div>
+              {editFiliere && (
+                <div style={{ paddingTop: 22 }}>
+                  <Button variant="ghost" onClick={resetFiliereForm}>Annuler</Button>
+                </div>
+              )}
+            </div>
+          )}
+          {canManageFonctions && !editFiliere && codesDisponibles.length === 0 && (
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: -12, marginBottom: 16 }}>
+              Les trois filières (FR, AR, EN) sont déjà configurées.
+            </p>
+          )}
+
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Code</th><th>Nom</th><th>Langue</th><th style={{ textAlign: 'center' }}>Barème</th>
+                <th style={{ textAlign: 'center' }}>Classes</th><th style={{ textAlign: 'center' }}>Matières</th>
+                <th style={{ textAlign: 'center' }}>Active</th>{canManageFonctions && <th></th>}
+              </tr>
+            </thead>
+            <tbody>
+              {filieres.map(fi => {
+                const usages = fi.nb_classes + fi.nb_matieres;
+                return (
+                  <tr key={fi.id} style={{ opacity: fi.actif ? 1 : 0.55 }}>
+                    <td>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'monospace', fontSize: 12 }}>
+                        <span style={{ width: 12, height: 12, borderRadius: 3, background: fi.couleur, border: '1px solid var(--border)' }} />
+                        {fi.code}
+                      </span>
+                    </td>
+                    <td>{fi.nom_fr}{fi.nom_ar ? <span style={{ color: 'var(--text-muted)', marginInlineStart: 8 }} dir="rtl">{fi.nom_ar}</span> : null}</td>
+                    <td style={{ fontSize: 12 }}>{fi.langue} · {fi.sens_ecriture}</td>
+                    <td style={{ textAlign: 'center', fontSize: 12 }}>{fi.note_max == null ? '—' : `/${Number(fi.note_max)}`}</td>
+                    <td style={{ textAlign: 'center' }}>{fi.nb_classes}</td>
+                    <td style={{ textAlign: 'center' }}>{fi.nb_matieres}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      {canManageFonctions ? (
+                        <button
+                          onClick={() => toggleFiliereActif(fi)}
+                          title={fi.actif ? 'Désactiver' : 'Activer'}
+                          style={{ cursor: 'pointer', border: 'none', background: 'transparent', fontSize: 16 }}
+                        >
+                          {fi.actif ? '✅' : '⬜'}
+                        </button>
+                      ) : (fi.actif ? '✅' : '⬜')}
+                    </td>
+                    {canManageFonctions && (
+                      <td style={{ textAlign: 'right' }}>
+                        <span style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
+                          <Button size="sm" variant="ghost" onClick={() => openEditFiliere(fi)}>Modifier</Button>
+                          {usages > 0 ? (
+                            <span title="Filière utilisée — désactivez-la au lieu de la supprimer" style={{ fontSize: 12, color: 'var(--ink-3)', fontStyle: 'italic', padding: '4px 8px', cursor: 'help' }}>utilisée</span>
+                          ) : (
+                            <Button size="sm" variant="danger" onClick={() => setConfirmDeleteFiliere(fi)}>Supprimer</Button>
+                          )}
+                        </span>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+              {filieres.length === 0 && (
+                <tr><td colSpan={canManageFonctions ? 8 : 7} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Aucune filière configurée</td></tr>
               )}
             </tbody>
           </table>
@@ -2254,6 +2487,15 @@ export function ParametresPage() {
         loading={deletingFonction}
         title="Supprimer la fonction"
         message={`Supprimer la fonction "${confirmDeleteFonction?.libelle_fr ?? ''}" ? Cette action est irréversible.`}
+      />
+
+      <ConfirmModal
+        isOpen={!!confirmDeleteFiliere}
+        onClose={() => setConfirmDeleteFiliere(null)}
+        onConfirm={performDeleteFiliere}
+        loading={deletingFiliere}
+        title="Supprimer la filière"
+        message={`Supprimer la filière "${confirmDeleteFiliere?.nom_fr ?? ''}" ? Cette action est irréversible.`}
       />
 
       <ConfirmModal
