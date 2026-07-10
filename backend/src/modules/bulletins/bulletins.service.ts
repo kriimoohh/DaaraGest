@@ -6,6 +6,7 @@ import { assertProfPeutAccederClasse } from '../../utils/teachingPolicy';
 import { logAction } from '../../utils/audit';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 import { NotFoundError } from '../../utils/errors';
+import { selectLiensClasse, classeIdParFiliere, LienClasseCode } from '../../utils/inscriptionClasse';
 
 type Filiere = 'FR' | 'AR' | 'COMBINE';
 
@@ -147,7 +148,7 @@ async function getMatieres(etablissement_id: string, filiere: 'FR' | 'AR') {
 async function getElevesClasse(classe_id: string, annee_scolaire_id: string) {
   return prisma.inscription.findMany({
     where: { annee_scolaire_id, statut: 'actif', classes: { some: { classe_id } } },
-    include: { eleve: true },
+    include: { eleve: true, ...selectLiensClasse },
   });
 }
 
@@ -175,8 +176,10 @@ export async function calculerMoyennesClasse(
   // et la moyenne COMBINE ne refléterait que le FR).
   const classIdsByFiliere: Record<'FR' | 'AR', Set<string>> = { FR: new Set(), AR: new Set() };
   for (const i of inscriptions) {
-    if (i.classe_fr_id) classIdsByFiliere.FR.add(i.classe_fr_id);
-    if (i.classe_ar_id) classIdsByFiliere.AR.add(i.classe_ar_id);
+    const fr = classeIdParFiliere(i.classes, 'FR');
+    const ar = classeIdParFiliere(i.classes, 'AR');
+    if (fr) classIdsByFiliere.FR.add(fr);
+    if (ar) classIdsByFiliere.AR.add(ar);
   }
 
   // Coeff/barème/évaluée par période (gère les coefficients qui changent de trimestre)
@@ -258,8 +261,10 @@ export async function getBaremesClasseCohorte(
   const inscriptions = await getElevesClasse(classe_id, annee_scolaire_id);
   const classIds: Record<'FR' | 'AR', Set<string>> = { FR: new Set(), AR: new Set() };
   for (const i of inscriptions) {
-    if (i.classe_fr_id) classIds.FR.add(i.classe_fr_id);
-    if (i.classe_ar_id) classIds.AR.add(i.classe_ar_id);
+    const fr = classeIdParFiliere(i.classes, 'FR');
+    const ar = classeIdParFiliere(i.classes, 'AR');
+    if (fr) classIds.FR.add(fr);
+    if (ar) classIds.AR.add(ar);
   }
   const map = new Map<string, { coeff: number; note_max: number; evaluee: boolean }>();
   for (const p of periodes) for (const f of filieres) for (const cid of classIds[f]) {
@@ -270,7 +275,7 @@ export async function getBaremesClasseCohorte(
   return map;
 }
 
-type InscriptionClasses = { eleve_id: string; classe_fr_id: string | null; classe_ar_id: string | null };
+type InscriptionClasses = { eleve_id: string; classes: LienClasseCode[] };
 
 /**
  * Barème + coefficient EFFECTIFS par (élève → période → matière), en combinant les
@@ -301,7 +306,7 @@ async function baremesParElevePeriode(
     for (const p of periodes) {
       const merged = new Map<string, Bareme>();
       for (const f of filieres) {
-        const cid = f === 'FR' ? insc.classe_fr_id : insc.classe_ar_id;
+        const cid = classeIdParFiliere(insc.classes, f);
         if (!cid) continue;
         for (const [mid, v] of await getClasse(cid, f, p)) merged.set(mid, v);
       }
@@ -719,7 +724,7 @@ export async function getBulletin(id: string, etablissement_id: string) {
   const bulletin = await prisma.bulletin.findFirst({
     where: { id, eleve: { etablissement_id } },
     include: {
-      eleve: { include: { inscriptions: { include: { classe_fr: true, classe_ar: true } } } },
+      eleve: { include: { inscriptions: { include: { ...selectLiensClasse } } } },
       annee_scolaire: true,
     },
   });
@@ -736,9 +741,9 @@ export async function getBulletin(id: string, etablissement_id: string) {
   // Chercher la classe de l'élève pour l'année scolaire du bulletin
   const inscription = bulletin.eleve.inscriptions.find(
     i => i.annee_scolaire_id === bulletin.annee_scolaire_id
-  ) as { classe_fr_id?: string | null; classe_ar_id?: string | null } | undefined;
-  const classeIdFR = inscription?.classe_fr_id ?? null;
-  const classeIdAR = inscription?.classe_ar_id ?? null;
+  ) as { classes?: LienClasseCode[] } | undefined;
+  const classeIdFR = classeIdParFiliere(inscription?.classes, 'FR');
+  const classeIdAR = classeIdParFiliere(inscription?.classes, 'AR');
 
   const notesByFiliere: Record<string, unknown[]> = {};
   for (const f of filieres) {
@@ -828,11 +833,11 @@ export async function mettreAJourObservation(
   if (role) {
     const inscription = await prisma.inscription.findFirst({
       where: { eleve_id: bulletin.eleve_id, annee_scolaire_id: bulletin.annee_scolaire_id },
-      select: { classe_fr_id: true, classe_ar_id: true },
+      select: { ...selectLiensClasse },
     });
     const candidateClasses = [
-      bulletin.filiere === 'AR' ? null : inscription?.classe_fr_id,
-      bulletin.filiere === 'FR' ? null : inscription?.classe_ar_id,
+      bulletin.filiere === 'AR' ? null : classeIdParFiliere(inscription?.classes, 'FR'),
+      bulletin.filiere === 'FR' ? null : classeIdParFiliere(inscription?.classes, 'AR'),
     ].filter((c): c is string => Boolean(c));
     if (candidateClasses.length === 0) {
       throw new NotFoundError('Inscription introuvable pour ce bulletin');
@@ -952,16 +957,18 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
   // défaut plat (/20), avec des appréciations et des moyennes par filière fausses.
   const insc = data.eleve.inscriptions.find(
     i => i.annee_scolaire_id === data.annee_scolaire_id
-  ) as { classe_fr_id?: string | null; classe_ar_id?: string | null } | undefined;
+  ) as { classes?: LienClasseCode[] } | undefined;
+  const frId = classeIdParFiliere(insc?.classes, 'FR');
+  const arId = classeIdParFiliere(insc?.classes, 'AR');
 
   // Mentions effectives : celles du niveau de la classe (FR prioritaire), sinon défauts établissement.
-  const niveauId = await niveauPourBulletin(insc?.classe_fr_id, insc?.classe_ar_id);
+  const niveauId = await niveauPourBulletin(frId, arId);
   const mentions = await getMentionsForNiveau(etablissement_id, niveauId);
   const periodeForBareme = data.periode === 0 ? undefined : data.periode;
   const effMap = new Map<string, { coeff: number; note_max: number; evaluee: boolean }>();
   for (const [cid, f] of [
-    [insc?.classe_fr_id, 'FR'] as const,
-    [insc?.classe_ar_id, 'AR'] as const,
+    [frId, 'FR'] as const,
+    [arId, 'AR'] as const,
   ]) {
     if (!cid) continue;
     for (const m of await getMatieresDeclasse(cid, f, periodeForBareme, baseNote)) {
@@ -972,8 +979,8 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
   const { generateBulletinHtml, generateBulletinAnnuelHtml, CSS: BULLETIN_CSS } = await import('./bulletin.template');
 
   // Maître(s) de la classe : FR + AR (les deux pour un bulletin combiné).
-  const maitre_fr = data.filiere !== 'AR' ? await getMaitresClasse(insc?.classe_fr_id, data.annee_scolaire_id) : null;
-  const maitre_ar = data.filiere !== 'FR' ? await getMaitresClasse(insc?.classe_ar_id, data.annee_scolaire_id) : null;
+  const maitre_fr = data.filiere !== 'AR' ? await getMaitresClasse(frId, data.annee_scolaire_id) : null;
+  const maitre_ar = data.filiere !== 'FR' ? await getMaitresClasse(arId, data.annee_scolaire_id) : null;
   const abs = await getAbsences(data.eleve_id, data.annee_scolaire_id);
 
   const base = {
@@ -1103,7 +1110,7 @@ export async function genererPdfClasse(
   // bonne classe par élève et par filière (comme le bulletin individuel).
   const inscriptions = await prisma.inscription.findMany({
     where: { annee_scolaire_id, eleve_id: { in: bulletins.map(b => b.eleve_id) } },
-    select: { eleve_id: true, classe_fr_id: true, classe_ar_id: true },
+    select: { eleve_id: true, ...selectLiensClasse },
   });
   const inscByEleve = new Map(inscriptions.map(i => [i.eleve_id, i]));
   const maitreCache = new Map<string, string | null>();
@@ -1131,7 +1138,7 @@ export async function genererPdfClasse(
     // existantes — ainsi les matières non évaluées apparaissent quand même.
     const rowsByFiliere: Record<string, { nom_fr: string; nom_ar: string; coeff: number; valeur: number | null; note_max: number; evaluee: boolean }[]> = {};
     for (const f of filieres) {
-      const mats = await matieresPour(f === 'FR' ? insc?.classe_fr_id : insc?.classe_ar_id, f);
+      const mats = await matieresPour(classeIdParFiliere(insc?.classes, f), f);
       const notes = await prisma.note.findMany({
         where: { eleve_id: bulletin.eleve_id, annee_scolaire_id, periode, matiere_id: { in: mats.map(m => m.id) } },
         select: { matiere_id: true, valeur: true },
@@ -1147,8 +1154,8 @@ export async function genererPdfClasse(
     }
     const toRows = (f: 'FR' | 'AR') => rowsByFiliere[f] ?? [];
 
-    const maitre_fr = filiere !== 'AR' ? await maitrePour(insc?.classe_fr_id) : null;
-    const maitre_ar = filiere !== 'FR' ? await maitrePour(insc?.classe_ar_id) : null;
+    const maitre_fr = filiere !== 'AR' ? await maitrePour(classeIdParFiliere(insc?.classes, 'FR')) : null;
+    const maitre_ar = filiere !== 'FR' ? await maitrePour(classeIdParFiliere(insc?.classes, 'AR')) : null;
     const abs = absByEleve.get(bulletin.eleve_id) ?? { j: 0, nj: 0 };
 
     pages.push(generateBulletinHtml({
