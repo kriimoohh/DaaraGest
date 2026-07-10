@@ -6,6 +6,7 @@ import { escapeHtml } from '../../utils/escapeHtml';
 import { TypeDocument, GenererDocumentInput, GenererCartesLotInput, UpsertTemplateInput, TYPE_DOCUMENT_VALUES, CARD_TYPES } from './documents.schema';
 import { getDefaultTemplate, TYPE_DOCUMENT_LABELS, getCardTemplate } from './templates/defaults';
 import { calculerMoyennesClasse, getBaremesClasse } from '../bulletins/bulletins.service';
+import { selectLiensClasse, selectLiensClasseObjet, classeIdParFiliere, classeParFiliere } from '../../utils/inscriptionClasse';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 import { NotFoundError } from '../../utils/errors';
 
@@ -139,8 +140,7 @@ async function buildEleveVars(eleve_id: string, _etablissement_id: string): Prom
       inscriptions: {
         where: { statut: 'actif' },
         include: {
-          classe_fr: true,
-          classe_ar: true,
+          ...selectLiensClasseObjet,
           annee_scolaire: true,
         },
         orderBy: { date_inscription: 'desc' },
@@ -150,8 +150,8 @@ async function buildEleveVars(eleve_id: string, _etablissement_id: string): Prom
   });
 
   const inscription = eleve.inscriptions[0];
-  const classe_fr = inscription?.classe_fr?.nom_fr ?? '';
-  const classe_ar = inscription?.classe_ar?.nom_fr ?? '';
+  const classe_fr = classeParFiliere(inscription?.classes, 'FR')?.nom_fr ?? '';
+  const classe_ar = classeParFiliere(inscription?.classes, 'AR')?.nom_fr ?? '';
   const annee_scolaire = inscription?.annee_scolaire?.libelle ?? '';
   const dateInscription = inscription?.date_inscription ? fmtDate(inscription.date_inscription) : '';
   const statutInscription = inscription?.statut ?? '';
@@ -619,7 +619,7 @@ async function buildTableauNotesClasse(
 async function buildListeClasse(classe_id: string, annee_scolaire_id: string, _etablissement_id: string): Promise<string> {
   const inscriptions = await prisma.inscription.findMany({
     where: {
-      classe_fr_id: classe_id,
+      classes: { some: { classe_id } },
       annee_scolaire_id: annee_scolaire_id || undefined,
       statut: 'actif',
     },
@@ -781,7 +781,7 @@ async function genererCarteEleve(
     include: {
       inscriptions: {
         where: { statut: 'actif' },
-        include: { classe_fr: true, classe_ar: true, annee_scolaire: true },
+        include: { ...selectLiensClasseObjet, annee_scolaire: true },
         orderBy: { date_inscription: 'desc' },
         take: 1,
       },
@@ -803,8 +803,8 @@ async function genererCarteEleve(
     NOM_ELEVE: eleve.nom_fr,
     PRENOM_ELEVE: eleve.prenom_fr ?? '',
     MATRICULE: eleve.matricule,
-    CLASSE_FR: inscription?.classe_fr?.nom_fr ?? '',
-    CLASSE_AR: inscription?.classe_ar?.nom_fr ?? '',
+    CLASSE_FR: classeParFiliere(inscription?.classes, 'FR')?.nom_fr ?? '',
+    CLASSE_AR: classeParFiliere(inscription?.classes, 'AR')?.nom_fr ?? '',
     ANNEE_SCOLAIRE: inscription?.annee_scolaire?.libelle ?? '',
     PHOTO_ELEVE: eleve.photo_url
       ? `<img src="${eleve.photo_url}" alt="Photo" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
@@ -894,7 +894,7 @@ async function buildA4DocumentHtml(
     if (type === 'RELEVE_NOTES') {
       const inscription = await prisma.inscription.findFirst({
         where: { eleve_id: destinataire_id, statut: 'actif' },
-        include: { annee_scolaire: true },
+        include: { annee_scolaire: true, ...selectLiensClasse },
         orderBy: { date_inscription: 'desc' },
       });
       if (inscription) {
@@ -912,8 +912,8 @@ async function buildA4DocumentHtml(
         const periodes = [1, 2, 3];
         const baremes = new Map<string, { coeff: number; note_max: number; evaluee: boolean }>();
         for (const [cid, fil] of [
-          [inscription.classe_fr_id, 'FR'] as const,
-          [inscription.classe_ar_id, 'AR'] as const,
+          [classeIdParFiliere(inscription.classes, 'FR'), 'FR'] as const,
+          [classeIdParFiliere(inscription.classes, 'AR'), 'AR'] as const,
         ]) {
           if (!cid) continue;
           for (const [k, v] of await getBaremesClasse(cid, periodes, [fil])) baremes.set(k, v);
@@ -934,8 +934,8 @@ async function buildA4DocumentHtml(
           // les bulletins — et non une moyenne brute des notes (barèmes variables).
           let somme = 0, n = 0;
           for (const [cid, fil] of [
-            [inscription.classe_fr_id, 'FR'] as const,
-            [inscription.classe_ar_id, 'AR'] as const,
+            [classeIdParFiliere(inscription.classes, 'FR'), 'FR'] as const,
+            [classeIdParFiliere(inscription.classes, 'AR'), 'AR'] as const,
           ]) {
             if (!cid) continue;
             const moys = await calculerMoyennesClasse(etablissement_id, cid, inscription.annee_scolaire_id, periodes, [fil]);
@@ -950,10 +950,12 @@ async function buildA4DocumentHtml(
     if (type === 'EMPLOI_DU_TEMPS_ELEVE') {
       const inscription = await prisma.inscription.findFirst({
         where: { eleve_id: destinataire_id, statut: 'actif' },
+        include: { ...selectLiensClasse },
         orderBy: { date_inscription: 'desc' },
       });
-      if (inscription?.classe_fr_id) {
-        vars.TABLEAU_EMPLOI_DU_TEMPS = await buildEmploiDuTemps(inscription.classe_fr_id);
+      const classeEmploi = classeIdParFiliere(inscription?.classes, 'FR');
+      if (classeEmploi) {
+        vars.TABLEAU_EMPLOI_DU_TEMPS = await buildEmploiDuTemps(classeEmploi);
       }
     }
   } else if (destinataire_type === 'professeur') {

@@ -2,6 +2,7 @@ import prisma from '../../config/database';
 import { ValiderProgressionInput } from './progression.schema';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 import { NotFoundError } from '../../utils/errors';
+import { selectLiensClasseObjet, classeParFiliere } from '../../utils/inscriptionClasse';
 
 export async function listerProgressions(
   etablissement_id: string,
@@ -163,8 +164,7 @@ export async function historiqueEleve(eleve_id: string, etablissement_id: string
       where: { eleve_id },
       include: {
         annee_scolaire: true,
-        classe_fr:      { select: { nom_fr: true } },
-        classe_ar:      { select: { nom_fr: true } },
+        ...selectLiensClasseObjet,
       },
       orderBy: { annee_scolaire: { date_debut: 'desc' } },
     }),
@@ -187,7 +187,12 @@ export async function historiqueEleve(eleve_id: string, etablissement_id: string
 
   return {
     eleve,
-    inscriptions,
+    // Rétro-compat d'affichage : classe_fr / classe_ar dérivés de la jointure.
+    inscriptions: inscriptions.map(i => ({
+      ...i,
+      classe_fr: classeParFiliere(i.classes, 'FR'),
+      classe_ar: classeParFiliere(i.classes, 'AR'),
+    })),
     progressions,
     absences_par_annee: absencesParAnnee,
     paiements_par_annee: paiementsParAnnee,

@@ -18,6 +18,24 @@ export const selectLiensClasse = {
 
 export type LienClasseCode = { classe_id: string; filiere: { code: string } | null };
 
+// Include Prisma chargeant l'OBJET Classe complet (+ niveau) par filière, pour les
+// affichages qui ont besoin du nom / niveau de la classe (listes, exports, documents).
+export const selectLiensClasseObjet = {
+  classes: { include: { classe: { include: { niveau: true } }, filiere: { select: { code: true } } } },
+} as const;
+
+/**
+ * Objet Classe rattaché à une inscription pour un code de filière donné, dérivé de
+ * la jointure (remplace la lecture de la relation classe_fr / classe_ar). Renvoie
+ * null si l'élève ne suit pas cette filière.
+ */
+export function classeParFiliere<C>(
+  liens: ({ filiere: { code: string } | null; classe: C })[] | null | undefined,
+  code: string,
+): C | null {
+  return liens?.find(l => l.filiere?.code === code)?.classe ?? null;
+}
+
 /**
  * Id de la classe rattachée à une inscription pour un code de filière donné,
  * dérivé de la jointure InscriptionClasse. Remplace la lecture directe de
