@@ -86,9 +86,10 @@ model Filiere {
   created_at       DateTime @default(now())
   updated_at       DateTime @updatedAt
 
-  etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
-  classes       Classe[]
-  matieres      Matiere[]
+  etablissement        Etablissement       @relation(fields: [etablissement_id], references: [id])
+  classes              Classe[]
+  matieres             Matiere[]
+  inscriptions_classes InscriptionClasse[]
 
   @@unique([etablissement_id, code])
   @@index([etablissement_id])
@@ -446,17 +447,18 @@ model Classe {
   // sert qu'au regroupement inter-années, il n'est donc pas unique en base.
   code              String?
 
-  etablissement   Etablissement            @relation(fields: [etablissement_id], references: [id])
-  filiere_ref     Filiere?                 @relation(fields: [filiere_id], references: [id])
-  annee_scolaire  AnneeScolaire            @relation(fields: [annee_scolaire_id], references: [id])
-  niveau          Niveau?                  @relation(fields: [niveau_id], references: [id])
-  inscriptions_fr Inscription[]            @relation("ClasseFR")
-  inscriptions_ar Inscription[]            @relation("ClasseAR")
-  prof_matieres   PersonnelMatiereClasse[]
-  absences        AbsenceEleve[]
-  classe_matieres ClasseMatiere[]
-  creneaux        Creneau[]
-  evaluations     Evaluation[]
+  etablissement        Etablissement            @relation(fields: [etablissement_id], references: [id])
+  filiere_ref          Filiere?                 @relation(fields: [filiere_id], references: [id])
+  annee_scolaire       AnneeScolaire            @relation(fields: [annee_scolaire_id], references: [id])
+  niveau               Niveau?                  @relation(fields: [niveau_id], references: [id])
+  inscriptions_fr      Inscription[]            @relation("ClasseFR")
+  inscriptions_ar      Inscription[]            @relation("ClasseAR")
+  inscriptions_classes InscriptionClasse[]
+  prof_matieres        PersonnelMatiereClasse[]
+  absences             AbsenceEleve[]
+  classe_matieres      ClasseMatiere[]
+  creneaux             Creneau[]
+  evaluations          Evaluation[]
 
   @@index([etablissement_id])
   @@index([etablissement_id, annee_scolaire_id])
@@ -574,11 +576,34 @@ model Inscription {
   statut            String   @default("actif")
   created_at        DateTime @default(now())
 
-  eleve          Eleve           @relation(fields: [eleve_id], references: [id])
-  classe_fr      Classe?         @relation("ClasseFR", fields: [classe_fr_id], references: [id])
-  classe_ar      Classe?         @relation("ClasseAR", fields: [classe_ar_id], references: [id])
-  annee_scolaire AnneeScolaire   @relation(fields: [annee_scolaire_id], references: [id])
+  eleve          Eleve               @relation(fields: [eleve_id], references: [id])
+  classe_fr      Classe?             @relation("ClasseFR", fields: [classe_fr_id], references: [id])
+  classe_ar      Classe?             @relation("ClasseAR", fields: [classe_ar_id], references: [id])
+  annee_scolaire AnneeScolaire       @relation(fields: [annee_scolaire_id], references: [id])
   paiements      PaiementEleve[]
+  classes        InscriptionClasse[]
+}
+
+// Rattachement d'une inscription à UNE classe PAR filière. Remplace à terme les
+// colonnes câblées Inscription.classe_fr_id / classe_ar_id par un modèle N-filières
+// (l'élève peut suivre 1 ou plusieurs filières en parallèle, dont l'anglais).
+// Phase 2a : peuplée en parallèle (backfill + double-écriture) ; les lecteurs
+// basculeront dessus en Phase 2b avant le retrait des 2 colonnes.
+model InscriptionClasse {
+  id             String   @id @default(uuid())
+  inscription_id String
+  filiere_id     String
+  classe_id      String
+  created_at     DateTime @default(now())
+
+  inscription Inscription @relation(fields: [inscription_id], references: [id], onDelete: Cascade)
+  filiere     Filiere     @relation(fields: [filiere_id], references: [id])
+  classe      Classe      @relation(fields: [classe_id], references: [id])
+
+  @@unique([inscription_id, filiere_id])
+  @@index([classe_id])
+  @@index([filiere_id])
+  @@index([inscription_id])
 }
 
 model PaiementEleve {

@@ -322,6 +322,12 @@ async function main() {
           ...(e.ca ? { classe_ar_id: e.ca } : {}),
         },
       });
+      // Jointure InscriptionClasse (Phase 2a) : une ligne par filière assignée.
+      const liens = [
+        ...(e.cf && filiereByCode.get('FR') ? [{ inscription_id: e.inscId, filiere_id: filiereByCode.get('FR')!, classe_id: e.cf }] : []),
+        ...(e.ca && filiereByCode.get('AR') ? [{ inscription_id: e.inscId, filiere_id: filiereByCode.get('AR')!, classe_id: e.ca }] : []),
+      ];
+      if (liens.length) await prisma.inscriptionClasse.createMany({ data: liens, skipDuplicates: true });
     }
   }
   console.log('✅ Élèves test (20) + inscriptions');
