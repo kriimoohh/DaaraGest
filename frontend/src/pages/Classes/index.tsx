@@ -191,6 +191,7 @@ export function ClassesPage() {
   // Duplication FR → AR
   const [dupliquerModal, setDupliquerModal] = useState<Classe | null>(null);
   const [dupliquerNom, setDupliquerNom]     = useState('');
+  const [dupliquerCible, setDupliquerCible] = useState('');
   const [dupliquerLoading, setDupliquerLoading] = useState(false);
 
   // Liste des élèves d'une classe
@@ -505,25 +506,30 @@ export function ClassesPage() {
     }
   }
 
+  // Filières vers lesquelles on peut dupliquer une classe (actives, ≠ celle de la source).
+  const ciblesDuplication = (classe: Classe) => filieresActives.filter(f => f.code !== classe.filiere);
+
   function openDupliquer(classe: Classe) {
     setDupliquerModal(classe);
     setDupliquerNom('');
+    setDupliquerCible(ciblesDuplication(classe)[0]?.code ?? '');
   }
 
-  async function handleDupliquerAr() {
-    if (!dupliquerModal) return;
+  async function handleDupliquer() {
+    if (!dupliquerModal || !dupliquerCible) return;
     setDupliquerLoading(true);
     try {
-      const payload: Record<string, string> = {};
+      const payload: Record<string, string> = { filiere_cible: dupliquerCible };
       if (dupliquerNom.trim()) payload.nom_fr = dupliquerNom.trim();
       const res = await api.post<{ classe: Classe; stats: { total_eleves_source: number; eleves_inscrits: number; eleves_ignores: number } }>(
-        `/api/v1/classes/${dupliquerModal.id}/dupliquer-ar`,
+        `/api/v1/classes/${dupliquerModal.id}/dupliquer`,
         payload
       );
       const { stats } = res;
+      const cibleNom = filieresActives.find(f => f.code === dupliquerCible)?.nom_fr ?? dupliquerCible;
       const msg = stats.eleves_ignores > 0
-        ? `Classe "${res.classe.nom_fr}" créée — ${stats.eleves_inscrits} élève(s) inscrits, ${stats.eleves_ignores} ignoré(s) (déjà en filière arabe)`
-        : `Classe "${res.classe.nom_fr}" créée — ${stats.eleves_inscrits} élève(s) inscrits en filière arabe`;
+        ? `Classe "${res.classe.nom_fr}" créée — ${stats.eleves_inscrits} élève(s) rattaché(s), ${stats.eleves_ignores} ignoré(s) (déjà en ${cibleNom})`
+        : `Classe "${res.classe.nom_fr}" créée — ${stats.eleves_inscrits} élève(s) rattaché(s) en ${cibleNom}`;
       toast.success(msg);
       setDupliquerModal(null);
       fetchClasses();
@@ -933,13 +939,13 @@ export function ClassesPage() {
                   <button className="btn btn-secondary btn-sm grow" onClick={() => openListeEleves(c)}>{t('classe.btn_eleves')}</button>
                   <button className="btn btn-secondary btn-sm grow" onClick={() => openProgramme(c)}>{t('classe.btn_programme')}</button>
                 </div>
-                {isGestion && c.filiere === 'FR' && (
+                {isGestion && ciblesDuplication(c).length > 0 && (
                   <button
                     className="btn btn-ghost btn-sm"
                     style={{ fontSize: 11, color: 'var(--ink-3)', borderTop: '1px solid var(--rule)', paddingTop: 8, marginTop: -4 }}
                     onClick={() => openDupliquer(c)}
                   >
-                    ⇄ Dupliquer en filière arabe
+                    ⇄ Dupliquer vers une filière…
                   </button>
                 )}
               </div>
@@ -1332,34 +1338,45 @@ export function ClassesPage() {
       </Modal>
     )}
 
-    {/* ── Modale liste des élèves ──────────────────────────────────────────── */}
-    {/* ── Modale duplication FR → AR ─────────────────────────────────────── */}
-    {dupliquerModal && (
+    {/* ── Modale duplication vers une filière ───────────────────────────── */}
+    {dupliquerModal && (() => {
+      const cibles = ciblesDuplication(dupliquerModal);
+      const cibleNom = cibles.find(f => f.code === dupliquerCible)?.nom_fr ?? dupliquerCible;
+      return (
       <Modal
         isOpen={!!dupliquerModal}
         onClose={() => setDupliquerModal(null)}
-        title="Dupliquer en filière arabe"
+        title="Dupliquer vers une filière"
         size="sm"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <p style={{ fontSize: 13, color: 'var(--ink-3)', lineHeight: 1.6 }}>
-            Une nouvelle classe <strong>Filière Arabe</strong> sera créée à partir de{' '}
-            <strong>{dupliquerModal.nom_fr}</strong>. Tous les élèves actifs sans classe arabe seront
-            automatiquement inscrits.
+            Une nouvelle classe sera créée dans la filière choisie à partir de{' '}
+            <strong>{dupliquerModal.nom_fr}</strong>. Les élèves de cette classe qui n'ont pas encore
+            de classe dans la filière cible y seront automatiquement rattachés.
           </p>
+          <Select
+            label="Filière cible"
+            value={dupliquerCible}
+            onChange={e => setDupliquerCible(e.target.value)}
+            options={cibles.map(f => ({ value: f.code, label: nomBilingue(f) }))}
+          />
           <Input
-            label="Nom de la nouvelle classe AR (optionnel)"
+            label="Nom de la nouvelle classe (optionnel)"
             value={dupliquerNom}
             onChange={e => setDupliquerNom(e.target.value)}
-            placeholder={`${dupliquerModal.nom_fr} (AR)`}
+            placeholder={`${dupliquerModal.nom_fr} (${dupliquerCible})`}
           />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
             <Button variant="secondary" onClick={() => setDupliquerModal(null)}>Annuler</Button>
-            <Button onClick={handleDupliquerAr} loading={dupliquerLoading}>Dupliquer</Button>
+            <Button onClick={handleDupliquer} loading={dupliquerLoading} disabled={!dupliquerCible}>
+              Dupliquer vers {cibleNom}
+            </Button>
           </div>
         </div>
       </Modal>
-    )}
+      );
+    })()}
 
     {listeModal && (
       <Modal
