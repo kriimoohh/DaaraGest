@@ -435,7 +435,7 @@ async function buildTableauNotesClasse(
       where: {
         annee_scolaire_id,
         statut: 'actif',
-        OR: [{ classe_fr_id: classe_id }, { classe_ar_id: classe_id }],
+        classes: { some: { classe_id } },
       },
       include: { eleve: { select: { id: true, nom_fr: true, prenom_fr: true, matricule: true } } },
       orderBy: { eleve: { nom_fr: 'asc' } },

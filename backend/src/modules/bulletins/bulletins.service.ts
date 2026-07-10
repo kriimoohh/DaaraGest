@@ -146,7 +146,7 @@ async function getMatieres(etablissement_id: string, filiere: 'FR' | 'AR') {
 
 async function getElevesClasse(classe_id: string, annee_scolaire_id: string) {
   return prisma.inscription.findMany({
-    where: { annee_scolaire_id, statut: 'actif', OR: [{ classe_fr_id: classe_id }, { classe_ar_id: classe_id }] },
+    where: { annee_scolaire_id, statut: 'actif', classes: { some: { classe_id } } },
     include: { eleve: true },
   });
 }
@@ -326,7 +326,7 @@ export async function listerBulletins(
     eleveWhere.inscriptions = {
       some: {
         ...(annee_scolaire_id ? { annee_scolaire_id } : {}),
-        OR: [{ classe_fr_id: classe_id }, { classe_ar_id: classe_id }],
+        classes: { some: { classe_id } },
       },
     };
   }
@@ -365,7 +365,7 @@ export async function bulletinsImpactesParMatiere(
     where: {
       filiere: { in: filieres },
       periode: { in: periodes },
-      eleve: { inscriptions: { some: { OR: [{ classe_fr_id: classe_id }, { classe_ar_id: classe_id }] } } },
+      eleve: { inscriptions: { some: { classes: { some: { classe_id } } } } },
     },
     select: { id: true, eleve_id: true, periode: true, filiere: true, valide_le: true },
   });
@@ -393,7 +393,7 @@ export async function deverrouillerPeriode(
       valide_le: { not: null },
       eleve: {
         etablissement_id,
-        inscriptions: { some: { OR: [{ classe_fr_id: data.classe_id }, { classe_ar_id: data.classe_id }] } },
+        inscriptions: { some: { classes: { some: { classe_id: data.classe_id } } } },
       },
     },
     select: { id: true },
@@ -1075,7 +1075,7 @@ export async function genererPdfClasse(
   const bulletins = await prisma.bulletin.findMany({
     where: {
       annee_scolaire_id, periode, filiere,
-      eleve: { etablissement_id, inscriptions: { some: { annee_scolaire_id, OR: [{ classe_fr_id: classe_id }, { classe_ar_id: classe_id }] } } },
+      eleve: { etablissement_id, inscriptions: { some: { annee_scolaire_id, classes: { some: { classe_id } } } } },
     },
     include: { eleve: true, annee_scolaire: true },
     orderBy: [{ rang: 'asc' }, { eleve: { nom_fr: 'asc' } }],

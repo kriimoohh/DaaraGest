@@ -39,7 +39,7 @@ export async function listerEleves(
   if (classe_id) {
     where.inscriptions = {
       some: {
-        OR: [{ classe_fr_id: classe_id }, { classe_ar_id: classe_id }],
+        classes: { some: { classe_id } },
       },
     };
   }
