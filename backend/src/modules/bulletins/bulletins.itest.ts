@@ -132,10 +132,10 @@ beforeAll(async () => {
 
   await prisma.inscription.createMany({
     data: [
-      // Élève A : bilingue (classe FR + classe AR sur la même inscription).
-      { id: ids.inscA, eleve_id: ids.eleveA, classe_fr_id: classeId, classe_ar_id: classeArId, annee_scolaire_id: anneeId, statut: 'actif' },
-      // Élève B : FR uniquement (pas de classe AR) — le COMBINE doit alors valoir le FR seul.
-      { id: ids.inscB, eleve_id: ids.eleveB, classe_fr_id: classeId, annee_scolaire_id: anneeId, statut: 'actif' },
+      // Élève A : bilingue (classes FR + AR via la jointure ci-dessous).
+      { id: ids.inscA, eleve_id: ids.eleveA, annee_scolaire_id: anneeId, statut: 'actif' },
+      // Élève B : FR uniquement — le COMBINE doit alors valoir le FR seul.
+      { id: ids.inscB, eleve_id: ids.eleveB, annee_scolaire_id: anneeId, statut: 'actif' },
     ],
   });
   // Jointure InscriptionClasse (Phase 2a) : une ligne par classe assignée — c'est

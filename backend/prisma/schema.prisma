@@ -451,8 +451,6 @@ model Classe {
   filiere_ref          Filiere?                 @relation(fields: [filiere_id], references: [id])
   annee_scolaire       AnneeScolaire            @relation(fields: [annee_scolaire_id], references: [id])
   niveau               Niveau?                  @relation(fields: [niveau_id], references: [id])
-  inscriptions_fr      Inscription[]            @relation("ClasseFR")
-  inscriptions_ar      Inscription[]            @relation("ClasseAR")
   inscriptions_classes InscriptionClasse[]
   prof_matieres        PersonnelMatiereClasse[]
   absences             AbsenceEleve[]
@@ -569,18 +567,15 @@ model Parent {
 model Inscription {
   id                String   @id @default(uuid())
   eleve_id          String
-  classe_fr_id      String?
-  classe_ar_id      String?
   annee_scolaire_id String
   date_inscription  DateTime @default(now())
   statut            String   @default("actif")
   created_at        DateTime @default(now())
 
   eleve          Eleve               @relation(fields: [eleve_id], references: [id])
-  classe_fr      Classe?             @relation("ClasseFR", fields: [classe_fr_id], references: [id])
-  classe_ar      Classe?             @relation("ClasseAR", fields: [classe_ar_id], references: [id])
   annee_scolaire AnneeScolaire       @relation(fields: [annee_scolaire_id], references: [id])
   paiements      PaiementEleve[]
+  // Rattachement classe↔filière (remplace classe_fr_id/classe_ar_id, retirés en Phase 2d).
   classes        InscriptionClasse[]
 }
 

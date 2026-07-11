@@ -53,10 +53,11 @@ export async function listerClasses(etablissement_id: string, annee_scolaire_id?
     include: {
       annee_scolaire: true,
       niveau: true,
+      // Effectif = nombre d'élèves rattachés à cette classe via la jointure
+      // (une ligne InscriptionClasse par élève dans la classe), inscription active.
       _count: {
         select: {
-          inscriptions_fr: { where: { statut: 'actif' } },
-          inscriptions_ar: { where: { statut: 'actif' } },
+          inscriptions_classes: { where: { inscription: { statut: 'actif' } } },
         },
       },
     },
@@ -65,7 +66,7 @@ export async function listerClasses(etablissement_id: string, annee_scolaire_id?
 
   return classes.map(({ _count, ...c }) => ({
     ...c,
-    effectif: c.filiere === 'FR' ? _count.inscriptions_fr : _count.inscriptions_ar,
+    effectif: _count.inscriptions_classes,
   }));
 }
 
@@ -457,9 +458,6 @@ export async function dupliquerClasse(
   const dejaSet = new Set(dejaCible.map(x => x.inscription_id));
   const aInscrire = sourceIds.filter(iid => !dejaSet.has(iid));
 
-  // Colonne rétro-compat seulement pour FR/AR.
-  const colonne = cible === 'FR' ? 'classe_fr_id' : cible === 'AR' ? 'classe_ar_id' : null;
-
   return prisma.$transaction(async (tx) => {
     const nom = data.nom_fr ?? `${source.nom_fr} (${cible})`;
 
@@ -482,9 +480,6 @@ export async function dupliquerClasse(
         data: aInscrire.map(iid => ({ inscription_id: iid, filiere_id: filiere_id_cible, classe_id: nouvelleClasse.id })),
         skipDuplicates: true,
       });
-      if (colonne) {
-        await tx.inscription.updateMany({ where: { id: { in: aInscrire } }, data: { [colonne]: nouvelleClasse.id } });
-      }
     }
 
     return {

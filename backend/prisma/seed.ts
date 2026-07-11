@@ -317,12 +317,9 @@ async function main() {
     });
     if (!await prisma.inscription.findFirst({ where: { id: e.inscId } })) {
       await prisma.inscription.create({
-        data: { id: e.inscId, eleve_id: e.id, annee_scolaire_id: ID.annees.y2425, statut: 'actif',
-          ...(e.cf ? { classe_fr_id: e.cf } : {}),
-          ...(e.ca ? { classe_ar_id: e.ca } : {}),
-        },
+        data: { id: e.inscId, eleve_id: e.id, annee_scolaire_id: ID.annees.y2425, statut: 'actif' },
       });
-      // Jointure InscriptionClasse (Phase 2a) : une ligne par filière assignée.
+      // Jointure InscriptionClasse : une ligne par filière assignée.
       const liens = [
         ...(e.cf && filiereByCode.get('FR') ? [{ inscription_id: e.inscId, filiere_id: filiereByCode.get('FR')!, classe_id: e.cf }] : []),
         ...(e.ca && filiereByCode.get('AR') ? [{ inscription_id: e.inscId, filiere_id: filiereByCode.get('AR')!, classe_id: e.ca }] : []),
