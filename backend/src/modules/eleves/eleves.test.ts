@@ -26,18 +26,7 @@ describe('genererMatricule personnel', () => {
   it('type P bien présent', () => expect(genererMatriculePersonnel('FIC', '26', 4)).toBe('FIC-P-26-005'));
 });
 
-describe('transfert élève — schéma & champ ciblé', () => {
-  // Réplique la sélection du champ inscription selon la filière (voir transfererEleve).
-  const champClasse = (filiere: 'FR' | 'AR') => (filiere === 'FR' ? 'classe_fr_id' : 'classe_ar_id');
-
-  it('filière FR cible classe_fr_id', () => {
-    expect(champClasse('FR')).toBe('classe_fr_id');
-  });
-
-  it('filière AR cible classe_ar_id', () => {
-    expect(champClasse('AR')).toBe('classe_ar_id');
-  });
-
+describe('transfert élève — schéma', () => {
   it('accepte un transfert FR valide', () => {
     const r = transfertSchema.safeParse({ annee_scolaire_id: UUID, filiere: 'FR', nouvelle_classe_id: UUID });
     expect(r.success).toBe(true);
