@@ -133,15 +133,15 @@ export function BulletinsPage() {
   const noteMax = useNoteMax();
   const { actives: filieresActives } = useFilieres();
   // Types de bulletin construits depuis les filières actives de l'établissement :
-  // une entrée trimestre + une annuelle par filière. Le combiné FR+AR reste proposé
-  // tant que ces deux filières sont actives (le combiné générique viendra en 3-2).
-  const aFR = filieresActives.some(f => f.code === 'FR');
-  const aAR = filieresActives.some(f => f.code === 'AR');
+  // une entrée trimestre + une annuelle par filière. Le combiné (Phase 3-2) fusionne
+  // TOUTES les filières actives ; il est proposé dès qu'au moins deux sont actives.
+  const combineCodes = filieresActives.map(f => f.code).join('+'); // ex. « FR+AR », « FR+EN »
+  const aCombine = filieresActives.length >= 2;
   const typeOptions = [
     ...filieresActives.map(f => ({ value: f.code, label: `📄 Trimestre — ${nomBilingue(f)}` })),
-    ...(aFR && aAR ? [{ value: 'COMBINE', label: '📕 Trimestre — Combiné FR+AR' }] : []),
+    ...(aCombine ? [{ value: 'COMBINE', label: `📕 Trimestre — Combiné ${combineCodes}` }] : []),
     ...filieresActives.map(f => ({ value: `ANNUEL_${f.code}`, label: `🗓 Annuel — ${nomBilingue(f)}` })),
-    ...(aFR && aAR ? [{ value: 'ANNUEL_COMBINE', label: '🗓 Annuel — Combiné FR+AR' }] : []),
+    ...(aCombine ? [{ value: 'ANNUEL_COMBINE', label: `🗓 Annuel — Combiné ${combineCodes}` }] : []),
   ];
   const [annees, setAnnees] = useState<AnneeScolaire[]>([]);
   const [classes, setClasses] = useState<Classe[]>([]);
@@ -767,7 +767,11 @@ function BulletinDetailContent({
 
   const moy = detail.moyenne !== null ? Number(detail.moyenne) : null;
   const isAnnuel = detail.periode === 0;
-  const filieres: ('FR' | 'AR' | 'EN')[] = detail.filiere === 'COMBINE' ? ['FR', 'AR'] : [detail.filiere as 'FR' | 'AR' | 'EN'];
+  // COMBINE : les filières réellement fusionnées (clés présentes dans notesByFiliere,
+  // dans l'ordre canonique) — généralise le FR+AR figé (Phase 3-2).
+  const filieres: ('FR' | 'AR' | 'EN')[] = detail.filiere === 'COMBINE'
+    ? (['FR', 'AR', 'EN'] as const).filter(c => detail.notesByFiliere[c])
+    : [detail.filiere as 'FR' | 'AR' | 'EN'];
   const insc = detail.eleve.inscriptions?.[0];
   const classeNom = insc?.classe_fr?.nom_fr ?? insc?.classe_ar?.nom_fr ?? '—';
 
