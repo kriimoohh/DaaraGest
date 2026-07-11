@@ -296,12 +296,9 @@ export async function inscrireEleve(id: string, etablissement_id: string, data: 
     data: {
       eleve_id: id,
       annee_scolaire_id: data.annee_scolaire_id,
-      // Colonnes rétro-compat (FR/AR uniquement).
-      classe_fr_id: parCode.get('FR') ?? null,
-      classe_ar_id: parCode.get('AR') ?? null,
     },
   });
-  // Jointure (source de vérité) : une ligne par filière rattachée.
+  // Jointure InscriptionClasse (source de vérité) : une ligne par filière rattachée.
   for (const classe_id of parCode.values()) {
     await syncInscriptionClasse(inscription.id, classe_id);
   }
@@ -341,10 +338,6 @@ export async function transfererEleve(
     throw new ValidationError("La classe de destination n'appartient pas à cette année scolaire");
   }
 
-  // Colonne rétro-compat : seules FR/AR ont une colonne dédiée. Les autres filières
-  // (anglais…) ne vivent que dans la jointure InscriptionClasse.
-  const colonne = data.filiere === 'FR' ? 'classe_fr_id' : data.filiere === 'AR' ? 'classe_ar_id' : null;
-
   // Inscription existante pour cette année (la plus récente si doublon historique).
   const inscription = await prisma.inscription.findFirst({
     where: { eleve_id: id, annee_scolaire_id: data.annee_scolaire_id },
@@ -358,24 +351,11 @@ export async function transfererEleve(
     throw new ValidationError('L\'élève est déjà inscrit dans cette classe');
   }
 
-  let inscriptionId: string;
-  if (inscription) {
-    inscriptionId = inscription.id;
-    if (colonne) {
-      await prisma.inscription.update({ where: { id: inscription.id }, data: { [colonne]: data.nouvelle_classe_id } });
-    }
-  } else {
-    const created = await prisma.inscription.create({
-      data: {
-        eleve_id: id,
-        annee_scolaire_id: data.annee_scolaire_id,
-        ...(colonne ? { [colonne]: data.nouvelle_classe_id } : {}),
-      },
-    });
-    inscriptionId = created.id;
-  }
+  const inscriptionId = inscription
+    ? inscription.id
+    : (await prisma.inscription.create({ data: { eleve_id: id, annee_scolaire_id: data.annee_scolaire_id } })).id;
 
-  // Jointure (source de vérité) : rattache cette filière à la nouvelle classe.
+  // Jointure InscriptionClasse (source de vérité) : rattache cette filière à la nouvelle classe.
   await syncInscriptionClasse(inscriptionId, data.nouvelle_classe_id);
 
   const resultat = await prisma.inscription.findUniqueOrThrow({
@@ -438,8 +418,6 @@ export async function bulkInscrireEleves(ids: string[], etablissement_id: string
     data: validIds.map(eleve_id => ({
       eleve_id,
       annee_scolaire_id: data.annee_scolaire_id,
-      classe_fr_id: parCode.get('FR') ?? null,
-      classe_ar_id: parCode.get('AR') ?? null,
     })),
     skipDuplicates: true,
   });
