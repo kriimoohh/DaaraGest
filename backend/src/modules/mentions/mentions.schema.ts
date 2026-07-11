@@ -8,7 +8,8 @@ export const creerMentionSchema = z.object({
   seuil_min:  z.number().finite().min(0),
   couleur:    z.enum(COULEURS).default('info'),
   ordre:      z.number().int().min(0).optional(),
-  // null/absent = mention par défaut établissement ; sinon override de ce niveau.
+  // null/absent = toutes filières / tous niveaux ; sinon override de cette portée.
+  filiere_id: z.string().uuid().optional().nullable(),
   niveau_id:  z.string().uuid().optional().nullable(),
 });
 
