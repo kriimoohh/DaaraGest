@@ -57,6 +57,7 @@ export async function getPortailData(token: string) {
   });
   const classeIdFR = classeIdParFiliere(inscription?.classes, 'FR');
   const classeIdAR = classeIdParFiliere(inscription?.classes, 'AR');
+  const classeIdEN = classeIdParFiliere(inscription?.classes, 'EN');
 
   // Échelle de l'établissement + barèmes/coefficients EFFECTIFS par classe (override
   // de période prioritaire), pour normaliser les notes comme les bulletins.
@@ -73,6 +74,9 @@ export async function getPortailData(token: string) {
   }
   if (classeIdAR) {
     for (const [k, v] of await getBaremesClasse(classeIdAR, periodes, ['AR'], noteMaxBase)) baremes.set(k, v);
+  }
+  if (classeIdEN) {
+    for (const [k, v] of await getBaremesClasse(classeIdEN, periodes, ['EN'], noteMaxBase)) baremes.set(k, v);
   }
 
   // Get notes
