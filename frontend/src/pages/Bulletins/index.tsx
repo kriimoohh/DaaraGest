@@ -765,7 +765,16 @@ function BulletinDetailContent({
     } finally { setSavingObs(false); }
   };
 
-  const moy = detail.moyenne !== null ? Number(detail.moyenne) : null;
+  // Échelle d'affichage : celle de la filière pour un bulletin MONO-filière (phase 3),
+  // sinon l'échelle établissement. La moyenne stockée (canonique) est re-scalée.
+  const echelle = (() => {
+    if (detail.filiere === 'COMBINE') return noteMax;
+    const fil = filieresActives.find(f => f.code === detail.filiere);
+    const nm = fil?.note_max != null ? Number(fil.note_max) : null;
+    return nm && nm > 0 ? nm : noteMax;
+  })();
+  const factor = noteMax > 0 ? echelle / noteMax : 1;
+  const moy = detail.moyenne !== null ? Number(detail.moyenne) * factor : null;
   const isAnnuel = detail.periode === 0;
   // COMBINE : les filières réellement fusionnées (clés présentes dans notesByFiliere,
   // dans l'ordre canonique) — généralise le FR+AR figé (Phase 3-2).
@@ -784,16 +793,16 @@ function BulletinDetailContent({
     return fil ? nomBilingue(fil) : f;
   };
 
-  const bandeauBg = moy === null ? 'var(--paper-2)' : moy >= noteMax * 0.7 ? 'var(--success-soft)' : moy >= noteMax * 0.5 ? 'var(--warning-soft)' : 'var(--danger-soft)';
+  const bandeauBg = moy === null ? 'var(--paper-2)' : moy >= echelle * 0.7 ? 'var(--success-soft)' : moy >= echelle * 0.5 ? 'var(--warning-soft)' : 'var(--danger-soft)';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Bandeau moyenne + rang */}
       <div style={{ borderRadius: 'var(--r-lg)', padding: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, background: bandeauBg }}>
         <div>
-          <div style={{ fontSize: 36, fontWeight: 700, color: moyenneColor(moy, noteMax) }}>
+          <div style={{ fontSize: 36, fontWeight: 700, color: moyenneColor(moy, echelle) }}>
             {moy !== null ? moy.toFixed(2) : 'N/A'}
-            <span style={{ fontSize: 16, fontWeight: 400, color: 'var(--ink-4)', marginInlineStart: 4 }}>/{noteMax}</span>
+            <span style={{ fontSize: 16, fontWeight: 400, color: 'var(--ink-4)', marginInlineStart: 4 }}>/{echelle}</span>
           </div>
           {detail.appreciation && (
             <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--ink-2)', marginTop: 4 }}>{detail.appreciation}</div>

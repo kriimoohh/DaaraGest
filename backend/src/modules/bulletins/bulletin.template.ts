@@ -39,6 +39,9 @@ interface BulletinBaseData {
   appreciation: string | null;
   devise: string;
   note_max_etab?: number;
+  // Échelle d'affichage de la filière (phase 3) — mono-filière uniquement. Absent /
+  // égal à l'échelle établissement = aucun re-scale. Non fourni pour le combiné.
+  filiere_note_max?: number;
   mentions?: { libelle_fr: string; libelle_ar?: string | null; seuil_min: number }[];
   // Contact établissement (bandeau sous l'en-tête) + maître(s) de la classe.
   etablissement_telephone?: string | null;
@@ -70,13 +73,24 @@ function matiereLabel(nom_fr: string, nom_ar: string | undefined, bilingue: bool
   return fr;
 }
 
-// Échelle de l'établissement (ex: 10) + mentions configurées, fixées au début du rendu.
+// Échelle d'AFFICHAGE de la moyenne (RENDER_BASE) — établissement par défaut, ou
+// échelle de la filière (Filiere.note_max) pour un bulletin mono-filière (phase 3).
+// Le calcul reste CANONIQUE (base établissement) ; RENDER_FACTOR = RENDER_BASE /
+// base établissement re-scale la moyenne stockée + les seuils de mention à
+// l'affichage. Combiné → facteur 1 (base canonique). Tout est proportionnel donc
+// le classement ne change jamais.
 type MentionRow = { libelle_fr: string; libelle_ar?: string | null; seuil_min: number };
 let RENDER_BASE = DEFAULT_NOTE_MAX;
+let RENDER_FACTOR = 1;
 let RENDER_MENTIONS: MentionRow[] = [];
-function setRenderContext(d: { note_max_etab?: number; mentions?: MentionRow[] }) {
-  RENDER_BASE = d.note_max_etab ?? DEFAULT_NOTE_MAX;
-  RENDER_MENTIONS = (d.mentions ?? []).slice().sort((a, b) => b.seuil_min - a.seuil_min);
+function setRenderContext(d: { note_max_etab?: number; filiere_note_max?: number; mentions?: MentionRow[] }) {
+  const etabBase = d.note_max_etab ?? DEFAULT_NOTE_MAX;
+  RENDER_BASE = d.filiere_note_max ?? etabBase;
+  RENDER_FACTOR = etabBase > 0 ? RENDER_BASE / etabBase : 1;
+  // Les seuils de mention sont stockés sur la base établissement → re-scale à l'échelle d'affichage.
+  RENDER_MENTIONS = (d.mentions ?? [])
+    .map(m => ({ ...m, seuil_min: m.seuil_min * RENDER_FACTOR }))
+    .sort((a, b) => b.seuil_min - a.seuil_min);
 }
 // Mention (objet) pour une valeur ramenée sur l'échelle établissement (RENDER_BASE).
 function mentionRowFor(scaled: number | null): MentionRow | null {
@@ -784,7 +798,9 @@ function chromeCtx(data: BulletinBaseData, filiere: 'FR' | 'AR' | 'COMBINE', tit
 // Valeurs du résumé (moyenne générale, rang, mention, sous-moyennes) partagées
 // par les variantes simple et combinée.
 function resumeCtx(data: BulletinBaseData, estCombine: boolean, frMoy: number | null, arMoy: number | null): Record<string, unknown> {
-  const m = data.moyenne;
+  // Moyenne stockée = base canonique établissement → re-scale à l'échelle d'affichage
+  // (RENDER_FACTOR = 1 pour le combiné et pour une filière à l'échelle établissement).
+  const m = data.moyenne !== null ? Number(data.moyenne) * RENDER_FACTOR : null;
   return {
     est_combine: estCombine,
     annee: data.annee_libelle,
