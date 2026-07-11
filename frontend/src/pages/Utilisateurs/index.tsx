@@ -326,7 +326,7 @@ export function UtilisateursPage() {
               label={t('utilisateur.langue')}
               value={form.langue}
               onChange={(e) => setForm((f) => ({ ...f, langue: e.target.value }))}
-              options={[{ value: 'fr', label: t('utilisateur.francais') }, { value: 'ar', label: t('utilisateur.arabe') }]}
+              options={[{ value: 'fr', label: t('utilisateur.francais') }, { value: 'ar', label: t('utilisateur.arabe') }, { value: 'en', label: 'English' }]}
             />
             <Input label={t('common.email')} type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
           </div>
