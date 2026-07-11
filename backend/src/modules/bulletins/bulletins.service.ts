@@ -181,6 +181,15 @@ export async function filieresActivesCodes(etablissement_id: string): Promise<('
   return codes.length > 0 ? codes : ['FR', 'AR'];
 }
 
+// Échelle d'AFFICHAGE d'une filière (Filiere.note_max) pour un bulletin MONO-filière
+// (phase 3). undefined pour COMBINE ou si la filière n'a pas d'échelle propre
+// (→ base établissement, aucun re-scale). Le calcul reste toujours canonique.
+async function echelleFiliere(etablissement_id: string, filiere: string): Promise<number | undefined> {
+  if (filiere === 'COMBINE') return undefined;
+  const f = await prisma.filiere.findFirst({ where: { etablissement_id, code: filiere }, select: { note_max: true } });
+  return f?.note_max != null ? Number(f.note_max) : undefined;
+}
+
 async function getElevesClasse(classe_id: string, annee_scolaire_id: string) {
   return prisma.inscription.findMany({
     where: { annee_scolaire_id, statut: 'actif', classes: { some: { classe_id } } },
@@ -1039,6 +1048,9 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
     : (data.filiere !== 'FR' ? await getMaitresClasse(arId, data.annee_scolaire_id) : null);
   const abs = await getAbsences(data.eleve_id, data.annee_scolaire_id);
 
+  // Échelle d'affichage de la filière (phase 3) — mono-filière uniquement.
+  const filiereNoteMax = await echelleFiliere(etablissement_id, data.filiere);
+
   const base = {
     etablissement_nom_fr: etab.nom_fr,
     etablissement_logo_url: etab.logo_url,
@@ -1051,7 +1063,7 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
     annee_libelle: data.annee_scolaire.libelle,
     moyenne: data.moyenne !== null ? Number(data.moyenne) : null, rang: data.rang,
     appreciation: data.appreciation, devise: etab.devise,
-    note_max_etab: baseNote, mentions,
+    note_max_etab: baseNote, filiere_note_max: filiereNoteMax, mentions,
     etablissement_telephone: etab.telephone,
     etablissement_email: etab.email,
     etablissement_autorisation: etab.numero_autorisation,
@@ -1144,6 +1156,8 @@ export async function genererPdfClasse(
   // Mentions effectives = celles du niveau de la classe imprimée, sinon défauts établissement.
   const classeNiveau = await prisma.classe.findUnique({ where: { id: classe_id }, select: { niveau_id: true } });
   const mentions = await resolveMentions(etablissement_id, filiere === 'COMBINE' ? null : filiere, classeNiveau?.niveau_id);
+  // Échelle d'affichage de la filière (phase 3) — mono-filière uniquement.
+  const filiereNoteMax = await echelleFiliere(etablissement_id, filiere);
 
   const bulletins = await prisma.bulletin.findMany({
     where: {
@@ -1244,7 +1258,7 @@ export async function genererPdfClasse(
       annee_libelle: bulletin.annee_scolaire.libelle,
       moyenne: bulletin.moyenne !== null ? Number(bulletin.moyenne) : null,
       rang: bulletin.rang, appreciation: bulletin.appreciation, devise: etab.devise,
-      note_max_etab: baseNote, mentions,
+      note_max_etab: baseNote, filiere_note_max: filiereNoteMax, mentions,
       etablissement_telephone: etab.telephone,
       etablissement_email: etab.email,
       etablissement_autorisation: etab.numero_autorisation,
@@ -1340,6 +1354,8 @@ export async function apercuBulletinTemplate(etablissement_id: string, type: Typ
     appreciation: mentions[1]?.libelle_fr ?? 'Bien',
     devise: etab.devise,
     note_max_etab: baseNote,
+    // Aperçu éditeur : échelle de la filière du type prévisualisé (mono-filière).
+    filiere_note_max: await echelleFiliere(etablissement_id, type),
     mentions,
     etablissement_telephone: etab.telephone,
     etablissement_email: etab.email,
