@@ -90,6 +90,7 @@ model Filiere {
   classes              Classe[]
   matieres             Matiere[]
   inscriptions_classes InscriptionClasse[]
+  mentions             Mention[]
 
   @@unique([etablissement_id, code])
   @@index([etablissement_id])
@@ -1141,7 +1142,9 @@ model DemandeAbsencePersonnel {
 model Mention {
   id               String   @id @default(uuid())
   etablissement_id String
-  // niveau_id null = mentions par défaut de l'établissement ; sinon override par niveau.
+  // Portée d'une mention (résolution : filière+niveau > filière > niveau > établissement).
+  // filiere_id null = toutes filières ; niveau_id null = tous niveaux.
+  filiere_id       String?
   niveau_id        String?
   libelle_fr       String
   libelle_ar       String?
@@ -1152,11 +1155,13 @@ model Mention {
   created_at       DateTime @default(now())
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
+  filiere       Filiere?      @relation(fields: [filiere_id], references: [id])
   niveau        Niveau?       @relation(fields: [niveau_id], references: [id])
 
-  @@unique([etablissement_id, niveau_id, seuil_min])
+  @@unique([etablissement_id, filiere_id, niveau_id, seuil_min])
   @@index([etablissement_id])
   @@index([niveau_id])
+  @@index([filiere_id])
 }
 
 // Compteur de matricules par établissement + type (E=élève, P=personnel) + année
