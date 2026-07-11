@@ -145,6 +145,25 @@ async function getMatieres(etablissement_id: string, filiere: 'FR' | 'AR' | 'EN'
   });
 }
 
+// Ordre canonique des codes de filière (garantit ['FR','AR'] pour un établissement
+// franco-arabe → COMBINE inchangé, et un ordre déterministe pour EN).
+const CODE_ORDER: ('FR' | 'AR' | 'EN')[] = ['FR', 'AR', 'EN'];
+
+// Codes des filières ACTIVES de l'établissement, dans l'ordre canonique. C'est le
+// périmètre d'un bulletin COMBINE : « combiné » = toutes les filières actives.
+// Un établissement FR+AR seul renvoie ['FR','AR'] (comportement historique).
+async function filieresCombineCodes(etablissement_id: string): Promise<('FR' | 'AR' | 'EN')[]> {
+  const fils = await prisma.filiere.findMany({
+    where: { etablissement_id, actif: true },
+    select: { code: true },
+  });
+  const actifs = new Set(fils.map(f => f.code));
+  const codes = CODE_ORDER.filter(c => actifs.has(c));
+  // Repli de sûreté : si aucune filière n'est configurée (données anciennes), on
+  // retombe sur le franco-arabe historique.
+  return codes.length > 0 ? codes : ['FR', 'AR'];
+}
+
 async function getElevesClasse(classe_id: string, annee_scolaire_id: string) {
   return prisma.inscription.findMany({
     where: { annee_scolaire_id, statut: 'actif', classes: { some: { classe_id } } },
@@ -287,10 +306,10 @@ type InscriptionClasses = { eleve_id: string; classes: LienClasseCode[] };
 type Bareme = { coeff: number; note_max: number; evaluee: boolean };
 
 async function baremesParElevePeriode(
-  inscriptions: InscriptionClasses[], filieres: ('FR' | 'AR')[], periodes: number[], baseNote: number,
+  inscriptions: InscriptionClasses[], filieres: ('FR' | 'AR' | 'EN')[], periodes: number[], baseNote: number,
 ): Promise<Map<string, Map<number, Map<string, Bareme>>>> {
   const cache = new Map<string, Map<string, Bareme>>(); // `${classeId}|${f}|${p}`
-  const getClasse = async (classeId: string, f: 'FR' | 'AR', p: number) => {
+  const getClasse = async (classeId: string, f: 'FR' | 'AR' | 'EN', p: number) => {
     const key = `${classeId}|${f}|${p}`;
     let m = cache.get(key);
     if (!m) {
@@ -365,7 +384,8 @@ export async function bulletinsImpactesParMatiere(
 ): Promise<{ unsigned: BulletinImpacte[]; signed: BulletinImpacte[] }> {
   const matiere = await prisma.matiere.findUnique({ where: { id: matiere_id }, select: { filiere: true } });
   if (!matiere) return { unsigned: [], signed: [] };
-  const filieres = matiere.filiere === 'FR' ? ['FR', 'COMBINE'] : ['AR', 'COMBINE'];
+  // Une note d'une filière impacte le bulletin de SA filière + le COMBINE.
+  const filieres = [matiere.filiere, 'COMBINE'];
   const bulletins = await prisma.bulletin.findMany({
     where: {
       filiere: { in: filieres },
@@ -590,9 +610,13 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
   const mentions = await getMentions(etablissement_id);
   if (inscriptions.length === 0) return { message: 'Aucun élève inscrit', bulletins: [] };
 
-  const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
-  // Barème/coeff/évaluée effectifs par élève en combinant SES classes FR et AR (un élève
-  // bilingue a deux classes) — sinon une moyenne COMBINE ne refléterait qu'une filière.
+  // COMBINE = toutes les filières actives de l'établissement (FR+AR, FR+EN, FR+AR+EN…).
+  const filieres: ('FR' | 'AR' | 'EN')[] = filiere === 'COMBINE'
+    ? await filieresCombineCodes(etablissement_id)
+    : [filiere as 'FR' | 'AR' | 'EN'];
+  // Barème/coeff/évaluée effectifs par élève en combinant SES classes de chaque filière
+  // (un élève bilingue a plusieurs classes) — sinon une moyenne COMBINE ne refléterait
+  // qu'une filière.
   const baremes = await baremesParElevePeriode(inscriptions, filieres, [periode], baseNote);
 
   // Fetch toutes les notes d'un coup (évite N+1). On laisse le barème par élève
@@ -663,9 +687,12 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
   const periodesAnnuelles = Array.from({ length: nbPeriodes }, (_, i) => i + 1);
   const mentions = await getMentions(etablissement_id);
 
-  const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
+  // COMBINE = toutes les filières actives de l'établissement.
+  const filieres: ('FR' | 'AR' | 'EN')[] = filiere === 'COMBINE'
+    ? await filieresCombineCodes(etablissement_id)
+    : [filiere as 'FR' | 'AR' | 'EN'];
   // Barème/coeff/évaluée effectifs PAR ÉLÈVE et PAR PÉRIODE (les coeff peuvent changer d'un
-  // trimestre à l'autre), en combinant les deux classes FR+AR de l'élève.
+  // trimestre à l'autre), en combinant les classes de chaque filière de l'élève.
   const baremes = await baremesParElevePeriode(inscriptions, filieres, periodesAnnuelles, baseNote);
 
   // Fetch toutes les notes annuelles d'un coup (évite N+1)
@@ -730,7 +757,9 @@ export async function getBulletin(id: string, etablissement_id: string) {
   });
   if (!bulletin) throw new NotFoundError('Bulletin introuvable');
 
-  const filieres: ('FR' | 'AR' | 'EN')[] = bulletin.filiere === 'COMBINE' ? ['FR', 'AR'] : [bulletin.filiere as 'FR' | 'AR' | 'EN'];
+  const filieres: ('FR' | 'AR' | 'EN')[] = bulletin.filiere === 'COMBINE'
+    ? await filieresCombineCodes(etablissement_id)
+    : [bulletin.filiere as 'FR' | 'AR' | 'EN'];
 
   // Nb de périodes configurable (2=semestres, 3=trimestres, 6=bimestres). On
   // ne dépend plus de [1,2,3] hardcodé pour les bulletins annuels.
@@ -1047,6 +1076,10 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
     });
   };
 
+  // COMBINE = filières actives de l'établissement (FR+AR historique, ou FR+EN…).
+  const combineCodes = data.filiere === 'COMBINE' ? await filieresCombineCodes(etablissement_id) : [];
+  const inFiliere = (c: string) => data.filiere === c || (data.filiere === 'COMBINE' && combineCodes.includes(c as 'FR' | 'AR' | 'EN'));
+
   let html: string;
   if (data.periode === 0) {
     const type = data.filiere === 'COMBINE' ? 'ANNUEL_COMBINE'
@@ -1054,17 +1087,19 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
       : data.filiere === 'EN' ? 'ANNUEL_EN' : 'ANNUEL_FR';
     html = generateBulletinAnnuelHtml({
       ...base, type,
-      matieres_fr: (data.filiere === 'FR' || data.filiere === 'COMBINE') ? toAnnuelRows('FR') : undefined,
-      matieres_ar: (data.filiere === 'AR' || data.filiere === 'COMBINE') ? toAnnuelRows('AR') : undefined,
-      matieres_en: data.filiere === 'EN' ? toAnnuelRows('EN') : undefined,
+      filieres_combine: data.filiere === 'COMBINE' ? combineCodes : undefined,
+      matieres_fr: inFiliere('FR') ? toAnnuelRows('FR') : undefined,
+      matieres_ar: inFiliere('AR') ? toAnnuelRows('AR') : undefined,
+      matieres_en: inFiliere('EN') ? toAnnuelRows('EN') : undefined,
     });
   } else {
     const type = data.filiere as 'FR' | 'AR' | 'EN' | 'COMBINE';
     html = generateBulletinHtml({
       ...base, type, periode: data.periode,
-      notes_fr: (data.filiere === 'FR' || data.filiere === 'COMBINE') ? toRows('FR') : undefined,
-      notes_ar: (data.filiere === 'AR' || data.filiere === 'COMBINE') ? toRows('AR') : undefined,
-      notes_en: data.filiere === 'EN' ? toRows('EN') : undefined,
+      filieres_combine: data.filiere === 'COMBINE' ? combineCodes : undefined,
+      notes_fr: inFiliere('FR') ? toRows('FR') : undefined,
+      notes_ar: inFiliere('AR') ? toRows('AR') : undefined,
+      notes_en: inFiliere('EN') ? toRows('EN') : undefined,
     });
   }
 
@@ -1113,7 +1148,10 @@ export async function genererPdfClasse(
     absByEleve.set(r.eleve_id, e);
   }
 
-  const filieres: ('FR' | 'AR' | 'EN')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR' | 'EN'];
+  // COMBINE = filières actives de l'établissement (FR+AR historique, ou FR+EN…).
+  const combineCodes = filiere === 'COMBINE' ? await filieresCombineCodes(etablissement_id) : [];
+  const filieres: ('FR' | 'AR' | 'EN')[] = filiere === 'COMBINE' ? combineCodes : [filiere as 'FR' | 'AR' | 'EN'];
+  const inFiliere = (c: string) => filiere === c || (filiere === 'COMBINE' && combineCodes.includes(c as 'FR' | 'AR' | 'EN'));
 
   // Les matières/notes AR sont rattachées à la classe AR de l'élève (classe_ar_id),
   // distincte de la classe FR. Utiliser le classe_id passé (FR) pour les deux
@@ -1196,9 +1234,10 @@ export async function genererPdfClasse(
       afficher_absences: config?.bulletin_afficher_absences ?? true,
       logo_echelle: config?.bulletin_logo_echelle ?? 100,
       template_html: templateHtml,
-      notes_fr: (filiere === 'FR' || filiere === 'COMBINE') ? toRows('FR') : undefined,
-      notes_ar: (filiere === 'AR' || filiere === 'COMBINE') ? toRows('AR') : undefined,
-      notes_en: filiere === 'EN' ? toRows('EN') : undefined,
+      filieres_combine: filiere === 'COMBINE' ? combineCodes : undefined,
+      notes_fr: inFiliere('FR') ? toRows('FR') : undefined,
+      notes_ar: inFiliere('AR') ? toRows('AR') : undefined,
+      notes_en: inFiliere('EN') ? toRows('EN') : undefined,
     }));
   }
 

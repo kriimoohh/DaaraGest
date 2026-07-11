@@ -79,12 +79,62 @@ describe('generateBulletinHtml — non-régression FR / AR / COMBINE', () => {
     expect(html).not.toContain('Filière Anglaise');
   });
 
-  it('COMBINE : sections FR + AR et résumé combiné', () => {
+  it('COMBINE FR+AR (défaut) : sections FR + AR et résumé historique inchangé', () => {
     const html = generateBulletinHtml({ ...base, type: 'COMBINE', periode: 1, notes_fr: [noteFR], notes_ar: [noteAR] });
     expect(html).toContain('Filière Française');
     expect(html).toContain('Filière Arabe');
     expect(html).toContain('Moy. FR');
+    expect(html).toContain('Moy. AR');
+    expect(html).toContain('Résultats FR — AR'); // en-tête du résumé combiné historique
     expect(html).not.toContain('Filière Anglaise');
+  });
+});
+
+describe('generateBulletinHtml — COMBINÉ générique (Phase 3-2)', () => {
+  it('FR+EN : sections FR + EN, résumé Moy. FR / Moy. EN, aucune section AR', () => {
+    const html = generateBulletinHtml({
+      ...base, type: 'COMBINE', periode: 1,
+      filieres_combine: ['FR', 'EN'],
+      notes_fr: [noteFR], notes_en: [noteEN],
+    });
+    expect(html).toContain('Filière Française');
+    expect(html).toContain('Filière Anglaise');
+    expect(html).not.toContain('Filière Arabe');
+    // Résumé générique : une sous-moyenne par filière du combiné.
+    expect(html).toContain('Moy. FR');
+    expect(html).toContain('Moy. EN');
+    expect(html).not.toContain('Moy. AR');
+    // Ce n'est PAS le résumé historique FR+AR.
+    expect(html).not.toContain('Résultats FR — AR');
+  });
+
+  it('FR+AR+EN : les trois sections + trois sous-moyennes', () => {
+    const html = generateBulletinHtml({
+      ...base, type: 'COMBINE', periode: 1,
+      filieres_combine: ['FR', 'AR', 'EN'],
+      notes_fr: [noteFR], notes_ar: [noteAR], notes_en: [noteEN],
+    });
+    expect(html).toContain('Filière Française');
+    expect(html).toContain('Filière Arabe');
+    expect(html).toContain('Filière Anglaise');
+    expect(html).toContain('Moy. FR');
+    expect(html).toContain('Moy. AR');
+    expect(html).toContain('Moy. EN');
+  });
+
+  it('annuel FR+EN : tableaux annuels FR + EN, pas de tableau AR', () => {
+    const matFR = { nom_fr: 'Français', nom_ar: 'الفرنسية', coeff: 2, note_max: 10, valeurs: [7, 8, 6], moyenne_annuelle: 7, evaluee: true };
+    const matEN = { nom_fr: 'English', nom_ar: 'English', coeff: 2, note_max: 10, valeurs: [8, 7, 9], moyenne_annuelle: 8, evaluee: true };
+    const html = generateBulletinAnnuelHtml({
+      ...base, type: 'ANNUEL_COMBINE', nb_periodes: 3,
+      filieres_combine: ['FR', 'EN'],
+      matieres_fr: [matFR], matieres_en: [matEN],
+    });
+    expect(html).toContain('Évaluation annuelle — Filière Française');
+    expect(html).toContain('Évaluation annuelle — Filière Anglaise');
+    expect(html).not.toContain('Évaluation annuelle — Filière Arabe');
+    expect(html).toContain('Moy. FR');
+    expect(html).toContain('Moy. EN');
   });
 });
 
