@@ -149,10 +149,10 @@ async function getMatieres(etablissement_id: string, filiere: 'FR' | 'AR' | 'EN'
 // franco-arabe → COMBINE inchangé, et un ordre déterministe pour EN).
 const CODE_ORDER: ('FR' | 'AR' | 'EN')[] = ['FR', 'AR', 'EN'];
 
-// Codes des filières ACTIVES de l'établissement, dans l'ordre canonique. C'est le
-// périmètre d'un bulletin COMBINE : « combiné » = toutes les filières actives.
-// Un établissement FR+AR seul renvoie ['FR','AR'] (comportement historique).
-async function filieresCombineCodes(etablissement_id: string): Promise<('FR' | 'AR' | 'EN')[]> {
+// Codes des filières ACTIVES de l'établissement, dans l'ordre canonique. Périmètre
+// d'un bulletin COMBINE (« combiné » = toutes les filières actives) ET des rapports
+// /stats agrégés par classe. Un établissement FR+AR seul renvoie ['FR','AR'].
+export async function filieresActivesCodes(etablissement_id: string): Promise<('FR' | 'AR' | 'EN')[]> {
   const fils = await prisma.filiere.findMany({
     where: { etablissement_id, actif: true },
     select: { code: true },
@@ -181,24 +181,24 @@ async function getElevesClasse(classe_id: string, annee_scolaire_id: string) {
  */
 export async function calculerMoyennesClasse(
   etablissement_id: string, classe_id: string, annee_scolaire_id: string,
-  periodes: number[], filieres: ('FR' | 'AR')[] = ['FR', 'AR'],
+  periodes: number[], filieres: ('FR' | 'AR' | 'EN')[] = ['FR', 'AR'],
 ): Promise<Map<string, number>> {
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
   const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
   const inscriptions = await getElevesClasse(classe_id, annee_scolaire_id);
   if (inscriptions.length === 0) return new Map();
 
-  // Les matières d'une filière sont rattachées à la classe de cette filière
-  // (classe_fr_id pour FR, classe_ar_id pour AR), qui peuvent être distinctes
-  // pour un élève bilingue. On résout donc les classes par filière depuis le
-  // cohort (sinon les matières AR, cherchées sur la classe FR, seraient ignorées
-  // et la moyenne COMBINE ne refléterait que le FR).
-  const classIdsByFiliere: Record<'FR' | 'AR', Set<string>> = { FR: new Set(), AR: new Set() };
+  // Les matières d'une filière sont rattachées à la classe de cette filière (qui peut
+  // être distincte pour un élève multi-filières). On résout donc les classes par
+  // filière depuis le cohort — générique (FR, AR, EN…) — sinon les matières d'une
+  // filière, cherchées sur la classe d'une autre, seraient ignorées.
+  const classIdsByFiliere = new Map<string, Set<string>>();
+  for (const f of filieres) classIdsByFiliere.set(f, new Set());
   for (const i of inscriptions) {
-    const fr = classeIdParFiliere(i.classes, 'FR');
-    const ar = classeIdParFiliere(i.classes, 'AR');
-    if (fr) classIdsByFiliere.FR.add(fr);
-    if (ar) classIdsByFiliere.AR.add(ar);
+    for (const f of filieres) {
+      const cid = classeIdParFiliere(i.classes, f);
+      if (cid) classIdsByFiliere.get(f)!.add(cid);
+    }
   }
 
   // Coeff/barème/évaluée par période (gère les coefficients qui changent de trimestre)
@@ -208,7 +208,7 @@ export async function calculerMoyennesClasse(
   const matIds = new Set<string>();
   for (const p of periodes) {
     const cM = new Map<string, number>(), nM = new Map<string, number>(), eM = new Map<string, boolean>();
-    for (const f of filieres) for (const classId of classIdsByFiliere[f]) {
+    for (const f of filieres) for (const classId of classIdsByFiliere.get(f) ?? []) {
       for (const m of await getMatieresDeclasse(classId, f, p, baseNote)) {
         cM.set(m.id, Number(m.coeff_effectif)); nM.set(m.id, Number(m.note_max_effectif)); eM.set(m.id, m.evaluee_effectif); matIds.add(m.id);
       }
@@ -254,7 +254,7 @@ export async function getMentionsEtab(etablissement_id: string): Promise<Mention
  * Clé de la map : `${matiere_id}|${periode}`.
  */
 export async function getBaremesClasse(
-  classe_id: string, periodes: number[], filieres: ('FR' | 'AR')[] = ['FR', 'AR'],
+  classe_id: string, periodes: number[], filieres: ('FR' | 'AR' | 'EN')[] = ['FR', 'AR'],
   baseNote: number = DEFAULT_NOTE_MAX,
 ): Promise<Map<string, { coeff: number; note_max: number; evaluee: boolean }>> {
   const map = new Map<string, { coeff: number; note_max: number; evaluee: boolean }>();
@@ -275,18 +275,19 @@ export async function getBaremesClasse(
  */
 export async function getBaremesClasseCohorte(
   classe_id: string, annee_scolaire_id: string, periodes: number[],
-  filieres: ('FR' | 'AR')[] = ['FR', 'AR'], baseNote: number = DEFAULT_NOTE_MAX,
+  filieres: ('FR' | 'AR' | 'EN')[] = ['FR', 'AR'], baseNote: number = DEFAULT_NOTE_MAX,
 ): Promise<Map<string, { coeff: number; note_max: number; evaluee: boolean }>> {
   const inscriptions = await getElevesClasse(classe_id, annee_scolaire_id);
-  const classIds: Record<'FR' | 'AR', Set<string>> = { FR: new Set(), AR: new Set() };
+  const classIds = new Map<string, Set<string>>();
+  for (const f of filieres) classIds.set(f, new Set());
   for (const i of inscriptions) {
-    const fr = classeIdParFiliere(i.classes, 'FR');
-    const ar = classeIdParFiliere(i.classes, 'AR');
-    if (fr) classIds.FR.add(fr);
-    if (ar) classIds.AR.add(ar);
+    for (const f of filieres) {
+      const cid = classeIdParFiliere(i.classes, f);
+      if (cid) classIds.get(f)!.add(cid);
+    }
   }
   const map = new Map<string, { coeff: number; note_max: number; evaluee: boolean }>();
-  for (const p of periodes) for (const f of filieres) for (const cid of classIds[f]) {
+  for (const p of periodes) for (const f of filieres) for (const cid of classIds.get(f) ?? []) {
     for (const m of await getMatieresDeclasse(cid, f, p, baseNote)) {
       map.set(`${m.id}|${p}`, { coeff: Number(m.coeff_effectif), note_max: Number(m.note_max_effectif), evaluee: m.evaluee_effectif });
     }
@@ -612,7 +613,7 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
 
   // COMBINE = toutes les filières actives de l'établissement (FR+AR, FR+EN, FR+AR+EN…).
   const filieres: ('FR' | 'AR' | 'EN')[] = filiere === 'COMBINE'
-    ? await filieresCombineCodes(etablissement_id)
+    ? await filieresActivesCodes(etablissement_id)
     : [filiere as 'FR' | 'AR' | 'EN'];
   // Barème/coeff/évaluée effectifs par élève en combinant SES classes de chaque filière
   // (un élève bilingue a plusieurs classes) — sinon une moyenne COMBINE ne refléterait
@@ -689,7 +690,7 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
 
   // COMBINE = toutes les filières actives de l'établissement.
   const filieres: ('FR' | 'AR' | 'EN')[] = filiere === 'COMBINE'
-    ? await filieresCombineCodes(etablissement_id)
+    ? await filieresActivesCodes(etablissement_id)
     : [filiere as 'FR' | 'AR' | 'EN'];
   // Barème/coeff/évaluée effectifs PAR ÉLÈVE et PAR PÉRIODE (les coeff peuvent changer d'un
   // trimestre à l'autre), en combinant les classes de chaque filière de l'élève.
@@ -758,7 +759,7 @@ export async function getBulletin(id: string, etablissement_id: string) {
   if (!bulletin) throw new NotFoundError('Bulletin introuvable');
 
   const filieres: ('FR' | 'AR' | 'EN')[] = bulletin.filiere === 'COMBINE'
-    ? await filieresCombineCodes(etablissement_id)
+    ? await filieresActivesCodes(etablissement_id)
     : [bulletin.filiere as 'FR' | 'AR' | 'EN'];
 
   // Nb de périodes configurable (2=semestres, 3=trimestres, 6=bimestres). On
@@ -1077,7 +1078,7 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
   };
 
   // COMBINE = filières actives de l'établissement (FR+AR historique, ou FR+EN…).
-  const combineCodes = data.filiere === 'COMBINE' ? await filieresCombineCodes(etablissement_id) : [];
+  const combineCodes = data.filiere === 'COMBINE' ? await filieresActivesCodes(etablissement_id) : [];
   const inFiliere = (c: string) => data.filiere === c || (data.filiere === 'COMBINE' && combineCodes.includes(c as 'FR' | 'AR' | 'EN'));
 
   let html: string;
@@ -1149,7 +1150,7 @@ export async function genererPdfClasse(
   }
 
   // COMBINE = filières actives de l'établissement (FR+AR historique, ou FR+EN…).
-  const combineCodes = filiere === 'COMBINE' ? await filieresCombineCodes(etablissement_id) : [];
+  const combineCodes = filiere === 'COMBINE' ? await filieresActivesCodes(etablissement_id) : [];
   const filieres: ('FR' | 'AR' | 'EN')[] = filiere === 'COMBINE' ? combineCodes : [filiere as 'FR' | 'AR' | 'EN'];
   const inFiliere = (c: string) => filiere === c || (filiere === 'COMBINE' && combineCodes.includes(c as 'FR' | 'AR' | 'EN'));
 
