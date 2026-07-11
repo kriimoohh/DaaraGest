@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import prisma from '../../config/database';
-import { genererBulletins, genererBulletinsAnnuels, getBulletin } from './bulletins.service';
+import { genererBulletins, genererBulletinsAnnuels, getBulletin, calculerMoyennesClasse, filieresActivesCodes } from './bulletins.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test d'INTÉGRATION (nécessite une vraie base PostgreSQL via DATABASE_URL).
@@ -281,5 +281,21 @@ describe('Bulletins — intégration notes → moyenne (DB réelle)', () => {
     const detail = await getBulletin(b!.id, etabId);
     expect(detail.notesByFiliere.EN).toHaveLength(1);
     expect(detail.notesByFiliere.FR).toBeUndefined();
+  });
+
+  it('stats/rapports : calculerMoyennesClasse est générique (EN sans crash, codes actifs)', async () => {
+    // Chemin qui plantait avant (classIdsByFiliere était figé FR/AR) : filière EN seule.
+    const moysEN = await calculerMoyennesClasse(etabId, classeEnId, anneeId, [1], ['EN']);
+    expect(moysEN.get(ids.eleveB)).toBeCloseTo(16.0, 2); // Mathematics 16/20
+
+    // Codes actifs de l'établissement = FR+AR+EN (ordre canonique).
+    const codes = await filieresActivesCodes(etabId);
+    expect(codes).toEqual(['FR', 'AR', 'EN']);
+
+    // Moyenne combinée par élève via les codes actifs (comme un rapport de classe) :
+    // A (FR+AR) = 14.2 ; B (FR+EN) = 12.0. Prouve l'agrégation multi-filières.
+    const moysCombine = await calculerMoyennesClasse(etabId, classeId, anneeId, [1], codes);
+    expect(moysCombine.get(ids.eleveA)).toBeCloseTo(14.2, 2);
+    expect(moysCombine.get(ids.eleveB)).toBeCloseTo(12.0, 2);
   });
 });

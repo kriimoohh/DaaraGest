@@ -914,6 +914,7 @@ async function buildA4DocumentHtml(
         for (const [cid, fil] of [
           [classeIdParFiliere(inscription.classes, 'FR'), 'FR'] as const,
           [classeIdParFiliere(inscription.classes, 'AR'), 'AR'] as const,
+          [classeIdParFiliere(inscription.classes, 'EN'), 'EN'] as const,
         ]) {
           if (!cid) continue;
           for (const [k, v] of await getBaremesClasse(cid, periodes, [fil])) baremes.set(k, v);
@@ -936,6 +937,7 @@ async function buildA4DocumentHtml(
           for (const [cid, fil] of [
             [classeIdParFiliere(inscription.classes, 'FR'), 'FR'] as const,
             [classeIdParFiliere(inscription.classes, 'AR'), 'AR'] as const,
+            [classeIdParFiliere(inscription.classes, 'EN'), 'EN'] as const,
           ]) {
             if (!cid) continue;
             const moys = await calculerMoyennesClasse(etablissement_id, cid, inscription.annee_scolaire_id, periodes, [fil]);

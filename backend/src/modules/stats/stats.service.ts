@@ -105,7 +105,8 @@ async function calculerStatsNotes(etablissement_id: string, annee: string) {
   const moyennesClasses: Array<{
     classe_id: string; classe_nom: string; filiere: string; nb_eleves: number; moyenne: number | null;
   }> = [];
-  // eleve_id → cumul des moyennes par filière (moyenne globale = (moy FR + moy AR) / 2)
+  // eleve_id → cumul des moyennes par filière (moyenne globale = moyenne des
+  // moyennes de chaque filière de l'élève : FR, AR, EN…)
   const parEleve = new Map<string, { somme: number; n: number; classe: string }>();
 
   for (const c of classes) {
@@ -118,7 +119,7 @@ async function calculerStatsNotes(etablissement_id: string, annee: string) {
       continue;
     }
 
-    const moys = await calculerMoyennesClasse(etablissement_id, c.id, annee, periodes, [c.filiere as 'FR' | 'AR']);
+    const moys = await calculerMoyennesClasse(etablissement_id, c.id, annee, periodes, [c.filiere as 'FR' | 'AR' | 'EN']);
     const vals = [...moys.values()];
     const moyenne = vals.length ? Math.round((vals.reduce((s, v) => s + v, 0) / vals.length) * 100) / 100 : null;
     moyennesClasses.push({ classe_id: c.id, classe_nom: c.nom_fr, filiere: c.filiere, nb_eleves: inscriptions.length, moyenne });
