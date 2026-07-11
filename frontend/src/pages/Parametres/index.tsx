@@ -665,6 +665,8 @@ export function ParametresPage() {
   const [deletingFiliere, setDeletingFiliere] = useState(false);
 
   const [mentions, setMentions] = useState<Mention[]>([]);
+  // Portée filière des mentions par défaut ('' = toutes filières / défaut établissement).
+  const [mentionFiliere, setMentionFiliere] = useState('');
   const [editMention, setEditMention] = useState<Mention | null>(null);
   const [mentionForm, setMentionForm] = useState({ libelle_fr: '', libelle_ar: '', seuil_min: '', couleur: 'info' as CouleurMention });
   const [savingMention, setSavingMention] = useState(false);
@@ -705,8 +707,13 @@ export function ParametresPage() {
   const fetchTarifs = () =>
     api.get<Tarif[]>('/api/v1/tarifs').then(setTarifs).catch(() => {});
 
-  const fetchMentions = () =>
-    api.get<Mention[]>('/api/v1/mentions').then(r => setMentions(r.map(m => ({ ...m, seuil_min: Number(m.seuil_min) })))).catch(() => {});
+  // Mentions de la portée filière choisie ('' = défaut établissement). L'id de filière
+  // est résolu depuis le code (les filières sont déjà chargées).
+  const fetchMentions = (filiereCode = mentionFiliere) => {
+    const fid = filiereCode ? filieres.find(f => f.code === filiereCode)?.id : null;
+    const q = fid ? `?filiere_id=${fid}` : '';
+    return api.get<Mention[]>(`/api/v1/mentions${q}`).then(r => setMentions(r.map(m => ({ ...m, seuil_min: Number(m.seuil_min) })))).catch(() => {});
+  };
 
   useEffect(() => {
     fetchNiveaux();
@@ -953,6 +960,7 @@ export function ParametresPage() {
           libelle_ar: mentionForm.libelle_ar.trim() || null,
           seuil_min:  seuil,
           couleur:    mentionForm.couleur,
+          filiere_id: mentionFiliere ? (filieres.find(f => f.code === mentionFiliere)?.id ?? null) : null,
         });
         toast.success('Mention ajoutée');
       }
@@ -2030,13 +2038,26 @@ export function ParametresPage() {
                 <span className="sub">
                   Mentions appliquées aux bulletins (note max : {config.note_max}). Ajoutez, renommez ou supprimez librement.
                   La mention «&nbsp;Insuffisant&nbsp;» (seuil 0) est système et non supprimable.
+                  {mentionFiliere
+                    ? ` — Portée : filière ${mentionFiliere}. Vide = cette filière hérite du défaut établissement.`
+                    : ' — Portée : défaut établissement (toutes filières).'}
                 </span>
               </div>
-              {canManageFonctions && !showMentionForm && (
-                <Button onClick={() => { resetMentionForm(); setShowMentionForm(true); }}>
-                  + Ajouter une mention
-                </Button>
-              )}
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
+                <div style={{ minWidth: 200 }}>
+                  <Select
+                    label="Filière"
+                    value={mentionFiliere}
+                    onChange={e => { setMentionFiliere(e.target.value); resetMentionForm(); fetchMentions(e.target.value); }}
+                    options={[{ value: '', label: 'Défaut établissement (toutes)' }, ...filieres.map(f => ({ value: f.code, label: f.nom_fr }))]}
+                  />
+                </div>
+                {canManageFonctions && !showMentionForm && (
+                  <Button onClick={() => { resetMentionForm(); setShowMentionForm(true); }}>
+                    + Ajouter une mention
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Barre de visualisation proportionnelle */}

@@ -316,4 +316,27 @@ describe('Bulletins — intégration notes → moyenne (DB réelle)', () => {
     const baremes = await getBaremesClasse(classeBaremeId, [1], ['FR'], 20);
     expect(baremes.get(`${ids.matBareme}|1`)?.note_max).toBe(50);
   });
+
+  // ⚠️ Ce test doit rester le DERNIER : il ajoute des mentions spécifiques FR qui
+  // changeraient l'appréciation des générations FR des tests précédents.
+  it('mentions par filière : la génération FR utilise les mentions spécifiques FR (Phase 2)', async () => {
+    await prisma.mention.createMany({
+      data: [
+        { etablissement_id: etabId, filiere_id: filiereFrId, libelle_fr: 'Très bien FR', seuil_min: 16, ordre: 4 },
+        { etablissement_id: etabId, filiere_id: filiereFrId, libelle_fr: 'Bien FR', seuil_min: 14, ordre: 3 },
+        { etablissement_id: etabId, filiere_id: filiereFrId, libelle_fr: 'Assez bien FR', seuil_min: 12, ordre: 2 },
+        { etablissement_id: etabId, filiere_id: filiereFrId, libelle_fr: 'Passable FR', seuil_min: 10, ordre: 1 },
+        { etablissement_id: etabId, filiere_id: filiereFrId, libelle_fr: 'Insuffisant FR', seuil_min: 0, ordre: 0 },
+      ],
+    });
+
+    await genererBulletins(etabId, { classe_id: classeId, annee_scolaire_id: anneeId, periode: 1, filiere: 'FR' });
+    const parEleve = Object.fromEntries(
+      (await prisma.bulletin.findMany({ where: { annee_scolaire_id: anneeId, periode: 1, filiere: 'FR' } }))
+        .map(b => [b.eleve_id, b]),
+    );
+    // A (15.25) → « Bien FR » (≥14) ; B (10.00) → « Passable FR » (≥10) — mentions FR, pas défaut.
+    expect(parEleve[ids.eleveA].appreciation).toBe('Bien FR');
+    expect(parEleve[ids.eleveB].appreciation).toBe('Passable FR');
+  });
 });

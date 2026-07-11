@@ -49,20 +49,36 @@ export function extractSeuilsMentions(config: { seuil_tres_bien?: unknown; seuil
 
 export type MentionDef = { libelle_fr: string; libelle_ar?: string | null; seuil_min: number };
 
-/** Mentions par défaut de l'établissement (niveau_id null), triées par seuil décroissant. */
+const mapMentions = (rows: { libelle_fr: string; libelle_ar: string | null; seuil_min: unknown }[]): MentionDef[] =>
+  rows.map(r => ({ libelle_fr: r.libelle_fr, libelle_ar: r.libelle_ar, seuil_min: Number(r.seuil_min) }));
+
+/** Mentions PAR DÉFAUT de l'établissement (aucune filière, aucun niveau), triées par seuil décroissant. */
 async function getMentions(etablissement_id: string): Promise<MentionDef[]> {
-  const rows = await prisma.mention.findMany({ where: { etablissement_id, niveau_id: null }, orderBy: { seuil_min: 'desc' } });
-  return rows.map(r => ({ libelle_fr: r.libelle_fr, libelle_ar: r.libelle_ar, seuil_min: Number(r.seuil_min) }));
+  const rows = await prisma.mention.findMany({ where: { etablissement_id, filiere_id: null, niveau_id: null }, orderBy: { seuil_min: 'desc' } });
+  return mapMentions(rows);
 }
 
-/** Mentions effectives pour un niveau : celles du niveau si définies, sinon défauts établissement. */
-async function getMentionsForNiveau(etablissement_id: string, niveau_id: string | null | undefined): Promise<MentionDef[]> {
-  if (niveau_id) {
-    const rows = await prisma.mention.findMany({ where: { etablissement_id, niveau_id }, orderBy: { seuil_min: 'desc' } });
-    if (rows.length > 0) return rows.map(r => ({ libelle_fr: r.libelle_fr, libelle_ar: r.libelle_ar, seuil_min: Number(r.seuil_min) }));
+/**
+ * Mentions EFFECTIVES pour une (filière, niveau), par précédence décroissante :
+ * filière+niveau > filière > niveau > établissement (défaut). `filiereCode` null ou
+ * 'COMBINE' = pas de filière (base canonique établissement).
+ */
+async function resolveMentions(
+  etablissement_id: string, filiereCode?: string | null, niveau_id?: string | null,
+): Promise<MentionDef[]> {
+  let filiere_id: string | null = null;
+  if (filiereCode && filiereCode !== 'COMBINE') {
+    const f = await prisma.filiere.findFirst({ where: { etablissement_id, code: filiereCode }, select: { id: true } });
+    filiere_id = f?.id ?? null;
   }
+  const fetch = (fid: string | null, nid: string | null) =>
+    prisma.mention.findMany({ where: { etablissement_id, filiere_id: fid, niveau_id: nid }, orderBy: { seuil_min: 'desc' } });
+  if (filiere_id && niveau_id) { const r = await fetch(filiere_id, niveau_id); if (r.length) return mapMentions(r); }
+  if (filiere_id)             { const r = await fetch(filiere_id, null);      if (r.length) return mapMentions(r); }
+  if (niveau_id)              { const r = await fetch(null, niveau_id);       if (r.length) return mapMentions(r); }
   return getMentions(etablissement_id);
 }
+
 
 /** niveau_id de la classe FR (prioritaire) ou AR pour résoudre les mentions du bulletin. */
 async function niveauPourBulletin(classe_fr_id?: string | null, classe_ar_id?: string | null): Promise<string | null> {
@@ -609,7 +625,8 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
   const inscriptions = await getElevesClasse(classe_id, annee_scolaire_id);
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
   const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
-  const mentions = await getMentions(etablissement_id);
+  // Mentions résolues pour la filière du bulletin (COMBINE → base canonique établissement).
+  const mentions = await resolveMentions(etablissement_id, filiere === 'COMBINE' ? null : filiere, classe.niveau_id);
   if (inscriptions.length === 0) return { message: 'Aucun élève inscrit', bulletins: [] };
 
   // COMBINE = toutes les filières actives de l'établissement (FR+AR, FR+EN, FR+AR+EN…).
@@ -687,7 +704,8 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
   const nbPeriodes = config?.nb_periodes ?? 3;
   const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
   const periodesAnnuelles = Array.from({ length: nbPeriodes }, (_, i) => i + 1);
-  const mentions = await getMentions(etablissement_id);
+  // Mentions résolues pour la filière du bulletin (COMBINE → base canonique établissement).
+  const mentions = await resolveMentions(etablissement_id, filiere === 'COMBINE' ? null : filiere, classe.niveau_id);
 
   // COMBINE = toutes les filières actives de l'établissement.
   const filieres: ('FR' | 'AR' | 'EN')[] = filiere === 'COMBINE'
@@ -995,7 +1013,7 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
   // Mentions effectives : celles du niveau de la classe (FR prioritaire, sinon AR/EN),
   // sinon défauts établissement.
   const niveauId = await niveauPourBulletin(frId, arId ?? enId);
-  const mentions = await getMentionsForNiveau(etablissement_id, niveauId);
+  const mentions = await resolveMentions(etablissement_id, data.filiere === 'COMBINE' ? null : data.filiere, niveauId);
   const periodeForBareme = data.periode === 0 ? undefined : data.periode;
   const effMap = new Map<string, { coeff: number; note_max: number; evaluee: boolean }>();
   for (const [cid, f] of [
@@ -1125,7 +1143,7 @@ export async function genererPdfClasse(
   const templateHtml = (await prisma.bulletinTemplate.findUnique({ where: { etablissement_id_type: { etablissement_id, type: periode === 0 ? 'ANNUEL' : filiere } } }))?.contenu_html ?? null;
   // Mentions effectives = celles du niveau de la classe imprimée, sinon défauts établissement.
   const classeNiveau = await prisma.classe.findUnique({ where: { id: classe_id }, select: { niveau_id: true } });
-  const mentions = await getMentionsForNiveau(etablissement_id, classeNiveau?.niveau_id);
+  const mentions = await resolveMentions(etablissement_id, filiere === 'COMBINE' ? null : filiere, classeNiveau?.niveau_id);
 
   const bulletins = await prisma.bulletin.findMany({
     where: {
