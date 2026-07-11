@@ -12,17 +12,17 @@
     "error": "Identifiant ou mot de passe incorrect"
   },
   "login": {
-    "langue": "Langue",
-    "theme": "Thème",
     "tagline": "Gestion scolaire franco-arabe",
+    "tagline_footer": "École franco-arabe · Sénégal",
     "connexion_loading": "Connexion…",
-    "footer": "École franco-arabe · Sénégal"
+    "lang_title": "Langue",
+    "theme_title": "Thème"
   },
   "nav": {
     "accueil": "Accueil",
     "dashboard": "Tableau de bord",
     "eleves": "Élèves",
-    "personnel":   "Personnel",
+    "personnel": "Personnel",
     "classes": "Classes",
     "notes": "Notes",
     "evaluations": "Évaluations",
@@ -39,9 +39,9 @@
     "absences": "Absences élèves",
     "emploi_du_temps": "Emploi du temps",
     "calendrier": "Calendrier",
-    "messagerie":   "Messagerie",
-    "documents":    "Documents",
-    "rapports":     "Rapports",
+    "messagerie": "Messagerie",
+    "documents": "Documents",
+    "rapports": "Rapports",
     "bibliotheque": "Bibliothèque",
     "demandes_absence_personnel": "Congés & Permissions"
   },
@@ -51,7 +51,8 @@
   },
   "lang": {
     "fr": "Français",
-    "ar": "العربية"
+    "ar": "العربية",
+    "en": "English"
   },
   "dashboard": {
     "welcome": "Bienvenue",
@@ -343,8 +344,8 @@
     "specialite": "Spécialité",
     "type_contrat": "Type de contrat",
     "permanent": "Permanent",
-    "CDI":       "CDI",
-    "CDD":       "CDD",
+    "CDI": "CDI",
+    "CDD": "CDD",
     "vacataire": "Vacataire",
     "stagiaire": "Stagiaire",
     "salaire": "Salaire de base",
@@ -554,7 +555,7 @@
     "valeur": "Note /20",
     "coefficient": "Coefficient",
     "enregistrer_tout": "Enregistrer toutes les notes",
-    "selectionner": "Sélectionner...",
+    "selectionner": "Sélectionner",
     "aucun_eleve": "Aucun élève dans cette classe",
     "notes_enregistrees": "Notes enregistrées",
     "appreciation_excellent": "Excellent",
@@ -576,7 +577,6 @@
     "supprimer_selection": "Supprimer la sélection ({{count}})",
     "supprimer_tout": "Tout supprimer",
     "tout_selectionner": "Tout sélectionner",
-    "selectionner": "Sélectionner",
     "aucune_note_a_supprimer": "Aucune note enregistrée pour cet élève",
     "confirmer_suppression_titre": "Supprimer des notes",
     "confirmer_suppression_selection": "Supprimer définitivement {{count}} note(s) sélectionnée(s) ? Cette action est irréversible.",
@@ -1029,12 +1029,6 @@
     "erreur": "Erreur",
     "erreur_generique": "Erreur",
     "ar_periode_label_prefix": "الفصل",
-    "format_invalide_image": "Format invalide — image uniquement (PNG, JPG, SVG…)",
-    "format_invalide_image_simple": "Format invalide — image uniquement",
-    "fichier_trop_volumineux": "Fichier trop volumineux — maximum 512 Ko",
-    "niveau_modifie": "Niveau modifié",
-    "niveau_ajoute": "Niveau ajouté",
-    "niveau_supprime": "Niveau supprimé",
     "code_requis_lettres": "Code requis (lettres et underscores)",
     "libelle_requis": "Libellé requis",
     "montant_invalide": "Montant invalide",
@@ -1592,13 +1586,6 @@
     "approuver_btn": "Approuver",
     "refuser_btn": "Refuser",
     "supprimer_btn": "Supprimer"
-  },
-  "login": {
-    "tagline": "Gestion scolaire franco-arabe",
-    "tagline_footer": "École franco-arabe · Sénégal",
-    "connexion_loading": "Connexion…",
-    "lang_title": "Langue",
-    "theme_title": "Thème"
   },
   "landing": {
     "lang_title": "Changer de langue",
