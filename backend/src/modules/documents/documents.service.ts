@@ -426,7 +426,7 @@ async function buildTableauNotesClasse(
       where: { classe_id },
       include: {
         matiere: {
-          select: { id: true, nom_fr: true, code_court: true, ordre_bulletin: true, active: true },
+          select: { id: true, nom_fr: true, code_court: true, ordre_bulletin: true, active: true, note_max: true },
         },
       },
       orderBy: [{ ordre_override: 'asc' }, { matiere: { ordre_bulletin: 'asc' } }],
@@ -457,7 +457,7 @@ async function buildTableauNotesClasse(
       id: cm.matiere.id,
       nom_fr: cm.matiere.nom_fr,
       code_court: cm.matiere.code_court,
-      note_max: Number(cm.note_max_override ?? baseNote),
+      note_max: Number(cm.note_max_override ?? cm.matiere.note_max ?? baseNote),
     }))
     .filter(m => classeMatieres.find(cm => cm.matiere.id === m.id)?.matiere.active !== false);
 

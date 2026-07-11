@@ -11,6 +11,8 @@ export const matiereSchema = z.object({
   filiere: z.enum(['FR', 'AR', 'EN']),
   coeff_defaut: z.number().positive().optional(),
   note_min: z.number().min(0).optional(),
+  // Barème de saisie par défaut de la matière (null = échelle établissement).
+  note_max: z.number().positive().nullable().optional(),
   ordre_bulletin: z.number().int().optional(),
   domaine_id: z.string().uuid().nullable().optional(),
   type_note: z.enum(TYPE_NOTE).optional(),
