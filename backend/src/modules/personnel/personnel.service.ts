@@ -85,6 +85,15 @@ export async function creerPersonnel(etablissement_id: string, data: PersonnelIn
   const roleProf = await prisma.role.findFirst({ where: { libelle_fr: 'professeur' } });
   if (!roleProf) throw new NotFoundError('Rôle professeur introuvable');
 
+  // `identifiant` est unique au niveau global (tous établissements confondus).
+  // On pré-vérifie pour renvoyer un message clair (409) au lieu du P2002 brut
+  // que le handler traduirait en un vague « Données invalides ».
+  const identifiantPris = await prisma.utilisateur.findFirst({
+    where: { identifiant: data.identifiant },
+    select: { id: true },
+  });
+  if (identifiantPris) throw new ConflictError('Cet identifiant est déjà utilisé');
+
   const hashedPassword = await bcrypt.hash(data.mot_de_passe, 10);
   const matricule = data.matricule || await genererMatricule(etablissement_id, 'P');
 
@@ -308,8 +317,12 @@ export async function supprimerPersonnel(id: string, etablissement_id: string) {
   });
   if (!professeur) throw new NotFoundError('Personnel introuvable');
 
+  // Suffixer l'identifiant pour libérer le slot unique (comme le module
+  // Utilisateurs) : sans ça, un personnel supprimé garde son identifiant occupé
+  // et bloque toute recréation avec le même identifiant.
+  const identifiantLibere = `${professeur.utilisateur.identifiant}_deleted_${Date.now()}`;
   return prisma.utilisateur.update({
     where: { id: professeur.utilisateur_id },
-    data: { actif: false },
+    data: { actif: false, identifiant: identifiantLibere },
   });
 }
