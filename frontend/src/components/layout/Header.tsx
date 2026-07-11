@@ -68,8 +68,10 @@ export function Topbar({ onMenuClick }: TopbarProps) {
     } finally { setSaving(false); }
   };
 
+  const LANG_CYCLE = ['fr', 'ar', 'en'] as const;
+  const currentLang = i18n.language.startsWith('ar') ? 'ar' : i18n.language.startsWith('en') ? 'en' : 'fr';
   const toggleLang = () => {
-    const next = i18n.language === 'fr' ? 'ar' : 'fr';
+    const next = LANG_CYCLE[(LANG_CYCLE.indexOf(currentLang) + 1) % LANG_CYCLE.length];
     i18n.changeLanguage(next);
     document.documentElement.dir = next === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.lang = next;
@@ -119,11 +121,11 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           </select>
         )}
 
-        <button className="tb-pill" onClick={toggleLang} title="Langue" aria-label={i18n.language === 'fr' ? 'Changer en arabe' : 'Changer en français'}>
+        <button className="tb-pill" onClick={toggleLang} title="Langue — FR / AR / EN" aria-label="Changer de langue">
           <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor">
             <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95a15.65 15.65 0 00-1.38-3.56A8.03 8.03 0 0118.92 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2s.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.987 7.987 0 015.08 16zm2.95-8H5.08a7.987 7.987 0 014.33-3.56A15.65 15.65 0 008.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2s.07-1.35.16-2h4.68c.09.65.16 1.32.16 2s-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 01-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2s-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z" />
           </svg>
-          <span>{i18n.language === 'fr' ? 'AR' : 'FR'}</span>
+          <span>{currentLang.toUpperCase()}</span>
         </button>
 
         <button className="tb-btn" onClick={toggleTheme} title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'} aria-label={theme === 'dark' ? 'Activer le mode clair' : 'Activer le mode sombre'}>
@@ -207,7 +209,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 0, border: '1px solid var(--rule)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--rule)', fontSize: 13 }}>
                       <span style={{ color: 'var(--ink-3)' }}>Langue</span>
-                      <span style={{ fontWeight: 500 }}>{user?.langue === 'ar' ? 'العربية' : 'Français'}</span>
+                      <span style={{ fontWeight: 500 }}>{user?.langue === 'ar' ? 'العربية' : user?.langue === 'en' ? 'English' : 'Français'}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--rule)', fontSize: 13 }}>
                       <span style={{ color: 'var(--ink-3)' }}>Thème</span>

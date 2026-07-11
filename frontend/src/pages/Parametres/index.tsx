@@ -1851,7 +1851,7 @@ export function ParametresPage() {
               <div>
                 <div className="field-label" style={{ marginBottom: 10 }}>{t('parametre.langue_interface')}</div>
                 <div style={{ display: 'flex', gap: 10 }}>
-                  {(['fr', 'ar'] as const).map(l => (
+                  {(['fr', 'ar', 'en'] as const).map(l => (
                     <button
                       key={l}
                       type="button"
@@ -1868,7 +1868,7 @@ export function ParametresPage() {
                         transition: 'all 0.15s',
                       }}
                     >
-                      {l === 'fr' ? 'Français' : 'العربية'}
+                      {l === 'fr' ? 'Français' : l === 'ar' ? 'العربية' : 'English'}
                     </button>
                   ))}
                 </div>
