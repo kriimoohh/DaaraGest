@@ -482,6 +482,8 @@
     "nom_fr": "Nom (Français)",
     "nom_ar": "Nom (Arabe)",
     "ordre_bulletin": "Ordre bulletin",
+    "col_bareme": "Barème (note max)",
+    "bareme_placeholder": "Échelle établissement",
     "ajouter": "Ajouter une matière",
     "toutes": "Toutes les filières",
     "pedagogie": "Pédagogie",

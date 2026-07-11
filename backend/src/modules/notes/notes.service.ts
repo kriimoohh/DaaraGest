@@ -110,7 +110,7 @@ export async function bulkUpsertNotes(
     if (matiere) {
       const noteMax = baremePeriode.get(`${note.matiere_id}|${note.periode}`)
         ?? baremeOverride.get(note.matiere_id)
-        ?? baseNote;
+        ?? (matiere.note_max != null ? Number(matiere.note_max) : baseNote);
       const noteMin = Number(matiere.note_min);
       if (note.valeur > noteMax) {
         throw new Error(`La note ${note.valeur} dépasse le maximum autorisé (${noteMax}) pour "${matiere.nom_fr}"`);

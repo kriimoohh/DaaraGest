@@ -27,6 +27,7 @@ interface Matiere {
   filiere: string;
   coeff_defaut: number;
   note_min: number;
+  note_max: number | string | null;
   ordre_bulletin: number;
   active: boolean;
   domaine_id: string | null;
@@ -43,6 +44,7 @@ const EMPTY = {
   filiere: 'FR',
   coeff_defaut: '1',
   note_min: '0',
+  note_max: '',
   ordre_bulletin: '0',
   domaine_id: '',
   type_note: 'SIMPLE',
@@ -101,6 +103,7 @@ export function MatieresPage() {
       filiere: m.filiere,
       coeff_defaut: String(m.coeff_defaut),
       note_min: String(m.note_min),
+      note_max: m.note_max == null ? '' : String(m.note_max),
       ordre_bulletin: String(m.ordre_bulletin),
       domaine_id: m.domaine_id ?? '',
       type_note: m.type_note ?? 'SIMPLE',
@@ -122,6 +125,7 @@ export function MatieresPage() {
         filiere: form.filiere,
         coeff_defaut: parseFloat(form.coeff_defaut) || 1,
         note_min: parseFloat(form.note_min) || 0,
+        note_max: form.note_max.trim() ? parseFloat(form.note_max) : null,
         ordre_bulletin: parseInt(form.ordre_bulletin) || 0,
         domaine_id: form.domaine_id || null,
         type_note: form.type_note,
@@ -231,6 +235,7 @@ export function MatieresPage() {
                   <th>{t('matiere.col_domaine')}</th>
                   <th>{t('note.coefficient')}</th>
                   <th>{t('parametre.note_min')}</th>
+                  <th>{t('matiere.col_bareme', 'Barème')}</th>
                   <th>{t('matiere.col_actions')}</th>
                 </tr>
               </thead>
@@ -258,6 +263,7 @@ export function MatieresPage() {
                     </td>
                     <td>{m.coeff_defaut}</td>
                     <td>{m.note_min}</td>
+                    <td>{m.note_max == null ? <span style={{ color: 'var(--muted)', fontSize: 12 }}>—</span> : `/${m.note_max}`}</td>
                     <td>
                       <div className="row">
                         <Button size="sm" variant="ghost" onClick={() => openEdit(m)}>{t('actions.modifier')}</Button>
@@ -325,6 +331,15 @@ export function MatieresPage() {
               min="0"
               value={form.note_min}
               onChange={(e) => setForm((f) => ({ ...f, note_min: e.target.value }))}
+            />
+            <Input
+              label={t('matiere.col_bareme', 'Barème (note max)')}
+              type="number"
+              step="1"
+              min="1"
+              placeholder={t('matiere.bareme_placeholder', 'Échelle établissement')}
+              value={form.note_max}
+              onChange={(e) => setForm((f) => ({ ...f, note_max: e.target.value }))}
             />
             <Input
               label={t('matiere.ordre_bulletin')}

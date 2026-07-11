@@ -152,7 +152,7 @@ export async function listerMatieresDeclasse(classe_id: string, etablissement_id
     ovByMatiere.get(o.matiere_id)!.push(o);
   }
   return rows.map(r => {
-    const note_max_effectif = Number(r.note_max_override ?? baseNote);
+    const note_max_effectif = Number(r.note_max_override ?? r.matiere.note_max ?? baseNote);
     return {
       ...r,
       note_max_effectif,
@@ -301,7 +301,7 @@ export async function upsertOverridePeriode(
   }
 
   const coeff = data.coeff ?? Number(existing?.coeff ?? cm.coeff_override ?? cm.matiere.coeff_defaut);
-  const note_max = data.note_max ?? Number(existing?.note_max ?? cm.note_max_override ?? baseNote);
+  const note_max = data.note_max ?? Number(existing?.note_max ?? cm.note_max_override ?? cm.matiere.note_max ?? baseNote);
   // evaluee: si non fourni, on garde l'existant (ou null si pas d'override).
   const evaluee = data.evaluee !== undefined ? data.evaluee : (existing?.evaluee ?? null);
 
