@@ -19,14 +19,17 @@ const etabId = `itest-etab-${RUN}`;
 const anneeId = `itest-annee-${RUN}`;
 const classeId = `itest-classe-${RUN}`;
 const classeArId = `itest-classe-ar-${RUN}`; // classe arabe distincte (élève bilingue)
+const classeEnId = `itest-classe-en-${RUN}`; // classe anglaise (Phase 3-1b)
 const filiereFrId = `itest-fil-fr-${RUN}`;
 const filiereArId = `itest-fil-ar-${RUN}`;
+const filiereEnId = `itest-fil-en-${RUN}`;
 
 const ids = {
   matMath: `itest-mat-math-${RUN}`,
   matFr: `itest-mat-fr-${RUN}`,
   matRlc: `itest-mat-rlc-${RUN}`, // matière avec barème /60 via override de classe
   matAr: `itest-mat-ar-${RUN}`,   // matière de la filière arabe
+  matEn: `itest-mat-en-${RUN}`,   // matière de la filière anglaise
   eleveA: `itest-eleve-a-${RUN}`,
   eleveB: `itest-eleve-b-${RUN}`,
   inscA: `itest-insc-a-${RUN}`,
@@ -40,7 +43,7 @@ async function nettoyer() {
   // Jointure avant inscription/classe/filiere (FK RESTRICT sur classe & filière).
   await prisma.inscriptionClasse.deleteMany({ where: { inscription: { annee_scolaire_id: anneeId } } });
   await prisma.inscription.deleteMany({ where: { annee_scolaire_id: anneeId } });
-  await prisma.classeMatiere.deleteMany({ where: { classe_id: { in: [classeId, classeArId] } } });
+  await prisma.classeMatiere.deleteMany({ where: { classe_id: { in: [classeId, classeArId, classeEnId] } } });
   await prisma.note.deleteMany({ where: { matiere: { etablissement_id: etabId } } });
   await prisma.classe.deleteMany({ where: { etablissement_id: etabId } });
   await prisma.matiere.deleteMany({ where: { etablissement_id: etabId } });
@@ -87,6 +90,7 @@ beforeAll(async () => {
     data: [
       { id: filiereFrId, etablissement_id: etabId, code: 'FR', nom_fr: 'Filière française', langue: 'fr', sens_ecriture: 'LTR' },
       { id: filiereArId, etablissement_id: etabId, code: 'AR', nom_fr: 'Filière arabe', langue: 'ar', sens_ecriture: 'RTL' },
+      { id: filiereEnId, etablissement_id: etabId, code: 'EN', nom_fr: 'Filière anglaise', langue: 'en', sens_ecriture: 'LTR' },
     ],
   });
 
@@ -98,6 +102,10 @@ beforeAll(async () => {
   await prisma.classe.create({
     data: { id: classeArId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1 Arabe', filiere: 'AR', filiere_id: filiereArId },
   });
+  // Classe anglaise (Phase 3-1b) : l'élève B y suit une matière EN.
+  await prisma.classe.create({
+    data: { id: classeEnId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1 English', filiere: 'EN', filiere_id: filiereEnId },
+  });
 
   // Matières FR. Le barème de saisie est porté par la classe (note_max_override) ;
   // sans override, une note est réputée sur l'échelle établissement (ici /20).
@@ -107,6 +115,7 @@ beforeAll(async () => {
       { id: ids.matFr, etablissement_id: etabId, nom_fr: 'Français', filiere: 'FR', coeff_defaut: 1, ordre_bulletin: 2 },
       { id: ids.matRlc, etablissement_id: etabId, nom_fr: 'Lecture (RLC)', filiere: 'FR', coeff_defaut: 1, ordre_bulletin: 3 },
       { id: ids.matAr, etablissement_id: etabId, nom_fr: 'Langue arabe', filiere: 'AR', coeff_defaut: 1, ordre_bulletin: 1 },
+      { id: ids.matEn, etablissement_id: etabId, nom_fr: 'Mathematics', filiere: 'EN', coeff_defaut: 2, ordre_bulletin: 1 },
     ],
   });
 
@@ -120,6 +129,8 @@ beforeAll(async () => {
       { classe_id: classeId, matiere_id: ids.matRlc, note_max_override: 60 },
       // Matière AR dans la classe arabe (barème /20 = échelle établissement).
       { classe_id: classeArId, matiere_id: ids.matAr, note_max_override: 20 },
+      // Matière EN dans la classe anglaise (barème /20 = échelle établissement).
+      { classe_id: classeEnId, matiere_id: ids.matEn, note_max_override: 20 },
     ],
   });
 
@@ -145,6 +156,9 @@ beforeAll(async () => {
       { inscription_id: ids.inscA, filiere_id: filiereFrId, classe_id: classeId },
       { inscription_id: ids.inscA, filiere_id: filiereArId, classe_id: classeArId },
       { inscription_id: ids.inscB, filiere_id: filiereFrId, classe_id: classeId },
+      // Élève B également inscrit en filière anglaise (Phase 3-1b). N'affecte ni le
+      // bulletin FR (autre classe) ni le COMBINE (qui n'agrège que FR + AR).
+      { inscription_id: ids.inscB, filiere_id: filiereEnId, classe_id: classeEnId },
     ],
   });
 
@@ -166,6 +180,8 @@ beforeAll(async () => {
       { eleve_id: ids.eleveB, matiere_id: ids.matRlc, periode: 1, annee_scolaire_id: anneeId, valeur: 30 },
       // Élève A, filière AR : Langue arabe 10/20 (c1) → (10/20)*20*1 = 10.
       { eleve_id: ids.eleveA, matiere_id: ids.matAr, periode: 1, annee_scolaire_id: anneeId, valeur: 10 },
+      // Élève B, filière EN : Mathematics 16/20 (c2) → moyenne EN = 16.00 ("Très bien").
+      { eleve_id: ids.eleveB, matiere_id: ids.matEn, periode: 1, annee_scolaire_id: anneeId, valeur: 16 },
     ],
   });
 });
@@ -243,5 +259,24 @@ describe('Bulletins — intégration notes → moyenne (DB réelle)', () => {
     // Classement combiné : A (14.2) devant B (10.0).
     expect(parEleve[ids.eleveA].rang).toBe(1);
     expect(parEleve[ids.eleveB].rang).toBe(2);
+  });
+
+  it('EN (filière anglaise) : génère un bulletin et expose notesByFiliere.EN', async () => {
+    const res = await genererBulletins(etabId, {
+      classe_id: classeEnId, annee_scolaire_id: anneeId, periode: 1, filiere: 'EN',
+    });
+    // Seul l'élève B est inscrit en filière anglaise.
+    expect(res.bulletins).toHaveLength(1);
+
+    const b = await prisma.bulletin.findFirst({ where: { eleve_id: ids.eleveB, periode: 1, filiere: 'EN' } });
+    expect(b).not.toBeNull();
+    // Mathematics 16/20 (coeff 2) → moyenne normalisée = 16.00, mention "Très bien".
+    expect(Number(b!.moyenne)).toBeCloseTo(16.0, 2);
+    expect(b!.appreciation).toBe('Très bien');
+
+    // Le détail doit renvoyer les notes SOUS la clé EN (et non FR/AR).
+    const detail = await getBulletin(b!.id, etabId);
+    expect(detail.notesByFiliere.EN).toHaveLength(1);
+    expect(detail.notesByFiliere.FR).toBeUndefined();
   });
 });

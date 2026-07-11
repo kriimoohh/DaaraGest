@@ -100,9 +100,9 @@ export async function deverrouillerPeriodeHandler(request: FastifyRequest, reply
   }
 }
 
-function parseType(request: FastifyRequest, reply: FastifyReply): 'FR' | 'AR' | 'COMBINE' | 'ANNUEL' | null {
+function parseType(request: FastifyRequest, reply: FastifyReply): 'FR' | 'AR' | 'EN' | 'COMBINE' | 'ANNUEL' | null {
   const parsed = bulletinTemplateTypeSchema.safeParse((request.params as { type?: string }).type);
-  if (!parsed.success) { reply.status(400).send({ error: 'Type de bulletin invalide (FR, AR, COMBINE ou ANNUEL)' }); return null; }
+  if (!parsed.success) { reply.status(400).send({ error: 'Type de bulletin invalide (FR, AR, EN, COMBINE ou ANNUEL)' }); return null; }
   return parsed.data;
 }
 
