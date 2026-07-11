@@ -291,7 +291,7 @@ function BulletinTemplateEditor() {
   const [html, setHtml] = useState('');
   const [placeholders, setPlaceholders] = useState<{ token: string; desc: string }[]>([]);
   const [types, setTypes] = useState<{ type: string; label: string; is_custom: boolean }[]>([]);
-  const [type, setType] = useState<'FR' | 'AR' | 'COMBINE' | 'ANNUEL'>('FR');
+  const [type, setType] = useState<'FR' | 'AR' | 'EN' | 'COMBINE' | 'ANNUEL'>('FR');
   const [isCustom, setIsCustom] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -312,7 +312,7 @@ function BulletinTemplateEditor() {
 
   useEffect(() => { load(); }, [load]);
 
-  const changeType = (t: 'FR' | 'AR' | 'COMBINE' | 'ANNUEL') => {
+  const changeType = (t: 'FR' | 'AR' | 'EN' | 'COMBINE' | 'ANNUEL') => {
     if (t === type) return;
     if (dirty && !confirm('Des changements ne sont pas enregistrés. Changer de type et les perdre ?')) return;
     setType(t);
@@ -383,7 +383,7 @@ function BulletinTemplateEditor() {
             <button
               key={t.type}
               type="button"
-              onClick={() => changeType(t.type as 'FR' | 'AR' | 'COMBINE' | 'ANNUEL')}
+              onClick={() => changeType(t.type as 'FR' | 'AR' | 'EN' | 'COMBINE' | 'ANNUEL')}
               style={{
                 padding: '6px 12px', borderRadius: 'var(--r-sm)', fontSize: 13, cursor: 'pointer',
                 border: `1px solid ${t.type === type ? 'var(--terra)' : 'var(--rule)'}`,

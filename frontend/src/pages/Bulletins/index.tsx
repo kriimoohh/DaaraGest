@@ -47,7 +47,7 @@ interface DetailBulletin extends Bulletin {
   eleve: Bulletin['eleve'] & {
     inscriptions: { classe_fr: { nom_fr: string } | null; classe_ar: { nom_fr: string } | null; }[];
   };
-  notesByFiliere: { FR?: NoteDetail[]; AR?: NoteDetail[]; };
+  notesByFiliere: { FR?: NoteDetail[]; AR?: NoteDetail[]; EN?: NoteDetail[]; };
 }
 
 type BulletinType = string;
@@ -746,6 +746,7 @@ function BulletinDetailContent({
   const locale = i18n.language === 'ar' ? 'ar-SN' : 'fr-FR';
   const noteMax = useNoteMax();
   const { user } = useAuthStore();
+  const { actives: filieresActives } = useFilieres();
   const [obsFr, setObsFr] = useState(detail.observation_fr ?? '');
   const [obsProf, setObsProf] = useState(detail.observation_prof ?? '');
   const [savingObs, setSavingObs] = useState(false);
@@ -766,9 +767,18 @@ function BulletinDetailContent({
 
   const moy = detail.moyenne !== null ? Number(detail.moyenne) : null;
   const isAnnuel = detail.periode === 0;
-  const filieres: ('FR' | 'AR')[] = detail.filiere === 'COMBINE' ? ['FR', 'AR'] : [detail.filiere as 'FR' | 'AR'];
+  const filieres: ('FR' | 'AR' | 'EN')[] = detail.filiere === 'COMBINE' ? ['FR', 'AR'] : [detail.filiere as 'FR' | 'AR' | 'EN'];
   const insc = detail.eleve.inscriptions?.[0];
   const classeNom = insc?.classe_fr?.nom_fr ?? insc?.classe_ar?.nom_fr ?? '—';
+
+  // Libellé de section par filière : FR/AR gardent leurs libellés traduits ;
+  // les autres codes (EN…) prennent le nom de la filière configurée (repli sur le code).
+  const filiereNom = (f: string) => {
+    if (f === 'FR') return t('classe.filiere_fr');
+    if (f === 'AR') return t('classe.filiere_ar');
+    const fil = filieresActives.find(x => x.code === f);
+    return fil ? nomBilingue(fil) : f;
+  };
 
   const bandeauBg = moy === null ? 'var(--paper-2)' : moy >= noteMax * 0.7 ? 'var(--success-soft)' : moy >= noteMax * 0.5 ? 'var(--warning-soft)' : 'var(--danger-soft)';
 
@@ -820,12 +830,13 @@ function BulletinDetailContent({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {filieres.map(f => {
           const notes = detail.notesByFiliere[f] ?? [];
-          const hdBg = f === 'FR' ? 'var(--indigo-soft)' : 'var(--sahel-soft)';
-          const hdColor = f === 'FR' ? 'var(--indigo-ink)' : 'var(--sahel-ink)';
+          // FR = indigo, AR = sahel, autres filières (EN…) = accent neutre.
+          const hdBg = f === 'FR' ? 'var(--indigo-soft)' : f === 'AR' ? 'var(--sahel-soft)' : 'var(--paper-2)';
+          const hdColor = f === 'FR' ? 'var(--indigo-ink)' : f === 'AR' ? 'var(--sahel-ink)' : 'var(--ink-3)';
           return (
             <div key={f} className="card" style={{ overflow: 'hidden' }}>
               <div style={{ padding: '8px 16px', fontSize: 12, fontWeight: 600, borderBottom: '1px solid var(--rule)', background: hdBg, color: hdColor }}>
-                {f === 'FR' ? t('classe.filiere_fr') : t('classe.filiere_ar')} — {notes.length} {t('matiere.titre').toLowerCase()}
+                {filiereNom(f)} — {notes.length} {t('matiere.titre').toLowerCase()}
               </div>
               <div style={{ padding: '0 16px 12px' }}>
                 {notes.length === 0
