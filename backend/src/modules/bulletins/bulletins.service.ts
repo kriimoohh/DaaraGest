@@ -113,7 +113,7 @@ function contributionNote(valeur: number, noteMax: number, base: number, coeff: 
 // par défaut quand une matière de la classe n'a ni override de période ni override
 // de classe : la note est alors réputée saisie sur l'échelle de l'établissement.
 async function getMatieresDeclasse(
-  classe_id: string, filiere: 'FR' | 'AR', periode?: number, baseNote: number = DEFAULT_NOTE_MAX,
+  classe_id: string, filiere: 'FR' | 'AR' | 'EN', periode?: number, baseNote: number = DEFAULT_NOTE_MAX,
 ): Promise<MatiereAvecCoeff[]> {
   const rows = await prisma.classeMatiere.findMany({
     where: { classe_id, matiere: { filiere, active: true } },
@@ -138,7 +138,7 @@ async function getMatieresDeclasse(
   });
 }
 
-async function getMatieres(etablissement_id: string, filiere: 'FR' | 'AR') {
+async function getMatieres(etablissement_id: string, filiere: 'FR' | 'AR' | 'EN') {
   return prisma.matiere.findMany({
     where: { etablissement_id, filiere, active: true },
     orderBy: { ordre_bulletin: 'asc' },
@@ -730,7 +730,7 @@ export async function getBulletin(id: string, etablissement_id: string) {
   });
   if (!bulletin) throw new NotFoundError('Bulletin introuvable');
 
-  const filieres: ('FR' | 'AR')[] = bulletin.filiere === 'COMBINE' ? ['FR', 'AR'] : [bulletin.filiere as 'FR' | 'AR'];
+  const filieres: ('FR' | 'AR' | 'EN')[] = bulletin.filiere === 'COMBINE' ? ['FR', 'AR'] : [bulletin.filiere as 'FR' | 'AR' | 'EN'];
 
   // Nb de périodes configurable (2=semestres, 3=trimestres, 6=bimestres). On
   // ne dépend plus de [1,2,3] hardcodé pour les bulletins annuels.
@@ -742,12 +742,11 @@ export async function getBulletin(id: string, etablissement_id: string) {
   const inscription = bulletin.eleve.inscriptions.find(
     i => i.annee_scolaire_id === bulletin.annee_scolaire_id
   ) as { classes?: LienClasseCode[] } | undefined;
-  const classeIdFR = classeIdParFiliere(inscription?.classes, 'FR');
-  const classeIdAR = classeIdParFiliere(inscription?.classes, 'AR');
 
   const notesByFiliere: Record<string, unknown[]> = {};
   for (const f of filieres) {
-    const classeId = f === 'FR' ? classeIdFR : classeIdAR;
+    // Classe de l'élève DANS cette filière (générique : FR, AR ou EN).
+    const classeId = classeIdParFiliere(inscription?.classes, f);
     const periodes = bulletin.periode === 0
       ? Array.from({ length: nbPeriodes }, (_, i) => i + 1)
       : [bulletin.periode];
@@ -960,15 +959,18 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
   ) as { classes?: LienClasseCode[] } | undefined;
   const frId = classeIdParFiliere(insc?.classes, 'FR');
   const arId = classeIdParFiliere(insc?.classes, 'AR');
+  const enId = classeIdParFiliere(insc?.classes, 'EN');
 
-  // Mentions effectives : celles du niveau de la classe (FR prioritaire), sinon défauts établissement.
-  const niveauId = await niveauPourBulletin(frId, arId);
+  // Mentions effectives : celles du niveau de la classe (FR prioritaire, sinon AR/EN),
+  // sinon défauts établissement.
+  const niveauId = await niveauPourBulletin(frId, arId ?? enId);
   const mentions = await getMentionsForNiveau(etablissement_id, niveauId);
   const periodeForBareme = data.periode === 0 ? undefined : data.periode;
   const effMap = new Map<string, { coeff: number; note_max: number; evaluee: boolean }>();
   for (const [cid, f] of [
     [frId, 'FR'] as const,
     [arId, 'AR'] as const,
+    [enId, 'EN'] as const,
   ]) {
     if (!cid) continue;
     for (const m of await getMatieresDeclasse(cid, f, periodeForBareme, baseNote)) {
@@ -978,9 +980,14 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
 
   const { generateBulletinHtml, generateBulletinAnnuelHtml, CSS: BULLETIN_CSS } = await import('./bulletin.template');
 
-  // Maître(s) de la classe : FR + AR (les deux pour un bulletin combiné).
-  const maitre_fr = data.filiere !== 'AR' ? await getMaitresClasse(frId, data.annee_scolaire_id) : null;
-  const maitre_ar = data.filiere !== 'FR' ? await getMaitresClasse(arId, data.annee_scolaire_id) : null;
+  // Maître(s) de la classe : FR + AR (les deux pour un bulletin combiné). Pour une
+  // filière EN (LTR, un seul créneau), le maître EN occupe le créneau « maitre_fr ».
+  const maitre_fr = data.filiere === 'EN'
+    ? await getMaitresClasse(enId, data.annee_scolaire_id)
+    : (data.filiere !== 'AR' ? await getMaitresClasse(frId, data.annee_scolaire_id) : null);
+  const maitre_ar = data.filiere === 'EN'
+    ? null
+    : (data.filiere !== 'FR' ? await getMaitresClasse(arId, data.annee_scolaire_id) : null);
   const abs = await getAbsences(data.eleve_id, data.annee_scolaire_id);
 
   const base = {
@@ -1011,7 +1018,7 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
 
   type NoteRaw = { matiere_id: string; valeur: unknown; periode: number; evaluee?: boolean; matiere: { nom_fr: string; nom_ar: string | null; coeff_defaut: unknown } };
 
-  const toRows = (f: 'FR' | 'AR') =>
+  const toRows = (f: 'FR' | 'AR' | 'EN') =>
     ((data.notesByFiliere[f] ?? []) as NoteRaw[]).map(n => {
       const eff = effMap.get(n.matiere_id);
       return {
@@ -1022,7 +1029,7 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
       };
     });
 
-  const toAnnuelRows = (f: 'FR' | 'AR') => {
+  const toAnnuelRows = (f: 'FR' | 'AR' | 'EN') => {
     const map = new Map<string, { nom_fr: string; nom_ar: string; coeff: number; note_max: number; vals: Record<number, number | null>; evaluee: boolean }>();
     for (const n of (data.notesByFiliere[f] ?? []) as NoteRaw[]) {
       if (!map.has(n.matiere.nom_fr)) {
@@ -1042,18 +1049,22 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
 
   let html: string;
   if (data.periode === 0) {
-    const type = data.filiere === 'COMBINE' ? 'ANNUEL_COMBINE' : data.filiere === 'AR' ? 'ANNUEL_AR' : 'ANNUEL_FR';
+    const type = data.filiere === 'COMBINE' ? 'ANNUEL_COMBINE'
+      : data.filiere === 'AR' ? 'ANNUEL_AR'
+      : data.filiere === 'EN' ? 'ANNUEL_EN' : 'ANNUEL_FR';
     html = generateBulletinAnnuelHtml({
       ...base, type,
-      matieres_fr: data.filiere !== 'AR' ? toAnnuelRows('FR') : undefined,
-      matieres_ar: data.filiere !== 'FR' ? toAnnuelRows('AR') : undefined,
+      matieres_fr: (data.filiere === 'FR' || data.filiere === 'COMBINE') ? toAnnuelRows('FR') : undefined,
+      matieres_ar: (data.filiere === 'AR' || data.filiere === 'COMBINE') ? toAnnuelRows('AR') : undefined,
+      matieres_en: data.filiere === 'EN' ? toAnnuelRows('EN') : undefined,
     });
   } else {
-    const type = data.filiere as 'FR' | 'AR' | 'COMBINE';
+    const type = data.filiere as 'FR' | 'AR' | 'EN' | 'COMBINE';
     html = generateBulletinHtml({
       ...base, type, periode: data.periode,
-      notes_fr: data.filiere !== 'AR' ? toRows('FR') : undefined,
-      notes_ar: data.filiere !== 'FR' ? toRows('AR') : undefined,
+      notes_fr: (data.filiere === 'FR' || data.filiere === 'COMBINE') ? toRows('FR') : undefined,
+      notes_ar: (data.filiere === 'AR' || data.filiere === 'COMBINE') ? toRows('AR') : undefined,
+      notes_en: data.filiere === 'EN' ? toRows('EN') : undefined,
     });
   }
 
@@ -1102,7 +1113,7 @@ export async function genererPdfClasse(
     absByEleve.set(r.eleve_id, e);
   }
 
-  const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
+  const filieres: ('FR' | 'AR' | 'EN')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR' | 'EN'];
 
   // Les matières/notes AR sont rattachées à la classe AR de l'élève (classe_ar_id),
   // distincte de la classe FR. Utiliser le classe_id passé (FR) pour les deux
@@ -1120,7 +1131,7 @@ export async function genererPdfClasse(
     return maitreCache.get(classId)!;
   };
   const matCache = new Map<string, MatiereAvecCoeff[]>();
-  const matieresPour = async (classId: string | null | undefined, f: 'FR' | 'AR') => {
+  const matieresPour = async (classId: string | null | undefined, f: 'FR' | 'AR' | 'EN') => {
     if (!classId) return [];
     const key = `${classId}|${f}`;
     let mats = matCache.get(key);
@@ -1152,14 +1163,18 @@ export async function genererPdfClasse(
         evaluee: m.evaluee_effectif,
       }));
     }
-    const toRows = (f: 'FR' | 'AR') => rowsByFiliere[f] ?? [];
+    const toRows = (f: 'FR' | 'AR' | 'EN') => rowsByFiliere[f] ?? [];
 
-    const maitre_fr = filiere !== 'AR' ? await maitrePour(classeIdParFiliere(insc?.classes, 'FR')) : null;
-    const maitre_ar = filiere !== 'FR' ? await maitrePour(classeIdParFiliere(insc?.classes, 'AR')) : null;
+    const maitre_fr = filiere === 'EN'
+      ? await maitrePour(classeIdParFiliere(insc?.classes, 'EN'))
+      : (filiere !== 'AR' ? await maitrePour(classeIdParFiliere(insc?.classes, 'FR')) : null);
+    const maitre_ar = filiere === 'EN'
+      ? null
+      : (filiere !== 'FR' ? await maitrePour(classeIdParFiliere(insc?.classes, 'AR')) : null);
     const abs = absByEleve.get(bulletin.eleve_id) ?? { j: 0, nj: 0 };
 
     pages.push(generateBulletinHtml({
-      type: filiere as 'FR' | 'AR' | 'COMBINE', periode: bulletin.periode,
+      type: filiere as 'FR' | 'AR' | 'EN' | 'COMBINE', periode: bulletin.periode,
       etablissement_nom_fr: etab.nom_fr,
       etablissement_logo_url: etab.logo_url,
       entete_bulletin_fr: etab.entete_bulletin_fr,
@@ -1181,8 +1196,9 @@ export async function genererPdfClasse(
       afficher_absences: config?.bulletin_afficher_absences ?? true,
       logo_echelle: config?.bulletin_logo_echelle ?? 100,
       template_html: templateHtml,
-      notes_fr: filiere !== 'AR' ? toRows('FR') : undefined,
-      notes_ar: filiere !== 'FR' ? toRows('AR') : undefined,
+      notes_fr: (filiere === 'FR' || filiere === 'COMBINE') ? toRows('FR') : undefined,
+      notes_ar: (filiere === 'AR' || filiere === 'COMBINE') ? toRows('AR') : undefined,
+      notes_en: filiere === 'EN' ? toRows('EN') : undefined,
     }));
   }
 
@@ -1247,6 +1263,8 @@ export async function apercuBulletinTemplate(etablissement_id: string, type: Typ
     ({ nom_fr, nom_ar, coeff, valeur: Math.round(baseNote * pct * 100) / 100, note_max: baseNote, evaluee: true });
   const demoFR = [note('Mathématiques', 'الرياضيات', 4, 0.78), note('Français', 'الفرنسية', 4, 0.65), note('Histoire-Géographie', 'التاريخ والجغرافيا', 2, 0.57)];
   const demoAR = [note('Coran', 'القرآن', 3, 0.80), note('Langue arabe', 'اللغة العربية', 3, 0.70)];
+  // Filière anglaise : non bilingue → nom_ar = nom_fr (aucune glose arabe affichée).
+  const demoEN = [note('Mathematics', 'Mathematics', 4, 0.78), note('English', 'English', 4, 0.68), note('Science', 'Science', 2, 0.57)];
 
   const common = {
     etablissement_nom_fr: etab.nom_fr,
@@ -1290,8 +1308,9 @@ export async function apercuBulletinTemplate(etablissement_id: string, type: Typ
   } else {
     html = generateBulletinHtml({
       ...common, type, periode: 1,
-      notes_fr: type !== 'AR' ? demoFR : undefined,
-      notes_ar: type !== 'FR' ? demoAR : undefined,
+      notes_fr: (type === 'FR' || type === 'COMBINE') ? demoFR : undefined,
+      notes_ar: (type === 'AR' || type === 'COMBINE') ? demoAR : undefined,
+      notes_en: type === 'EN' ? demoEN : undefined,
     });
   }
   return { html };

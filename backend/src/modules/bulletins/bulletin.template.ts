@@ -111,16 +111,18 @@ function moyenneNorm(notes: { valeur: number | null; coeff: number; note_max?: n
 }
 
 export interface BulletinTrimestreData extends BulletinBaseData {
-  type: 'FR' | 'AR' | 'COMBINE';
+  type: 'FR' | 'AR' | 'EN' | 'COMBINE';
   periode: number;
   notes_fr?: NoteRow[];
   notes_ar?: NoteRow[];
+  notes_en?: NoteRow[];
 }
 
 export interface BulletinAnnuelData extends BulletinBaseData {
-  type: 'ANNUEL_FR' | 'ANNUEL_AR' | 'ANNUEL_COMBINE';
+  type: 'ANNUEL_FR' | 'ANNUEL_AR' | 'ANNUEL_EN' | 'ANNUEL_COMBINE';
   matieres_fr?: TrimestreRow[];
   matieres_ar?: TrimestreRow[];
+  matieres_en?: TrimestreRow[];
 }
 
 // ─── Constantes ─────────────────────────────────────────────────────────────
@@ -598,6 +600,32 @@ const FRAG_TABLE_AR = `{{#tableau_ar}}
 </div>
 {{/tableau_ar}}`;
 
+// Filière anglaise : même mise en page que le FR (LTR, non bilingue), avec une
+// glose anglaise sur les libellés — miroir de la glose arabe du tableau AR.
+const FRAG_TABLE_EN = `{{#tableau_en}}
+<div class="eval-section">
+  <div class="eval-header">Évaluation des acquis — Filière Anglaise <span style="font-weight:400">— English Section</span></div>
+  <table>
+    <thead><tr>
+      <th style="width:42%">Matières <span style="font-weight:400;color:#6b7280">/ Subjects</span></th>
+      <th class="center" style="width:8%">Coeff.</th>
+      <th class="center" style="width:10%">Note <span style="font-weight:400;color:#6b7280">/ Mark</span></th>
+      <th class="center" style="width:8%">/ Max</th>
+      <th style="width:32%">Appréciation <span style="font-weight:400;color:#6b7280">/ Remark</span></th>
+    </tr></thead>
+    <tbody>
+      {{{lignes}}}
+      <tr class="results-row">
+        <td>Résultats <span class="th-ar">/ Results</span></td>
+        <td class="center">Coef: {{coef_total}}</td>
+        <td class="center" colspan="2">Total: {{total}}</td>
+        <td class="center">Moyenne: {{moyenne}} / {{note_max_etab}} <span class="th-ar">/ Average</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+{{/tableau_en}}`;
+
 const FRAG_TABLE_ANNUEL_FR = `{{#tableau_annuel_fr}}
 <div class="eval-section">
   <div class="eval-header">Évaluation annuelle — Filière Française</div>
@@ -629,6 +657,22 @@ const FRAG_TABLE_ANNUEL_AR = `{{#tableau_annuel_ar}}
   </table>
 </div>
 {{/tableau_annuel_ar}}`;
+
+const FRAG_TABLE_ANNUEL_EN = `{{#tableau_annuel_en}}
+<div class="eval-section">
+  <div class="eval-header">Évaluation annuelle — Filière Anglaise <span style="font-weight:400">— English Section</span></div>
+  <table>
+    <thead><tr>
+      <th style="width:35%">Matière <span style="font-weight:400;color:#6b7280">/ Subject</span></th>
+      <th class="center" style="width:7%">Coeff.</th>
+      {{#periodes}}<th class="center">{{label}}</th>{{/periodes}}
+      <th class="center" style="background:#f0fdf4;color:#059669">Moy. Ann.</th>
+      <th style="width:22%">Appréciation <span style="font-weight:400;color:#6b7280">/ Remark</span></th>
+    </tr></thead>
+    <tbody>{{{lignes}}}</tbody>
+  </table>
+</div>
+{{/tableau_annuel_en}}`;
 
 const FRAG_RESUME_SIMPLE = `<table class="combined-summary">
   <thead><tr>
@@ -662,10 +706,10 @@ const FRAG_RESUME_COMBINE = `<table class="combined-summary">
   </tr></tbody>
 </table>`;
 
-export type TypeModeleBulletin = 'FR' | 'AR' | 'COMBINE' | 'ANNUEL';
-export const BULLETIN_TYPES: TypeModeleBulletin[] = ['FR', 'AR', 'COMBINE', 'ANNUEL'];
+export type TypeModeleBulletin = 'FR' | 'AR' | 'EN' | 'COMBINE' | 'ANNUEL';
+export const BULLETIN_TYPES: TypeModeleBulletin[] = ['FR', 'AR', 'EN', 'COMBINE', 'ANNUEL'];
 export const BULLETIN_TYPE_LABELS: Record<TypeModeleBulletin, string> = {
-  FR: 'Bulletin français', AR: 'Bulletin arabe', COMBINE: 'Bulletin combiné (FR + AR)', ANNUEL: 'Bulletin annuel',
+  FR: 'Bulletin français', AR: 'Bulletin arabe', EN: 'Bulletin anglais', COMBINE: 'Bulletin combiné (FR + AR)', ANNUEL: 'Bulletin annuel',
 };
 
 // UN modèle par défaut par type. HTML complet et éditable (en-têtes, libellés, titres…).
@@ -673,8 +717,11 @@ export const BULLETIN_TYPE_LABELS: Record<TypeModeleBulletin, string> = {
 export const DEFAULT_BULLETIN_TEMPLATES: Record<TypeModeleBulletin, string> = {
   FR:      `${FRAG_CHROME_TOP}\n${FRAG_TABLE_FR}\n${FRAG_RESUME_SIMPLE}\n${FRAG_CHROME_BOTTOM}`,
   AR:      `${FRAG_CHROME_TOP}\n${FRAG_TABLE_AR}\n${FRAG_RESUME_SIMPLE}\n${FRAG_CHROME_BOTTOM}`,
+  EN:      `${FRAG_CHROME_TOP}\n${FRAG_TABLE_EN}\n${FRAG_RESUME_SIMPLE}\n${FRAG_CHROME_BOTTOM}`,
   COMBINE: `${FRAG_CHROME_TOP}\n${FRAG_TABLE_FR}\n${FRAG_TABLE_AR}\n${FRAG_RESUME_COMBINE}\n${FRAG_CHROME_BOTTOM}`,
-  ANNUEL:  `${FRAG_CHROME_TOP}\n${FRAG_TABLE_ANNUEL_FR}\n${FRAG_TABLE_ANNUEL_AR}\n{{#est_combine}}${FRAG_RESUME_COMBINE}{{/est_combine}}{{^est_combine}}${FRAG_RESUME_SIMPLE}{{/est_combine}}\n${FRAG_CHROME_BOTTOM}`,
+  // La section {{#tableau_annuel_en}} n'apparaît que si des matières EN sont fournies
+  // (undefined pour FR/AR/COMBINE) → aucune régression sur les annuels existants.
+  ANNUEL:  `${FRAG_CHROME_TOP}\n${FRAG_TABLE_ANNUEL_FR}\n${FRAG_TABLE_ANNUEL_AR}\n${FRAG_TABLE_ANNUEL_EN}\n{{#est_combine}}${FRAG_RESUME_COMBINE}{{/est_combine}}{{^est_combine}}${FRAG_RESUME_SIMPLE}{{/est_combine}}\n${FRAG_CHROME_BOTTOM}`,
 };
 
 // Blocs « décor » calculés (HTML brut) communs à toutes les variantes.
@@ -722,7 +769,10 @@ export function generateBulletinHtml(data: BulletinTrimestreData): string {
   const periodeStr = periodeLabel(data.periode);
   const notesFR = data.notes_fr ?? [];
   const notesAR = data.notes_ar ?? [];
+  const notesEN = data.notes_en ?? [];
 
+  // En-tête : la filière anglaise (LTR) réutilise le bloc officiel FR (showFr) —
+  // il n'y a pas de troisième bloc d'en-tête. `headerHtml` reste FR/AR/COMBINE.
   let filiere: 'FR' | 'AR' | 'COMBINE';
   let titre: string;
   let estCombine = false;
@@ -730,6 +780,7 @@ export function generateBulletinHtml(data: BulletinTrimestreData): string {
   let arMoy: number | null = null;
   let tableau_fr: ReturnType<typeof ctxTableauTrim> | undefined;
   let tableau_ar: ReturnType<typeof ctxTableauTrim> | undefined;
+  let tableau_en: ReturnType<typeof ctxTableauTrim> | undefined;
 
   if (data.type === 'FR') {
     filiere = 'FR';
@@ -740,6 +791,10 @@ export function generateBulletinHtml(data: BulletinTrimestreData): string {
     // Titre bilingue (FR + AR), cohérent avec les libellés arabes du tableau AR.
     titre = titleHtml(`${periodeStr} — <span dir="rtl">${periodeLabelAr(data.periode)}</span>`);
     tableau_ar = ctxTableauTrim(notesAR, true);
+  } else if (data.type === 'EN') {
+    filiere = 'FR';
+    titre = titleHtml(`${periodeStr} — English report`);
+    tableau_en = ctxTableauTrim(notesEN, false);
   } else {
     filiere = 'COMBINE';
     estCombine = true;
@@ -755,6 +810,7 @@ export function generateBulletinHtml(data: BulletinTrimestreData): string {
     ...resumeCtx(data, estCombine, frMoy, arMoy),
     tableau_fr,
     tableau_ar,
+    tableau_en,
   });
 }
 
@@ -762,10 +818,12 @@ export function generateBulletinAnnuelHtml(data: BulletinAnnuelData): string {
   setRenderContext(data);
   const isCombine = data.type === 'ANNUEL_COMBINE';
   const isAR = data.type === 'ANNUEL_AR';
+  const isEN = data.type === 'ANNUEL_EN';
   const nbPeriodes = data.nb_periodes ?? 3;
 
   const mFR = data.matieres_fr ?? [];
   const mAR = data.matieres_ar ?? [];
+  const mEN = data.matieres_en ?? [];
 
   // Sous-moyennes pour le résumé combiné — matières non évaluées exclues.
   const frWithMoy = mFR.filter(m => m.evaluee !== false && m.moyenne_annuelle !== null);
@@ -775,14 +833,17 @@ export function generateBulletinAnnuelHtml(data: BulletinAnnuelData): string {
   const frMoy = frCoeff > 0 ? frWithMoy.reduce((s, m) => s + m.moyenne_annuelle! * m.coeff, 0) / frCoeff : null;
   const arMoy = arCoeff > 0 ? arWithMoy.reduce((s, m) => s + m.moyenne_annuelle! * m.coeff, 0) / arCoeff : null;
 
-  const tableau_annuel_fr = (!isAR && mFR.length > 0) ? ctxTableauAnnuel(mFR, false, nbPeriodes) : undefined;
+  const tableau_annuel_fr = (!isAR && !isEN && mFR.length > 0) ? ctxTableauAnnuel(mFR, false, nbPeriodes) : undefined;
   const tableau_annuel_ar = ((isAR || isCombine) && mAR.length > 0) ? ctxTableauAnnuel(mAR, true, nbPeriodes) : undefined;
+  const tableau_annuel_en = (isEN && mEN.length > 0) ? ctxTableauAnnuel(mEN, false, nbPeriodes) : undefined;
 
+  // EN (LTR) réutilise le bloc d'en-tête FR ; le résumé reste « simple » (non combiné).
   const filiere = isAR ? 'AR' : isCombine ? 'COMBINE' : 'FR';
   return renderBulletinDoc(data.template_html, DEFAULT_BULLETIN_TEMPLATES.ANNUEL, {
     ...chromeCtx(data, filiere, titleAnnuelHtml(nbPeriodes)),
     ...resumeCtx(data, isCombine, frMoy, arMoy),
     tableau_annuel_fr,
     tableau_annuel_ar,
+    tableau_annuel_en,
   });
 }
