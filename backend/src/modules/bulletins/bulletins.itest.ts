@@ -239,7 +239,7 @@ describe('Bulletins — intégration notes → moyenne (DB réelle)', () => {
     expect(Number(annuelA!.moyenne)).toBeCloseTo(15.25, 2);
   });
 
-  it('COMBINE agrège les DEUX classes (FR + AR) de l\'élève bilingue', async () => {
+  it('COMBINE générique : agrège les filières de chaque élève (FR+AR / FR+EN)', async () => {
     const res = await genererBulletins(etabId, {
       classe_id: classeId, annee_scolaire_id: anneeId, periode: 1, filiere: 'COMBINE',
     });
@@ -250,13 +250,16 @@ describe('Bulletins — intégration notes → moyenne (DB réelle)', () => {
     });
     const parEleve = Object.fromEntries(bulletins.map(b => [b.eleve_id, b]));
 
-    // Élève A bilingue : FR (30+16+15, coeff 4) + AR (10, coeff 1) = 71/5 = 14.2.
-    // (et NON 15.25 = FR seul, l'ancien bug qui ignorait la filière AR.)
+    // Établissement FR+AR+EN actifs → COMBINE générique (Phase 3-2) : fusion des
+    // filières où CHAQUE élève est inscrit (classes absentes ignorées par élève).
+    // Élève A (FR + AR) : FR (30+16+15, coeff 4) + AR (10, coeff 1) = 71/5 = 14.2.
+    // (EN ignoré : pas de classe EN pour A.)
     expect(Number(parEleve[ids.eleveA].moyenne)).toBeCloseTo(14.2, 2);
-    // Élève B sans classe AR : COMBINE = FR seul = 10.00.
-    expect(Number(parEleve[ids.eleveB].moyenne)).toBeCloseTo(10.0, 2);
+    // Élève B (FR + EN) : FR (20+10+10, coeff 4) + EN (32, coeff 2) = 72/6 = 12.00.
+    // (AR ignoré : pas de classe AR pour B. Prouve la fusion FR+EN générique.)
+    expect(Number(parEleve[ids.eleveB].moyenne)).toBeCloseTo(12.0, 2);
 
-    // Classement combiné : A (14.2) devant B (10.0).
+    // Classement combiné : A (14.2) devant B (12.0).
     expect(parEleve[ids.eleveA].rang).toBe(1);
     expect(parEleve[ids.eleveB].rang).toBe(2);
   });
