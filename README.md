@@ -1,6 +1,6 @@
 # DaaraGest
 
-Application web de gestion d'école franco-arabe, conçue pour les établissements scolaires au Sénégal. Gestion complète des élèves, professeurs, classes, notes, bulletins, finances, pointage, emploi du temps, messagerie interne, bibliothèque et portail parents — avec interface bilingue Français/Arabe et une landing page publique présentant la plateforme.
+Application web de gestion scolaire multi-filières (franco-arabe et au-delà : FR / AR / EN + combinaisons, configurables par établissement), conçue pour les établissements au Sénégal. Gestion complète des élèves, du personnel, des classes, notes, bulletins, finances, pointage, emploi du temps, messagerie interne, bibliothèque et portail parents — interface **trilingue Français / Arabe / Anglais** (RTL pour l'arabe) et landing page publique.
 
 ---
 
@@ -30,13 +30,14 @@ Application web de gestion d'école franco-arabe, conçue pour les établissemen
 | Module | Description |
 |--------|-------------|
 | **Landing page** | Page d'accueil publique présentant la plateforme, ses modules et les guides par rôle — bilingue FR/AR avec basculement thème |
-| **Élèves** | Inscription, fiche complète, matricule auto-généré `DG-YYYY-NNN`, import en masse via CSV |
-| **Professeurs** | Comptes liés à un utilisateur, spécialités, type de contrat, salaire de base |
-| **Classes** | Deux filières (Française / Arabe), niveaux, capacité, par année scolaire |
-| **Matières** | Coefficients, note max/min configurables par matière |
-| **Notes** | Saisie en masse par classe/matière/période, tri alphabétique, validation par matière |
-| **Évaluations** | Évaluations formatives (devoir, contrôle, examen) avec pondération |
-| **Bulletins** | 4 types (FR · AR · Combiné · Annuel), moyennes pondérées, classement, export PDF individuel ou classe entière |
+| **Élèves** | Inscription (N filières via `InscriptionClasse`), fiche complète, matricule auto par établissement `CODE-E-YY-NNN` (ex. `CAAM-E-26-001`), transfert de classe en cours d'année, import en masse via CSV |
+| **Personnel** | Comptes liés à un utilisateur, fonctions configurables, contrats CDD/CDI/stagiaire, salaire de base (module unifié, ex-« Professeurs ») |
+| **Filières** | Entité `Filiere` configurable par établissement : FR / AR / EN + combinaisons, N par établissement, langue & sens d'écriture, échelle (`note_max`) et couleur propres |
+| **Classes** | Rattachées à une filière, niveaux, capacité, par année scolaire ; duplication vers une autre filière |
+| **Matières** | Coefficient, note min et **barème de saisie (note max)** par défaut sur la matière, overridables par classe/trimestre |
+| **Notes** | Saisie en masse par classe/matière/période, tri alphabétique, validation sur le barème effectif |
+| **Évaluations** | Évaluations formatives (devoir, contrôle, test d'entrée, examen…) avec pondération |
+| **Bulletins** | Par filière (FR/AR/EN) + **combiné générique** (fusion des filières de l'élève) + annuel ; moyennes pondérées, mentions **personnalisables par filière**, **échelle d'affichage par filière**, classement, export PDF individuel ou classe entière |
 | **Progression** | Suivi de la progression académique des élèves par période et par classe |
 | **Activités** | Activités parascolaires et projets pédagogiques par classe |
 | **Absences élèves** | Saisie par classe, justification, alertes automatiques au-delà du seuil configurable |
@@ -53,7 +54,7 @@ Application web de gestion d'école franco-arabe, conçue pour les établissemen
 | **Utilisateurs** | Rôles depuis la DB, réinitialisation de mot de passe |
 | **Paramètres** | Établissement, barème des notes, niveaux, tarifs, préférences de notifications, sécurité du compte |
 | **Dashboard** | Statistiques clés, graphique des encaissements sur 6 mois (Recharts) |
-| **i18n FR/AR** | Interface complète bilingue avec basculement RTL instantané |
+| **i18n FR/AR/EN** | Interface trilingue (français, arabe, anglais) avec sélecteur de langue et bascule RTL instantanée pour l'arabe |
 | **Dark mode** | Persistant par utilisateur, actif dès la page de connexion |
 
 ---
@@ -105,14 +106,14 @@ DaaraGest/
 │       │   ├── niveaux/
 │       │   ├── notes/           # bulk upsert
 │       │   ├── evaluations/     # évaluations formatives, notes, moyennes
-│       │   ├── bulletins/       # 4 types + PDF Puppeteer
+│       │   ├── bulletins/       # FR/AR/EN + combiné + annuel, PDF Puppeteer
 │       │   ├── absences/        # absences élèves + alertes
 │       │   ├── progression/     # suivi pluriannuel, génération, historique élève
 │       │   ├── activites/       # activités parascolaires, séances, présences, évaluation
 │       │   ├── finances/        # paiements + reliquats + stats mensuelles
 │       │   ├── parametres/      # établissement + configNotes + jours_cours
 │       │   ├── pointage/        # présences manuelles + alertes
-│       │   ├── professeurs/
+│       │   ├── personnel/
 │       │   ├── utilisateurs/    # + GET /roles
 │       │   ├── emploi-du-temps/ # créneaux, conflits, jours actifs
 │       │   ├── calendrier/      # événements scolaires
@@ -144,8 +145,8 @@ DaaraGest/
 **Établissement & Utilisateurs**
 `Etablissement` · `Role` · `Utilisateur` · `RefreshToken`
 
-**Personnels**
-`Professeur` · `ProfesseurCarte` · `Pointage` · `HeureTravail` · `PresenceProfesseur` · `PaiementProfesseur`
+**Personnel**
+`Personnel` · `PersonnelCarte` · `Pointage` · `HeureTravail` · `PresencePersonnel` · `PaiementPersonnel` · `PersonnelMatiereClasse`
 
 **Académique**
 `AnneeScolaire` · `ConfigNotes` · `Matiere` · `Niveau` · `Classe` · `ClasseMatiere` · `ProfMatiereClasse`
@@ -181,7 +182,7 @@ Chaque requête authentifiée extrait `etablissement_id` du JWT. Tous les servic
 |------|------------------|
 | `admin` | Toutes |
 | `directeur` | Toutes sauf Utilisateurs et Paramètres |
-| `gestionnaire` | Dashboard, Élèves, Professeurs, Classes, Années, Matières, Notes, Bulletins, Absences, Emploi du temps, Calendrier, Messagerie, Pointage |
+| `gestionnaire` | Dashboard, Élèves, Personnel, Classes, Années, Matières, Notes, Bulletins, Absences, Emploi du temps, Calendrier, Messagerie, Pointage |
 | `agent de scolarité` | Dashboard, Élèves, Classes, Notes, Bulletins, Absences, Finances, Emploi du temps, Calendrier, Messagerie |
 | `professeur` | Dashboard, Classes, Notes, Bulletins, Absences, Emploi du temps, Calendrier, Messagerie |
 | `pointeur` | Dashboard, Absences, Pointage, Emploi du temps, Calendrier, Messagerie |
@@ -190,12 +191,11 @@ Chaque requête authentifiée extrait `etablissement_id` du JWT. Tous les servic
 
 | Type | Description |
 |------|-------------|
-| `FR` | Bulletin filière française uniquement |
-| `AR` | Bulletin filière arabe uniquement |
-| `COMBINE` | Bulletins FR et AR fusionnés — la moyenne couvre les deux filières |
-| `ANNUEL` | Récapitulatif annuel des trois trimestres |
+| `FR` / `AR` / `EN` | Bulletin d'une filière (français / arabe / anglais), affiché sur l'échelle de la filière |
+| `COMBINE` | **Combiné générique** : fusionne les filières actives où l'élève est réellement inscrit (FR+AR, FR+EN, FR+AR+EN…) ; moyenne générale sur la base canonique |
+| `ANNUEL` | Récapitulatif annuel des périodes (trimestres/semestres selon l'établissement) |
 
-> Un élève inscrit dans une classe FR **et** une classe AR peut recevoir un bulletin `COMBINE`.
+> Le combiné fusionne, par élève, les filières où il est inscrit. Mentions et échelle d'affichage sont configurables **par filière**.
 
 ### Jours de cours flexibles
 
@@ -397,15 +397,15 @@ Toutes les routes (sauf `/health`, `POST /api/v1/auth/login`, et `GET /api/v1/po
 | `POST` | `/api/v1/eleves/:id/inscrire` | Inscrire dans une classe |
 | `POST` | `/api/v1/eleves/import` | Import CSV · body `{ rows[] }` · max 500 · retourne `{ created, errors[] }` |
 
-### Professeurs
+### Personnel
 
 | Méthode | Route | Description |
 |---------|-------|-------------|
-| `GET` | `/api/v1/professeurs?page&search&limit` | Liste paginée |
-| `GET` | `/api/v1/professeurs/:id` | Détail |
-| `POST` | `/api/v1/professeurs` | Créer (utilisateur + profil liés) |
-| `PUT` | `/api/v1/professeurs/:id` | Modifier |
-| `DELETE` | `/api/v1/professeurs/:id` | Désactiver |
+| `GET` | `/api/v1/personnel?page&search&limit` | Liste paginée |
+| `GET` | `/api/v1/personnel/:id` | Détail |
+| `POST` | `/api/v1/personnel` | Créer (utilisateur + profil liés) |
+| `PUT` | `/api/v1/personnel/:id` | Modifier |
+| `DELETE` | `/api/v1/personnel/:id` | Désactiver (soft-delete) |
 
 ### Notes
 
@@ -634,8 +634,8 @@ Toutes les routes (sauf `/health`, `POST /api/v1/auth/login`, et `GET /api/v1/po
 2. **Années scolaires** — Créer l'année (ex: "2025-2026") et l'activer
 3. **Matières** — Vérifier/ajouter les matières FR et AR avec coefficients et notes max
 4. **Classes** — Créer les classes pour l'année
-5. **Élèves** — Ajouter manuellement ou **importer via CSV** (matricule auto `DG-YYYY-NNN`)
-6. **Professeurs** — Créer les comptes professeurs
+5. **Élèves** — Ajouter manuellement ou **importer via CSV** (matricule auto par établissement `CODE-E-YY-NNN`, ex. `CAAM-E-26-001`)
+6. **Personnel** — Créer les comptes du personnel (enseignants et autres fonctions)
 7. **Emploi du temps** — Saisir les créneaux par classe
 8. **Calendrier scolaire** — Enregistrer les vacances et examens
 9. **Notes → Bulletins → Finances → Pointage** au fil de l'année
@@ -771,7 +771,7 @@ npm install fastify@^5 @fastify/jwt@^8 @fastify/cookie@^11 @fastify/cors@^10 @fa
 
 #### Pointage NFC
 
-Les modèles `ProfesseurCarte`, `Pointage` et `HeureTravail` sont déjà présents en schéma. Il manque uniquement la couche API de lecture des badges NFC.
+Les modèles `PersonnelCarte`, `Pointage` et `HeureTravail` sont déjà présents en schéma. Il manque uniquement la couche API de lecture des badges NFC.
 
 #### Application mobile (React Native)
 
