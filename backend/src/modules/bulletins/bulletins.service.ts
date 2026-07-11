@@ -131,7 +131,8 @@ async function getMatieresDeclasse(
     return {
       ...r.matiere,
       coeff_effectif: o ? o.coeff : (r.coeff_override ?? r.matiere.coeff_defaut),
-      note_max_effectif: o ? o.note_max : (r.note_max_override ?? baseNote),
+      // Barème effectif : période > classe > matière (défaut) > échelle établissement.
+      note_max_effectif: o ? o.note_max : (r.note_max_override ?? r.matiere.note_max ?? baseNote),
       ordre_bulletin: r.ordre_override ?? r.matiere.ordre_bulletin,
       evaluee_effectif: o?.evaluee != null ? o.evaluee : r.evaluee,
     };

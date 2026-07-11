@@ -427,6 +427,8 @@
     "nom_fr": "Name (French)",
     "nom_ar": "Name (Arabic)",
     "ordre_bulletin": "Report card order",
+    "col_bareme": "Scale (max mark)",
+    "bareme_placeholder": "School scale",
     "ajouter": "Add a subject",
     "toutes": "All tracks",
     "pedagogie": "Academics",

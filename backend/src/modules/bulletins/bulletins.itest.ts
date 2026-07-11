@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import prisma from '../../config/database';
-import { genererBulletins, genererBulletinsAnnuels, getBulletin, calculerMoyennesClasse, filieresActivesCodes } from './bulletins.service';
+import { genererBulletins, genererBulletinsAnnuels, getBulletin, calculerMoyennesClasse, filieresActivesCodes, getBaremesClasse } from './bulletins.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test d'INTÉGRATION (nécessite une vraie base PostgreSQL via DATABASE_URL).
@@ -20,6 +20,7 @@ const anneeId = `itest-annee-${RUN}`;
 const classeId = `itest-classe-${RUN}`;
 const classeArId = `itest-classe-ar-${RUN}`; // classe arabe distincte (élève bilingue)
 const classeEnId = `itest-classe-en-${RUN}`; // classe anglaise (Phase 3-1b)
+const classeBaremeId = `itest-classe-bareme-${RUN}`; // isolée : test du repli barème matière
 const filiereFrId = `itest-fil-fr-${RUN}`;
 const filiereArId = `itest-fil-ar-${RUN}`;
 const filiereEnId = `itest-fil-en-${RUN}`;
@@ -30,6 +31,7 @@ const ids = {
   matRlc: `itest-mat-rlc-${RUN}`, // matière avec barème /60 via override de classe
   matAr: `itest-mat-ar-${RUN}`,   // matière de la filière arabe
   matEn: `itest-mat-en-${RUN}`,   // matière de la filière anglaise
+  matBareme: `itest-mat-bareme-${RUN}`, // matière avec barème /50 porté par la MATIÈRE (pas d'override classe)
   eleveA: `itest-eleve-a-${RUN}`,
   eleveB: `itest-eleve-b-${RUN}`,
   inscA: `itest-insc-a-${RUN}`,
@@ -43,7 +45,7 @@ async function nettoyer() {
   // Jointure avant inscription/classe/filiere (FK RESTRICT sur classe & filière).
   await prisma.inscriptionClasse.deleteMany({ where: { inscription: { annee_scolaire_id: anneeId } } });
   await prisma.inscription.deleteMany({ where: { annee_scolaire_id: anneeId } });
-  await prisma.classeMatiere.deleteMany({ where: { classe_id: { in: [classeId, classeArId, classeEnId] } } });
+  await prisma.classeMatiere.deleteMany({ where: { classe_id: { in: [classeId, classeArId, classeEnId, classeBaremeId] } } });
   await prisma.note.deleteMany({ where: { matiere: { etablissement_id: etabId } } });
   await prisma.classe.deleteMany({ where: { etablissement_id: etabId } });
   await prisma.matiere.deleteMany({ where: { etablissement_id: etabId } });
@@ -106,6 +108,10 @@ beforeAll(async () => {
   await prisma.classe.create({
     data: { id: classeEnId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1 English', filiere: 'EN', filiere_id: filiereEnId },
   });
+  // Classe isolée (sans élève) pour tester le repli du barème porté par la MATIÈRE.
+  await prisma.classe.create({
+    data: { id: classeBaremeId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1 Barème', filiere: 'FR', filiere_id: filiereFrId },
+  });
 
   // Matières FR. Le barème de saisie est porté par la classe (note_max_override) ;
   // sans override, une note est réputée sur l'échelle établissement (ici /20).
@@ -116,6 +122,8 @@ beforeAll(async () => {
       { id: ids.matRlc, etablissement_id: etabId, nom_fr: 'Lecture (RLC)', filiere: 'FR', coeff_defaut: 1, ordre_bulletin: 3 },
       { id: ids.matAr, etablissement_id: etabId, nom_fr: 'Langue arabe', filiere: 'AR', coeff_defaut: 1, ordre_bulletin: 1 },
       { id: ids.matEn, etablissement_id: etabId, nom_fr: 'Mathematics', filiere: 'EN', coeff_defaut: 2, ordre_bulletin: 1 },
+      // Barème /50 porté par la MATIÈRE (pas d'override de classe) — Phase 1.
+      { id: ids.matBareme, etablissement_id: etabId, nom_fr: 'Récitation', filiere: 'FR', coeff_defaut: 1, note_max: 50, ordre_bulletin: 9 },
     ],
   });
 
@@ -131,6 +139,9 @@ beforeAll(async () => {
       { classe_id: classeArId, matiere_id: ids.matAr, note_max_override: 20 },
       // Matière EN dans la classe anglaise (barème /20 = échelle établissement).
       { classe_id: classeEnId, matiere_id: ids.matEn, note_max_override: 20 },
+      // Récitation : AUCUN override de classe → le barème effectif doit venir de
+      // Matiere.note_max (/50), pas de l'échelle établissement (/20). Phase 1.
+      { classe_id: classeBaremeId, matiere_id: ids.matBareme },
     ],
   });
 
@@ -297,5 +308,12 @@ describe('Bulletins — intégration notes → moyenne (DB réelle)', () => {
     const moysCombine = await calculerMoyennesClasse(etabId, classeId, anneeId, [1], codes);
     expect(moysCombine.get(ids.eleveA)).toBeCloseTo(14.2, 2);
     expect(moysCombine.get(ids.eleveB)).toBeCloseTo(12.0, 2);
+  });
+
+  it('barème effectif : Matiere.note_max sert de repli quand la classe n\'override pas (Phase 1)', async () => {
+    // classeBareme n'a AUCUN override de barème sur Récitation → le barème effectif
+    // doit venir de Matiere.note_max (/50), et non de l'échelle établissement (/20).
+    const baremes = await getBaremesClasse(classeBaremeId, [1], ['FR'], 20);
+    expect(baremes.get(`${ids.matBareme}|1`)?.note_max).toBe(50);
   });
 });

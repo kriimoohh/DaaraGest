@@ -1047,7 +1047,7 @@ export async function rapportReleveNotes(
     fetchInscriptions(classe_id, annee_scolaire_id),
     prisma.classeMatiere.findMany({
       where: { classe_id },
-      include: { matiere: { select: { id: true, nom_fr: true, nom_ar: true, code_court: true, ordre_bulletin: true } } },
+      include: { matiere: { select: { id: true, nom_fr: true, nom_ar: true, code_court: true, ordre_bulletin: true, note_max: true } } },
       // Ordre du Programme (réorganisation par classe) puis ordre_bulletin — identique à
       // la saisie et au relevé « documents », pour que le prof retrouve le même ordre.
       orderBy: [{ ordre_override: 'asc' }, { matiere: { ordre_bulletin: 'asc' } }],
@@ -1058,7 +1058,7 @@ export async function rapportReleveNotes(
   const cfg = await prisma.configNotes.findUnique({ where: { etablissement_id }, select: { nb_periodes: true, note_max: true } });
   const baseNote = Number(cfg?.note_max ?? DEFAULT_NOTE_MAX);
   // Barème effectif par matière = override de classe si présent, sinon échelle établissement.
-  const matieres = classeMatieres.map(cm => ({ ...cm.matiere, note_max_eff: Number(cm.note_max_override ?? baseNote) }));
+  const matieres = classeMatieres.map(cm => ({ ...cm.matiere, note_max_eff: Number(cm.note_max_override ?? cm.matiere.note_max ?? baseNote) }));
   const eleveIds = inscriptions.map(i => i.eleve_id);
   const nbPeriodes = cfg?.nb_periodes ?? 3;
   const periodes = periode && periode > 0 ? [periode] : Array.from({ length: nbPeriodes }, (_, i) => i + 1);
