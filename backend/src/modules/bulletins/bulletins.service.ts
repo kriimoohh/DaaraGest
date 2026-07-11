@@ -387,7 +387,7 @@ export async function bulletinsImpactesParMatiere(
  */
 export async function deverrouillerPeriode(
   etablissement_id: string,
-  data: { classe_id: string; annee_scolaire_id: string; periode: number; filiere: 'FR' | 'AR' | 'COMBINE' },
+  data: { classe_id: string; annee_scolaire_id: string; periode: number; filiere: 'FR' | 'AR' | 'EN' | 'COMBINE' },
   acteur_id: string,
 ): Promise<{ count: number }> {
   const bulletins = await prisma.bulletin.findMany({

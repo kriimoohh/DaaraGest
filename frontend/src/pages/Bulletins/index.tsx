@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { nomClasse } from '../../lib/noms';
+import { nomClasse, nomBilingue } from '../../lib/noms';
+import { useFilieres } from '../../hooks/useFilieres';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
@@ -49,16 +50,7 @@ interface DetailBulletin extends Bulletin {
   notesByFiliere: { FR?: NoteDetail[]; AR?: NoteDetail[]; };
 }
 
-type BulletinType = 'FR' | 'AR' | 'COMBINE' | 'ANNUEL_FR' | 'ANNUEL_AR' | 'ANNUEL_COMBINE';
-
-const TYPE_OPTIONS = [
-  { value: 'FR',             label: '📘 Trimestre — Filière Française' },
-  { value: 'AR',             label: '📗 Trimestre — Filière Arabe' },
-  { value: 'COMBINE',        label: '📕 Trimestre — Combiné FR+AR' },
-  { value: 'ANNUEL_FR',      label: '🗓 Annuel — Filière Française' },
-  { value: 'ANNUEL_AR',      label: '🗓 Annuel — Filière Arabe' },
-  { value: 'ANNUEL_COMBINE', label: '🗓 Annuel — Combiné FR+AR' },
-];
+type BulletinType = string;
 
 // Seuils relatifs à l'échelle de l'établissement (base, ex: 10) : 0.7 = "bien"
 // (14/20), 0.5 = "moyenne" (10/20). Évite les seuils /20 codés en dur.
@@ -139,6 +131,18 @@ export function BulletinsPage() {
   const { t } = useTranslation();
   const api = useApi();
   const noteMax = useNoteMax();
+  const { actives: filieresActives } = useFilieres();
+  // Types de bulletin construits depuis les filières actives de l'établissement :
+  // une entrée trimestre + une annuelle par filière. Le combiné FR+AR reste proposé
+  // tant que ces deux filières sont actives (le combiné générique viendra en 3-2).
+  const aFR = filieresActives.some(f => f.code === 'FR');
+  const aAR = filieresActives.some(f => f.code === 'AR');
+  const typeOptions = [
+    ...filieresActives.map(f => ({ value: f.code, label: `📄 Trimestre — ${nomBilingue(f)}` })),
+    ...(aFR && aAR ? [{ value: 'COMBINE', label: '📕 Trimestre — Combiné FR+AR' }] : []),
+    ...filieresActives.map(f => ({ value: `ANNUEL_${f.code}`, label: `🗓 Annuel — ${nomBilingue(f)}` })),
+    ...(aFR && aAR ? [{ value: 'ANNUEL_COMBINE', label: '🗓 Annuel — Combiné FR+AR' }] : []),
+  ];
   const [annees, setAnnees] = useState<AnneeScolaire[]>([]);
   const [classes, setClasses] = useState<Classe[]>([]);
   const [bulletins, setBulletins] = useState<Bulletin[]>([]);
@@ -318,7 +322,7 @@ export function BulletinsPage() {
           />
           <Select label="Type de bulletin"
             value={type} onChange={(e) => { setType(e.target.value as BulletinType); setBulletins([]); }}
-            options={TYPE_OPTIONS}
+            options={typeOptions}
           />
           {!isAnnuel && (
             <Select label={t('note.periode')}

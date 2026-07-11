@@ -4,7 +4,7 @@ export const genererBulletinSchema = z.object({
   classe_id: z.string().uuid(),
   annee_scolaire_id: z.string().uuid(),
   periode: z.number().int().min(1).max(3),
-  filiere: z.enum(['FR', 'AR', 'COMBINE']),
+  filiere: z.enum(['FR', 'AR', 'EN', 'COMBINE']),
   // Flags issus du pré-vol — opt-in côté front, défauts sûrs (exclusion stricte).
   inclure_non_evaluees: z.boolean().optional(),
   traiter_manquantes_comme_zero: z.boolean().optional(),
@@ -13,7 +13,7 @@ export const genererBulletinSchema = z.object({
 export const genererBulletinAnnuelSchema = z.object({
   classe_id: z.string().uuid(),
   annee_scolaire_id: z.string().uuid(),
-  filiere: z.enum(['FR', 'AR', 'COMBINE']),
+  filiere: z.enum(['FR', 'AR', 'EN', 'COMBINE']),
   inclure_non_evaluees: z.boolean().optional(),
   traiter_manquantes_comme_zero: z.boolean().optional(),
 });
@@ -29,7 +29,7 @@ export const preflightSchema = z.object({
   classe_id: z.string().uuid(),
   annee_scolaire_id: z.string().uuid(),
   periode: z.number().int().min(0).max(6),
-  filiere: z.enum(['FR', 'AR', 'COMBINE']),
+  filiere: z.enum(['FR', 'AR', 'EN', 'COMBINE']),
 });
 
 // Déverrouillage d'une période validée — phase 2 (action critique, admin/directeur).
@@ -37,7 +37,7 @@ export const deverrouillerPeriodeSchema = z.object({
   classe_id: z.string().uuid(),
   annee_scolaire_id: z.string().uuid(),
   periode: z.number().int().min(0).max(6),
-  filiere: z.enum(['FR', 'AR', 'COMBINE']),
+  filiere: z.enum(['FR', 'AR', 'EN', 'COMBINE']),
 });
 
 // Modèle HTML du bulletin, un par type. Borné pour éviter un payload abusif.
