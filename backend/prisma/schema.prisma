@@ -27,11 +27,7 @@ model Etablissement {
   logo_url            String?
   signature_url       String?
   cachet_url          String?
-  // Champs deprecated : conservés pour rétro-compat tant que tous les établissements
-  // n'ont pas un directeur Personnel associé. À supprimer dans une migration ultérieure.
-  nom_directeur       String?
-  civilite_directeur  String?
-  directeur_id        String? // FK vers Personnel (fonction=DIRECTEUR). Si défini, override nom_directeur/civilite_directeur pour les documents.
+  directeur_id        String? // FK vers Personnel : nom + accord en genre du directeur pour les documents (sélectionné dans Paramètres).
   code                String   @unique // Préfixe des matricules, ex: "FIC", "TBK". Configurable dans Paramètres.
   devise              String   @default("FCFA")
   actif               Boolean  @default(true)

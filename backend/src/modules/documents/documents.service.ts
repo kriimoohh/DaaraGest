@@ -55,13 +55,11 @@ async function buildCommonVars(etablissement_id: string): Promise<Record<string,
     include: { directeur: { include: { utilisateur: true } } },
   });
 
-  // Prefer la fiche Personnel du directeur (relation), fallback sur les champs
-  // deprecated nom_directeur / civilite_directeur pour rétro-compat tant
-  // qu'aucun Personnel DIRECTEUR n'est défini.
-  const dirNomFromRel = etab.directeur
+  // Le directeur vient de la fiche Personnel liée (Etablissement.directeur_id),
+  // sélectionnée dans Paramètres → Établissement. Vide tant que rien n'est choisi.
+  const nomDirecteur = etab.directeur
     ? `${etab.directeur.utilisateur.nom_fr}${etab.directeur.utilisateur.prenom_fr ? ' ' + etab.directeur.utilisateur.prenom_fr : ''}`.trim()
-    : null;
-  const nomDirecteur = dirNomFromRel ?? etab.nom_directeur ?? '';
+    : '';
 
   const escapeAttr = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const logoHtml = etab.logo_url
@@ -89,14 +87,12 @@ async function buildCommonVars(etablissement_id: string): Promise<Record<string,
   const today = new Date();
   const refDoc = `REF-${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}-${Math.floor(Math.random() * 9000 + 1000)}`;
 
-  // Accord en genre des documents :
-  //   1) si un Personnel directeur est lié → on prend son sexe (M/F)
-  //   2) sinon → on retombe sur Etablissement.civilite_directeur (legacy)
-  //   3) sinon → forme inclusive ("Directeur(trice)", "soussigné(e)")
+  // Accord en genre des documents : sexe (M/F) de l'Utilisateur du directeur
+  // lié ; sans directeur ou sans sexe renseigné → forme inclusive
+  // ("Directeur(trice)", "soussigné(e)").
   const directeurSexe = etab.directeur?.utilisateur?.sexe ?? null;
-  const isFemme = directeurSexe === 'F' || (!directeurSexe && etab.civilite_directeur === 'Mme');
-  const hasCivilite = directeurSexe === 'M' || directeurSexe === 'F'
-    || etab.civilite_directeur === 'M' || etab.civilite_directeur === 'Mme';
+  const isFemme = directeurSexe === 'F';
+  const hasCivilite = directeurSexe === 'M' || directeurSexe === 'F';
   const CIVILITE_DIRECTEUR  = hasCivilite ? (isFemme ? 'Mme'         : 'M.')          : '';
   const TITRE_DIRECTEUR     = hasCivilite ? (isFemme ? 'Directrice'  : 'Directeur')   : 'Directeur(trice)';
   const DIRECTEUR_QUALITE   = hasCivilite ? (isFemme ? 'La Directrice' : 'Le Directeur') : 'Le/La Directeur(trice)';
