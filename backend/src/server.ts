@@ -37,6 +37,7 @@ import { progressionRoutes } from './modules/progression/progression.routes';
 import { documentsRoutes } from './modules/documents/documents.routes';
 import { demandesAbsencePersonnelRoutes } from './modules/demandes-absence-personnel/demandes-absence.routes';
 import { statsRoutes } from './modules/stats/stats.routes';
+import { auditRoutes } from './modules/audit/audit.routes';
 import { rapportsRoutes } from './modules/rapports/rapports.routes';
 import { bibliothequeRoutes } from './modules/bibliotheque/bibliotheque.routes';
 import { fonctionsRoutes } from './modules/fonctions/fonctions.routes';
@@ -207,6 +208,7 @@ async function build() {
       await api.register(documentsRoutes,   { prefix: '/documents' });
       await api.register(demandesAbsencePersonnelRoutes, { prefix: '/demandes-absence-personnel' });
       await api.register(statsRoutes,       { prefix: '/stats' });
+      await api.register(auditRoutes,       { prefix: '/audit' });
       await api.register(rapportsRoutes,    { prefix: '/rapports' });
       await api.register(bibliothequeRoutes,{ prefix: '/bibliotheque' });
     },
