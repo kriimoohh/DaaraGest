@@ -13,10 +13,9 @@
   },
   "login": {
     "tagline": "Gestion scolaire franco-arabe",
-    "tagline_footer": "École franco-arabe · Sénégal",
     "connexion_loading": "Connexion…",
-    "lang_title": "Langue",
-    "theme_title": "Thème"
+    "theme": "Thème",
+    "footer": "École franco-arabe · Sénégal"
   },
   "nav": {
     "accueil": "Accueil",
@@ -1589,10 +1588,6 @@
     "approuver_btn": "Approuver",
     "refuser_btn": "Refuser",
     "supprimer_btn": "Supprimer"
-  },
-  "landing": {
-    "lang_title": "Changer de langue",
-    "theme_title": "Changer de thème"
   },
   "progression": {
     "titre": "Progression de fin d'année",
