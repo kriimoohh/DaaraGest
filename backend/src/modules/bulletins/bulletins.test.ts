@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mentionPour, MentionDef } from '../../utils/notes';
+import { mentionPour, mentionPourFiliere, MentionDef } from '../../utils/notes';
 
 // Mentions par défaut telles que semées par mentions.service (base /20).
 const MENTIONS_DEFAUT: MentionDef[] = [
@@ -27,6 +27,18 @@ describe('mentionPour (mentions par défaut)', () => {
   it('<10 → Insuffisant', () => expect(appreciation(9.99)).toBe('Insuffisant'));
   it('tolérance flottante : 11.999999999 → Passable', () => expect(appreciation(12 - 1e-10)).toBe('Assez bien'));
   it('liste vide → chaîne vide', () => expect(mentionPour(12, [])).toBe(''));
+});
+
+describe('mentionPourFiliere (libellé dans la langue du bulletin)', () => {
+  const mentions: MentionDef[] = [
+    { libelle_fr: 'Très bien', libelle_ar: 'ممتاز', seuil_min: 16 },
+    { libelle_fr: 'Passable', libelle_ar: null, seuil_min: 10 },
+    { libelle_fr: 'Insuffisant', seuil_min: 0 },
+  ];
+  it('bulletin AR → libellé arabe quand renseigné', () => expect(mentionPourFiliere(17, mentions, 'AR')).toBe('ممتاز'));
+  it('bulletin AR sans libelle_ar → repli français', () => expect(mentionPourFiliere(11, mentions, 'AR')).toBe('Passable'));
+  it('bulletin FR → libellé français même si AR existe', () => expect(mentionPourFiliere(17, mentions, 'FR')).toBe('Très bien'));
+  it('COMBINE → libellé français', () => expect(mentionPourFiliere(17, mentions, 'COMBINE')).toBe('Très bien'));
 });
 
 describe('calculerMoyenne', () => {
