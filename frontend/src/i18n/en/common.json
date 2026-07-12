@@ -98,10 +98,9 @@
   },
   "login": {
     "tagline": "Franco-Arabic school management",
-    "tagline_footer": "Franco-Arabic school · Senegal",
     "connexion_loading": "Signing in…",
-    "lang_title": "Language",
-    "theme_title": "Theme"
+    "theme": "Theme",
+    "footer": "Franco-Arabic school · Senegal"
   },
   "theme": {
     "light": "Light mode",
@@ -1808,9 +1807,5 @@
     "approuver_btn": "Approve",
     "refuser_btn": "Decline",
     "supprimer_btn": "Delete"
-  },
-  "landing": {
-    "lang_title": "Language",
-    "theme_title": "Theme"
   }
 }
