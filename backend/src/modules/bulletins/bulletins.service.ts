@@ -1074,6 +1074,7 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
     afficher_absences: config?.bulletin_afficher_absences ?? true,
     logo_echelle: config?.bulletin_logo_echelle ?? 100,
     nb_periodes: nbPeriodes,
+    noms_periodes: (config?.noms_periodes as { fr?: string[] } | null) ?? undefined,
     template_html: (await prisma.bulletinTemplate.findUnique({ where: { etablissement_id_type: { etablissement_id, type: data.periode === 0 ? 'ANNUEL' : data.filiere } } }))?.contenu_html ?? null,
   };
 
@@ -1267,6 +1268,8 @@ export async function genererPdfClasse(
       afficher_rang: config?.bulletin_afficher_rang ?? true,
       afficher_absences: config?.bulletin_afficher_absences ?? true,
       logo_echelle: config?.bulletin_logo_echelle ?? 100,
+      nb_periodes: config?.nb_periodes ?? 3,
+      noms_periodes: (config?.noms_periodes as { fr?: string[] } | null) ?? undefined,
       template_html: templateHtml,
       filieres_combine: filiere === 'COMBINE' ? combineCodes : undefined,
       notes_fr: inFiliere('FR') ? toRows('FR') : undefined,
@@ -1367,6 +1370,7 @@ export async function apercuBulletinTemplate(etablissement_id: string, type: Typ
     afficher_absences: config?.bulletin_afficher_absences ?? true,
     logo_echelle: config?.bulletin_logo_echelle ?? 100,
     nb_periodes: nbPeriodes,
+    noms_periodes: (config?.noms_periodes as { fr?: string[] } | null) ?? undefined,
     template_html: contenu_html,
   };
 

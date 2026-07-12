@@ -57,6 +57,7 @@ interface BulletinBaseData {
   afficher_absences?: boolean;  // défaut true → tableau des absences visible
   logo_echelle?: number;        // % (100 = taille de base)
   nb_periodes?: number;         // pour le titre du bulletin annuel
+  noms_periodes?: { fr?: string[] }; // noms FR personnalisés des périodes (config)
   // Modèle HTML personnalisé (Étape 2). Absent → DEFAULT_BULLETIN_TEMPLATE.
   // Le corps contient des placeholders de blocs ({{en_tete}}, {{tableau_notes}}…).
   template_html?: string | null;
@@ -145,12 +146,23 @@ export interface BulletinAnnuelData extends BulletinBaseData {
 
 // ─── Constantes ─────────────────────────────────────────────────────────────
 
-const periodeLabel = (p: number) =>
-  ({ 1: '1er Trimestre', 2: '2ème Trimestre', 3: '3ème Trimestre' }[p] ?? `Période ${p}`);
+// Nom d'une période (COMPLET, plus de « T1/T2/T3 ») selon le découpage de
+// l'établissement : 2 = semestres, 6 = bimestres, sinon trimestres. Un nom FR
+// personnalisé (ConfigNotes.noms_periodes.fr) est prioritaire. L'arabe utilise
+// « الاختبار » + l'ordinal (traductions fournies par l'établissement).
+const ORDINAL_FR = ['1er', '2ème', '3ème', '4ème', '5ème', '6ème'];
+const ORDINAL_AR = ['الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس'];
+const motPeriode = (nbPeriodes: number) =>
+  nbPeriodes === 2 ? 'Semestre' : nbPeriodes === 6 ? 'Bimestre' : 'Trimestre';
 
-// Nom arabe du trimestre — pour un titre bilingue sur les bulletins de filière arabe.
-const periodeLabelAr = (p: number) =>
-  ({ 1: 'الفصل الأول', 2: 'الفصل الثاني', 3: 'الفصل الثالث' }[p] ?? `الفترة ${p}`);
+function periodeNomFr(p: number, nbPeriodes: number, noms?: string[]): string {
+  const custom = noms?.[p - 1];
+  if (custom && custom.trim()) return custom;
+  return `${ORDINAL_FR[p - 1] ?? `${p}ème`} ${motPeriode(nbPeriodes)}`;
+}
+function periodeNomAr(p: number): string {
+  return ORDINAL_AR[p - 1] ? `الاختبار ${ORDINAL_AR[p - 1]}` : `الفترة ${p}`;
+}
 
 // Appréciation par matière = mentions configurées de l'établissement (mêmes bandes
 // que la moyenne, ex /10 : Très bien≥10, Bien≥8…), appliquées à la note ramenée
@@ -457,7 +469,7 @@ function ctxTableauTrim(notes: NoteRow[], bilingue: boolean) {
 // ─── Tableau annuel ──────────────────────────────────────────────────────────
 
 // Contexte d'un tableau annuel : lignes calculées (HTML brut) + libellés de périodes.
-function ctxTableauAnnuel(matieres: TrimestreRow[], bilingue: boolean, nbPeriodes: number) {
+function ctxTableauAnnuel(matieres: TrimestreRow[], bilingue: boolean, nbPeriodes: number, nomsFr?: string[]) {
   const rows = matieres.map(m => {
     if (m.evaluee === false) {
       const cells = m.valeurs.map(() => '<td class="center" style="color:#9ca3af">—</td>').join('');
@@ -485,7 +497,7 @@ function ctxTableauAnnuel(matieres: TrimestreRow[], bilingue: boolean, nbPeriode
   }).join('');
   return {
     bilingue,
-    periodes: Array.from({ length: nbPeriodes }, (_, i) => ({ label: `T${i + 1}` })),
+    periodes: Array.from({ length: nbPeriodes }, (_, i) => ({ label: periodeNomFr(i + 1, nbPeriodes, nomsFr) })),
     lignes: rows,
   };
 }
@@ -824,7 +836,8 @@ function renderBulletinDoc(customTpl: string | null | undefined, defaultTpl: str
 
 export function generateBulletinHtml(data: BulletinTrimestreData): string {
   setRenderContext(data);
-  const periodeStr = periodeLabel(data.periode);
+  const nbP = data.nb_periodes ?? 3;
+  const periodeStr = periodeNomFr(data.periode, nbP, data.noms_periodes?.fr);
   const notesFR = data.notes_fr ?? [];
   const notesAR = data.notes_ar ?? [];
   const notesEN = data.notes_en ?? [];
@@ -849,7 +862,7 @@ export function generateBulletinHtml(data: BulletinTrimestreData): string {
   } else if (data.type === 'AR') {
     filiere = 'AR';
     // Titre bilingue (FR + AR), cohérent avec les libellés arabes du tableau AR.
-    titre = titleHtml(`${periodeStr} — <span dir="rtl">${periodeLabelAr(data.periode)}</span>`);
+    titre = titleHtml(`${periodeStr} — <span dir="rtl">${periodeNomAr(data.periode)}</span>`);
     tableau_ar = ctxTableauTrim(notesAR, true);
   } else if (data.type === 'EN') {
     filiere = 'FR';
@@ -871,7 +884,7 @@ export function generateBulletinHtml(data: BulletinTrimestreData): string {
       return { code: c, label: SOUS_MOY_LABEL[c] ?? `Moy. ${c}`, valeur: m !== null ? Number(m).toFixed(2) : '—' };
     });
     // Terme arabe du trimestre seulement si la filière AR fait partie du combiné.
-    const termeAr = codes.includes('AR') ? ` — <span dir="rtl">${periodeLabelAr(data.periode)}</span>` : '';
+    const termeAr = codes.includes('AR') ? ` — <span dir="rtl">${periodeNomAr(data.periode)}</span>` : '';
     titre = titleHtml(`${periodeStr}${termeAr} · Filières ${codes.join(' &amp; ')}`);
     defaultTpl = buildCombineTemplate(codes, false);
   }
@@ -909,9 +922,9 @@ export function generateBulletinAnnuelHtml(data: BulletinAnnuelData): string {
   // COMBINE = fusion des filières actives (défaut ['FR','AR']) ; simple = filière unique.
   const codes = isCombine ? (data.filieres_combine?.length ? data.filieres_combine : ['FR', 'AR']) : [];
 
-  const tableau_annuel_fr = (((isCombine && codes.includes('FR')) || (!isCombine && !isAR && !isEN)) && mFR.length > 0) ? ctxTableauAnnuel(mFR, false, nbPeriodes) : undefined;
-  const tableau_annuel_ar = (((isCombine && codes.includes('AR')) || (!isCombine && isAR)) && mAR.length > 0) ? ctxTableauAnnuel(mAR, true, nbPeriodes) : undefined;
-  const tableau_annuel_en = (((isCombine && codes.includes('EN')) || (!isCombine && isEN)) && mEN.length > 0) ? ctxTableauAnnuel(mEN, false, nbPeriodes) : undefined;
+  const tableau_annuel_fr = (((isCombine && codes.includes('FR')) || (!isCombine && !isAR && !isEN)) && mFR.length > 0) ? ctxTableauAnnuel(mFR, false, nbPeriodes, data.noms_periodes?.fr) : undefined;
+  const tableau_annuel_ar = (((isCombine && codes.includes('AR')) || (!isCombine && isAR)) && mAR.length > 0) ? ctxTableauAnnuel(mAR, true, nbPeriodes, data.noms_periodes?.fr) : undefined;
+  const tableau_annuel_en = (((isCombine && codes.includes('EN')) || (!isCombine && isEN)) && mEN.length > 0) ? ctxTableauAnnuel(mEN, false, nbPeriodes, data.noms_periodes?.fr) : undefined;
 
   const moyByCode: Record<string, number | null> = { FR: frMoy, AR: arMoy, EN: moyOf(mEN) };
   const sousMoyennes = isCombine

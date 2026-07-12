@@ -170,3 +170,35 @@ describe('generateBulletinHtml — échelle par filière (re-scale, Phase 3)', (
     expect(html).toContain('/ 10');
   });
 });
+
+describe('noms de périodes (trimestre/semestre, complets, AR)', () => {
+  it('trimestre (nb=3) : titre « 1er Trimestre »', () => {
+    const html = generateBulletinHtml({ ...base, type: 'FR', periode: 1, nb_periodes: 3, notes_fr: [noteFR] });
+    expect(html).toContain('1er Trimestre');
+  });
+
+  it('semestre (nb=2) : titre « 1er Semestre »', () => {
+    const html = generateBulletinHtml({ ...base, type: 'FR', periode: 1, nb_periodes: 2, notes_fr: [noteFR] });
+    expect(html).toContain('1er Semestre');
+    expect(html).not.toContain('1er Trimestre');
+  });
+
+  it('arabe : « الاختبار الأول » (traduction établissement)', () => {
+    const html = generateBulletinHtml({ ...base, type: 'AR', periode: 1, nb_periodes: 3, notes_ar: [noteAR] });
+    expect(html).toContain('الاختبار الأول');
+    expect(html).not.toContain('الفصل الأول');
+  });
+
+  it('nom de période personnalisé prioritaire', () => {
+    const html = generateBulletinHtml({ ...base, type: 'FR', periode: 1, nb_periodes: 3, noms_periodes: { fr: ['Étape Un'] }, notes_fr: [noteFR] });
+    expect(html).toContain('Étape Un');
+  });
+
+  it('annuel : colonnes en noms complets, plus de « T1/T2/T3 »', () => {
+    const matFR = { nom_fr: 'Maths', nom_ar: 'Maths', coeff: 2, note_max: 10, valeurs: [8, 7, 9], moyenne_annuelle: 8, evaluee: true };
+    const html = generateBulletinAnnuelHtml({ ...base, type: 'ANNUEL_FR', nb_periodes: 3, matieres_fr: [matFR] });
+    expect(html).toContain('1er Trimestre');
+    expect(html).toContain('3ème Trimestre');
+    expect(html).not.toMatch(/>T1</);
+  });
+});

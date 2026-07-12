@@ -234,11 +234,15 @@ const TOUS_JOURS = [
   { value: 'samedi',   label: 'Samedi' },
 ];
 
-const DEFAULT_FR = ['1er Trimestre', '2ème Trimestre', '3ème Trimestre', '4ème Trimestre'];
+// Nom par défaut d'une période selon le découpage : 2 = semestres, 6 = bimestres,
+// sinon trimestres. Le bulletin utilise la même logique (bulletin.template.ts).
+const ORDINAL_FR = ['1er', '2ème', '3ème', '4ème', '5ème', '6ème'];
+const motPeriode = (n: number) => (n === 2 ? 'Semestre' : n === 6 ? 'Bimestre' : 'Trimestre');
+const defautPeriodeFr = (i: number, n: number) => `${ORDINAL_FR[i] ?? `${i + 1}ème`} ${motPeriode(n)}`;
 
 function buildPeriodes(n: number, existing?: NomsPeriodes): NomsPeriodes {
   return {
-    fr: Array.from({ length: n }, (_, i) => existing?.fr?.[i] ?? DEFAULT_FR[i]),
+    fr: Array.from({ length: n }, (_, i) => existing?.fr?.[i] ?? defautPeriodeFr(i, n)),
   };
 }
 
@@ -1046,8 +1050,16 @@ export function ParametresPage() {
 
   const handleNbPeriodes = (n: number) => {
     if (!config) return;
-    const clamped = Math.max(1, Math.min(4, n));
-    setConfig({ ...config, nb_periodes: clamped, noms_periodes: buildPeriodes(clamped, config.noms_periodes) });
+    const clamped = Math.max(1, Math.min(6, n));
+    const oldN = config.nb_periodes;
+    // On régénère les noms par DÉFAUT pour refléter le nouveau découpage
+    // (trimestre ↔ semestre), mais on conserve les noms personnalisés par l'utilisateur.
+    const fr = Array.from({ length: clamped }, (_, i) => {
+      const cur = config.noms_periodes?.fr?.[i];
+      const etaitDefaut = !cur || cur === defautPeriodeFr(i, oldN);
+      return etaitDefaut ? defautPeriodeFr(i, clamped) : cur;
+    });
+    setConfig({ ...config, nb_periodes: clamped, noms_periodes: { fr } });
   };
 
   const saveEtab = async () => {
@@ -1363,9 +1375,10 @@ export function ParametresPage() {
                   onChange={e => handleNbPeriodes(parseInt(e.target.value))}
                 >
                   <option value={1}>1 {t('parametre.periode')}</option>
-                  <option value={2}>2 {t('parametre.periodes')}</option>
+                  <option value={2}>2 {t('parametre.periodes')} — Semestres</option>
                   <option value={3}>3 {t('parametre.periodes')} — Trimestres</option>
                   <option value={4}>4 {t('parametre.periodes')}</option>
+                  <option value={6}>6 {t('parametre.periodes')} — Bimestres</option>
                 </select>
               </div>
 
