@@ -865,7 +865,7 @@ export async function rapportPerformanceDomaine(
     { key: 'MATHS', label: 'Mathématiques' },
   ] as const;
   const colKeys: string[] = COLS.map(c => c.key);
-  const colForNote = (note: { matiere: { filiere: string; filiere_ref?: { code: string } | null; domaine: { code: string } | null } }): string | null => {
+  const colForNote = (note: { matiere: { filiere_ref?: { code: string } | null; domaine: { code: string } | null } }): string | null => {
     const dc = note.matiere.domaine?.code;
     if (dc === 'MATHEMATIQUES') return 'MATHS';
     if (dc === 'LANGUE_COMMUNICATION') return codeFiliere(note.matiere) === 'AR' ? 'LC_AR' : 'LC_FR';

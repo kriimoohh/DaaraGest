@@ -19,6 +19,10 @@ function bulletinsImpactError(payload: unknown): Error {
 
 type ListeData = Awaited<ReturnType<typeof listerElevesDeClasse>>;
 
+// Colonne string supprimée (Phase 2d) : la réponse API continue d'exposer le
+// code de filière (`filiere`) depuis la relation, pour le frontend.
+const exposeCode = <T extends { filiere_ref: { code: string } }>(c: T) => ({ ...c, filiere: c.filiere_ref.code });
+
 const LISTE_CSS = `
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; color: #1a1a1a; }
@@ -54,6 +58,7 @@ export async function listerClasses(etablissement_id: string, annee_scolaire_id?
     include: {
       annee_scolaire: true,
       niveau: true,
+      ...selectFiliereRef,
       // Effectif = nombre d'élèves rattachés à cette classe via la jointure
       // (une ligne InscriptionClasse par élève dans la classe), inscription active.
       _count: {
@@ -66,7 +71,7 @@ export async function listerClasses(etablissement_id: string, annee_scolaire_id?
   });
 
   return classes.map(({ _count, ...c }) => ({
-    ...c,
+    ...exposeCode(c),
     effectif: _count.inscriptions_classes,
   }));
 }
@@ -77,25 +82,26 @@ export async function getClasse(id: string, etablissement_id: string) {
     include: { annee_scolaire: true, niveau: true, ...selectFiliereRef },
   });
   if (!classe) throw new NotFoundError('Classe introuvable');
-  return classe;
+  return exposeCode(classe);
 }
 
 export async function creerClasse(etablissement_id: string, data: ClasseInput) {
-  // La filière doit être configurée et active (double-écriture filiere + filiere_id).
+  // La filière doit être configurée et active.
   const filiere_id = await getFiliereActiveId(etablissement_id, data.filiere);
-  return prisma.classe.create({
+  const created = await prisma.classe.create({
     data: {
       etablissement_id,
       nom_fr: data.nom_fr,
       nom_ar: data.nom_ar ?? null,
-      filiere: data.filiere,
       filiere_id,
       niveau_id: data.niveau_id ?? null,
       annee_scolaire_id: data.annee_scolaire_id,
       capacite: data.capacite ?? 30,
       code: classeCode(data.nom_fr, data.filiere),
     },
+    include: { ...selectFiliereRef },
   });
+  return exposeCode(created);
 }
 
 export async function modifierClasse(id: string, etablissement_id: string, data: ClasseInput) {
@@ -103,19 +109,20 @@ export async function modifierClasse(id: string, etablissement_id: string, data:
   if (!existing) throw new NotFoundError('Classe introuvable');
 
   const filiere_id = await getFiliereId(etablissement_id, data.filiere);
-  return prisma.classe.update({
+  const updated = await prisma.classe.update({
     where: { id },
     data: {
       nom_fr: data.nom_fr,
       nom_ar: data.nom_ar ?? null,
-      filiere: data.filiere,
       filiere_id,
       niveau_id: data.niveau_id ?? null,
       annee_scolaire_id: data.annee_scolaire_id,
       capacite: data.capacite,
       code: classeCode(data.nom_fr, data.filiere),
     },
+    include: { ...selectFiliereRef },
   });
+  return exposeCode(updated);
 }
 
 export async function supprimerClasse(id: string, etablissement_id: string) {
@@ -411,7 +418,7 @@ export async function listerElevesDeClasse(
   });
 
   return {
-    classe,
+    classe: exposeCode(classe),
     total: inscriptions.length,
     eleves: inscriptions.map((i, idx) => ({
       rang: idx + 1,
@@ -473,13 +480,12 @@ export async function dupliquerClasse(
         etablissement_id,
         annee_scolaire_id: source.annee_scolaire_id,
         nom_fr: nom,
-        filiere: cible,
         filiere_id: filiere_id_cible,
         niveau_id: source.niveau_id ?? null,
         capacite: source.capacite,
         code: classeCode(nom, cible),
       },
-      include: { annee_scolaire: true, niveau: true },
+      include: { annee_scolaire: true, niveau: true, ...selectFiliereRef },
     });
 
     if (aInscrire.length > 0) {
@@ -490,7 +496,7 @@ export async function dupliquerClasse(
     }
 
     return {
-      classe: nouvelleClasse,
+      classe: exposeCode(nouvelleClasse),
       stats: {
         total_eleves_source: sourceIds.length,
         eleves_inscrits: aInscrire.length,

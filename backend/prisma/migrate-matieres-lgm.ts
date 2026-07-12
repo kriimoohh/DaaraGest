@@ -61,20 +61,27 @@ async function migrerEtablissement(etabId: string, etabNom: string) {
   const domaines = await prisma.domaine.findMany({ where: { etablissement_id: etabId } });
   const domaineByCode = new Map(domaines.map(d => [d.code, d.id]));
 
+  // Filières (Phase 2d : la filière n'est portée que par filiere_id)
+  const filiereByCode = new Map(
+    (await prisma.filiere.findMany({ where: { etablissement_id: etabId } })).map(f => [f.code, f.id]),
+  );
+
   // ── 2. Matières — UPSERT par (nom_fr, filiere) ─────────────────────────────
   let matCreated = 0;
   let matUpdated = 0;
   const lgmNames = new Set<string>(); // clé "nom_fr|filiere" du référentiel
   for (const m of LGM_MATIERES) {
     lgmNames.add(`${m.nom_fr}|${m.filiere}`);
+    const filiereId = filiereByCode.get(m.filiere);
+    if (!filiereId) throw new Error(`Filière ${m.filiere} non configurée pour cet établissement`);
     const existing = await prisma.matiere.findFirst({
-      where: { etablissement_id: etabId, nom_fr: m.nom_fr, filiere: m.filiere },
+      where: { etablissement_id: etabId, nom_fr: m.nom_fr, filiere_id: filiereId },
     });
     const data = {
       etablissement_id: etabId,
       nom_fr: m.nom_fr,
       nom_ar: m.nom_ar,
-      filiere: m.filiere,
+      filiere_id: filiereId,
       coeff_defaut: new Prisma.Decimal(1),
       note_min: new Prisma.Decimal(0),
       ordre_bulletin: m.ordre_bulletin,
@@ -96,8 +103,9 @@ async function migrerEtablissement(etabId: string, etabNom: string) {
   // ── 3. Matières hors référentiel → suppression cascade ─────────────────────
   const obsoletes = (await prisma.matiere.findMany({
     where: { etablissement_id: etabId },
-    select: { id: true, nom_fr: true, filiere: true },
-  })).filter(m => !lgmNames.has(`${m.nom_fr}|${m.filiere}`));
+    select: { id: true, nom_fr: true, filiere_ref: { select: { code: true } } },
+  })).map(m => ({ id: m.id, nom_fr: m.nom_fr, filiere: m.filiere_ref.code }))
+    .filter(m => !lgmNames.has(`${m.nom_fr}|${m.filiere}`));
 
   if (obsoletes.length === 0) {
     console.log('  Obsolètes → aucune');
