@@ -4,7 +4,7 @@ import { GenererBulletinInput, GenererBulletinAnnuelInput, ObservationInput, Pre
 import { renderPdfHtml } from '../../utils/browserPool';
 import { assertProfPeutAccederClasse } from '../../utils/teachingPolicy';
 import { logAction } from '../../utils/audit';
-import { DEFAULT_NOTE_MAX, MentionDef, mentionPour } from '../../utils/notes';
+import { DEFAULT_NOTE_MAX, MentionDef, mentionPourFiliere } from '../../utils/notes';
 import { NotFoundError } from '../../utils/errors';
 import { selectLiensClasse, selectLiensClasseObjet, classeIdParFiliere, LienClasseCode } from '../../utils/inscriptionClasse';
 
@@ -647,8 +647,8 @@ export async function genererBulletins(etablissement_id: string, data: GenererBu
     const { eleve_id, moyenne } = moyennes[i];
     const b = await prisma.bulletin.upsert({
       where: { eleve_id_annee_scolaire_id_filiere_periode: { eleve_id, annee_scolaire_id, filiere, periode } },
-      create: { eleve_id, annee_scolaire_id, filiere, filieres_combine: filieresCombineStr, periode, moyenne, rang: i + 1, appreciation: mentionPour(moyenne, mentions), generated_at: new Date() },
-      update: { filieres_combine: filieresCombineStr, moyenne, rang: i + 1, appreciation: mentionPour(moyenne, mentions), generated_at: new Date() },
+      create: { eleve_id, annee_scolaire_id, filiere, filieres_combine: filieresCombineStr, periode, moyenne, rang: i + 1, appreciation: mentionPourFiliere(moyenne, mentions, filiere), generated_at: new Date() },
+      update: { filieres_combine: filieresCombineStr, moyenne, rang: i + 1, appreciation: mentionPourFiliere(moyenne, mentions, filiere), generated_at: new Date() },
     });
     bulletins.push(b);
   }
@@ -727,8 +727,8 @@ export async function genererBulletinsAnnuels(etablissement_id: string, data: Ge
     const { eleve_id, moyenne } = moyennes[i];
     const b = await prisma.bulletin.upsert({
       where: { eleve_id_annee_scolaire_id_filiere_periode: { eleve_id, annee_scolaire_id, filiere, periode: 0 } },
-      create: { eleve_id, annee_scolaire_id, filiere, filieres_combine: filieresCombineStr, periode: 0, moyenne, rang: i + 1, appreciation: mentionPour(moyenne, mentions), generated_at: new Date() },
-      update: { filieres_combine: filieresCombineStr, moyenne, rang: i + 1, appreciation: mentionPour(moyenne, mentions), generated_at: new Date() },
+      create: { eleve_id, annee_scolaire_id, filiere, filieres_combine: filieresCombineStr, periode: 0, moyenne, rang: i + 1, appreciation: mentionPourFiliere(moyenne, mentions, filiere), generated_at: new Date() },
+      update: { filieres_combine: filieresCombineStr, moyenne, rang: i + 1, appreciation: mentionPourFiliere(moyenne, mentions, filiere), generated_at: new Date() },
     });
     bulletins.push(b);
   }

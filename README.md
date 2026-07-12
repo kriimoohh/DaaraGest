@@ -388,7 +388,6 @@ npm run format           # Prettier
 npm run db:migrate       # prisma migrate dev
 npm run db:seed          # Seed de développement
 npm run db:cleanup       # Script de nettoyage de données
-npm run db:check         # Vérification de cohérence des données
 npm run db:studio        # Interface Prisma Studio
 ```
 
@@ -862,8 +861,8 @@ Le portail parent est accessible via un lien unique sans création de compte :
 |--------|--------|
 | Variables d'env | Validées par Zod au boot (`config/env.ts`) — **fail-fast** si `JWT_SECRET`/`QR_SECRET` absents ou < 32 caractères |
 | JWT | HMAC-SHA256, expiration 24h (configurable), refresh tokens révocables |
-| Transport du token | `Authorization: Bearer <token>` + cookie httpOnly `daaragest_token` en fallback |
-| Stockage token (frontend) | Zustand + `localStorage` (compromis UX/sécurité — acceptable pour outil interne) |
+| Transport du token | Cookie httpOnly `daaragest_token` (le header `Authorization: Bearer` reste accepté pour les clients API) |
+| Stockage token (frontend) | **Aucun** — le token n'est jamais exposé au JavaScript (cookie httpOnly), immunisé XSS ; seul le profil utilisateur est en Zustand |
 | Mots de passe | bcrypt cost 10 · changement forcé à la 1re connexion (seed) |
 | Verrouillage de compte | Compteur de tentatives + verrouillage temporaire après échecs répétés |
 | Auth middleware | `return reply.status(401)` — arrêt immédiat sur token invalide |
@@ -883,12 +882,13 @@ Le portail parent est accessible via un lien unique sans création de compte :
 ### Flux d'authentification
 
 ```
-1. POST /auth/login → { user, token } + cookie httpOnly + refresh token
-2. Frontend stocke le token dans Zustand (localStorage)
-3. Chaque requête : Authorization: Bearer <token> (ou cookie)
+1. POST /auth/login → { user } + cookies httpOnly (daaragest_token + daaragest_refresh)
+2. Le token n'apparaît jamais dans le body ni dans le JavaScript (immunisé XSS)
+3. Chaque requête : cookie envoyé automatiquement (credentials: include) ;
+   Authorization: Bearer accepté en alternative pour les clients API
 4. Backend : jwtVerify() → vérifie header puis cookie en fallback
 5. Zod valide le payload JWT (id, role, etablissement_id, langue, theme, doit_changer_mdp)
-6. À expiration : POST /auth/refresh renouvelle silencieusement le token
+6. À expiration : POST /auth/refresh renouvelle silencieusement via le cookie refresh
 ```
 
 ### Configuration production
@@ -931,23 +931,15 @@ Principaux domaines couverts côté unitaire : calculs de bulletins (moyennes po
 
 ## Roadmap — chantiers en cours
 
-> **Modules déjà implémentés** : Filières génériques (entité + inscriptions N-filières), Mentions configurables, Échelle d'affichage par niveau, Domaines & grilles IEF, Tarifs, Fonctions configurables, Pointage QR, Audit log, Demandes d'absence personnel, Évaluations formatives, Progression pluriannuelle, Activités parascolaires, Bibliothèque, Portail parents (+ bulletins PDF), Documents officiels (25 types), Rapports (11 types + aperçus), Tableau de bord analytique, Refresh tokens, Verrouillage de période des bulletins, Templates de bulletins éditables, i18n EN, Sentry, CI complète.
+> **Modules déjà implémentés** : Filières génériques (entité `Filiere`, inscriptions N-filières, **colonnes string supprimées — refonte soldée**), Bulletins FR/AR/EN + combiné au choix, Mentions configurables (seule source des seuils, libellé arabe sur les bulletins AR), Échelle d'affichage par niveau, Domaines & grilles IEF, Tarifs, Fonctions configurables, Pointage QR, Audit log, Demandes d'absence personnel, Évaluations formatives, Progression pluriannuelle, Activités parascolaires, Bibliothèque, Portail parents (+ bulletins PDF), Documents officiels (25 types), Rapports (11 types + aperçus), Tableau de bord analytique, Refresh tokens, Verrouillage de période des bulletins, Templates de bulletins éditables, i18n FR/AR/EN synchronisée, Sentry, CI complète.
 
-### Refonte filières — Phase 2c (destructive)
+### Phase 4 — Multi-établissement
 
-La colonne string `filiere` (Matiere, Classe, Bulletin) reste la source de vérité pendant la transition ; `filiere_id` est backfillée en parallèle. La Phase 2c basculera les lecteurs sur `filiere_id` et retirera les colonnes string.
-
-### Bulletins EN — Phase 3
-
-L'API accepte déjà `EN` (schémas Zod, génération générique par cohorte) mais des portions du service restent câblées FR/AR (préflight, libellés d'appréciation, template éditable limité à FR/AR/COMBINE/ANNUEL). Généralisation en cours.
-
-### i18n
-
-L'anglais est une **langue d'interface** (fr/ar/en, fallback fr) distincte de la filière EN. Le socle est traduit ; la traduction arabe est à compléter section par section (~1 630 lignes sur 1 816).
+Le socle multi-tenant existe (`etablissement_id` partout, JWT scopé). Reste l'onboarding : module `etablissements`, super-admin plateforme, branding par école. À planifier quand une deuxième école arrivera.
 
 ### Pointage NFC
 
-Les modèles `PersonnelCarte`, `Pointage` et `HeureTravail` sont présents en schéma mais sans API. Le pointage QR couvre le besoin actuel ; le NFC reste une évolution possible (badges physiques).
+Les modèles `PersonnelCarte`, `Pointage` et `HeureTravail` sont présents en schéma mais sans API (décision : conservés tels quels). Le pointage QR couvre le besoin actuel ; le NFC reste une évolution possible (badges physiques).
 
 ### Application mobile (React Native)
 
@@ -957,9 +949,7 @@ Expo + partage des types TypeScript, mode hors-ligne pour la saisie de notes et 
 
 | Chantier | Valeur métier | Complexité |
 |----------|--------------|------------|
-| Phase 2c filières (retrait colonnes string) | ★★★☆☆ | ★★★☆☆ |
-| Bulletins EN (Phase 3) | ★★★☆☆ | ★★★☆☆ |
-| Complétion i18n AR | ★★★☆☆ | ★★☆☆☆ |
+| Phase 4 multi-établissement | ★★★☆☆ | ★★★★☆ |
 | Pointage NFC | ★★☆☆☆ | ★★★★☆ |
 | App mobile | ★★★★★ | ★★★★★ |
 
@@ -967,28 +957,13 @@ Expo + partage des types TypeScript, mode hors-ligne pour la saisie de notes et 
 
 ## Dette technique
 
-Points connus à traiter lors d'une prochaine session de dev planifiée. L'application est **pleinement fonctionnelle** en l'état.
+L'audit de cohérence de juillet 2026 (PR #126–#136) a soldé la dette précédemment listée ici : transition filières (colonnes string supprimées), consolidation des mentions (seuils fixes retirés), lien de navigation Audit, champs directeur legacy et stockage du token (cookie httpOnly seul). Restent connus :
 
-### 1. Transition filières inachevée *(priorité haute — chantier actif)*
+### 1. Modèles NFC sans API *(priorité basse — décision : conservés)*
 
-Double source de vérité temporaire : `filiere` (string) et `filiere_id` (FK) coexistent sur `Matiere`, `Classe` et `Bulletin`. À résorber en Phase 2c (voir roadmap).
+`PersonnelCarte`, `Pointage`, `HeureTravail` sont en schéma sans aucune route, réservés à un éventuel pointage par badge NFC. Le pointage QR couvre le besoin actuel.
 
-### 2. Doublon seuils de mentions *(priorité moyenne)*
+### 2. Rapport socle IEF et filière EN *(niche, par conception)*
 
-`ConfigNotes.seuil_tres_bien/bien/assez_bien/passable` coexistent avec la table `Mention` qui les remplace. À retirer une fois tous les lecteurs basculés sur `Mention`.
+La grille officielle IEF est à colonnes fixes (LC FR / LC AR / Maths) — une matière-langue EN y tombe dans LC FR. L'anglais ne figure pas dans la grille officielle sénégalaise ; ne pas « corriger ».
 
-### 3. Page Audit sans entrée de menu *(priorité basse)*
-
-La route `/audit` existe côté frontend mais aucun lien de navigation n'y mène (accessible uniquement par URL directe). Ajouter l'entrée Sidebar pour la direction.
-
-### 4. Champs deprecated `Etablissement` *(priorité basse)*
-
-`nom_directeur` / `civilite_directeur` sont conservés pour rétro-compatibilité tant que tous les établissements n'ont pas un `directeur_id` (Personnel). À supprimer par migration.
-
-### 5. Modèles NFC sans API *(priorité basse)*
-
-`PersonnelCarte`, `Pointage`, `HeureTravail` sont en schéma sans aucune route. À implémenter (roadmap NFC) ou à retirer.
-
-### 6. Token JWT en localStorage *(priorité basse)*
-
-Le transport cross-subdomain bloque les cookies cross-origin, ce qui a nécessité le stockage en `localStorage`. Alternative propre : mettre frontend et API sur le même domaine (ex: `ecole.sn` + `ecole.sn/api`) avec un proxy nginx, puis le cookie httpOnly peut être la seule solution de transport.
