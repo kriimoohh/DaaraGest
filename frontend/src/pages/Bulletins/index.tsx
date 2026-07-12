@@ -17,6 +17,9 @@ interface AnneeScolaire { id: string; libelle: string; }
 interface Classe { id: string; nom_fr: string; nom_ar?: string | null; filiere: string; }
 interface Bulletin {
   id: string; periode: number; filiere: string;
+  annee_scolaire_id?: string;
+  // Codes réellement fusionnés pour un COMBINE (ex. "FR,EN") ; null = actives.
+  filieres_combine?: string | null;
   moyenne: number | null; rang: number | null; appreciation: string | null;
   generated_at: string | null;
   eleve: { id: string; nom_fr: string; prenom_fr: string; matricule: string; };
@@ -33,9 +36,9 @@ interface NoteDetail {
 interface PreflightResult {
   classe_id: string; periode: number; filiere: string;
   total_eleves: number;
-  matieres_evaluees: { id: string; nom_fr: string; nom_ar: string | null; coeff: number; note_max: number; filiere: 'FR' | 'AR'; eleves_avec_notes: number }[];
-  matieres_non_evaluees: { id: string; nom_fr: string; nom_ar: string | null; filiere: 'FR' | 'AR'; source: 'periode' | 'classe' }[];
-  matieres_sans_notes: { id: string; nom_fr: string; nom_ar: string | null; filiere: 'FR' | 'AR' }[];
+  matieres_evaluees: { id: string; nom_fr: string; nom_ar: string | null; coeff: number; note_max: number; filiere: 'FR' | 'AR' | 'EN'; eleves_avec_notes: number }[];
+  matieres_non_evaluees: { id: string; nom_fr: string; nom_ar: string | null; filiere: 'FR' | 'AR' | 'EN'; source: 'periode' | 'classe' }[];
+  matieres_sans_notes: { id: string; nom_fr: string; nom_ar: string | null; filiere: 'FR' | 'AR' | 'EN' }[];
   eleves_sans_aucune_note: { id: string; nom_fr: string; prenom_fr: string; matricule: string }[];
   periodes_vides?: { periode: number; libelle: string }[];
   warnings: { code: string; message: string }[];
@@ -45,7 +48,12 @@ interface DetailBulletin extends Bulletin {
   observation_fr: string | null;
   observation_prof: string | null;
   eleve: Bulletin['eleve'] & {
-    inscriptions: { classe_fr: { nom_fr: string } | null; classe_ar: { nom_fr: string } | null; }[];
+    // Liens génériques classe↔filière (InscriptionClasse) — remplace l'ancien
+    // couple classe_fr/classe_ar supprimé en Phase 2d.
+    inscriptions: {
+      annee_scolaire_id?: string;
+      classes?: { classe_id: string; filiere: { code: string } | null; classe?: { nom_fr: string; nom_ar?: string | null } }[];
+    }[];
   };
   notesByFiliere: { FR?: NoteDetail[]; AR?: NoteDetail[]; EN?: NoteDetail[]; };
   echelle_affichage?: number | null;
@@ -69,11 +77,13 @@ function moyenneColor(m: number | null, base = 20): string {
   return 'var(--danger)';
 }
 
-function filiereChip(f: string) {
+function filiereChip(f: string, combine?: string | null) {
   const map: Record<string, { bg: string; color: string; label: string }> = {
     FR:      { bg: 'var(--indigo-soft)', color: 'var(--indigo-ink)', label: 'FR' },
     AR:      { bg: 'var(--sahel-soft)', color: 'var(--sahel-ink)', label: 'AR' },
-    COMBINE: { bg: 'var(--success-soft)', color: 'var(--success-text)', label: 'FR+AR' },
+    // Libellé = codes réellement fusionnés (« FR+EN »…) ; « FR+AR » pour les
+    // anciens bulletins sans filieres_combine stocké.
+    COMBINE: { bg: 'var(--success-soft)', color: 'var(--success-text)', label: combine ? combine.split(',').join('+') : 'FR+AR' },
   };
   const s = map[f] ?? { bg: 'var(--paper-2)', color: 'var(--ink-3)', label: f };
   return (
@@ -214,6 +224,9 @@ export function BulletinsPage() {
       const filiereFetch = isAnnuel ? filiere : type;
       const pf = await api.post<PreflightResult>('/api/v1/bulletins/preflight', {
         classe_id: classeId, annee_scolaire_id: anneeId, periode: periodeFetch, filiere: filiereFetch,
+        // Parité avec la génération : le pré-vol d'un COMBINE au choix vérifie
+        // exactement les filières qui seront fusionnées.
+        ...(filiereFetch === 'COMBINE' && combineFilieres.length ? { filieres_combine: combineFilieres } : {}),
       });
       setPreflight(pf);
     } catch (err) {
@@ -439,7 +452,7 @@ export function BulletinsPage() {
 
                   {/* Badges filière + période */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {filiereChip(b.filiere)}
+                    {filiereChip(b.filiere, b.filieres_combine)}
                     <span style={{ fontSize: 12, color: 'var(--ink-4)' }}>
                       {b.periode === 0 ? t('common.annuel') : t(`common.trimestre_${b.periode}`)}
                     </span>
@@ -502,7 +515,7 @@ export function BulletinsPage() {
                     <td><RangMedal rang={b.rang} /></td>
                     <td style={{ fontWeight: 500, color: 'var(--ink)' }}>{b.eleve.prenom_fr} {b.eleve.nom_fr}</td>
                     <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-3)' }}>{b.eleve.matricule}</td>
-                    <td>{filiereChip(b.filiere)}</td>
+                    <td>{filiereChip(b.filiere, b.filieres_combine)}</td>
                     <td style={{ color: 'var(--ink-3)', fontSize: 12 }}>
                       {b.periode === 0 ? 'Annuel' : `T${b.periode}`}
                     </td>
@@ -807,8 +820,15 @@ function BulletinDetailContent({
   const filieres: ('FR' | 'AR' | 'EN')[] = detail.filiere === 'COMBINE'
     ? (['FR', 'AR', 'EN'] as const).filter(c => detail.notesByFiliere[c])
     : [detail.filiere as 'FR' | 'AR' | 'EN'];
-  const insc = detail.eleve.inscriptions?.[0];
-  const classeNom = insc?.classe_fr?.nom_fr ?? insc?.classe_ar?.nom_fr ?? '—';
+  // Classe affichée : celle de la filière du bulletin (générique FR/AR/EN) ;
+  // pour un COMBINE, les classes des filières fusionnées jointes par « · ».
+  const insc = detail.eleve.inscriptions?.find(i => i.annee_scolaire_id === detail.annee_scolaire_id)
+    ?? detail.eleve.inscriptions?.[0];
+  const liens = insc?.classes ?? [];
+  const nomsClasses = filieres
+    .map(f => liens.find(l => l.filiere?.code === f)?.classe?.nom_fr)
+    .filter((n): n is string => Boolean(n));
+  const classeNom = nomsClasses.length ? [...new Set(nomsClasses)].join(' · ') : '—';
 
   // Libellé de section par filière : FR/AR gardent leurs libellés traduits ;
   // les autres codes (EN…) prennent le nom de la filière configurée (repli sur le code).
@@ -852,7 +872,7 @@ function BulletinDetailContent({
         <div style={{ padding: 12, background: 'var(--paper-2)', borderRadius: 'var(--r-md)' }}>
           <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 2 }}>{t('classe.titre')}</div>
           <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{classeNom}</div>
-          <div style={{ marginTop: 4 }}>{filiereChip(detail.filiere)}</div>
+          <div style={{ marginTop: 4 }}>{filiereChip(detail.filiere, detail.filieres_combine)}</div>
         </div>
         <div style={{ padding: 12, background: 'var(--paper-2)', borderRadius: 'var(--r-md)' }}>
           <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 2 }}>{t('classe.annee_scolaire')}</div>
