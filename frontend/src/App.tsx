@@ -59,6 +59,7 @@ const ActivitesPage      = lazyWithReload(() => import('./pages/Activites').then
 const DocumentsPage      = lazyWithReload(() => import('./pages/Documents').then(m => ({ default: m.DocumentsPage })));
 const PortailParentPage  = lazyWithReload(() => import('./pages/PortailParent').then(m => ({ default: m.PortailParentPage })));
 const RapportsPage       = lazyWithReload(() => import('./pages/Rapports').then(m => ({ default: m.RapportsPage })));
+const AuditPage          = lazyWithReload(() => import('./pages/Audit').then(m => ({ default: m.AuditPage })));
 const BibliothequeePage  = lazyWithReload(() => import('./pages/Bibliotheque').then(m => ({ default: m.BibliothequeePage })));
 const DemandesAbsencePersonnelPage = lazyWithReload(() => import('./pages/DemandesAbsencePersonnel').then(m => ({ default: m.DemandesAbsencePersonnelPage })));
 
@@ -149,6 +150,9 @@ export default function App() {
             } />
             <Route path="/rapports" element={
               <ProtectedRoute roles={['admin', 'directeur', 'gestionnaire']}><RapportsPage /></ProtectedRoute>
+            } />
+            <Route path="/audit" element={
+              <ProtectedRoute roles={['admin', 'directeur']}><AuditPage /></ProtectedRoute>
             } />
             <Route path="/bibliotheque" element={
               <ProtectedRoute roles={ROLES.gestion}><BibliothequeePage /></ProtectedRoute>
