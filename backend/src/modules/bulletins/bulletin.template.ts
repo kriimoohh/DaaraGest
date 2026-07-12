@@ -41,7 +41,7 @@ interface BulletinBaseData {
   note_max_etab?: number;
   // Échelle d'affichage de la filière (phase 3) — mono-filière uniquement. Absent /
   // égal à l'échelle établissement = aucun re-scale. Non fourni pour le combiné.
-  filiere_note_max?: number;
+  echelle_affichage?: number;
   mentions?: { libelle_fr: string; libelle_ar?: string | null; seuil_min: number }[];
   // Contact établissement (bandeau sous l'en-tête) + maître(s) de la classe.
   etablissement_telephone?: string | null;
@@ -84,9 +84,9 @@ type MentionRow = { libelle_fr: string; libelle_ar?: string | null; seuil_min: n
 let RENDER_BASE = DEFAULT_NOTE_MAX;
 let RENDER_FACTOR = 1;
 let RENDER_MENTIONS: MentionRow[] = [];
-function setRenderContext(d: { note_max_etab?: number; filiere_note_max?: number; mentions?: MentionRow[] }) {
+function setRenderContext(d: { note_max_etab?: number; echelle_affichage?: number; mentions?: MentionRow[] }) {
   const etabBase = d.note_max_etab ?? DEFAULT_NOTE_MAX;
-  RENDER_BASE = d.filiere_note_max ?? etabBase;
+  RENDER_BASE = d.echelle_affichage ?? etabBase;
   RENDER_FACTOR = etabBase > 0 ? RENDER_BASE / etabBase : 1;
   // Les seuils de mention sont stockés sur la base établissement → re-scale à l'échelle d'affichage.
   RENDER_MENTIONS = (d.mentions ?? [])

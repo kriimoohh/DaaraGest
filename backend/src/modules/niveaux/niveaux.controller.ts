@@ -9,10 +9,10 @@ export async function listerHandler(request: FastifyRequest, reply: FastifyReply
 
 export async function creerHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
-  const { libelle, ordre } = request.body as { libelle: string; ordre?: number };
+  const { libelle, ordre, note_max } = request.body as { libelle: string; ordre?: number; note_max?: number | null };
   if (!libelle?.trim()) return reply.status(400).send({ error: 'libelle requis' });
   try {
-    return reply.status(201).send(await creerNiveau(etablissement_id, libelle.trim(), ordre ?? 0));
+    return reply.status(201).send(await creerNiveau(etablissement_id, libelle.trim(), ordre ?? 0, note_max ?? null));
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
   }
@@ -21,10 +21,10 @@ export async function creerHandler(request: FastifyRequest, reply: FastifyReply)
 export async function modifierHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
-  const { libelle, ordre } = request.body as { libelle: string; ordre?: number };
+  const { libelle, ordre, note_max } = request.body as { libelle: string; ordre?: number; note_max?: number | null };
   if (!libelle?.trim()) return reply.status(400).send({ error: 'libelle requis' });
   try {
-    return reply.send(await modifierNiveau(id, etablissement_id, libelle.trim(), ordre ?? 0));
+    return reply.send(await modifierNiveau(id, etablissement_id, libelle.trim(), ordre ?? 0, note_max));
   } catch (err) {
     return reply.status(404).send({ error: (err as Error).message });
   }
