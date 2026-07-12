@@ -6,7 +6,7 @@ import { assertProfPeutAccederClasse } from '../../utils/teachingPolicy';
 import { logAction } from '../../utils/audit';
 import { DEFAULT_NOTE_MAX, MentionDef, mentionPour } from '../../utils/notes';
 import { NotFoundError } from '../../utils/errors';
-import { selectLiensClasse, classeIdParFiliere, LienClasseCode } from '../../utils/inscriptionClasse';
+import { selectLiensClasse, selectLiensClasseObjet, classeIdParFiliere, LienClasseCode } from '../../utils/inscriptionClasse';
 
 const mapMentions = (rows: { libelle_fr: string; libelle_ar: string | null; seuil_min: unknown }[]): MentionDef[] =>
   rows.map(r => ({ libelle_fr: r.libelle_fr, libelle_ar: r.libelle_ar, seuil_min: Number(r.seuil_min) }));
@@ -738,7 +738,9 @@ export async function getBulletin(id: string, etablissement_id: string) {
   const bulletin = await prisma.bulletin.findFirst({
     where: { id, eleve: { etablissement_id } },
     include: {
-      eleve: { include: { inscriptions: { include: { ...selectLiensClasse } } } },
+      // Variante « objet » : expose classe.nom_fr/nom_ar par lien pour que le
+      // front affiche la classe de la filière du bulletin (générique FR/AR/EN).
+      eleve: { include: { inscriptions: { include: { ...selectLiensClasseObjet } } } },
       annee_scolaire: true,
     },
   });
