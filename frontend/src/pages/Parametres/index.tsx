@@ -68,8 +68,10 @@ interface Etablissement {
   numero_autorisation?: string;
   entete_bulletin_fr?: string;
   entete_bulletin_ar?: string;
-  nom_directeur?: string;
-  civilite_directeur?: 'M' | 'Mme' | null;
+  // Directeur = Personnel lié (nom/genre pour les documents). Les anciens champs
+  // libres nom_directeur/civilite_directeur restent en base comme repli legacy
+  // mais ne sont plus édités ici.
+  directeur_id?: string | null;
   logo_url?: string;
   signature_url?: string;
   cachet_url?: string;
@@ -633,6 +635,7 @@ export function ParametresPage() {
   const [savingNiveau, setSavingNiveau] = useState(false);
 
   const [tarifs, setTarifs] = useState<Tarif[]>([]);
+  const [personnelOptions, setPersonnelOptions] = useState<{ id: string; fonction: string; label: string }[]>([]);
   const [editTarif, setEditTarif] = useState<Tarif | null>(null);
   const [tarifForm, setTarifForm] = useState({
     code: '', libelle_fr: '', montant_defaut: '',
@@ -708,6 +711,22 @@ export function ParametresPage() {
   const fetchTarifs = () =>
     api.get<Tarif[]>('/api/v1/tarifs').then(setTarifs).catch(() => {});
 
+  // Personnel actif pour le sélecteur de directeur (fonction DIRECTEUR en tête).
+  const fetchPersonnel = () =>
+    api.get<{ data: { nom_fr: string; prenom_fr?: string | null; personnel?: { id: string; fonction: string } | null }[] }>('/api/v1/personnel?limit=200')
+      .then(r => {
+        const opts = (r.data ?? [])
+          .filter(u => u.personnel?.id)
+          .map(u => ({
+            id: u.personnel!.id,
+            fonction: u.personnel!.fonction,
+            label: `${u.nom_fr}${u.prenom_fr ? ' ' + u.prenom_fr : ''}`,
+          }))
+          .sort((a, b) => Number(b.fonction === 'DIRECTEUR') - Number(a.fonction === 'DIRECTEUR') || a.label.localeCompare(b.label, 'fr'));
+        setPersonnelOptions(opts);
+      })
+      .catch(() => {});
+
   // Mentions de la portée filière choisie ('' = défaut établissement). L'id de filière
   // est résolu depuis le code (les filières sont déjà chargées).
   const fetchMentions = (filiereCode = mentionFiliere) => {
@@ -722,6 +741,7 @@ export function ParametresPage() {
     fetchFilieres();
     fetchTarifs();
     fetchMentions();
+    fetchPersonnel();
     Promise.all([
       api.get<Etablissement>('/api/v1/parametres'),
       api.get<Record<string, unknown>>('/api/v1/parametres/notes'),
@@ -1067,8 +1087,7 @@ export function ParametresPage() {
         numero_autorisation: etab.numero_autorisation?.trim() || null,
         entete_bulletin_fr: etab.entete_bulletin_fr?.trim() || null,
         entete_bulletin_ar: etab.entete_bulletin_ar?.trim() || null,
-        nom_directeur: etab.nom_directeur || null,
-        civilite_directeur: etab.civilite_directeur || null,
+        directeur_id: etab.directeur_id || null,
         logo_url: etab.logo_url || undefined,
         signature_url: etab.signature_url || undefined,
         cachet_url: etab.cachet_url || undefined,
@@ -1277,29 +1296,21 @@ export function ParametresPage() {
                     onChange={e => setEtab(p => p ? { ...p, numero_autorisation: e.target.value } : p)}
                   />
                 </div>
-                <div className="grid-2">
-                  <Select
-                    label="Civilité"
-                    value={etab.civilite_directeur ?? ''}
-                    onChange={e => setEtab(p => p ? { ...p, civilite_directeur: (e.target.value || null) as 'M' | 'Mme' | null } : p)}
-                    options={[
-                      { value: 'M',   label: 'M.' },
-                      { value: 'Mme', label: 'Mme' },
-                    ]}
-                    placeholder="— Non précisé —"
-                  />
-                  <Input
-                    label="Nom du/de la Directeur(trice)"
-                    placeholder={t('parametre.ex_directeur')}
-                    value={etab.nom_directeur ?? ''}
-                    onChange={e => setEtab(p => p ? { ...p, nom_directeur: e.target.value } : p)}
-                  />
-                </div>
+                <Select
+                  label="Directeur / Directrice (Personnel)"
+                  value={etab.directeur_id ?? ''}
+                  onChange={e => setEtab(p => p ? { ...p, directeur_id: e.target.value || null } : p)}
+                  options={personnelOptions.map(o => ({
+                    value: o.id,
+                    label: o.fonction === 'DIRECTEUR' ? `${o.label} — Directeur` : o.label,
+                  }))}
+                  placeholder="— Sélectionner dans le personnel —"
+                />
                 <div style={{ fontSize: 12, color: 'var(--ink-3)', padding: '8px 12px', background: 'var(--paper-2)', borderRadius: 6, border: '1px solid var(--rule)' }}>
-                  Ces deux champs servent de <strong>repli</strong> pour la génération des documents
-                  (bulletins, certificats, cartes…) lorsque l'établissement n'a pas encore de
-                  Personnel de fonction <em>Directeur</em>. Dès qu'un Personnel directeur est défini
-                  dans le module RH, ses informations sont utilisées en priorité.
+                  Le nom et l'accord en genre (Directeur/Directrice, soussigné(e)…) des documents
+                  générés (bulletins, certificats, cartes…) proviennent de la fiche Personnel
+                  sélectionnée ici. Tant que rien n'est sélectionné, l'ancien nom saisi en texte
+                  libre reste utilisé en <strong>repli</strong>.
                 </div>
                 <Input
                   label={t('common.devise')}

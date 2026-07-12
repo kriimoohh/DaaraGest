@@ -25,6 +25,9 @@ export const etablissementUpdateSchema = z.object({
   entete_bulletin_ar: z.string().optional().nullable(),
   nom_directeur:      z.string().optional().nullable(),
   civilite_directeur: z.enum(['M', 'Mme']).optional().nullable(),
+  // FK vers Personnel : source prioritaire du nom/genre du directeur pour les
+  // documents (les deux champs libres ci-dessus ne sont plus qu'un repli legacy).
+  directeur_id:       z.string().min(1).optional().nullable(),
   logo_url: z.string().optional().nullable(),
   signature_url: z.string().url().optional().nullable(),
   cachet_url: z.string().url().optional().nullable(),

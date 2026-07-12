@@ -951,12 +951,6 @@
     "logo_etab": "Logo de l'établissement",
     "signature_directeur": "Signature (directeur)",
     "cachet_etab": "Cachet de l'établissement",
-    "civilite": "Civilité",
-    "civilite_m": "M.",
-    "civilite_mme": "Mme",
-    "civilite_non_precisee": "— Non précisé —",
-    "nom_directeur": "Nom du/de la Directeur(trice)",
-    "nom_directeur_placeholder": "Ex : Adama NDIAYE",
     "format_invalide_image": "Format invalide — image uniquement (PNG, JPG, SVG…)",
     "format_invalide_image_simple": "Format invalide — image uniquement",
     "fichier_trop_volumineux": "Fichier trop volumineux — maximum 512 Ko",
@@ -1040,7 +1034,6 @@
     "code_requis": "Code requis",
     "nom_requis": "Le nom est requis",
     "email_invalide": "Email invalide",
-    "ex_directeur": "Ex : Adama NDIAYE",
     "ex_niveau": "Ex: CM1"
   },
   "utilisateur": {

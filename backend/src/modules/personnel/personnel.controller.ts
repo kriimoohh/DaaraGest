@@ -17,8 +17,10 @@ export async function listerHandler(
   request: FastifyRequest, reply: FastifyReply
 ) {
   const { etablissement_id } = request.user as JwtPayload;
-  const { page, search, fonction, specialite, annee_scolaire_id } = request.query as Record<string, string | undefined>;
-  const data = await listerPersonnel(etablissement_id, page ? parseInt(page) : 1, search, fonction, specialite, annee_scolaire_id);
+  const { page, search, fonction, specialite, annee_scolaire_id, limit } = request.query as Record<string, string | undefined>;
+  // limit borné à [1, 200] (ex: sélecteur de directeur dans Paramètres qui veut tout le personnel)
+  const limitNum = Math.min(200, Math.max(1, limit ? parseInt(limit) || 20 : 20));
+  const data = await listerPersonnel(etablissement_id, page ? parseInt(page) : 1, search, fonction, specialite, annee_scolaire_id, limitNum);
   return reply.send(data);
 }
 
