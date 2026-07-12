@@ -951,12 +951,6 @@
     "logo_etab": "شعار المؤسسة",
     "signature_directeur": "التوقيع (المدير)",
     "cachet_etab": "ختم المؤسسة",
-    "civilite": "اللقب",
-    "civilite_m": "السيد",
-    "civilite_mme": "السيدة",
-    "civilite_non_precisee": "— غير محدد —",
-    "nom_directeur": "اسم المدير/ة",
-    "nom_directeur_placeholder": "مثال: Adama NDIAYE",
     "format_invalide_image": "صيغة غير صالحة — الصور فقط (PNG، JPG، SVG…)",
     "format_invalide_image_simple": "صيغة غير صالحة — الصور فقط",
     "fichier_trop_volumineux": "ملف كبير جداً — الحد الأقصى 512 كيلوبايت",
@@ -1040,7 +1034,6 @@
     "code_requis": "الرمز مطلوب",
     "nom_requis": "الاسم مطلوب",
     "email_invalide": "بريد إلكتروني غير صالح",
-    "ex_directeur": "مثال: أداما نديا",
     "ex_niveau": "مثال: CM1"
   },
   "utilisateur": {

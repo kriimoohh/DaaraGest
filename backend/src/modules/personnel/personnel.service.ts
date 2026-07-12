@@ -4,8 +4,7 @@ import { PersonnelInput, AffectationInput } from './personnel.schema';
 import { NotFoundError, ValidationError, ConflictError } from '../../utils/errors';
 import { genererMatricule } from '../../utils/matricule';
 
-export async function listerPersonnel(etablissement_id: string, page = 1, search?: string, fonction?: string, specialite?: string, annee_scolaire_id?: string) {
-  const limit = 20;
+export async function listerPersonnel(etablissement_id: string, page = 1, search?: string, fonction?: string, specialite?: string, annee_scolaire_id?: string, limit = 20) {
   const skip = (page - 1) * limit;
 
   // Filtres sur la relation Personnel (fonction exacte, spécialité « contient »).

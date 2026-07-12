@@ -1536,12 +1536,6 @@
     "logo_etab": "School logo",
     "signature_directeur": "Signature (principal)",
     "cachet_etab": "School stamp",
-    "civilite": "Title",
-    "civilite_m": "Mr.",
-    "civilite_mme": "Mrs.",
-    "civilite_non_precisee": "— Not specified —",
-    "nom_directeur": "Principal's name",
-    "nom_directeur_placeholder": "e.g. Adama NDIAYE",
     "format_invalide_image": "Invalid format — image only (PNG, JPG, SVG…)",
     "format_invalide_image_simple": "Invalid format — image only",
     "fichier_trop_volumineux": "File too large — maximum 512 KB",
@@ -1625,7 +1619,6 @@
     "code_requis": "Code required",
     "nom_requis": "The name is required",
     "email_invalide": "Invalid email",
-    "ex_directeur": "e.g. Adama NDIAYE",
     "ex_niveau": "e.g. CM1"
   },
   "activite": {
