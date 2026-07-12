@@ -8,7 +8,6 @@ export interface FiliereLite {
   nom_ar: string | null;
   langue: string;
   sens_ecriture: 'LTR' | 'RTL';
-  note_max: number | string | null;
   couleur: string;
   ordre: number;
   actif: boolean;

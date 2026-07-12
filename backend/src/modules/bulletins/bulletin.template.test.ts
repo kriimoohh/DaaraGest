@@ -154,7 +154,7 @@ describe('generateBulletinAnnuelHtml — annuel EN', () => {
 
 describe('generateBulletinHtml — échelle par filière (re-scale, Phase 3)', () => {
   it('FR sur /20 alors que l\'établissement est /10 : moyenne + dénominateur re-scalés (facteur 2)', () => {
-    const html = generateBulletinHtml({ ...base, type: 'FR', periode: 1, filiere_note_max: 20, notes_fr: [noteFR] });
+    const html = generateBulletinHtml({ ...base, type: 'FR', periode: 1, echelle_affichage: 20, notes_fr: [noteFR] });
     // base.moyenne = 7.16 (canonique /10) → affichée 14.32 / 20.
     expect(html).toContain('14.32 / 20');
     expect(html).not.toContain('7.16 / 10');

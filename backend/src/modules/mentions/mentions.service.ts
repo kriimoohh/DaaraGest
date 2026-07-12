@@ -46,7 +46,14 @@ async function ensureMentionsExist(etablissement_id: string) {
   await prisma.mention.createMany({ data: rows, skipDuplicates: true });
 }
 
-async function getNoteMax(etablissement_id: string): Promise<number> {
+// Échelle applicable à une mention : celle du NIVEAU si la mention est propre à un
+// niveau (ex. secondaire /20), sinon l'échelle établissement. Les seuils de mention
+// se saisissent ainsi sur la bonne échelle.
+async function getNoteMax(etablissement_id: string, niveau_id?: string | null): Promise<number> {
+  if (niveau_id) {
+    const n = await prisma.niveau.findFirst({ where: { id: niveau_id, etablissement_id }, select: { note_max: true } });
+    if (n?.note_max != null) return Number(n.note_max);
+  }
   const cn = await prisma.configNotes.findUnique({ where: { etablissement_id }, select: { note_max: true } });
   return Number(cn?.note_max ?? DEFAULT_NOTE_MAX);
 }
@@ -67,7 +74,7 @@ export async function listerMentions(etablissement_id: string, niveau_id?: strin
 }
 
 export async function creerMention(etablissement_id: string, data: CreerMentionInput) {
-  const noteMax = await getNoteMax(etablissement_id);
+  const noteMax = await getNoteMax(etablissement_id, data.niveau_id);
   if (data.seuil_min >= noteMax) {
     throw Object.assign(
       new Error(`Le seuil (${data.seuil_min}) doit être inférieur à la note max (${noteMax})`),
@@ -123,7 +130,7 @@ export async function modifierMention(id: string, etablissement_id: string, data
   }
 
   if (data.seuil_min !== undefined && !mention.is_system) {
-    const noteMax = await getNoteMax(etablissement_id);
+    const noteMax = await getNoteMax(etablissement_id, mention.niveau_id);
     if (data.seuil_min >= noteMax) {
       throw Object.assign(
         new Error(`Le seuil (${data.seuil_min}) doit être inférieur à la note max (${noteMax})`),
