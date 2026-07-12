@@ -3,6 +3,7 @@ import { getBaremesClasse } from '../bulletins/bulletins.service';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 import { NotFoundError } from '../../utils/errors';
 import { selectLiensClasse, classeIdParFiliere } from '../../utils/inscriptionClasse';
+import { codeFiliere } from '../../utils/filiere';
 
 // Fallback : si pas d'année scolaire active, expire dans 90 jours (au lieu de 365).
 const TOKEN_FALLBACK_DUREE_MS = 90 * 24 * 60 * 60 * 1000;
@@ -82,7 +83,7 @@ export async function getPortailData(token: string) {
   // Get notes
   const notesRaw = inscription ? await prisma.note.findMany({
     where: { eleve_id: eleve.id, annee_scolaire_id: inscription.annee_scolaire_id },
-    include: { matiere: { select: { nom_fr: true, nom_ar: true, filiere: true, coeff_defaut: true } } },
+    include: { matiere: { select: { nom_fr: true, nom_ar: true, filiere: true, filiere_ref: { select: { code: true } }, coeff_defaut: true } } },
     orderBy: [{ periode: 'asc' }, { matiere: { nom_fr: 'asc' } }],
   }) : [];
 
@@ -91,6 +92,7 @@ export async function getPortailData(token: string) {
     const b = baremes.get(`${n.matiere_id}|${n.periode}`);
     return {
       ...n,
+      matiere: { ...n.matiere, filiere: codeFiliere(n.matiere) },
       note_max_effectif: b?.note_max ?? noteMaxBase,
       coeff_effectif: b?.coeff ?? Number(n.matiere.coeff_defaut),
     };
@@ -117,19 +119,23 @@ export async function getPortailData(token: string) {
   }) : [];
 
   // Get évaluations formatives (Phase 3.1)
-  const evaluationsFormatives = inscription ? await prisma.noteEvaluation.findMany({
+  const evaluationsFormativesRaw = inscription ? await prisma.noteEvaluation.findMany({
     where: { eleve_id: eleve.id },
     include: {
       evaluation: {
         select: {
           titre: true, type: true, date: true,
           coefficient: true, note_max: true, periode: true,
-          matiere: { select: { nom_fr: true, nom_ar: true, filiere: true } },
+          matiere: { select: { nom_fr: true, nom_ar: true, filiere: true, filiere_ref: { select: { code: true } } } },
         },
       },
     },
     orderBy: { evaluation: { date: 'desc' } },
   }) : [];
+  const evaluationsFormatives = evaluationsFormativesRaw.map(ne => ({
+    ...ne,
+    evaluation: { ...ne.evaluation, matiere: { ...ne.evaluation.matiere, filiere: codeFiliere(ne.evaluation.matiere) } },
+  }));
 
   // Get activités parascolaires (Phase 3.3)
   const activitesInscriptions = inscription ? await prisma.inscriptionActivite.findMany({

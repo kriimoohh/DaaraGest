@@ -4,6 +4,7 @@ import prisma from '../../config/database';
 import { renderPdfHtml as _renderPdfHtmlReal } from '../../utils/browserPool';
 import { calculerMoyennesClasse, getMentionsEtab, getBaremesClasseCohorte, filieresActivesCodes } from '../bulletins/bulletins.service';
 import { DEFAULT_NOTE_MAX, mentionPour } from '../../utils/notes';
+import { codeFiliere, selectFiliereRef } from '../../utils/filiere';
 import { NotFoundError } from '../../utils/errors';
 
 // Mode aperçu : on intercepte renderPdfHtml pour capturer le HTML sans
@@ -845,7 +846,7 @@ export async function rapportPerformanceDomaine(
   const [classeRaw, etab] = await Promise.all([
     prisma.classe.findFirst({
       where: { id: classe_id, etablissement_id },
-      include: { annee_scolaire: { select: { libelle: true } } },
+      include: { annee_scolaire: { select: { libelle: true } }, ...selectFiliereRef },
     }),
     prisma.etablissement.findUnique({ where: { id: etablissement_id } }),
   ]);
@@ -864,10 +865,10 @@ export async function rapportPerformanceDomaine(
     { key: 'MATHS', label: 'Mathématiques' },
   ] as const;
   const colKeys: string[] = COLS.map(c => c.key);
-  const colForNote = (note: { matiere: { filiere: string; domaine: { code: string } | null } }): string | null => {
+  const colForNote = (note: { matiere: { filiere: string; filiere_ref?: { code: string } | null; domaine: { code: string } | null } }): string | null => {
     const dc = note.matiere.domaine?.code;
     if (dc === 'MATHEMATIQUES') return 'MATHS';
-    if (dc === 'LANGUE_COMMUNICATION') return note.matiere.filiere === 'AR' ? 'LC_AR' : 'LC_FR';
+    if (dc === 'LANGUE_COMMUNICATION') return codeFiliere(note.matiere) === 'AR' ? 'LC_AR' : 'LC_FR';
     return null;
   };
 
@@ -882,7 +883,7 @@ export async function rapportPerformanceDomaine(
 
   const notes = await prisma.note.findMany({
     where: noteWhere,
-    include: { matiere: { include: { domaine: true } } },
+    include: { matiere: { include: { domaine: true, filiere_ref: { select: { code: true } } } } },
   });
 
   // Score par colonne par élève (normalisé /10 via le barème effectif)
@@ -1037,7 +1038,7 @@ export async function rapportReleveNotes(
   const [classeRaw, etab] = await Promise.all([
     prisma.classe.findFirst({
       where: { id: classe_id, etablissement_id },
-      include: { annee_scolaire: { select: { libelle: true } } },
+      include: { annee_scolaire: { select: { libelle: true } }, ...selectFiliereRef },
     }),
     prisma.etablissement.findUnique({ where: { id: etablissement_id } }),
   ]);
@@ -1194,7 +1195,7 @@ export async function rapportPropositionsFin(
   const [classeRaw, etab] = await Promise.all([
     prisma.classe.findFirst({
       where: { id: classe_id, etablissement_id },
-      include: { annee_scolaire: { select: { libelle: true } } },
+      include: { annee_scolaire: { select: { libelle: true } }, ...selectFiliereRef },
     }),
     prisma.etablissement.findUnique({ where: { id: etablissement_id } }),
   ]);
@@ -1209,7 +1210,7 @@ export async function rapportPropositionsFin(
 
   // Bulletins pour T1, T2, T3 (et annuel = période 4 si existe)
   const bulletins = await prisma.bulletin.findMany({
-    where: { eleve_id: { in: eleveIds }, annee_scolaire_id, filiere: classeRaw.filiere },
+    where: { eleve_id: { in: eleveIds }, annee_scolaire_id, filiere: codeFiliere(classeRaw) },
     select: { eleve_id: true, periode: true, moyenne: true },
   });
 

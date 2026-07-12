@@ -1,6 +1,19 @@
 import prisma from '../config/database';
 import { ValidationError } from './errors';
 
+// Sélection Prisma à étaler dans un include/select pour lire le code de filière
+// via la relation (lecteurs Phase 2c).
+export const selectFiliereRef = { filiere_ref: { select: { code: true } } } as const;
+
+/**
+ * Code de filière d'une ligne (Classe/Matiere) pendant la transition Phase 2c :
+ * la relation `filiere_ref` fait foi, la colonne string `filiere` sert de repli
+ * tant qu'elle existe (retirée en Phase 2d).
+ */
+export function codeFiliere(row: { filiere?: string | null; filiere_ref?: { code: string } | null }): string {
+  return row.filiere_ref?.code ?? row.filiere ?? '';
+}
+
 async function findFiliere(etablissement_id: string, code: string) {
   return prisma.filiere.findUnique({
     where: { etablissement_id_code: { etablissement_id, code } },

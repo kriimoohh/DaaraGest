@@ -1,6 +1,7 @@
 import prisma from '../../config/database';
 import { calculerMoyennesClasse } from '../bulletins/bulletins.service';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
+import { codeFiliere } from '../../utils/filiere';
 
 function dateDebutSemaine(): Date {
   const d = new Date();
@@ -99,7 +100,7 @@ async function calculerStatsNotes(etablissement_id: string, annee: string) {
 
   const classes = await prisma.classe.findMany({
     where: { etablissement_id, annee_scolaire_id: annee, active: true },
-    select: { id: true, nom_fr: true, filiere: true },
+    select: { id: true, nom_fr: true, filiere: true, filiere_ref: { select: { code: true } } },
   });
 
   const moyennesClasses: Array<{
@@ -110,24 +111,25 @@ async function calculerStatsNotes(etablissement_id: string, annee: string) {
   const parEleve = new Map<string, { somme: number; n: number; classe: string }>();
 
   for (const c of classes) {
+    const codeF = codeFiliere(c);
     const inscriptions = await prisma.inscription.findMany({
       where: { annee_scolaire_id: annee, statut: 'actif', classes: { some: { classe_id: c.id } } },
       select: { eleve_id: true },
     });
     if (inscriptions.length === 0) {
-      moyennesClasses.push({ classe_id: c.id, classe_nom: c.nom_fr, filiere: c.filiere, nb_eleves: 0, moyenne: null });
+      moyennesClasses.push({ classe_id: c.id, classe_nom: c.nom_fr, filiere: codeF, nb_eleves: 0, moyenne: null });
       continue;
     }
 
-    const moys = await calculerMoyennesClasse(etablissement_id, c.id, annee, periodes, [c.filiere as 'FR' | 'AR' | 'EN']);
+    const moys = await calculerMoyennesClasse(etablissement_id, c.id, annee, periodes, [codeF as 'FR' | 'AR' | 'EN']);
     const vals = [...moys.values()];
     const moyenne = vals.length ? Math.round((vals.reduce((s, v) => s + v, 0) / vals.length) * 100) / 100 : null;
-    moyennesClasses.push({ classe_id: c.id, classe_nom: c.nom_fr, filiere: c.filiere, nb_eleves: inscriptions.length, moyenne });
+    moyennesClasses.push({ classe_id: c.id, classe_nom: c.nom_fr, filiere: codeF, nb_eleves: inscriptions.length, moyenne });
 
     for (const [eleve_id, moy] of moys) {
       const cur = parEleve.get(eleve_id) ?? { somme: 0, n: 0, classe: c.nom_fr };
       cur.somme += moy; cur.n += 1;
-      if (c.filiere === 'FR') cur.classe = c.nom_fr; // libellé : classe FR de préférence
+      if (codeF === 'FR') cur.classe = c.nom_fr; // libellé : classe FR de préférence
       parEleve.set(eleve_id, cur);
     }
   }

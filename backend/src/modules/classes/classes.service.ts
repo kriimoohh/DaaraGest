@@ -6,7 +6,7 @@ import { bulletinsImpactesParMatiere } from '../bulletins/bulletins.service';
 import { logAction } from '../../utils/audit';
 import { NotFoundError, ValidationError } from '../../utils/errors';
 import { classeCode } from '../../utils/classeCode';
-import { getFiliereActiveId, getFiliereId } from '../../utils/filiere';
+import { getFiliereActiveId, getFiliereId, codeFiliere, selectFiliereRef } from '../../utils/filiere';
 import { selectLiensClasseObjet, classeParFiliere } from '../../utils/inscriptionClasse';
 
 // Erreur typée pour exposer le détail de l'impact (front affiche les options).
@@ -48,7 +48,8 @@ export async function listerClasses(etablissement_id: string, annee_scolaire_id?
       etablissement_id,
       active: true,
       ...(annee_scolaire_id ? { annee_scolaire_id } : {}),
-      ...(filiere === 'FR' || filiere === 'AR' ? { filiere } : {}),
+      // Filtre générique par code de filière (FR, AR, EN… selon l'établissement).
+      ...(filiere ? { filiere_ref: { code: filiere } } : {}),
     },
     include: {
       annee_scolaire: true,
@@ -61,7 +62,7 @@ export async function listerClasses(etablissement_id: string, annee_scolaire_id?
         },
       },
     },
-    orderBy: [{ filiere: 'asc' }, { niveau: { ordre: 'asc' } }, { nom_fr: 'asc' }],
+    orderBy: [{ filiere_ref: { code: 'asc' } }, { niveau: { ordre: 'asc' } }, { nom_fr: 'asc' }],
   });
 
   return classes.map(({ _count, ...c }) => ({
@@ -73,7 +74,7 @@ export async function listerClasses(etablissement_id: string, annee_scolaire_id?
 export async function getClasse(id: string, etablissement_id: string) {
   const classe = await prisma.classe.findFirst({
     where: { id, etablissement_id },
-    include: { annee_scolaire: true, niveau: true },
+    include: { annee_scolaire: true, niveau: true, ...selectFiliereRef },
   });
   if (!classe) throw new NotFoundError('Classe introuvable');
   return classe;
@@ -167,15 +168,21 @@ export async function listerMatieresDeclasse(classe_id: string, etablissement_id
 export async function ajouterMatiereClasse(
   classe_id: string, etablissement_id: string, data: ClasseMatiereInput
 ) {
-  const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
+  const classe = await prisma.classe.findFirst({
+    where: { id: classe_id, etablissement_id },
+    include: { ...selectFiliereRef },
+  });
   if (!classe) throw new NotFoundError('Classe introuvable');
 
   const matiere = await prisma.matiere.findFirst({
     where: { id: data.matiere_id, etablissement_id, active: true },
+    include: { ...selectFiliereRef },
   });
   if (!matiere) throw new NotFoundError('Matière introuvable');
-  if (matiere.filiere !== classe.filiere) {
-    throw new Error(`Impossible d'ajouter une matière ${matiere.filiere} à une classe ${classe.filiere}`);
+  const codeMatiere = codeFiliere(matiere);
+  const codeClasse = codeFiliere(classe);
+  if (codeMatiere !== codeClasse) {
+    throw new Error(`Impossible d'ajouter une matière ${codeMatiere} à une classe ${codeClasse}`);
   }
 
   return prisma.classeMatiere.create({
@@ -385,7 +392,7 @@ export async function listerElevesDeClasse(
 ) {
   const classe = await prisma.classe.findFirst({
     where: { id: classe_id, etablissement_id },
-    include: { annee_scolaire: true },
+    include: { annee_scolaire: true, ...selectFiliereRef },
   });
   if (!classe) throw new NotFoundError('Classe introuvable');
 
@@ -432,12 +439,12 @@ export async function dupliquerClasse(
 ) {
   const source = await prisma.classe.findFirst({
     where: { id, etablissement_id, active: true },
-    include: { annee_scolaire: true, niveau: true },
+    include: { annee_scolaire: true, niveau: true, ...selectFiliereRef },
   });
   if (!source) throw new NotFoundError('Classe introuvable');
 
   const cible = data.filiere_cible;
-  if (cible === source.filiere) {
+  if (cible === codeFiliere(source)) {
     throw new ValidationError('La filière cible doit être différente de la filière de la classe source');
   }
   const filiere_id_cible = await getFiliereActiveId(etablissement_id, cible);
@@ -498,12 +505,13 @@ export async function dupliquerClasse(
 function buildListeBodyContent(data: ListeData, etablissementNom: string): string {
   const { classe, eleves, total } = data;
   const anneeLabel = (classe.annee_scolaire as { libelle: string })?.libelle ?? '';
-  const filiereLabel = classe.filiere === 'FR' ? 'Filière Française' : 'Filière Arabe';
+  const codeF = codeFiliere(classe);
+  const filiereLabel = codeF === 'FR' ? 'Filière Française' : 'Filière Arabe';
   const dateImpression = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
   const nbM = eleves.filter((e: { sexe: string }) => e.sexe === 'M').length;
   const nbF = total - nbM;
-  const badgeBg = classe.filiere === 'FR' ? '#dbeafe' : '#d1fae5';
-  const badgeColor = classe.filiere === 'FR' ? '#1e40af' : '#065f46';
+  const badgeBg = codeF === 'FR' ? '#dbeafe' : '#d1fae5';
+  const badgeColor = codeF === 'FR' ? '#1e40af' : '#065f46';
 
   const rows = eleves.map((e: {
     matricule: string; nom_fr: string; prenom_fr: string; sexe: string;
