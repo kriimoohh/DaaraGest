@@ -15,16 +15,16 @@ const ID = {
   roles: {
     admin:        '20000000-0000-4000-a000-000000000001',
     directeur:    '20000000-0000-4000-a000-000000000002',
-    gestionnaire: '20000000-0000-4000-a000-000000000003',
-    caissier:     '20000000-0000-4000-a000-000000000004',
+    gestionnaire:   '20000000-0000-4000-a000-000000000003',
+    agentScolarite: '20000000-0000-4000-a000-000000000004',
     professeur:   '20000000-0000-4000-a000-000000000005',
     pointeur:     '20000000-0000-4000-a000-000000000006',
   },
 
   users: {
-    admin:     '30000000-0000-4000-a000-000000000001',
-    directeur: '30000000-0000-4000-a000-000000000002',
-    caissier:  '30000000-0000-4000-a000-000000000003',
+    admin:          '30000000-0000-4000-a000-000000000001',
+    directeur:      '30000000-0000-4000-a000-000000000002',
+    agentScolarite: '30000000-0000-4000-a000-000000000003',
     prof1:     '30000000-0000-4000-a000-000000000004',
     prof2:     '30000000-0000-4000-a000-000000000005',
     prof3:     '30000000-0000-4000-a000-000000000006',
@@ -111,7 +111,7 @@ async function main() {
     { id: ID.roles.admin,        libelle_fr: 'admin' },
     { id: ID.roles.directeur,    libelle_fr: 'directeur' },
     { id: ID.roles.gestionnaire, libelle_fr: 'gestionnaire' },
-    { id: ID.roles.caissier,     libelle_fr: 'agent de scolarité' },
+    { id: ID.roles.agentScolarite, libelle_fr: 'agent de scolarité' },
     { id: ID.roles.professeur,   libelle_fr: 'professeur' },
     { id: ID.roles.pointeur,     libelle_fr: 'pointeur' },
   ];
@@ -220,7 +220,9 @@ async function main() {
   const testUsers = [
     { id: ID.users.directeur, identifiant: 'directeur',   mot_de_passe: await bcrypt.hash('Directeur123!', 10), role_id: ID.roles.directeur,
       nom_fr: 'Diop' },
-    { id: ID.users.caissier,  identifiant: 'caissier',    mot_de_passe: await bcrypt.hash('Caissier123!', 10),  role_id: ID.roles.caissier,
+    // Identifiant de connexion « caissier » conservé (habitudes dev) ; le rôle
+    // pointé est bien « agent de scolarité ».
+    { id: ID.users.agentScolarite, identifiant: 'caissier', mot_de_passe: await bcrypt.hash('Caissier123!', 10), role_id: ID.roles.agentScolarite,
       nom_fr: 'Sow' },
     { id: ID.users.prof1,     identifiant: 'prof.fall',   mot_de_passe: await bcrypt.hash('Prof123!', 10),      role_id: ID.roles.professeur,
       nom_fr: 'Fall' },
