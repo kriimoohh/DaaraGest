@@ -33,6 +33,9 @@ export const preflightSchema = z.object({
   annee_scolaire_id: z.string().uuid(),
   periode: z.number().int().min(0).max(6),
   filiere: z.enum(['FR', 'AR', 'EN', 'COMBINE']),
+  // Parité avec genererBulletinSchema : le préflight d'un COMBINE au choix
+  // vérifie les mêmes filières que celles qui seront fusionnées.
+  filieres_combine: z.array(z.enum(['FR', 'AR', 'EN'])).optional(),
 });
 
 // Déverrouillage d'une période validée — phase 2 (action critique, admin/directeur).
