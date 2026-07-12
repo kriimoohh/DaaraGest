@@ -89,10 +89,6 @@ interface ConfigNotes {
   chiffres_arabes: boolean;
   montant_mensualite: number;
   jours_cours: string[];
-  seuil_tres_bien: number;
-  seuil_bien: number;
-  seuil_assez_bien: number;
-  seuil_passable: number;
   autoriser_toutes_matieres: boolean;
   autoriser_toutes_classes: boolean;
   // Rendu des bulletins PDF (onglet Bulletins).
@@ -745,10 +741,6 @@ export function ParametresPage() {
             montant_mensualite: Number(rawNotes.montant_mensualite),
             noms_periodes: buildPeriodes(nb, rawPeriodes),
             jours_cours: (rawNotes.jours_cours as string[]) ?? ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'],
-            seuil_tres_bien:  Number(rawNotes.seuil_tres_bien  ?? 16),
-            seuil_bien:       Number(rawNotes.seuil_bien       ?? 14),
-            seuil_assez_bien: Number(rawNotes.seuil_assez_bien ?? 12),
-            seuil_passable:   Number(rawNotes.seuil_passable   ?? 10),
             autoriser_toutes_matieres: Boolean(rawNotes.autoriser_toutes_matieres),
             autoriser_toutes_classes:  Boolean(rawNotes.autoriser_toutes_classes),
             bulletin_afficher_rang:     rawNotes.bulletin_afficher_rang     !== undefined ? Boolean(rawNotes.bulletin_afficher_rang)     : true,

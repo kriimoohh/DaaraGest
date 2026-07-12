@@ -1,12 +1,16 @@
 import { describe, it, expect } from 'vitest';
+import { mentionPour, MentionDef } from '../../utils/notes';
 
-function appreciation(m: number): string {
-  if (m >= 16) return 'Très bien — Félicitations du conseil';
-  if (m >= 14) return 'Bien';
-  if (m >= 12) return 'Assez bien';
-  if (m >= 10) return 'Passable';
-  return 'Insuffisant — Doit faire des efforts';
-}
+// Mentions par défaut telles que semées par mentions.service (base /20).
+const MENTIONS_DEFAUT: MentionDef[] = [
+  { libelle_fr: 'Très bien',   seuil_min: 16 },
+  { libelle_fr: 'Bien',        seuil_min: 14 },
+  { libelle_fr: 'Assez bien',  seuil_min: 12 },
+  { libelle_fr: 'Passable',    seuil_min: 10 },
+  { libelle_fr: 'Insuffisant', seuil_min: 0 },
+];
+
+const appreciation = (m: number) => mentionPour(m, MENTIONS_DEFAUT);
 
 function calculerMoyenne(notes: { valeur: number; coeff: number }[]): number | null {
   let totalP = 0, totalC = 0;
@@ -15,12 +19,14 @@ function calculerMoyenne(notes: { valeur: number; coeff: number }[]): number | n
   return Math.round((totalP / totalC) * 100) / 100;
 }
 
-describe('appreciation', () => {
-  it('≥16 → Très bien', () => expect(appreciation(16)).toBe('Très bien — Félicitations du conseil'));
+describe('mentionPour (mentions par défaut)', () => {
+  it('≥16 → Très bien', () => expect(appreciation(16)).toBe('Très bien'));
   it('14-15.99 → Bien', () => expect(appreciation(14)).toBe('Bien'));
   it('12-13.99 → Assez bien', () => expect(appreciation(12)).toBe('Assez bien'));
   it('10-11.99 → Passable', () => expect(appreciation(10)).toBe('Passable'));
-  it('<10 → Insuffisant', () => expect(appreciation(9.99)).toBe('Insuffisant — Doit faire des efforts'));
+  it('<10 → Insuffisant', () => expect(appreciation(9.99)).toBe('Insuffisant'));
+  it('tolérance flottante : 11.999999999 → Passable', () => expect(appreciation(12 - 1e-10)).toBe('Assez bien'));
+  it('liste vide → chaîne vide', () => expect(mentionPour(12, [])).toBe(''));
 });
 
 describe('calculerMoyenne', () => {
@@ -135,7 +141,7 @@ describe('calculerMoyenne — cas limites', () => {
   });
 
   it('note maximale 20 → appréciation Très bien', () => {
-    expect(appreciation(20)).toBe('Très bien — Félicitations du conseil');
+    expect(appreciation(20)).toBe('Très bien');
   });
 
   it('note 15.99 → Bien (pas Très bien)', () => {

@@ -4,50 +4,9 @@ import { GenererBulletinInput, GenererBulletinAnnuelInput, ObservationInput, Pre
 import { renderPdfHtml } from '../../utils/browserPool';
 import { assertProfPeutAccederClasse } from '../../utils/teachingPolicy';
 import { logAction } from '../../utils/audit';
-import { DEFAULT_NOTE_MAX } from '../../utils/notes';
+import { DEFAULT_NOTE_MAX, MentionDef, mentionPour } from '../../utils/notes';
 import { NotFoundError } from '../../utils/errors';
 import { selectLiensClasse, classeIdParFiliere, LienClasseCode } from '../../utils/inscriptionClasse';
-
-type Filiere = 'FR' | 'AR' | 'COMBINE';
-
-export type SeuilsMentions = {
-  tres_bien: number;
-  bien: number;
-  assez_bien: number;
-  passable: number;
-};
-
-const SEUILS_DEFAUT: SeuilsMentions = { tres_bien: 16, bien: 14, assez_bien: 12, passable: 10 };
-
-const LIBELLES: Record<'FR' | 'AR', { tres_bien: string; bien: string; assez_bien: string; passable: string; insuffisant: string }> = {
-  FR: {
-    tres_bien:   'Très bien — Félicitations du conseil',
-    bien:        'Bien',
-    assez_bien:  'Assez bien',
-    passable:    'Passable',
-    insuffisant: 'Insuffisant — Doit faire des efforts',
-  },
-  AR: {
-    tres_bien:   'ممتاز — تهنئة المجلس',
-    bien:        'جيد جدا',
-    assez_bien:  'جيد',
-    passable:    'مقبول',
-    insuffisant: 'ضعيف — يجب بذل المزيد من الجهد',
-  },
-};
-
-/** Extrait les seuils de ConfigNotes (ou applique les valeurs par défaut). */
-export function extractSeuilsMentions(config: { seuil_tres_bien?: unknown; seuil_bien?: unknown; seuil_assez_bien?: unknown; seuil_passable?: unknown } | null): SeuilsMentions {
-  if (!config) return SEUILS_DEFAUT;
-  return {
-    tres_bien:  Number(config.seuil_tres_bien)  || SEUILS_DEFAUT.tres_bien,
-    bien:       Number(config.seuil_bien)       || SEUILS_DEFAUT.bien,
-    assez_bien: Number(config.seuil_assez_bien) || SEUILS_DEFAUT.assez_bien,
-    passable:   Number(config.seuil_passable)   || SEUILS_DEFAUT.passable,
-  };
-}
-
-export type MentionDef = { libelle_fr: string; libelle_ar?: string | null; seuil_min: number };
 
 const mapMentions = (rows: { libelle_fr: string; libelle_ar: string | null; seuil_min: unknown }[]): MentionDef[] =>
   rows.map(r => ({ libelle_fr: r.libelle_fr, libelle_ar: r.libelle_ar, seuil_min: Number(r.seuil_min) }));
@@ -86,26 +45,6 @@ async function niveauPourBulletin(classe_fr_id?: string | null, classe_ar_id?: s
   if (!cid) return null;
   const c = await prisma.classe.findUnique({ where: { id: cid }, select: { niveau_id: true } });
   return c?.niveau_id ?? null;
-}
-
-/** Libellé de mention pour une moyenne (sur l'échelle de l'établissement). */
-export function mentionPour(m: number, mentions: MentionDef[]): string {
-  for (const mention of mentions) if (m + 1e-9 >= mention.seuil_min) return mention.libelle_fr;
-  return mentions.length ? mentions[mentions.length - 1].libelle_fr : '';
-}
-
-export function appreciation(m: number, filiere: Filiere = 'FR', seuils: SeuilsMentions = SEUILS_DEFAUT): string {
-  // COMBINE renvoie les deux versions séparées par un retour à la ligne
-  // pour préserver les deux entêtes du bulletin bilingue.
-  if (filiere === 'COMBINE') {
-    return `${appreciation(m, 'FR', seuils)}\n${appreciation(m, 'AR', seuils)}`;
-  }
-  const l = LIBELLES[filiere];
-  if (m >= seuils.tres_bien)  return l.tres_bien;
-  if (m >= seuils.bien)       return l.bien;
-  if (m >= seuils.assez_bien) return l.assez_bien;
-  if (m >= seuils.passable)   return l.passable;
-  return l.insuffisant;
 }
 
 type MatiereAvecCoeff = {
