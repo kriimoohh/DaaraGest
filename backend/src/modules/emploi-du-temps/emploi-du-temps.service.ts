@@ -2,6 +2,20 @@ import prisma from '../../config/database';
 import { CreneauInput } from './emploi-du-temps.schema';
 import { NotFoundError } from '../../utils/errors';
 
+// La colonne string Classe.filiere a été supprimée (Phase 2d) : on lit le code
+// via la relation et on continue de l'exposer sous `classe.filiere` (couleurs EDT).
+const INCLUDE_CRENEAU = {
+  classe: { select: { id: true, nom_fr: true, filiere_ref: { select: { code: true } } } },
+  matiere: { select: { id: true, nom_fr: true, nom_ar: true } },
+  personnel: { select: { id: true, utilisateur: { select: { nom_fr: true, prenom_fr: true } } } },
+} as const;
+
+type CreneauAvecClasse = { classe: { id: string; nom_fr: string; filiere_ref: { code: string } } };
+const exposeCodeClasse = <T extends CreneauAvecClasse>(c: T) => ({
+  ...c,
+  classe: { id: c.classe.id, nom_fr: c.classe.nom_fr, filiere: c.classe.filiere_ref.code },
+});
+
 function heureToMinutes(h: string): number {
   const [hh, mm] = h.split(':').map(Number);
   return hh * 60 + mm;
@@ -23,15 +37,12 @@ export async function listerCreneaux(
   if (classe_id) where.classe_id = classe_id;
   if (personnel_id) where.personnel_id = personnel_id;
 
-  return prisma.creneau.findMany({
+  const rows = await prisma.creneau.findMany({
     where,
-    include: {
-      classe: { select: { id: true, nom_fr: true, filiere: true } },
-      matiere: { select: { id: true, nom_fr: true, nom_ar: true } },
-      personnel: { select: { id: true, utilisateur: { select: { nom_fr: true, prenom_fr: true } } } },
-    },
+    include: INCLUDE_CRENEAU,
     orderBy: [{ jour: 'asc' }, { heure_debut: 'asc' }],
   });
+  return rows.map(exposeCodeClasse);
 }
 
 export async function creerCreneau(etablissement_id: string, data: CreneauInput) {
@@ -76,14 +87,11 @@ export async function creerCreneau(etablissement_id: string, data: CreneauInput)
     }
   }
 
-  return prisma.creneau.create({
+  const created = await prisma.creneau.create({
     data: { ...data, etablissement_id },
-    include: {
-      classe: { select: { id: true, nom_fr: true, filiere: true } },
-      matiere: { select: { id: true, nom_fr: true, nom_ar: true } },
-      personnel: { select: { id: true, utilisateur: { select: { nom_fr: true, prenom_fr: true } } } },
-    },
+    include: INCLUDE_CRENEAU,
   });
+  return exposeCodeClasse(created);
 }
 
 export async function modifierCreneau(id: string, etablissement_id: string, data: Partial<CreneauInput>) {
@@ -115,15 +123,12 @@ export async function modifierCreneau(id: string, etablissement_id: string, data
     }
   }
 
-  return prisma.creneau.update({
+  const updatedRow = await prisma.creneau.update({
     where: { id },
     data,
-    include: {
-      classe: { select: { id: true, nom_fr: true, filiere: true } },
-      matiere: { select: { id: true, nom_fr: true, nom_ar: true } },
-      personnel: { select: { id: true, utilisateur: { select: { nom_fr: true, prenom_fr: true } } } },
-    },
+    include: INCLUDE_CRENEAU,
   });
+  return exposeCodeClasse(updatedRow);
 }
 
 export async function supprimerCreneau(id: string, etablissement_id: string) {

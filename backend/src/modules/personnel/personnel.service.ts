@@ -32,7 +32,7 @@ export async function listerPersonnel(etablissement_id: string, page = 1, search
   const matieresClassesInclude = {
     where: annee_scolaire_id ? { annee_scolaire_id } : undefined,
     select: {
-      classe: { select: { id: true, nom_fr: true, filiere: true } },
+      classe: { select: { id: true, nom_fr: true, filiere_ref: { select: { code: true } } } },
     },
   };
 
@@ -54,7 +54,8 @@ export async function listerPersonnel(etablissement_id: string, page = 1, search
   const data = items.map((u) => {
     const liens = u.personnel?.matieres_classes ?? [];
     const parClasse = new Map<string, { id: string; nom_fr: string; filiere: string }>();
-    for (const l of liens) parClasse.set(l.classe.id, l.classe);
+    // `filiere` exposé depuis la relation (colonne string supprimée en Phase 2d).
+    for (const l of liens) parClasse.set(l.classe.id, { id: l.classe.id, nom_fr: l.classe.nom_fr, filiere: l.classe.filiere_ref.code });
     const classes_assignees = [...parClasse.values()]
       .sort((a, b) => a.nom_fr.localeCompare(b.nom_fr, 'fr'))
       .map((classe) => ({ classe }));
@@ -234,7 +235,7 @@ export async function listerAffectations(id: string, etablissement_id: string, a
   const liens = await prisma.personnelMatiereClasse.findMany({
     where: { personnel_id: prof.id, ...(annee_scolaire_id ? { annee_scolaire_id } : {}) },
     select: {
-      classe: { select: { id: true, nom_fr: true, filiere: true } },
+      classe: { select: { id: true, nom_fr: true, filiere_ref: { select: { code: true } } } },
       annee_scolaire: { select: { id: true, libelle: true } },
     },
   });
@@ -242,7 +243,8 @@ export async function listerAffectations(id: string, etablissement_id: string, a
   for (const l of liens) {
     const e = map.get(l.classe.id);
     if (e) e.nb_matieres += 1;
-    else map.set(l.classe.id, { classe: l.classe, annee_scolaire: l.annee_scolaire, nb_matieres: 1 });
+    // `filiere` exposé depuis la relation (colonne string supprimée en Phase 2d).
+    else map.set(l.classe.id, { classe: { id: l.classe.id, nom_fr: l.classe.nom_fr, filiere: l.classe.filiere_ref.code }, annee_scolaire: l.annee_scolaire, nb_matieres: 1 });
   }
   return [...map.values()].sort((a, b) => a.classe.nom_fr.localeCompare(b.classe.nom_fr, 'fr'));
 }

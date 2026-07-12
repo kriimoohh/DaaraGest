@@ -83,7 +83,7 @@ export async function getPortailData(token: string) {
   // Get notes
   const notesRaw = inscription ? await prisma.note.findMany({
     where: { eleve_id: eleve.id, annee_scolaire_id: inscription.annee_scolaire_id },
-    include: { matiere: { select: { nom_fr: true, nom_ar: true, filiere: true, filiere_ref: { select: { code: true } }, coeff_defaut: true } } },
+    include: { matiere: { select: { nom_fr: true, nom_ar: true, filiere_ref: { select: { code: true } }, coeff_defaut: true } } },
     orderBy: [{ periode: 'asc' }, { matiere: { nom_fr: 'asc' } }],
   }) : [];
 
@@ -126,7 +126,7 @@ export async function getPortailData(token: string) {
         select: {
           titre: true, type: true, date: true,
           coefficient: true, note_max: true, periode: true,
-          matiere: { select: { nom_fr: true, nom_ar: true, filiere: true, filiere_ref: { select: { code: true } } } },
+          matiere: { select: { nom_fr: true, nom_ar: true, filiere_ref: { select: { code: true } } } },
         },
       },
     },

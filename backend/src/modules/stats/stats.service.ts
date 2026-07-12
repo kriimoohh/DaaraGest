@@ -100,7 +100,7 @@ async function calculerStatsNotes(etablissement_id: string, annee: string) {
 
   const classes = await prisma.classe.findMany({
     where: { etablissement_id, annee_scolaire_id: annee, active: true },
-    select: { id: true, nom_fr: true, filiere: true, filiere_ref: { select: { code: true } } },
+    select: { id: true, nom_fr: true, filiere_ref: { select: { code: true } } },
   });
 
   const moyennesClasses: Array<{

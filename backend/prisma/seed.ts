@@ -178,15 +178,16 @@ async function main() {
       .map(d => [d.code, d.id]),
   );
   for (const m of LGM_MATIERES) {
+    const filiereId = filiereByCode.get(m.filiere);
+    if (!filiereId) throw new Error(`Filière ${m.filiere} absente du seed`);
     const existing = await prisma.matiere.findFirst({
-      where: { etablissement_id: ID.etab, nom_fr: m.nom_fr, filiere: m.filiere },
+      where: { etablissement_id: ID.etab, nom_fr: m.nom_fr, filiere_id: filiereId },
     });
     const data = {
       etablissement_id: ID.etab,
       nom_fr: m.nom_fr,
       nom_ar: m.nom_ar,
-      filiere: m.filiere,
-      filiere_id: filiereByCode.get(m.filiere) ?? null,
+      filiere_id: filiereId,
       coeff_defaut: new Prisma.Decimal(1),
       note_min: new Prisma.Decimal(0),
       ordre_bulletin: m.ordre_bulletin,
@@ -273,11 +274,11 @@ async function main() {
     { id: ID.classes.a5ar,  nom_fr: '5ème Arabe',   filiere: 'AR', capacite: 30, annee_scolaire_id: ID.annees.y2425 },
     { id: ID.classes.a6ar,  nom_fr: '6ème Arabe',   filiere: 'AR', capacite: 25, annee_scolaire_id: ID.annees.y2425 },
   ];
-  for (const cl of classes) {
+  for (const { filiere, ...cl } of classes) {
     await prisma.classe.upsert({
       where: { id: cl.id },
       update: {},
-      create: { ...cl, etablissement_id: ID.etab, filiere_id: filiereByCode.get(cl.filiere) ?? null },
+      create: { ...cl, etablissement_id: ID.etab, filiere_id: filiereByCode.get(filiere)! },
     });
   }
 
@@ -336,7 +337,7 @@ async function main() {
   //         Coran, Hadith, Tawhid, Étude du Texte / Arabe, Arabe (AR)
   const matieresAll = await prisma.matiere.findMany({ where: { etablissement_id: ID.etab } });
   const pick = (nom: string, fil: 'FR' | 'AR') => {
-    const m = matieresAll.find(x => x.nom_fr === nom && x.filiere === fil);
+    const m = matieresAll.find(x => x.nom_fr === nom && x.filiere_id === filiereByCode.get(fil));
     if (!m) throw new Error(`Matière introuvable pour seed notes : ${nom} (${fil})`);
     return m.id;
   };
