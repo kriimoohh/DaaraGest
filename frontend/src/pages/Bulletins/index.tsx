@@ -48,6 +48,7 @@ interface DetailBulletin extends Bulletin {
     inscriptions: { classe_fr: { nom_fr: string } | null; classe_ar: { nom_fr: string } | null; }[];
   };
   notesByFiliere: { FR?: NoteDetail[]; AR?: NoteDetail[]; EN?: NoteDetail[]; };
+  echelle_affichage?: number | null;
 }
 
 type BulletinType = string;
@@ -795,14 +796,9 @@ function BulletinDetailContent({
     } finally { setSavingObs(false); }
   };
 
-  // Échelle d'affichage : celle de la filière pour un bulletin MONO-filière (phase 3),
-  // sinon l'échelle établissement. La moyenne stockée (canonique) est re-scalée.
-  const echelle = (() => {
-    if (detail.filiere === 'COMBINE') return noteMax;
-    const fil = filieresActives.find(f => f.code === detail.filiere);
-    const nm = fil?.note_max != null ? Number(fil.note_max) : null;
-    return nm && nm > 0 ? nm : noteMax;
-  })();
+  // Échelle d'affichage résolue côté backend (niveau de la classe, repli établissement).
+  // La moyenne stockée (canonique) est re-scalée à cette échelle.
+  const echelle = detail.echelle_affichage ?? noteMax;
   const factor = noteMax > 0 ? echelle / noteMax : 1;
   const moy = detail.moyenne !== null ? Number(detail.moyenne) * factor : null;
   const isAnnuel = detail.periode === 0;

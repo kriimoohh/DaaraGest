@@ -8,16 +8,17 @@ export async function listerNiveaux(etablissement_id: string) {
   });
 }
 
-export async function creerNiveau(etablissement_id: string, libelle: string, ordre: number) {
+export async function creerNiveau(etablissement_id: string, libelle: string, ordre: number, note_max?: number | null) {
   return prisma.niveau.create({
-    data: { etablissement_id, libelle, ordre },
+    data: { etablissement_id, libelle, ordre, note_max: note_max ?? null },
   });
 }
 
-export async function modifierNiveau(id: string, etablissement_id: string, libelle: string, ordre: number) {
+export async function modifierNiveau(id: string, etablissement_id: string, libelle: string, ordre: number, note_max?: number | null) {
   const existing = await prisma.niveau.findFirst({ where: { id, etablissement_id } });
   if (!existing) throw new NotFoundError('Niveau introuvable');
-  return prisma.niveau.update({ where: { id }, data: { libelle, ordre } });
+  // note_max : undefined = inchangé ; null = échelle établissement ; nombre = échelle propre.
+  return prisma.niveau.update({ where: { id }, data: { libelle, ordre, note_max: note_max === undefined ? undefined : note_max } });
 }
 
 export async function supprimerNiveau(id: string, etablissement_id: string) {

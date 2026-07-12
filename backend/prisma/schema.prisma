@@ -70,7 +70,7 @@ model Etablissement {
 // matières, barème et mentions potentiellement distincts). Remplace à terme la
 // chaîne libre `filiere` ('FR'/'AR') câblée en dur. Un établissement active le jeu
 // de filières qu'il utilise : FR seule, AR seule, EN seule, ou combinaisons.
-// note_max null = repli sur l'échelle de l'établissement (ConfigNotes.note_max).
+// (L'échelle d'affichage de la moyenne est portée par le NIVEAU, pas la filière.)
 model Filiere {
   id               String   @id @default(uuid())
   etablissement_id String
@@ -79,7 +79,6 @@ model Filiere {
   nom_ar           String?
   langue           String   @default("fr") // langue d'enseignement/affichage : fr, ar, en
   sens_ecriture    String   @default("LTR") // 'LTR' | 'RTL'
-  note_max         Decimal? @db.Decimal(5, 2)
   couleur          String   @default("#DDE2F1")
   ordre            Int      @default(0)
   actif            Boolean  @default(true)
@@ -422,6 +421,10 @@ model Niveau {
   etablissement_id String
   libelle          String
   ordre            Int    @default(0)
+  // Échelle d'AFFICHAGE de la moyenne pour ce niveau (ex: primaire /10, secondaire
+  // /20 dans un même établissement). null = repli sur ConfigNotes.note_max. Le calcul
+  // reste canonique (base établissement) ; le rendu re-scale à cette échelle.
+  note_max         Decimal? @db.Decimal(5, 2)
   // Détermine le type de grille d'évaluation IEF applicable à ce niveau
   // CI_CP → seuils 7/10 & 8/10, pas de Ressources/Compétence
   // CE1_CE2 | CM1_CM2 → seuils 5/10 & 7/10, avec Ressources/Compétence

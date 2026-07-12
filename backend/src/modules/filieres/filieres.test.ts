@@ -26,11 +26,6 @@ describe('Filières — schéma', () => {
     expect(r.success).toBe(true);
     if (r.success) expect('code' in r.data).toBe(false);
   });
-
-  it("l'update accepte note_max null (repli sur l'échelle établissement)", () => {
-    expect(filiereUpdateSchema.safeParse({ note_max: null }).success).toBe(true);
-    expect(filiereUpdateSchema.safeParse({ note_max: -1 }).success).toBe(false);
-  });
 });
 
 // Garde-fous purs répliquant la logique du service (suppression / désactivation).

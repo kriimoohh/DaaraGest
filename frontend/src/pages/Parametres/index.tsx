@@ -16,6 +16,7 @@ interface Niveau {
   id: string;
   libelle: string;
   ordre: number;
+  note_max: number | string | null;
 }
 
 type FiliereCode = 'FR' | 'AR' | 'EN';
@@ -27,7 +28,6 @@ interface Filiere {
   nom_ar: string | null;
   langue: string;
   sens_ecriture: 'LTR' | 'RTL';
-  note_max: number | string | null;
   couleur: string;
   ordre: number;
   actif: boolean;
@@ -631,6 +631,7 @@ export function ParametresPage() {
   const [niveaux, setNiveaux] = useState<Niveau[]>([]);
   const [niveauLibelle, setNiveauLibelle] = useState('');
   const [niveauOrdre, setNiveauOrdre] = useState('');
+  const [niveauNoteMax, setNiveauNoteMax] = useState('');
   const [editNiveau, setEditNiveau] = useState<Niveau | null>(null);
   const [mentionsNiveau, setMentionsNiveau] = useState<Niveau | null>(null);
   const [savingNiveau, setSavingNiveau] = useState(false);
@@ -655,7 +656,7 @@ export function ParametresPage() {
   const [deletingFonction, setDeletingFonction] = useState(false);
 
   // ── Filières ───────────────────────────────────────────────────────────────
-  const emptyFiliereForm = { code: 'FR' as FiliereCode, nom_fr: '', nom_ar: '', langue: 'fr', sens_ecriture: 'LTR' as 'LTR' | 'RTL', note_max: '', couleur: '#DDE2F1', ordre: '0' };
+  const emptyFiliereForm = { code: 'FR' as FiliereCode, nom_fr: '', nom_ar: '', langue: 'fr', sens_ecriture: 'LTR' as 'LTR' | 'RTL', couleur: '#DDE2F1', ordre: '0' };
   const FILIERE_PRESETS: Record<FiliereCode, { nom_fr: string; langue: string; sens_ecriture: 'LTR' | 'RTL'; couleur: string; ordre: string }> = {
     FR: { nom_fr: 'Filière française', langue: 'fr', sens_ecriture: 'LTR', couleur: '#DDE2F1', ordre: '0' },
     AR: { nom_fr: 'Filière arabe',     langue: 'ar', sens_ecriture: 'RTL', couleur: '#DCEBDF', ordre: '1' },
@@ -775,7 +776,7 @@ export function ParametresPage() {
     if (!niveauLibelle.trim()) return;
     setSavingNiveau(true);
     try {
-      const body = { libelle: niveauLibelle.trim(), ordre: Number(niveauOrdre) || 0 };
+      const body = { libelle: niveauLibelle.trim(), ordre: Number(niveauOrdre) || 0, note_max: niveauNoteMax.trim() ? Number(niveauNoteMax) : null };
       if (editNiveau) {
         await api.put(`/api/v1/niveaux/${editNiveau.id}`, body);
         toast.success(t('parametre.niveau_modifie'));
@@ -783,7 +784,7 @@ export function ParametresPage() {
         await api.post('/api/v1/niveaux', body);
         toast.success(t('parametre.niveau_ajoute'));
       }
-      setNiveauLibelle(''); setNiveauOrdre(''); setEditNiveau(null);
+      setNiveauLibelle(''); setNiveauOrdre(''); setNiveauNoteMax(''); setEditNiveau(null);
       fetchNiveaux();
     } catch (err) {
       toast.error((err as Error).message || 'Erreur');
@@ -880,7 +881,7 @@ export function ParametresPage() {
     setEditFiliere(fi);
     setFiliereForm({
       code: fi.code, nom_fr: fi.nom_fr, nom_ar: fi.nom_ar ?? '', langue: fi.langue,
-      sens_ecriture: fi.sens_ecriture, note_max: fi.note_max == null ? '' : String(fi.note_max),
+      sens_ecriture: fi.sens_ecriture,
       couleur: fi.couleur, ordre: String(fi.ordre),
     });
   };
@@ -894,7 +895,6 @@ export function ParametresPage() {
         nom_ar: filiereForm.nom_ar.trim() || null,
         langue: filiereForm.langue,
         sens_ecriture: filiereForm.sens_ecriture,
-        note_max: filiereForm.note_max.trim() ? Number(filiereForm.note_max) : null,
         couleur: filiereForm.couleur,
         ordre: Number(filiereForm.ordre) || 0,
       };
@@ -1516,6 +1516,14 @@ export function ParametresPage() {
               onChange={e => setNiveauOrdre(e.target.value)}
               placeholder="1"
             />
+            <Input
+              label="Échelle (note max)"
+              type="number"
+              value={niveauNoteMax}
+              onChange={e => setNiveauNoteMax(e.target.value)}
+              placeholder={`établissement (${config?.note_max ?? 10})`}
+              style={{ width: 150 }}
+            />
             <div style={{ paddingTop: 22 }}>
               <Button onClick={handleSaveNiveau} loading={savingNiveau} disabled={!niveauLibelle.trim()}>
                 {editNiveau ? 'Modifier' : 'Ajouter'}
@@ -1523,7 +1531,7 @@ export function ParametresPage() {
             </div>
             {editNiveau && (
               <div style={{ paddingTop: 22 }}>
-                <Button variant="ghost" onClick={() => { setEditNiveau(null); setNiveauLibelle(''); setNiveauOrdre(''); }}>
+                <Button variant="ghost" onClick={() => { setEditNiveau(null); setNiveauLibelle(''); setNiveauOrdre(''); setNiveauNoteMax(''); }}>
                   Annuler
                 </Button>
               </div>
@@ -1532,19 +1540,20 @@ export function ParametresPage() {
 
           <table className="table">
             <thead>
-              <tr><th>Libellé</th><th>Ordre</th><th></th></tr>
+              <tr><th>Libellé</th><th>Ordre</th><th style={{ textAlign: 'center' }}>Échelle</th><th></th></tr>
             </thead>
             <tbody>
               {niveaux.map(n => (
                 <tr key={n.id}>
                   <td>{n.libelle}</td>
                   <td>{n.ordre}</td>
+                  <td style={{ textAlign: 'center', fontSize: 12 }}>{n.note_max == null ? `/${config?.note_max ?? 10}` : `/${Number(n.note_max)}`}</td>
                   <td style={{ textAlign: 'right' }}>
                     <span style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                       <Button size="sm" variant="ghost" onClick={() => setMentionsNiveau(n)}>
                         Mentions
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => { setEditNiveau(n); setNiveauLibelle(n.libelle); setNiveauOrdre(String(n.ordre)); }}>
+                      <Button size="sm" variant="ghost" onClick={() => { setEditNiveau(n); setNiveauLibelle(n.libelle); setNiveauOrdre(String(n.ordre)); setNiveauNoteMax(n.note_max == null ? '' : String(n.note_max)); }}>
                         Modifier
                       </Button>
                       <Button size="sm" variant="danger" onClick={() => handleDeleteNiveau(n)}>
@@ -1555,7 +1564,7 @@ export function ParametresPage() {
                 </tr>
               ))}
               {niveaux.length === 0 && (
-                <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Aucun niveau défini</td></tr>
+                <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Aucun niveau défini</td></tr>
               )}
             </tbody>
           </table>
@@ -1599,7 +1608,6 @@ export function ParametresPage() {
                   <option value="RTL">RTL</option>
                 </select>
               </div>
-              <Input label="Barème /" type="number" value={filiereForm.note_max} onChange={e => setFiliereForm(f => ({ ...f, note_max: e.target.value }))} placeholder="20" style={{ width: 90 }} />
               <div>
                 <label className="field-label">Couleur</label>
                 <input type="color" value={filiereForm.couleur} onChange={e => setFiliereForm(f => ({ ...f, couleur: e.target.value }))} style={{ width: 44, height: 38, padding: 2, border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', background: 'var(--paper)' }} />
@@ -1626,7 +1634,7 @@ export function ParametresPage() {
           <table className="table">
             <thead>
               <tr>
-                <th>Code</th><th>Nom</th><th>Langue</th><th style={{ textAlign: 'center' }}>Barème</th>
+                <th>Code</th><th>Nom</th><th>Langue</th>
                 <th style={{ textAlign: 'center' }}>Classes</th><th style={{ textAlign: 'center' }}>Matières</th>
                 <th style={{ textAlign: 'center' }}>Active</th>{canManageFonctions && <th></th>}
               </tr>
@@ -1644,7 +1652,6 @@ export function ParametresPage() {
                     </td>
                     <td>{fi.nom_fr}{fi.nom_ar ? <span style={{ color: 'var(--text-muted)', marginInlineStart: 8 }} dir="rtl">{fi.nom_ar}</span> : null}</td>
                     <td style={{ fontSize: 12 }}>{fi.langue} · {fi.sens_ecriture}</td>
-                    <td style={{ textAlign: 'center', fontSize: 12 }}>{fi.note_max == null ? '—' : `/${Number(fi.note_max)}`}</td>
                     <td style={{ textAlign: 'center' }}>{fi.nb_classes}</td>
                     <td style={{ textAlign: 'center' }}>{fi.nb_matieres}</td>
                     <td style={{ textAlign: 'center' }}>
@@ -2563,7 +2570,7 @@ export function ParametresPage() {
       {mentionsNiveau && (
         <NiveauMentionsModal
           niveau={mentionsNiveau}
-          noteMax={Number(config?.note_max ?? 20)}
+          noteMax={Number(mentionsNiveau.note_max ?? config?.note_max ?? 20)}
           defaults={mentions}
           api={api}
           onClose={() => setMentionsNiveau(null)}

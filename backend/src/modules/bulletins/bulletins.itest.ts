@@ -24,6 +24,7 @@ const classeBaremeId = `itest-classe-bareme-${RUN}`; // isolée : test du repli 
 const filiereFrId = `itest-fil-fr-${RUN}`;
 const filiereArId = `itest-fil-ar-${RUN}`;
 const filiereEnId = `itest-fil-en-${RUN}`;
+const niveauId = `itest-niveau-${RUN}`; // niveau avec échelle /20 (test échelle par niveau)
 
 const ids = {
   matMath: `itest-mat-math-${RUN}`,
@@ -48,6 +49,7 @@ async function nettoyer() {
   await prisma.classeMatiere.deleteMany({ where: { classe_id: { in: [classeId, classeArId, classeEnId, classeBaremeId] } } });
   await prisma.note.deleteMany({ where: { matiere: { etablissement_id: etabId } } });
   await prisma.classe.deleteMany({ where: { etablissement_id: etabId } });
+  await prisma.niveau.deleteMany({ where: { etablissement_id: etabId } });
   await prisma.matiere.deleteMany({ where: { etablissement_id: etabId } });
   await prisma.filiere.deleteMany({ where: { etablissement_id: etabId } });
   await prisma.eleve.deleteMany({ where: { etablissement_id: etabId } });
@@ -96,8 +98,11 @@ beforeAll(async () => {
     ],
   });
 
+  // Niveau avec une échelle d'affichage propre /10 (l'établissement est à /20) → prouve
+  // l'override par niveau : les bulletins de ses classes s'affichent sur /10.
+  await prisma.niveau.create({ data: { id: niveauId, etablissement_id: etabId, libelle: 'CM1', ordre: 1, note_max: 10 } });
   await prisma.classe.create({
-    data: { id: classeId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1 A', filiere: 'FR', filiere_id: filiereFrId },
+    data: { id: classeId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1 A', filiere: 'FR', filiere_id: filiereFrId, niveau_id: niveauId },
   });
   // Classe arabe distincte : l'élève bilingue y suit ses matières AR. Sert à
   // vérifier que le bulletin COMBINE agrège bien les DEUX classes de l'élève.
@@ -238,6 +243,13 @@ describe('Bulletins — intégration notes → moyenne (DB réelle)', () => {
     const b = await prisma.bulletin.findFirst({ where: { eleve_id: ids.eleveA, periode: 1, filiere: 'FR' } });
     const detail = await getBulletin(b!.id, etabId);
     expect(detail.notesByFiliere.FR).toHaveLength(3);
+  });
+
+  it('échelle par niveau : getBulletin expose l\'échelle du niveau (/10), override de l\'établissement (/20)', async () => {
+    const b = await prisma.bulletin.findFirst({ where: { eleve_id: ids.eleveA, periode: 1, filiere: 'FR' } });
+    const detail = await getBulletin(b!.id, etabId);
+    // La classe de l'élève A est au niveau CM1 (note_max=10) → échelle d'affichage = 10.
+    expect(detail.echelle_affichage).toBe(10);
   });
 
   it('le bulletin annuel moyenne les périodes saisies', async () => {
