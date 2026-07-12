@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { mentionPour, MentionDef } from '../../utils/notes';
 
 // ── Logique métier pure extraite pour tests sans DB ───────────────────────────
 
@@ -34,13 +35,17 @@ function calculerMoyenne(notes: { valeur: number; coeff: number }[]): number | n
   return totalC > 0 ? Math.round((totalP / totalC) * 100) / 100 : null;
 }
 
-function appreciation(m: number): string {
-  if (m >= 16) return 'Très bien — Félicitations du conseil';
-  if (m >= 14) return 'Bien';
-  if (m >= 12) return 'Assez bien';
-  if (m >= 10) return 'Passable';
-  return 'Insuffisant — Doit faire des efforts';
-}
+// Les appréciations viennent de la table Mention (configurable par
+// établissement/filière/niveau) via mentionPour ; on fige ici le contrat avec
+// les mentions par défaut semées par mentions.service (base /20).
+const MENTIONS_DEFAUT: MentionDef[] = [
+  { libelle_fr: 'Très bien',   seuil_min: 16 },
+  { libelle_fr: 'Bien',        seuil_min: 14 },
+  { libelle_fr: 'Assez bien',  seuil_min: 12 },
+  { libelle_fr: 'Passable',    seuil_min: 10 },
+  { libelle_fr: 'Insuffisant', seuil_min: 0 },
+];
+const appreciation = (m: number) => mentionPour(m, MENTIONS_DEFAUT);
 
 function calculerRang(
   moyennes: Array<{ eleve_id: string; moyenne: number }>,
@@ -208,16 +213,16 @@ describe('Métier — Bulletins : Moyennes complexes', () => {
 
 describe('Métier — Bulletins : Appréciations', () => {
   const cas = [
-    [20, 'Très bien — Félicitations du conseil'],
-    [16, 'Très bien — Félicitations du conseil'],
+    [20, 'Très bien'],
+    [16, 'Très bien'],
     [15.99, 'Bien'],
     [14, 'Bien'],
     [13.99, 'Assez bien'],
     [12, 'Assez bien'],
     [11.99, 'Passable'],
     [10, 'Passable'],
-    [9.99, 'Insuffisant — Doit faire des efforts'],
-    [0, 'Insuffisant — Doit faire des efforts'],
+    [9.99, 'Insuffisant'],
+    [0, 'Insuffisant'],
   ] as [number, string][];
 
   for (const [moy, attendu] of cas) {

@@ -2,8 +2,8 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import type { PDFOptions } from 'puppeteer';
 import prisma from '../../config/database';
 import { renderPdfHtml as _renderPdfHtmlReal } from '../../utils/browserPool';
-import { calculerMoyennesClasse, getMentionsEtab, mentionPour, getBaremesClasseCohorte, filieresActivesCodes } from '../bulletins/bulletins.service';
-import { DEFAULT_NOTE_MAX } from '../../utils/notes';
+import { calculerMoyennesClasse, getMentionsEtab, getBaremesClasseCohorte, filieresActivesCodes } from '../bulletins/bulletins.service';
+import { DEFAULT_NOTE_MAX, mentionPour } from '../../utils/notes';
 import { NotFoundError } from '../../utils/errors';
 
 // Mode aperçu : on intercepte renderPdfHtml pour capturer le HTML sans

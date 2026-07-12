@@ -16,22 +16,15 @@ function arrondir(v: number) { return Math.round(v * 2) / 2; }
 
 async function ensureMentionsExist(etablissement_id: string) {
   // On ne sème que les mentions PAR DÉFAUT de l'établissement (aucune filière, aucun niveau).
+  // Les établissements existants ont été backfillés depuis leurs anciens seuils
+  // ConfigNotes (migration mentions_consolidation) : ce semis paresseux ne sert
+  // plus qu'aux nouveaux établissements → pourcentages standard de note_max.
   const count = await prisma.mention.count({ where: { etablissement_id, filiere_id: null, niveau_id: null } });
   if (count > 0) return;
 
   const cn = await prisma.configNotes.findUnique({ where: { etablissement_id } });
   const noteMax = Number(cn?.note_max ?? DEFAULT_NOTE_MAX);
-
-  // Si ConfigNotes a des seuils configurés ET cohérents avec note_max, on les utilise
-  const tbRaw  = cn ? Number(cn.seuil_tres_bien)  : null;
-  const bRaw   = cn ? Number(cn.seuil_bien)       : null;
-  const abRaw  = cn ? Number(cn.seuil_assez_bien) : null;
-  const pRaw   = cn ? Number(cn.seuil_passable)   : null;
-  const seuilsCoherents = tbRaw !== null && tbRaw < noteMax;
-
-  const seuils = seuilsCoherents
-    ? [tbRaw!, bRaw!, abRaw!, pRaw!]
-    : SEUILS_DEFAUT_PCT.map(s => arrondir(s.pct * noteMax));
+  const seuils = SEUILS_DEFAUT_PCT.map(s => arrondir(s.pct * noteMax));
 
   const rows = SEUILS_DEFAUT_PCT.map((s, i) => ({
     libelle_fr:  s.libelle_fr,
