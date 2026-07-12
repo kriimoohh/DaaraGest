@@ -110,18 +110,37 @@ async function main() {
   }
   console.log(`✅ Domaines (${LGM.domaines.length})`);
 
+  // ── Filières (Phase 2d : la filière n'est portée que par l'entité Filiere) ──
+  const FILIERES_SEED = [
+    { code: 'FR', nom_fr: 'Filière française', nom_ar: null,             langue: 'fr', sens_ecriture: 'LTR', couleur: '#DDE2F1', ordre: 0 },
+    { code: 'AR', nom_fr: 'Filière arabe',     nom_ar: 'الشعبة العربية', langue: 'ar', sens_ecriture: 'RTL', couleur: '#DCEBDF', ordre: 1 },
+  ];
+  for (const f of FILIERES_SEED) {
+    await prisma.filiere.upsert({
+      where: { etablissement_id_code: { etablissement_id: etab.id, code: f.code } },
+      update: {},
+      create: { etablissement_id: etab.id, ...f },
+    });
+  }
+  const filiereByCode = new Map(
+    (await prisma.filiere.findMany({ where: { etablissement_id: etab.id } })).map(f => [f.code, f.id]),
+  );
+  console.log(`✅ Filières (${FILIERES_SEED.length})`);
+
   // ── Matières (référentiel LGM — 76 matières classées par domaine) ────────────
   const domaineRows = await prisma.domaine.findMany({ where: { etablissement_id: etab.id } });
   const domaineByCode = new Map(domaineRows.map(d => [d.code, d.id]));
   for (const m of LGM.matieres) {
+    const filiereId = filiereByCode.get(m.filiere);
+    if (!filiereId) throw new Error(`Filière ${m.filiere} absente`);
     const existing = await prisma.matiere.findFirst({
-      where: { nom_fr: m.nom_fr, filiere: m.filiere, etablissement_id: etab.id },
+      where: { nom_fr: m.nom_fr, filiere_id: filiereId, etablissement_id: etab.id },
     });
     const data = {
       etablissement_id: etab.id,
       nom_fr: m.nom_fr,
       nom_ar: m.nom_ar,
-      filiere: m.filiere,
+      filiere_id: filiereId,
       coeff_defaut: new Prisma.Decimal(1),
       note_min: new Prisma.Decimal(0),
       ordre_bulletin: m.ordre_bulletin,

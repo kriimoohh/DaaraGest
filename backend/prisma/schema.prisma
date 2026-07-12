@@ -372,11 +372,9 @@ model Matiere {
   etablissement_id String
   nom_fr           String
   nom_ar           String?
-  filiere          String
-  // Phase 0 refonte filières : FK vers l'entité Filiere (nullable + backfillée le
-  // temps de la transition ; `filiere` string reste la source de vérité jusqu'à ce
-  // que tous les usages basculent sur filiere_id). Voir migration filiere_entite.
-  filiere_id       String?
+  // Phase 2d : la filière est portée par l'entité Filiere (la colonne string
+  // historique `filiere` a été supprimée — migration filieres_drop_string).
+  filiere_id       String
   coeff_defaut     Decimal @default(1) @db.Decimal(4, 2)
   note_min         Decimal @default(0) @db.Decimal(5, 2)
   // Barème de saisie PAR DÉFAUT de la matière (le max sur lequel une note est SAISIE,
@@ -396,7 +394,7 @@ model Matiere {
   code_court       String?
 
   etablissement   Etablissement            @relation(fields: [etablissement_id], references: [id])
-  filiere_ref     Filiere?                 @relation(fields: [filiere_id], references: [id])
+  filiere_ref     Filiere                  @relation(fields: [filiere_id], references: [id])
   domaine         Domaine?                 @relation(fields: [domaine_id], references: [id])
   prof_matieres   PersonnelMatiereClasse[]
   notes           Note[]
@@ -437,10 +435,8 @@ model Classe {
   annee_scolaire_id String
   nom_fr            String
   nom_ar            String? // nom affiché en langue arabe (optionnel ; repli sur nom_fr)
-  filiere           String
-  // Phase 0 refonte filières : FK vers l'entité Filiere (nullable + backfillée ;
-  // `filiere` string reste la source de vérité pendant la transition).
-  filiere_id        String?
+  // Phase 2d : filière portée par l'entité Filiere (colonne string supprimée).
+  filiere_id        String
   niveau_id         String?
   capacite          Int     @default(30)
   active            Boolean @default(true)
@@ -452,7 +448,7 @@ model Classe {
   code              String?
 
   etablissement        Etablissement            @relation(fields: [etablissement_id], references: [id])
-  filiere_ref          Filiere?                 @relation(fields: [filiere_id], references: [id])
+  filiere_ref          Filiere                  @relation(fields: [filiere_id], references: [id])
   annee_scolaire       AnneeScolaire            @relation(fields: [annee_scolaire_id], references: [id])
   niveau               Niveau?                  @relation(fields: [niveau_id], references: [id])
   inscriptions_classes InscriptionClasse[]

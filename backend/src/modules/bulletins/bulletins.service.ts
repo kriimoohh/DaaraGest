@@ -85,6 +85,9 @@ async function getMatieresDeclasse(
     const o = overrides.get(r.matiere_id);
     return {
       ...r.matiere,
+      // Code de filière : celui demandé (les lignes sont filtrées dessus) —
+      // la colonne string Matiere.filiere n'existe plus (Phase 2d).
+      filiere,
       coeff_effectif: o ? o.coeff : (r.coeff_override ?? r.matiere.coeff_defaut),
       // Barème effectif : période > classe > matière (défaut) > échelle établissement.
       note_max_effectif: o ? o.note_max : (r.note_max_override ?? r.matiere.note_max ?? baseNote),
@@ -359,11 +362,11 @@ export async function bulletinsImpactesParMatiere(
 ): Promise<{ unsigned: BulletinImpacte[]; signed: BulletinImpacte[] }> {
   const matiere = await prisma.matiere.findUnique({
     where: { id: matiere_id },
-    select: { filiere: true, filiere_ref: { select: { code: true } } },
+    select: { filiere_ref: { select: { code: true } } },
   });
   if (!matiere) return { unsigned: [], signed: [] };
   // Une note d'une filière impacte le bulletin de SA filière + le COMBINE.
-  const filieres = [matiere.filiere_ref?.code ?? matiere.filiere, 'COMBINE'];
+  const filieres = [matiere.filiere_ref.code, 'COMBINE'];
   const bulletins = await prisma.bulletin.findMany({
     where: {
       filiere: { in: filieres },

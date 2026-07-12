@@ -102,35 +102,34 @@ beforeAll(async () => {
   // l'override par niveau : les bulletins de ses classes s'affichent sur /10.
   await prisma.niveau.create({ data: { id: niveauId, etablissement_id: etabId, libelle: 'CM1', ordre: 1, note_max: 10 } });
   await prisma.classe.create({
-    data: { id: classeId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1 A', filiere: 'FR', filiere_id: filiereFrId, niveau_id: niveauId },
+    data: { id: classeId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1 A', filiere_id: filiereFrId, niveau_id: niveauId },
   });
   // Classe arabe distincte : l'élève bilingue y suit ses matières AR. Sert à
   // vérifier que le bulletin COMBINE agrège bien les DEUX classes de l'élève.
   await prisma.classe.create({
-    data: { id: classeArId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1 Arabe', filiere: 'AR', filiere_id: filiereArId },
+    data: { id: classeArId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1 Arabe', filiere_id: filiereArId },
   });
   // Classe anglaise (Phase 3-1b) : l'élève B y suit une matière EN.
   await prisma.classe.create({
-    data: { id: classeEnId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1 English', filiere: 'EN', filiere_id: filiereEnId },
+    data: { id: classeEnId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1 English', filiere_id: filiereEnId },
   });
   // Classe isolée (sans élève) pour tester le repli du barème porté par la MATIÈRE.
   await prisma.classe.create({
-    data: { id: classeBaremeId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1 Barème', filiere: 'FR', filiere_id: filiereFrId },
+    data: { id: classeBaremeId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1 Barème', filiere_id: filiereFrId },
   });
 
   // Matières FR. Le barème de saisie est porté par la classe (note_max_override) ;
   // sans override, une note est réputée sur l'échelle établissement (ici /20).
-  // filiere_id renseigné comme en réel (backfill Phase 0 + double-écriture) :
-  // les lecteurs Phase 2c filtrent via la relation filiere_ref.
+  // Depuis la Phase 2d, la filière n'est portée que par filiere_id (relation).
   await prisma.matiere.createMany({
     data: [
-      { id: ids.matMath, etablissement_id: etabId, nom_fr: 'Mathématiques', filiere: 'FR', filiere_id: filiereFrId, coeff_defaut: 2, ordre_bulletin: 1 },
-      { id: ids.matFr, etablissement_id: etabId, nom_fr: 'Français', filiere: 'FR', filiere_id: filiereFrId, coeff_defaut: 1, ordre_bulletin: 2 },
-      { id: ids.matRlc, etablissement_id: etabId, nom_fr: 'Lecture (RLC)', filiere: 'FR', filiere_id: filiereFrId, coeff_defaut: 1, ordre_bulletin: 3 },
-      { id: ids.matAr, etablissement_id: etabId, nom_fr: 'Langue arabe', filiere: 'AR', filiere_id: filiereArId, coeff_defaut: 1, ordre_bulletin: 1 },
-      { id: ids.matEn, etablissement_id: etabId, nom_fr: 'Mathematics', filiere: 'EN', filiere_id: filiereEnId, coeff_defaut: 2, ordre_bulletin: 1 },
+      { id: ids.matMath, etablissement_id: etabId, nom_fr: 'Mathématiques', filiere_id: filiereFrId, coeff_defaut: 2, ordre_bulletin: 1 },
+      { id: ids.matFr, etablissement_id: etabId, nom_fr: 'Français', filiere_id: filiereFrId, coeff_defaut: 1, ordre_bulletin: 2 },
+      { id: ids.matRlc, etablissement_id: etabId, nom_fr: 'Lecture (RLC)', filiere_id: filiereFrId, coeff_defaut: 1, ordre_bulletin: 3 },
+      { id: ids.matAr, etablissement_id: etabId, nom_fr: 'Langue arabe', filiere_id: filiereArId, coeff_defaut: 1, ordre_bulletin: 1 },
+      { id: ids.matEn, etablissement_id: etabId, nom_fr: 'Mathematics', filiere_id: filiereEnId, coeff_defaut: 2, ordre_bulletin: 1 },
       // Barème /50 porté par la MATIÈRE (pas d'override de classe) — Phase 1.
-      { id: ids.matBareme, etablissement_id: etabId, nom_fr: 'Récitation', filiere: 'FR', filiere_id: filiereFrId, coeff_defaut: 1, note_max: 50, ordre_bulletin: 9 },
+      { id: ids.matBareme, etablissement_id: etabId, nom_fr: 'Récitation', filiere_id: filiereFrId, coeff_defaut: 1, note_max: 50, ordre_bulletin: 9 },
     ],
   });
 
