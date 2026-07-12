@@ -664,6 +664,9 @@ model Bulletin {
   eleve_id          String
   annee_scolaire_id String
   filiere           String
+  // Pour filiere='COMBINE' : codes des filières effectivement fusionnées (ex. "FR,AR"),
+  // choisis à la génération. null = repli sur les filières actives (rétro-compat).
+  filieres_combine  String?
   periode           Int
   moyenne           Decimal?  @db.Decimal(5, 2)
   rang              Int?

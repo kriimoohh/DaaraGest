@@ -275,6 +275,17 @@ describe('Bulletins — intégration notes → moyenne (DB réelle)', () => {
     expect(parEleve[ids.eleveB].rang).toBe(2);
   });
 
+  it('COMBINE au choix : filieres_combine restreint la fusion (FR seul) et est stocké', async () => {
+    const res = await genererBulletins(etabId, {
+      classe_id: classeId, annee_scolaire_id: anneeId, periode: 1, filiere: 'COMBINE', filieres_combine: ['FR'],
+    });
+    expect(res.bulletins).toHaveLength(2);
+    const b = await prisma.bulletin.findFirst({ where: { eleve_id: ids.eleveA, periode: 1, filiere: 'COMBINE' } });
+    // FR seul → 15.25 (et non 14.2 qui incluait la filière AR de l'élève A).
+    expect(Number(b!.moyenne)).toBeCloseTo(15.25, 2);
+    expect(b!.filieres_combine).toBe('FR');
+  });
+
   it('EN (filière anglaise) : génère un bulletin et expose notesByFiliere.EN', async () => {
     const res = await genererBulletins(etabId, {
       classe_id: classeEnId, annee_scolaire_id: anneeId, periode: 1, filiere: 'EN',

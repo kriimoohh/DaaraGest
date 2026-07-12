@@ -167,6 +167,14 @@ export function BulletinsPage() {
   const isAnnuel = type.startsWith('ANNUEL');
   const filiere = isAnnuel ? type.replace('ANNUEL_', '') : type;
 
+  // Combiné au choix : filières à fusionner (défaut = toutes les actives). Réinitialisé
+  // quand l'ensemble des filières actives change.
+  const activeCodesStr = filieresActives.map(f => f.code).join(',');
+  const [combineFilieres, setCombineFilieres] = useState<string[]>([]);
+  useEffect(() => {
+    setCombineFilieres(activeCodesStr ? activeCodesStr.split(',') : []);
+  }, [activeCodesStr]);
+
   useEffect(() => {
     api.get<AnneeScolaire[]>('/api/v1/annees-scolaires').then(setAnnees).catch(() => toast.error(t('bulletin.err_chargement')));
   }, []);
@@ -216,11 +224,16 @@ export function BulletinsPage() {
 
   const confirmerGeneration = async () => {
     if (!preflight || !classeId || !anneeId) return;
+    if (filiere === 'COMBINE' && combineFilieres.length === 0) {
+      toast.error('Sélectionnez au moins une filière à combiner');
+      return;
+    }
     setGenerating(true);
     try {
       const body = {
         classe_id: classeId, annee_scolaire_id: anneeId,
         filiere: isAnnuel ? filiere : type,
+        ...(filiere === 'COMBINE' ? { filieres_combine: combineFilieres } : {}),
         inclure_non_evaluees: inclureNonEvaluees,
         traiter_manquantes_comme_zero: manquantesCommeZero,
       };
@@ -324,6 +337,23 @@ export function BulletinsPage() {
             value={type} onChange={(e) => { setType(e.target.value as BulletinType); setBulletins([]); }}
             options={typeOptions}
           />
+          {filiere === 'COMBINE' && filieresActives.length > 0 && (
+            <div className="field">
+              <label className="field-label">Filières à combiner</label>
+              <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center', paddingTop: 8 }}>
+                {filieresActives.map(f => (
+                  <label key={f.code} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={combineFilieres.includes(f.code)}
+                      onChange={e => setCombineFilieres(prev => e.target.checked ? [...prev, f.code] : prev.filter(c => c !== f.code))}
+                    />
+                    {nomBilingue(f)}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           {!isAnnuel && (
             <Select label={t('note.periode')}
               value={periode} onChange={(e) => { setPeriode(e.target.value); setBulletins([]); }}
