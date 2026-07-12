@@ -259,7 +259,9 @@ export function ElevesPage() {
   const [sortBy, setSortBy] = useState('nom_fr');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [filterSexe, setFilterSexe] = useState('');
-  const [filterStatut, setFilterStatut] = useState('');
+  // Par défaut on n'affiche que les élèves ACTIFS : un élève désactivé (archivé) ou
+  // supprimé ne doit pas encombrer la liste. Le filtre permet de voir inactifs/tous.
+  const [filterStatut, setFilterStatut] = useState('actif');
   const [filterClasse, setFilterClasse] = useState('');
   const [limit, setLimit] = useState(20);
   const [allClasses, setAllClasses] = useState<{ id: string; nom_fr: string; filiere: string; annee_scolaire_id: string }[]>([]);
@@ -1465,7 +1467,7 @@ export function ElevesPage() {
         onClose={() => setConfirmDelete(null)}
         onConfirm={handleDelete}
         loading={deleting}
-        message={`Désactiver l'élève "${confirmDelete?.prenom_fr} ${confirmDelete?.nom_fr}" ?`}
+        message={`Supprimer définitivement l'élève "${confirmDelete?.prenom_fr} ${confirmDelete?.nom_fr}" ? Cette action est IRRÉVERSIBLE et efface toutes ses données (notes, bulletins, paiements, absences…). Pour un simple archivage réversible, utilisez plutôt « Désactiver ».`}
       />
 
       {/* ── Confirmation désactivation bulk ─────────────────────────────────── */}

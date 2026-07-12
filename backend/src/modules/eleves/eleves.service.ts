@@ -221,13 +221,32 @@ export async function modifierEleve(id: string, etablissement_id: string, data: 
   return eleve;
 }
 
+// Suppression DÉFINITIVE d'un élève. Aucune relation enfant d'Eleve n'est en
+// onDelete: Cascade → on purge explicitement les enfants (dans l'ordre) au sein
+// d'une transaction, puis l'élève. Pour un simple archivage réversible (élève qui
+// quitte l'école), utiliser plutôt la désactivation (toggleActifEleve).
 export async function supprimerEleve(id: string, etablissement_id: string, acteurId: string) {
   const existing = await prisma.eleve.findFirst({ where: { id, etablissement_id } });
   if (!existing) throw new NotFoundError('Élève introuvable');
 
-  const eleve = await prisma.eleve.update({ where: { id }, data: { actif: false } });
-  await logAction(etablissement_id, acteurId, 'DELETE', 'Eleve', id, { matricule: existing.matricule });
-  return eleve;
+  await prisma.$transaction(async (tx) => {
+    await tx.noteEvaluation.deleteMany({ where: { eleve_id: id } });
+    await tx.presenceActivite.deleteMany({ where: { eleve_id: id } });
+    await tx.inscriptionActivite.deleteMany({ where: { eleve_id: id } });
+    await tx.note.deleteMany({ where: { eleve_id: id } });
+    await tx.bulletin.deleteMany({ where: { eleve_id: id } });
+    await tx.paiementEleve.deleteMany({ where: { eleve_id: id } });
+    await tx.absenceEleve.deleteMany({ where: { eleve_id: id } });
+    await tx.progressionEleve.deleteMany({ where: { eleve_id: id } });
+    await tx.portailParentToken.deleteMany({ where: { eleve_id: id } });
+    await tx.emprunt.deleteMany({ where: { eleve_id: id } });
+    await tx.parent.deleteMany({ where: { eleve_id: id } });
+    await tx.inscriptionClasse.deleteMany({ where: { inscription: { eleve_id: id } } });
+    await tx.inscription.deleteMany({ where: { eleve_id: id } });
+    await tx.eleve.delete({ where: { id } });
+  });
+  await logAction(etablissement_id, acteurId, 'DELETE', 'Eleve', id, { matricule: existing.matricule, definitif: true });
+  return { ok: true };
 }
 
 export async function toggleActifEleve(id: string, etablissement_id: string) {
