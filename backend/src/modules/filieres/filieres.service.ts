@@ -88,14 +88,22 @@ export async function modifierFiliere(id: string, etablissement_id: string, data
 export async function supprimerFiliere(id: string, etablissement_id: string, acteurId: string) {
   const existing = await prisma.filiere.findFirst({
     where: { id, etablissement_id },
-    include: { _count: { select: { classes: true, matieres: true } } },
+    include: { _count: { select: { classes: true, matieres: true, inscriptions_classes: true, mentions: true } } },
   });
   if (!existing) throw new NotFoundError('Filière introuvable');
 
-  const usages = existing._count.classes + existing._count.matieres;
-  if (usages > 0) {
+  // Garde exhaustive : une filière n'est supprimable que si PLUS RIEN ne la référence
+  // (classes, matières, inscriptions d'élèves, mentions personnalisées). On ne liste
+  // que les vrais bloqueurs pour un message actionnable.
+  const c = existing._count;
+  const bloqueurs: string[] = [];
+  if (c.classes) bloqueurs.push(`${c.classes} classe(s)`);
+  if (c.matieres) bloqueurs.push(`${c.matieres} matière(s)`);
+  if (c.inscriptions_classes) bloqueurs.push(`${c.inscriptions_classes} inscription(s) d'élève`);
+  if (c.mentions) bloqueurs.push(`${c.mentions} mention(s) personnalisée(s)`);
+  if (bloqueurs.length > 0) {
     throw new ConflictError(
-      `Filière utilisée par ${existing._count.classes} classe(s) et ${existing._count.matieres} matière(s) — désactivez-la au lieu de la supprimer`,
+      `Filière encore utilisée par ${bloqueurs.join(', ')}. Retirez-les d'abord, ou désactivez la filière au lieu de la supprimer.`,
     );
   }
 
