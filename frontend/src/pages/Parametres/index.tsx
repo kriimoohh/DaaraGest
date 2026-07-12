@@ -68,9 +68,7 @@ interface Etablissement {
   numero_autorisation?: string;
   entete_bulletin_fr?: string;
   entete_bulletin_ar?: string;
-  // Directeur = Personnel lié (nom/genre pour les documents). Les anciens champs
-  // libres nom_directeur/civilite_directeur restent en base comme repli legacy
-  // mais ne sont plus édités ici.
+  // Directeur = Personnel lié (nom + accord en genre pour les documents).
   directeur_id?: string | null;
   logo_url?: string;
   signature_url?: string;
@@ -1309,8 +1307,8 @@ export function ParametresPage() {
                 <div style={{ fontSize: 12, color: 'var(--ink-3)', padding: '8px 12px', background: 'var(--paper-2)', borderRadius: 6, border: '1px solid var(--rule)' }}>
                   Le nom et l'accord en genre (Directeur/Directrice, soussigné(e)…) des documents
                   générés (bulletins, certificats, cartes…) proviennent de la fiche Personnel
-                  sélectionnée ici. Tant que rien n'est sélectionné, l'ancien nom saisi en texte
-                  libre reste utilisé en <strong>repli</strong>.
+                  sélectionnée ici. Sans sélection, les documents utilisent la forme neutre
+                  « Directeur(trice) » sans nom.
                 </div>
                 <Input
                   label={t('common.devise')}
