@@ -71,7 +71,7 @@ async function getMatieresDeclasse(
   classe_id: string, filiere: 'FR' | 'AR' | 'EN', periode?: number, baseNote: number = DEFAULT_NOTE_MAX,
 ): Promise<MatiereAvecCoeff[]> {
   const rows = await prisma.classeMatiere.findMany({
-    where: { classe_id, matiere: { filiere, active: true } },
+    where: { classe_id, matiere: { filiere_ref: { code: filiere }, active: true } },
     include: { matiere: true },
     orderBy: [{ ordre_override: 'asc' }, { matiere: { ordre_bulletin: 'asc' } }],
   });
@@ -96,7 +96,7 @@ async function getMatieresDeclasse(
 
 async function getMatieres(etablissement_id: string, filiere: 'FR' | 'AR' | 'EN') {
   return prisma.matiere.findMany({
-    where: { etablissement_id, filiere, active: true },
+    where: { etablissement_id, filiere_ref: { code: filiere }, active: true },
     orderBy: { ordre_bulletin: 'asc' },
   });
 }
@@ -357,10 +357,13 @@ type BulletinImpacte = { id: string; eleve_id: string; periode: number; filiere:
 export async function bulletinsImpactesParMatiere(
   classe_id: string, matiere_id: string, periodes: number[],
 ): Promise<{ unsigned: BulletinImpacte[]; signed: BulletinImpacte[] }> {
-  const matiere = await prisma.matiere.findUnique({ where: { id: matiere_id }, select: { filiere: true } });
+  const matiere = await prisma.matiere.findUnique({
+    where: { id: matiere_id },
+    select: { filiere: true, filiere_ref: { select: { code: true } } },
+  });
   if (!matiere) return { unsigned: [], signed: [] };
   // Une note d'une filière impacte le bulletin de SA filière + le COMBINE.
-  const filieres = [matiere.filiere, 'COMBINE'];
+  const filieres = [matiere.filiere_ref?.code ?? matiere.filiere, 'COMBINE'];
   const bulletins = await prisma.bulletin.findMany({
     where: {
       filiere: { in: filieres },

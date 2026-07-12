@@ -120,15 +120,17 @@ beforeAll(async () => {
 
   // Matières FR. Le barème de saisie est porté par la classe (note_max_override) ;
   // sans override, une note est réputée sur l'échelle établissement (ici /20).
+  // filiere_id renseigné comme en réel (backfill Phase 0 + double-écriture) :
+  // les lecteurs Phase 2c filtrent via la relation filiere_ref.
   await prisma.matiere.createMany({
     data: [
-      { id: ids.matMath, etablissement_id: etabId, nom_fr: 'Mathématiques', filiere: 'FR', coeff_defaut: 2, ordre_bulletin: 1 },
-      { id: ids.matFr, etablissement_id: etabId, nom_fr: 'Français', filiere: 'FR', coeff_defaut: 1, ordre_bulletin: 2 },
-      { id: ids.matRlc, etablissement_id: etabId, nom_fr: 'Lecture (RLC)', filiere: 'FR', coeff_defaut: 1, ordre_bulletin: 3 },
-      { id: ids.matAr, etablissement_id: etabId, nom_fr: 'Langue arabe', filiere: 'AR', coeff_defaut: 1, ordre_bulletin: 1 },
-      { id: ids.matEn, etablissement_id: etabId, nom_fr: 'Mathematics', filiere: 'EN', coeff_defaut: 2, ordre_bulletin: 1 },
+      { id: ids.matMath, etablissement_id: etabId, nom_fr: 'Mathématiques', filiere: 'FR', filiere_id: filiereFrId, coeff_defaut: 2, ordre_bulletin: 1 },
+      { id: ids.matFr, etablissement_id: etabId, nom_fr: 'Français', filiere: 'FR', filiere_id: filiereFrId, coeff_defaut: 1, ordre_bulletin: 2 },
+      { id: ids.matRlc, etablissement_id: etabId, nom_fr: 'Lecture (RLC)', filiere: 'FR', filiere_id: filiereFrId, coeff_defaut: 1, ordre_bulletin: 3 },
+      { id: ids.matAr, etablissement_id: etabId, nom_fr: 'Langue arabe', filiere: 'AR', filiere_id: filiereArId, coeff_defaut: 1, ordre_bulletin: 1 },
+      { id: ids.matEn, etablissement_id: etabId, nom_fr: 'Mathematics', filiere: 'EN', filiere_id: filiereEnId, coeff_defaut: 2, ordre_bulletin: 1 },
       // Barème /50 porté par la MATIÈRE (pas d'override de classe) — Phase 1.
-      { id: ids.matBareme, etablissement_id: etabId, nom_fr: 'Récitation', filiere: 'FR', coeff_defaut: 1, note_max: 50, ordre_bulletin: 9 },
+      { id: ids.matBareme, etablissement_id: etabId, nom_fr: 'Récitation', filiere: 'FR', filiere_id: filiereFrId, coeff_defaut: 1, note_max: 50, ordre_bulletin: 9 },
     ],
   });
 
