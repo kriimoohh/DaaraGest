@@ -7,7 +7,16 @@ export async function getParametres(etablissement_id: string) {
   return etablissementCache.getOrLoad(etablissement_id, async () => {
     const etablissement = await prisma.etablissement.findUnique({
       where: { id: etablissement_id },
-      include: { config_notes: true },
+      include: {
+        config_notes: true,
+        directeur: {
+          select: {
+            id: true,
+            fonction: true,
+            utilisateur: { select: { nom_fr: true, prenom_fr: true, sexe: true } },
+          },
+        },
+      },
     });
     if (!etablissement) throw new NotFoundError('Établissement introuvable');
     return etablissement;
@@ -15,6 +24,14 @@ export async function getParametres(etablissement_id: string) {
 }
 
 export async function updateEtablissement(etablissement_id: string, data: EtablissementUpdateInput) {
+  // Le directeur doit être un Personnel de CET établissement (isolation multi-tenant).
+  if (data.directeur_id) {
+    const personnel = await prisma.personnel.findFirst({
+      where: { id: data.directeur_id, utilisateur: { etablissement_id } },
+      select: { id: true },
+    });
+    if (!personnel) throw new NotFoundError('Personnel introuvable pour ce directeur');
+  }
   const updated = await prisma.etablissement.update({
     where: { id: etablissement_id },
     data,
