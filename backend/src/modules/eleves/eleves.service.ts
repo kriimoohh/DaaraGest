@@ -7,6 +7,7 @@ import { EleveInput, InscriptionInput, TransfertInput } from './eleves.schema';
 import { NotFoundError, ValidationError } from '../../utils/errors';
 import { genererMatricule } from '../../utils/matricule';
 import { syncInscriptionClasse, selectLiensClasse, selectLiensClasseObjet, classeIdParFiliere, classeParFiliere } from '../../utils/inscriptionClasse';
+import { codeFiliere, selectFiliereRef } from '../../utils/filiere';
 
 const VALID_SORT_FIELDS = ['nom_fr', 'prenom_fr', 'matricule', 'sexe', 'date_naissance'];
 
@@ -348,9 +349,10 @@ export async function transfererEleve(
   // filière et à la bonne année scolaire.
   const classe = await prisma.classe.findFirst({
     where: { id: data.nouvelle_classe_id, etablissement_id },
+    include: { ...selectFiliereRef },
   });
   if (!classe) throw new NotFoundError('Classe de destination introuvable');
-  if (classe.filiere !== data.filiere) {
+  if (codeFiliere(classe) !== data.filiere) {
     throw new ValidationError(`La classe de destination n'est pas de la filière ${data.filiere}`);
   }
   if (classe.annee_scolaire_id !== data.annee_scolaire_id) {

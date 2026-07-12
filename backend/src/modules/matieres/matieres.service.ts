@@ -5,8 +5,8 @@ import { getFiliereActiveId, getFiliereId } from '../../utils/filiere';
 
 export async function listerMatieres(etablissement_id: string, filiere?: string) {
   return prisma.matiere.findMany({
-    where: { etablissement_id, active: true, ...(filiere ? { filiere } : {}) },
-    orderBy: [{ filiere: 'asc' }, { ordre_bulletin: 'asc' }],
+    where: { etablissement_id, active: true, ...(filiere ? { filiere_ref: { code: filiere } } : {}) },
+    orderBy: [{ filiere_ref: { code: 'asc' } }, { ordre_bulletin: 'asc' }],
     include: { domaine: { select: { id: true, nom_fr: true, code: true, ordre: true } } },
   });
 }
