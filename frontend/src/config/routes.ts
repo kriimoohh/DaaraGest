@@ -57,6 +57,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: '/bibliotheque',                key: 'bibliotheque',       roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'], inNav: true },
   { path: '/demandes-absence-personnel',  key: 'demandes_absence_personnel', roles: DIRECTION_LIKE,         inNav: true },
   { path: '/utilisateurs',                key: 'utilisateurs',       roles: ['admin'],                       inNav: true },
+  { path: '/audit',                       key: 'audit',              roles: ['admin', 'directeur'],          inNav: true },
   { path: '/parametres',                  key: 'parametres',         roles: ['admin'],                       inNav: true },
 ];
 
