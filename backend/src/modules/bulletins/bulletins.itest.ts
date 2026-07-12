@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import prisma from '../../config/database';
-import { genererBulletins, genererBulletinsAnnuels, getBulletin, calculerMoyennesClasse, filieresActivesCodes, getBaremesClasse } from './bulletins.service';
+import { genererBulletins, genererBulletinsAnnuels, getBulletin, calculerMoyennesClasse, filieresActivesCodes, getBaremesClasse, preflightBulletins } from './bulletins.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test d'INTÉGRATION (nécessite une vraie base PostgreSQL via DATABASE_URL).
@@ -317,6 +317,28 @@ describe('Bulletins — intégration notes → moyenne (DB réelle)', () => {
     const detail = await getBulletin(b!.id, etabId);
     expect(detail.notesByFiliere.EN).toHaveLength(1);
     expect(detail.notesByFiliere.FR).toBeUndefined();
+  });
+
+  it('préflight EN : liste les matières de la filière anglaise (Phase 3-1)', async () => {
+    const res = await preflightBulletins(etabId, {
+      classe_id: classeEnId, annee_scolaire_id: anneeId, periode: 1, filiere: 'EN',
+    });
+    expect(res.matieres_evaluees.map(m => m.nom_fr)).toContain('Mathematics');
+    expect(res.matieres_evaluees.every(m => m.filiere === 'EN')).toBe(true);
+    expect(res.total_eleves).toBe(1); // seul l'élève B est en filière anglaise
+  });
+
+  it('préflight COMBINE au choix : filieres_combine restreint la vérification (FR seul)', async () => {
+    const res = await preflightBulletins(etabId, {
+      classe_id: classeId, annee_scolaire_id: anneeId, periode: 1, filiere: 'COMBINE',
+      filieres_combine: ['FR'],
+    });
+    // Aucune matière AR/EN ne doit apparaître : le préflight vérifie les mêmes
+    // filières que celles qui seront réellement fusionnées à la génération.
+    const codes = new Set(res.matieres_evaluees.map(m => m.filiere));
+    expect(codes.has('FR')).toBe(true);
+    expect(codes.has('AR')).toBe(false);
+    expect(codes.has('EN')).toBe(false);
   });
 
   it('stats/rapports : calculerMoyennesClasse est générique (EN sans crash, codes actifs)', async () => {

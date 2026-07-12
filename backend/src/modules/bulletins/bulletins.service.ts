@@ -418,9 +418,9 @@ export type PreflightWarning = { code: 'matieres_non_evaluees' | 'matieres_sans_
 
 export type PreflightResult = {
   classe_id: string; periode: number; filiere: string;
-  matieres_evaluees: { id: string; nom_fr: string; nom_ar: string | null; coeff: number; note_max: number; filiere: 'FR' | 'AR'; eleves_avec_notes: number }[];
-  matieres_non_evaluees: { id: string; nom_fr: string; nom_ar: string | null; filiere: 'FR' | 'AR'; source: 'periode' | 'classe' }[];
-  matieres_sans_notes: { id: string; nom_fr: string; nom_ar: string | null; filiere: 'FR' | 'AR' }[];
+  matieres_evaluees: { id: string; nom_fr: string; nom_ar: string | null; coeff: number; note_max: number; filiere: 'FR' | 'AR' | 'EN'; eleves_avec_notes: number }[];
+  matieres_non_evaluees: { id: string; nom_fr: string; nom_ar: string | null; filiere: 'FR' | 'AR' | 'EN'; source: 'periode' | 'classe' }[];
+  matieres_sans_notes: { id: string; nom_fr: string; nom_ar: string | null; filiere: 'FR' | 'AR' | 'EN' }[];
   eleves_sans_aucune_note: { id: string; nom_fr: string; prenom_fr: string; matricule: string }[];
   // Bulletin annuel (periode 0) : périodes entièrement sans notes → exclues silencieusement
   // du calcul de la moyenne annuelle. Le front avertit mais laisse générer.
@@ -445,7 +445,10 @@ export async function preflightBulletins(etablissement_id: string, data: Preflig
   const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
   const nbPeriodes = config?.nb_periodes ?? 3;
   const periodes = periode === 0 ? Array.from({ length: nbPeriodes }, (_, i) => i + 1) : [periode];
-  const filieres: ('FR' | 'AR')[] = filiere === 'COMBINE' ? ['FR', 'AR'] : [filiere as 'FR' | 'AR'];
+  // COMBINE : mêmes filières que la génération (choix explicite sinon actives).
+  const filieres: ('FR' | 'AR' | 'EN')[] = filiere === 'COMBINE'
+    ? combineCodesChoisis(await filieresActivesCodes(etablissement_id), data.filieres_combine)
+    : [filiere as 'FR' | 'AR' | 'EN'];
 
   const inscriptions = await getElevesClasse(classe_id, annee_scolaire_id);
   const elevesIds = inscriptions.map(i => i.eleve_id);
@@ -453,7 +456,7 @@ export async function preflightBulletins(etablissement_id: string, data: Preflig
 
   // Programme effectif PAR période, en distinguant la source du flag evaluee
   // (override période vs. flag classe) — utile pour expliciter dans la modale.
-  type ProgPeriode = { id: string; nom_fr: string; nom_ar: string | null; coeff: number; note_max: number; evaluee: boolean; filiere: 'FR' | 'AR'; source: 'periode' | 'classe' };
+  type ProgPeriode = { id: string; nom_fr: string; nom_ar: string | null; coeff: number; note_max: number; evaluee: boolean; filiere: 'FR' | 'AR' | 'EN'; source: 'periode' | 'classe' };
   const progByPeriode = new Map<number, Map<string, ProgPeriode>>();
   for (const p of periodes) {
     const mp = new Map<string, ProgPeriode>();
@@ -854,10 +857,15 @@ export async function mettreAJourObservation(
       where: { eleve_id: bulletin.eleve_id, annee_scolaire_id: bulletin.annee_scolaire_id },
       select: { ...selectLiensClasse },
     });
-    const candidateClasses = [
-      bulletin.filiere === 'AR' ? null : classeIdParFiliere(inscription?.classes, 'FR'),
-      bulletin.filiere === 'FR' ? null : classeIdParFiliere(inscription?.classes, 'AR'),
-    ].filter((c): c is string => Boolean(c));
+    // Classes candidates pour le contrôle d'accès prof : la classe de LA
+    // filière du bulletin (FR/AR/EN), ou toutes les classes de l'élève pour
+    // un COMBINE (générique — un bulletin EN était inaccessible avant).
+    const liens = inscription?.classes ?? [];
+    const candidateClasses = (
+      bulletin.filiere === 'COMBINE'
+        ? liens.map(l => l.classe_id)
+        : [classeIdParFiliere(liens, bulletin.filiere)]
+    ).filter((c): c is string => Boolean(c));
     if (candidateClasses.length === 0) {
       throw new NotFoundError('Inscription introuvable pour ce bulletin');
     }
