@@ -420,7 +420,7 @@ function TemplateEditor({ type, templates, onSaved }: {
           Aperçu
         </button>
         {canEdit && hasCustom && (
-          <button className="btn btn-ghost btn-sm" onClick={handleReset} disabled={resetting} style={{ color: '#dc2626' }}>
+          <button className="btn btn-ghost btn-sm" onClick={handleReset} disabled={resetting} style={{ color: 'var(--danger)' }}>
             Réinitialiser
           </button>
         )}
@@ -954,7 +954,7 @@ export function DocumentsPage() {
                 </div>
 
                 {!previewHasPhoto && (
-                  <div style={{ background: '#b45309', color: '#fff', borderRadius: 8, padding: '8px 14px', fontSize: 13, width: displayW, boxSizing: 'border-box' }}>
+                  <div style={{ background: 'var(--warning-soft)', color: 'var(--warning-text)', border: '1px solid var(--warning-border)', borderRadius: 'var(--r-md)', padding: '8px 14px', fontSize: 13, width: displayW, boxSizing: 'border-box' }}>
                     ⚠ Aucune photo — l'aperçu affiche un placeholder. Ajoutez une photo pour pouvoir télécharger ou imprimer.
                   </div>
                 )}

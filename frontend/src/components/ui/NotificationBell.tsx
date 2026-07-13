@@ -176,7 +176,7 @@ export function NotificationBell() {
             style={{
               position: 'absolute',
               top: 2, right: 2,
-              background: '#EF4444',
+              background: 'var(--danger)',
               color: '#fff',
               borderRadius: '50%',
               width: 16, height: 16,
@@ -228,7 +228,7 @@ export function NotificationBell() {
                 <span
                   style={{
                     marginInlineStart: 6,
-                    background: '#EF4444',
+                    background: 'var(--danger)',
                     color: '#fff',
                     borderRadius: 99,
                     fontSize: 10,
@@ -288,7 +288,7 @@ export function NotificationBell() {
                       flexShrink: 0,
                       width: 32, height: 32,
                       borderRadius: '50%',
-                      background: (TYPE_ICON_COLORS[n.type] ?? '#6B7280') + '18',
+                      background: `color-mix(in srgb, ${TYPE_ICON_COLORS[n.type] ?? 'var(--ink-3)'} 10%, transparent)`,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -316,7 +316,7 @@ export function NotificationBell() {
                             flexShrink: 0,
                             width: 8, height: 8,
                             borderRadius: '50%',
-                            background: '#EF4444',
+                            background: 'var(--danger)',
                             marginTop: 3,
                           }}
                         />

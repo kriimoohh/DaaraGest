@@ -10,6 +10,7 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { FiliereBadge } from '../../components/ui/FiliereBadge';
 import { useFilieres } from '../../hooks/useFilieres';
 import { nomBilingue } from '../../lib/noms';
 
@@ -247,11 +248,7 @@ export function MatieresPage() {
                     <td>
                       {(() => {
                         const f = filiereByCode.get(m.filiere);
-                        return (
-                          <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 99, fontSize: 12, fontWeight: 600, background: f?.couleur ?? 'var(--paper-3)', color: '#1B254A' }}>
-                            {m.filiere}
-                          </span>
-                        );
+                        return <FiliereBadge couleur={f?.couleur}>{m.filiere}</FiliereBadge>;
                       })()}
                     </td>
                     <td>

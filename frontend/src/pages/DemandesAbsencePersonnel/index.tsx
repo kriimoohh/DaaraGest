@@ -3,6 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { Select } from '../../components/ui/Select';
+import { Modal } from '../../components/ui/Modal';
+import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { Badge } from '../../components/ui/Badge';
 import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
@@ -33,23 +37,23 @@ interface PersonnelRow {
   personnel: { id: string } | null;
 }
 
-const TYPE_LABELS: Record<TypeAbsence, string> = {
-  CONGE_ANNUEL: 'Congé annuel',
-  MALADIE:      'Maladie',
-  PERMISSION:   'Permission',
-  AUTRE:        'Autre',
+const TYPE_KEYS: Record<TypeAbsence, string> = {
+  CONGE_ANNUEL: 'demande_absence.type_conge',
+  MALADIE:      'demande_absence.type_maladie',
+  PERMISSION:   'demande_absence.type_permission',
+  AUTRE:        'demande_absence.type_autre',
 };
 
-const STATUT_COLORS: Record<StatutDemande, React.CSSProperties> = {
-  EN_ATTENTE: { background: '#fff3cd', color: '#856404' },
-  APPROUVE:   { background: '#d1e7dd', color: '#0f5132' },
-  REFUSE:     { background: '#f8d7da', color: '#842029' },
+const STATUT_KEYS: Record<StatutDemande, string> = {
+  EN_ATTENTE: 'demande_absence.statut_attente',
+  APPROUVE:   'demande_absence.statut_approuve',
+  REFUSE:     'demande_absence.statut_refuse',
 };
 
-const STATUT_LABELS: Record<StatutDemande, string> = {
-  EN_ATTENTE: 'En attente',
-  APPROUVE:   'Approuvé',
-  REFUSE:     'Refusé',
+const STATUT_VARIANTS: Record<StatutDemande, 'warning' | 'success' | 'danger'> = {
+  EN_ATTENTE: 'warning',
+  APPROUVE:   'success',
+  REFUSE:     'danger',
 };
 
 function fmtDate(s: string) {
@@ -71,6 +75,7 @@ export function DemandesAbsencePersonnelPage() {
   const [filtreStatut, setFiltreStatut] = useState<string>('');
   const [showModal, setShowModal] = useState(false);
   const [showTraiterModal, setShowTraiterModal] = useState<{ id: string; action: 'APPROUVE' | 'REFUSE' } | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [commentaire, setCommentaire] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -133,23 +138,25 @@ export function DemandesAbsencePersonnelPage() {
     } finally { setSaving(false); }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm('Supprimer cette demande ?')) return;
+  async function handleDelete() {
+    if (!deleteId) return;
+    setSaving(true);
     try {
-      await api.delete(`/api/v1/demandes-absence-personnel/${id}`);
+      await api.delete(`/api/v1/demandes-absence-personnel/${deleteId}`);
+      setDeleteId(null);
       refresh();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : t('common.erreur', 'Erreur'));
-    }
+    } finally { setSaving(false); }
   }
 
   return (
-    <div style={{ padding: '0 0 40px' }}>
+    <div>
       <PageHeader
         title={t('demande_absence.titre')}
         subtitle={t('demande_absence.subtitle')}
         action={
-          <Button onClick={() => setShowModal(true)}>+ Nouvelle demande</Button>
+          <Button onClick={() => setShowModal(true)}>{t('demande_absence.nouvelle')}</Button>
         }
       />
 
@@ -160,181 +167,182 @@ export function DemandesAbsencePersonnelPage() {
             key={s}
             onClick={() => setFiltreStatut(s)}
             style={{
-              padding: '6px 14px', borderRadius: 20, border: '1.5px solid',
-              cursor: 'pointer', fontSize: 13, fontWeight: filtreStatut === s ? 600 : 400,
-              borderColor: filtreStatut === s ? '#1a5276' : '#ccc',
-              background: filtreStatut === s ? '#1a5276' : '#fff',
-              color: filtreStatut === s ? '#fff' : '#333',
+              padding: '6px 16px', borderRadius: 99, fontSize: 13, fontWeight: 500, border: '1.5px solid',
+              cursor: 'pointer',
+              background: filtreStatut === s ? 'var(--terra)' : 'transparent',
+              borderColor: filtreStatut === s ? 'var(--terra)' : 'var(--rule)',
+              color: filtreStatut === s ? '#fff' : 'var(--ink-3)',
             }}
           >
-            {s === '' ? 'Toutes' : STATUT_LABELS[s]}
+            {s === '' ? t('demande_absence.filtre_toutes') : t(STATUT_KEYS[s])}
           </button>
         ))}
       </div>
 
       {/* Table */}
-      {loading ? <p>{t('demande_absence.chargement')}</p> : error ? <p style={{ color: 'red' }}>{t('demande_absence.err_chargement')}</p> : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ background: '#1a5276', color: '#fff' }}>
-                <th style={{ padding: '10px 12px', textAlign: 'left' }}>{t('demande_absence.col_professeur')}</th>
-                <th style={{ padding: '10px 12px', textAlign: 'left' }}>{t('demande_absence.col_type')}</th>
-                <th style={{ padding: '10px 12px', textAlign: 'left' }}>{t('demande_absence.col_periode')}</th>
-                <th style={{ padding: '10px 12px', textAlign: 'left' }}>{t('demande_absence.col_motif')}</th>
-                <th style={{ padding: '10px 12px', textAlign: 'left' }}>{t('demande_absence.col_statut')}</th>
-                <th style={{ padding: '10px 12px', textAlign: 'left' }}>{t('demande_absence.col_traite_par')}</th>
-                <th style={{ padding: '10px 12px', textAlign: 'left' }}>{t('demande_absence.col_actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: '#777' }}>{t('demande_absence.aucune')}</td></tr>
-              ) : filtered.map((d, i) => (
-                <tr key={d.id} style={{ background: i % 2 === 0 ? '#fff' : '#f9f9f9', borderBottom: '1px solid #eee' }}>
-                  <td style={{ padding: '10px 12px', fontWeight: 600 }}>
-                    {d.personnel.utilisateur.nom_fr} {d.personnel.utilisateur.prenom_fr ?? ''}
-                  </td>
-                  <td style={{ padding: '10px 12px' }}>{TYPE_LABELS[d.type_absence]}</td>
-                  <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
-                    {fmtDate(d.date_debut)} → {fmtDate(d.date_fin)}
-                  </td>
-                  <td style={{ padding: '10px 12px', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {d.motif}
-                  </td>
-                  <td style={{ padding: '10px 12px' }}>
-                    <span style={{ ...STATUT_COLORS[d.statut], padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>
-                      {STATUT_LABELS[d.statut]}
-                    </span>
-                  </td>
-                  <td style={{ padding: '10px 12px', fontSize: 12, color: '#555' }}>
-                    {d.traiteur ? `${d.traiteur.nom_fr} ${d.traiteur.prenom_fr ?? ''}` : '—'}
-                    {d.traite_le ? <><br /><span style={{ color: '#aaa' }}>{fmtDate(d.traite_le)}</span></> : ''}
-                  </td>
-                  <td style={{ padding: '10px 12px' }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {isDirection && d.statut === 'EN_ATTENTE' && (
-                        <>
-                          <button
-                            onClick={() => setShowTraiterModal({ id: d.id, action: 'APPROUVE' })}
-                            style={{ padding: '4px 10px', background: '#0f5132', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}
-                          >{t('demande_absence.approuver_btn')}</button>
-                          <button
-                            onClick={() => setShowTraiterModal({ id: d.id, action: 'REFUSE' })}
-                            style={{ padding: '4px 10px', background: '#842029', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}
-                          >{t('demande_absence.refuser_btn')}</button>
-                        </>
-                      )}
-                      {d.statut === 'EN_ATTENTE' && (
-                        <button
-                          onClick={() => handleDelete(d.id)}
-                          style={{ padding: '4px 10px', background: '#eee', color: '#333', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}
-                        >{t('demande_absence.supprimer_btn')}</button>
-                      )}
-                    </div>
-                  </td>
+      {loading ? (
+        <div className="empty">{t('demande_absence.chargement')}</div>
+      ) : error ? (
+        <div style={{ padding: '10px 14px', background: 'var(--danger-soft)', border: '1px solid var(--danger-border)', borderRadius: 'var(--r-md)', fontSize: 13, color: 'var(--danger-text)' }}>
+          {t('demande_absence.err_chargement')}
+        </div>
+      ) : (
+        <div className="card">
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>{t('demande_absence.col_professeur')}</th>
+                  <th>{t('demande_absence.col_type')}</th>
+                  <th>{t('demande_absence.col_periode')}</th>
+                  <th>{t('demande_absence.col_motif')}</th>
+                  <th>{t('demande_absence.col_statut')}</th>
+                  <th>{t('demande_absence.col_traite_par')}</th>
+                  <th>{t('demande_absence.col_actions')}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Modal: Nouvelle demande */}
-      {showModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: 'var(--card)', borderRadius: 12, padding: 32, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ margin: '0 0 20px', fontSize: 18 }}>{t('demande_absence.nouvelle_titre')}</h3>
-
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>Professeur *</label>
-              <select
-                value={form.personnel_id}
-                onChange={e => setForm(f => ({ ...f, personnel_id: e.target.value }))}
-                style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #ddd', borderRadius: 6, fontSize: 13 }}
-              >
-                <option value="">— Sélectionner —</option>
-                {personnel.filter(p => p.personnel).map(p => (
-                  <option key={p.personnel!.id} value={p.personnel!.id}>
-                    {p.nom_fr} {p.prenom_fr ?? ''}
-                  </option>
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={7}>
+                      <div className="empty">{t('demande_absence.aucune')}</div>
+                    </td>
+                  </tr>
+                ) : filtered.map(d => (
+                  <tr key={d.id}>
+                    <td style={{ fontWeight: 600 }}>
+                      {d.personnel.utilisateur.nom_fr} {d.personnel.utilisateur.prenom_fr ?? ''}
+                    </td>
+                    <td>{t(TYPE_KEYS[d.type_absence])}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      {fmtDate(d.date_debut)} → {fmtDate(d.date_fin)}
+                    </td>
+                    <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {d.motif}
+                    </td>
+                    <td>
+                      <Badge label={t(STATUT_KEYS[d.statut])} variant={STATUT_VARIANTS[d.statut]} />
+                    </td>
+                    <td style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+                      {d.traiteur ? `${d.traiteur.nom_fr} ${d.traiteur.prenom_fr ?? ''}` : '—'}
+                      {d.traite_le ? <><br /><span style={{ color: 'var(--ink-4)' }}>{fmtDate(d.traite_le)}</span></> : ''}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {isDirection && d.statut === 'EN_ATTENTE' && (
+                          <>
+                            <Button size="sm" onClick={() => setShowTraiterModal({ id: d.id, action: 'APPROUVE' })}>
+                              {t('demande_absence.approuver_btn')}
+                            </Button>
+                            <Button size="sm" variant="danger" onClick={() => setShowTraiterModal({ id: d.id, action: 'REFUSE' })}>
+                              {t('demande_absence.refuser_btn')}
+                            </Button>
+                          </>
+                        )}
+                        {d.statut === 'EN_ATTENTE' && (
+                          <Button size="sm" variant="ghost" onClick={() => setDeleteId(d.id)}>
+                            {t('demande_absence.supprimer_btn')}
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
                 ))}
-              </select>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>Date de début *</label>
-                <Input type="date" value={form.date_debut} onChange={e => setForm(f => ({ ...f, date_debut: e.target.value }))} />
-              </div>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>Date de fin *</label>
-                <Input type="date" value={form.date_fin} onChange={e => setForm(f => ({ ...f, date_fin: e.target.value }))} />
-              </div>
-            </div>
-
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>Type d'absence *</label>
-              <select
-                value={form.type_absence}
-                onChange={e => setForm(f => ({ ...f, type_absence: e.target.value as TypeAbsence }))}
-                style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #ddd', borderRadius: 6, fontSize: 13 }}
-              >
-                <option value="CONGE_ANNUEL">{t('demande_absence.type_conge')}</option>
-                <option value="MALADIE">{t('demande_absence.type_maladie')}</option>
-                <option value="PERMISSION">{t('demande_absence.type_permission')}</option>
-                <option value="AUTRE">{t('demande_absence.type_autre')}</option>
-              </select>
-            </div>
-
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>Motif *</label>
-              <textarea
-                value={form.motif}
-                onChange={e => setForm(f => ({ ...f, motif: e.target.value }))}
-                rows={3}
-                style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #ddd', borderRadius: 6, fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }}
-                placeholder={t('demande_absence.motif_placeholder')}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <Button variant="secondary" onClick={() => setShowModal(false)}>{t('actions.annuler')}</Button>
-              <Button onClick={handleSubmit} disabled={saving}>{saving ? 'Enregistrement…' : 'Enregistrer'}</Button>
-            </div>
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
-      {/* Modal: Traiter */}
-      {showTraiterModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: 'var(--card)', borderRadius: 12, padding: 32, width: '100%', maxWidth: 400 }}>
-            <h3 style={{ margin: '0 0 16px', fontSize: 18 }}>
-              {showTraiterModal.action === 'APPROUVE' ? 'Approuver la demande' : 'Refuser la demande'}
-            </h3>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>Commentaire (optionnel)</label>
-              <textarea
-                value={commentaire}
-                onChange={e => setCommentaire(e.target.value)}
-                rows={3}
-                style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #ddd', borderRadius: 6, fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }}
-              />
-            </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <Button variant="secondary" onClick={() => { setShowTraiterModal(null); setCommentaire(''); }}>{t('actions.annuler')}</Button>
-              <Button
-                onClick={handleTraiter}
-                disabled={saving}
-                style={{ background: showTraiterModal.action === 'APPROUVE' ? '#0f5132' : '#842029' }}
-              >
-                {saving ? '…' : showTraiterModal.action === 'APPROUVE' ? "Confirmer l'approbation" : 'Confirmer le refus'}
-              </Button>
-            </div>
+      {/* Modal : nouvelle demande */}
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title={t('demande_absence.nouvelle_titre')}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowModal(false)}>{t('actions.annuler')}</Button>
+            <Button onClick={handleSubmit} loading={saving}>{t('actions.enregistrer')}</Button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <Select
+            label={t('demande_absence.professeur_label')}
+            value={form.personnel_id}
+            onChange={e => setForm(f => ({ ...f, personnel_id: e.target.value }))}
+            placeholder={t('demande_absence.professeur_placeholder')}
+            options={personnel.filter(p => p.personnel).map(p => ({
+              value: p.personnel!.id,
+              label: `${p.nom_fr} ${p.prenom_fr ?? ''}`.trim(),
+            }))}
+          />
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Input label={t('demande_absence.date_debut')} type="date" value={form.date_debut} onChange={e => setForm(f => ({ ...f, date_debut: e.target.value }))} />
+            <Input label={t('demande_absence.date_fin')} type="date" value={form.date_fin} onChange={e => setForm(f => ({ ...f, date_fin: e.target.value }))} />
+          </div>
+
+          <Select
+            label={t('demande_absence.type_label')}
+            value={form.type_absence}
+            onChange={e => setForm(f => ({ ...f, type_absence: e.target.value as TypeAbsence }))}
+            options={(Object.keys(TYPE_KEYS) as TypeAbsence[]).map(k => ({ value: k, label: t(TYPE_KEYS[k]) }))}
+          />
+
+          <div className="field">
+            <label className="field-label" htmlFor="demande-motif">{t('demande_absence.motif_label')}</label>
+            <textarea
+              id="demande-motif"
+              className="input"
+              value={form.motif}
+              onChange={e => setForm(f => ({ ...f, motif: e.target.value }))}
+              rows={3}
+              placeholder={t('demande_absence.motif_placeholder')}
+            />
           </div>
         </div>
-      )}
+      </Modal>
+
+      {/* Modal : traiter (approuver / refuser) */}
+      <Modal
+        isOpen={showTraiterModal !== null}
+        onClose={() => { setShowTraiterModal(null); setCommentaire(''); }}
+        title={showTraiterModal?.action === 'APPROUVE' ? t('demande_absence.approuver_titre') : t('demande_absence.refuser_titre')}
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => { setShowTraiterModal(null); setCommentaire(''); }}>{t('actions.annuler')}</Button>
+            <Button
+              variant={showTraiterModal?.action === 'APPROUVE' ? 'primary' : 'danger'}
+              onClick={handleTraiter}
+              loading={saving}
+            >
+              {showTraiterModal?.action === 'APPROUVE' ? t('demande_absence.approuver_confirm') : t('demande_absence.refuser_confirm')}
+            </Button>
+          </>
+        }
+      >
+        <div className="field">
+          <label className="field-label" htmlFor="demande-commentaire">{t('demande_absence.commentaire_label')}</label>
+          <textarea
+            id="demande-commentaire"
+            className="input"
+            value={commentaire}
+            onChange={e => setCommentaire(e.target.value)}
+            rows={3}
+          />
+        </div>
+      </Modal>
+
+      {/* Confirmation de suppression */}
+      <ConfirmModal
+        isOpen={deleteId !== null}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title={t('demande_absence.confirm_suppression')}
+        loading={saving}
+      />
     </div>
   );
 }

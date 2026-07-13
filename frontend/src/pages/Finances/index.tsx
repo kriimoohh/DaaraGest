@@ -897,7 +897,7 @@ export function FinancesPage() {
           <p style={{ fontSize: 13, color: 'var(--ink-3)', margin: 0 }}>
             Pointez la caméra sur le QR code de la carte scolaire de l'élève.
           </p>
-          <div style={{ background: '#0f172a', borderRadius: 12, overflow: 'hidden', minHeight: 240, position: 'relative' }}>
+          <div style={{ background: '#1B1812', borderRadius: 'var(--r-lg)', overflow: 'hidden', minHeight: 240, position: 'relative' }}>
             <div id="qr-paiement-reader" style={{ width: '100%' }} />
             {!qrStarted && (
               <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
@@ -910,7 +910,7 @@ export function FinancesPage() {
             )}
           </div>
           {qrError && (
-            <div style={{ padding: '8px 12px', background: '#fee2e2', borderRadius: 8, fontSize: 13, color: '#b91c1c' }}>
+            <div style={{ padding: '8px 12px', background: 'var(--danger-soft)', borderRadius: 'var(--r-md)', fontSize: 13, color: 'var(--danger-text)' }}>
               ⚠ {qrError}
             </div>
           )}

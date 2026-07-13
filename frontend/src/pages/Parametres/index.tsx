@@ -373,7 +373,7 @@ function BulletinTemplateEditor() {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <Button variant="ghost" onClick={handlePreview} loading={previewing}>Aperçu</Button>
-          {canEdit && isCustom && <Button variant="ghost" onClick={handleReset} loading={resetting} style={{ color: '#dc2626' }}>Réinitialiser</Button>}
+          {canEdit && isCustom && <Button variant="ghost" onClick={handleReset} loading={resetting} style={{ color: 'var(--danger)' }}>Réinitialiser</Button>}
           {canEdit && <Button onClick={handleSave} loading={saving} disabled={!dirty}>Enregistrer</Button>}
         </div>
       </div>
@@ -2099,7 +2099,7 @@ export function ParametresPage() {
                     <div
                       key={m.id}
                       title={`${m.libelle_fr} : ${m.seuil_min} → ${seuilMax}`}
-                      style={{ width: `${width}%`, background: bgMap[m.couleur] ?? '#888', transition: 'width .3s' }}
+                      style={{ width: `${width}%`, background: bgMap[m.couleur] ?? 'var(--ink-4)', transition: 'width .3s' }}
                     />
                   );
                 })}
@@ -2191,8 +2191,8 @@ export function ParametresPage() {
                         </td>
                         <td>
                           <span style={{
-                            display: 'inline-block', width: 10, height: 10, borderRadius: '50%', marginRight: 6,
-                            background: { success: '#16a34a', info: '#2563eb', warning: '#d97706', error: '#dc2626' }[m.couleur] ?? '#888',
+                            display: 'inline-block', width: 10, height: 10, borderRadius: '50%', marginInlineEnd: 6,
+                            background: { success: 'var(--success-text)', info: 'var(--info-text)', warning: 'var(--warning-text)', error: 'var(--danger-text)' }[m.couleur] ?? 'var(--ink-4)',
                           }} />
                           {COULEUR_OPTIONS.find(c => c.value === m.couleur)?.label.split(' ')[0]}
                         </td>
