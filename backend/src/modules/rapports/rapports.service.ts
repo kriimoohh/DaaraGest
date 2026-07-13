@@ -1118,20 +1118,22 @@ export async function rapportReleveNotes(
   const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:Arial,sans-serif;font-size:8px;color:#000;padding:7mm 8mm;}
+body{font-family:Arial,sans-serif;font-size:10px;color:#000;padding:7mm 8mm;}
 .header{display:flex;justify-content:space-between;margin-bottom:4px;}
-.titre{text-align:center;font-size:11px;font-weight:bold;text-decoration:underline;margin:4px 0;}
-.meta{display:flex;gap:20px;font-size:8.5px;margin-bottom:6px;justify-content:center;}
+.titre{text-align:center;font-size:13px;font-weight:bold;text-decoration:underline;margin:4px 0;}
+.meta{display:flex;gap:20px;font-size:10px;margin-bottom:6px;justify-content:center;}
 table{width:100%;border-collapse:collapse;}
-th,td{border:1px solid #333;padding:2px 2px;text-align:center;font-size:7.5px;}
+thead{display:table-header-group;}
+tr{page-break-inside:avoid;}
+th,td{border:1px solid #333;padding:3px 2px;text-align:center;font-size:9.5px;}
 th{background:#ccc;font-weight:bold;}
-.lbl{text-align:left;font-size:7.5px;}
-.stat-row{background:#ececec;font-style:italic;font-size:7px;}
-.sigs{display:flex;justify-content:space-around;margin-top:8mm;font-weight:bold;font-size:9.5px;}
+.lbl{text-align:left;font-size:9.5px;}
+.stat-row{background:#ececec;font-style:italic;font-size:8.5px;}
+.sigs{display:flex;justify-content:space-around;margin-top:8mm;font-weight:bold;font-size:10.5px;}
 </style></head><body>
 <div class="header">
-  <div style="font-weight:bold;font-size:10px">${esc(etab?.nom_fr ?? '')}</div>
-  <div style="font-size:8.5px">Année scolaire : ${esc(classeRaw.annee_scolaire.libelle)}</div>
+  <div style="font-weight:bold;font-size:12px">${esc(etab?.nom_fr ?? '')}</div>
+  <div style="font-size:10px">Année scolaire : ${esc(classeRaw.annee_scolaire.libelle)}</div>
 </div>
 <div class="titre">RELEVÉ DE NOTES — ${esc(periodeLabel)}</div>
 <div class="meta">

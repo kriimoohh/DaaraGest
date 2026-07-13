@@ -925,11 +925,12 @@ function bodyContent(html: string): string {
  * → garantit « 1 bulletin = 1 page A4 ».
  */
 function wrapBulletinsA4(pageContents: string[], css: string, opts: { policeEchelle?: number } = {}): string {
-  // Échelle de police configurable (Paramètres → Bulletins) appliquée via `zoom` :
-  // agrandit tout le contenu. Sur un bulletin dense, fitToA4 recompresse ensuite
-  // pour tenir sur une page ; sur un bulletin aéré, l'agrandissement est conservé.
+  // Échelle de police configurable (Paramètres → Bulletins), transmise via
+  // `data-zoom` au script fitToA4 de renderPdfHtml : c'est LUI qui applique
+  // l'échelle (transform: scale) en la plafonnant à ce qui tient sur une page.
+  // Ne pas revenir à CSS `zoom` ici : scrollHeight l'ignore et le contenu
+  // agrandi était tronqué en bas de page (cf. FIT_A4_SCRIPT dans browserPool).
   const zoom = Math.min(1.5, Math.max(0.7, (opts.policeEchelle ?? 100) / 100));
-  const zoomCss = zoom !== 1 ? `zoom: ${zoom};` : '';
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><style>
 ${css}
 body { padding: 0; margin: 0 }
@@ -938,10 +939,10 @@ body { padding: 0; margin: 0 }
 /* min-height ≈ hauteur imprimable (277mm ≈ 1046px @96dpi, marge de sécurité)
    + colonne flex : le bulletin remplit la page A4 au lieu de flotter en haut.
    Le pied de page (date + signatures) est poussé en bas via margin-top:auto. */
-.a4-fit { transform-origin: top left; padding: 18px 28px; display: flex; flex-direction: column; min-height: 1040px; ${zoomCss} }
+.a4-fit { transform-origin: top left; padding: 18px 28px; display: flex; flex-direction: column; min-height: 1040px }
 .a4-fit > .footer-date { margin-top: auto }
 </style></head><body>
-${pageContents.map(c => `<div class="a4-page"><div class="a4-fit">${c}</div></div>`).join('\n')}
+${pageContents.map(c => `<div class="a4-page"><div class="a4-fit" data-zoom="${zoom}">${c}</div></div>`).join('\n')}
 </body></html>`;
 }
 

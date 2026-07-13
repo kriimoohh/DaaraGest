@@ -567,7 +567,7 @@ async function buildTableauNotesClasse(
           <th style="min-width:130px;">Prénom &amp; Nom</th>
           ${matieres.map(m => {
             const titre = m.code_court ?? m.nom_fr.slice(0, 12);
-            return `<th title="${escapeHtml(m.nom_fr)}">${escapeHtml(titre)}<br><span style="font-weight:400;font-size:6.5px;">/${m.note_max}</span></th>`;
+            return `<th title="${escapeHtml(m.nom_fr)}">${escapeHtml(titre)}<br><span style="font-weight:400;font-size:8px;">/${m.note_max}</span></th>`;
           }).join('')}
           ${vierge
             ? '<th style="width:42px;">Moy</th><th style="width:42px;">Rang</th><th style="min-width:90px;">Observations</th>'
