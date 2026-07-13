@@ -439,6 +439,44 @@ const DOM_LABELS: Record<string, string> = {
   EVEIL:                'Éveil',
 };
 
+// Ordre canonique d'affichage des domaines dans les grilles.
+const DOM_ORDRE = ['LANGUE_COMMUNICATION', 'MATHEMATIQUES', 'ESVS', 'EPSA', 'RELIGION', 'EVEIL'];
+
+/**
+ * Programme de la classe : matières (ids) et domaines réellement enseignés.
+ * Les grilles se limitaient aux domaines IEF français codés en dur — les
+ * classes arabes (RELIGION, L&C arabe…) sortaient vides — et prenaient les
+ * notes de TOUTES les filières de l'élève (un inscrit FR+AR polluait la
+ * grille FR avec ses notes AR et inversement).
+ */
+async function programmeClasse(classe_id: string): Promise<{
+  matiereIds: Set<string>;
+  domCodes: string[];
+  domLabels: Map<string, string>;
+}> {
+  const rows = await prisma.classeMatiere.findMany({
+    where: { classe_id },
+    include: { matiere: { include: { domaine: true } } },
+  });
+  const matiereIds = new Set(rows.map(r => r.matiere_id));
+  const domLabels = new Map<string, string>();
+  for (const r of rows) {
+    const d = r.matiere.domaine;
+    if (d?.code && !domLabels.has(d.code)) domLabels.set(d.code, DOM_LABELS[d.code] ?? d.nom_fr);
+  }
+  const codes = [...domLabels.keys()].sort((a, b) => {
+    const ia = DOM_ORDRE.indexOf(a); const ib = DOM_ORDRE.indexOf(b);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib) || a.localeCompare(b);
+  });
+  return { matiereIds, domCodes: codes, domLabels };
+}
+
+/** Domaines à afficher : formulaire officiel IEF pour la filière FR, domaines du programme sinon. */
+function domainesGrille(filiereCode: string | undefined, programme: string[], officielsFR: string[]): string[] {
+  if (filiereCode === 'FR') return officielsFR;
+  return programme.length ? programme : officielsFR;
+}
+
 // ─── Rapport Grille IEF (inspection officielle, portrait A4) ─────────────────
 
 export async function rapportGrilleIef(
@@ -450,12 +488,13 @@ export async function rapportGrilleIef(
   const [classeRaw, etab, config] = await Promise.all([
     prisma.classe.findFirst({
       where: { id: classe_id, etablissement_id },
-      include: { niveau: true, annee_scolaire: { select: { libelle: true } } },
+      include: { niveau: true, annee_scolaire: { select: { libelle: true } }, filiere_ref: { select: { code: true } } },
     }),
     prisma.etablissement.findUnique({ where: { id: etablissement_id } }),
     prisma.configNotes.findUnique({ where: { etablissement_id } }),
   ]);
   if (!classeRaw) throw new NotFoundError('Classe introuvable');
+  const programme = await programmeClasse(classe_id);
 
   const [inscriptions, titulaireNom] = await Promise.all([
     fetchInscriptions(classe_id, annee_scolaire_id),
@@ -468,7 +507,9 @@ export async function rapportGrilleIef(
   const periodes = periode && periode > 0 ? [periode] : Array.from({ length: nbPeriodes }, (_, i) => i + 1);
   const seuilMoyenne = baseNote / 2; // seuil de réussite = moitié de l'échelle (ex: 5 sur /10)
 
-  const noteWhere: Record<string, unknown> = { eleve_id: { in: eleveIds }, annee_scolaire_id };
+  // Seules les matières du programme de la classe : pour un élève inscrit dans
+  // deux filières, la grille d'une classe AR ne doit voir que ses notes AR.
+  const noteWhere: Record<string, unknown> = { eleve_id: { in: eleveIds }, annee_scolaire_id, matiere_id: { in: [...programme.matiereIds] } };
   if (periode && periode > 0) noteWhere.periode = periode;
 
   const [notes, absentRecords] = await Promise.all([
@@ -527,7 +568,7 @@ export async function rapportGrilleIef(
   const filles  = inscriptions.filter(i => i.eleve.sexe === 'F');
   const [sG, sF, sT] = [garcons, filles, inscriptions].map(sectionI);
 
-  const domCodes = ['LANGUE_COMMUNICATION', 'MATHEMATIQUES', 'ESVS', 'EPSA'];
+  const domCodes = domainesGrille(classeRaw.filiere_ref?.code, programme.domCodes, ['LANGUE_COMMUNICATION', 'MATHEMATIQUES', 'ESVS', 'EPSA']);
   const periodeLabel = periode && periode > 0 ? `${periode}ème Trimestre` : 'Annuel';
 
   function domRow(label: string, fn: (s: Inscrip[], c: string) => { nbre: number; taux: number }, key: 'nbre' | 'taux', suffix = '') {
@@ -587,7 +628,7 @@ th,td{border:1px solid #000;padding:3px 4px;text-align:center;font-size:9px;}
   <thead>
     <tr>
       <th class="lbl" rowspan="2"></th>
-      ${domCodes.map(dc => `<th colspan="3" class="th-h">${esc(DOM_LABELS[dc] ?? dc)}</th>`).join('')}
+      ${domCodes.map(dc => `<th colspan="3" class="th-h">${esc(programme.domLabels.get(dc) ?? DOM_LABELS[dc] ?? dc)}</th>`).join('')}
     </tr>
     <tr>${domCodes.map(() => '<th>G</th><th>F</th><th>T</th>').join('')}</tr>
   </thead>
@@ -598,7 +639,7 @@ th,td{border:1px solid #000;padding:3px 4px;text-align:center;font-size:9px;}
 </table>
 
 <h3>IV. PROPOSITIONS D'AMÉLIORATION</h3>
-${domCodes.map(dc => `<div class="prop-title">${esc(DOM_LABELS[dc] ?? dc)} :</div><div class="prop-line"></div><div class="prop-line"></div>`).join('')}
+${domCodes.map(dc => `<div class="prop-title">${esc(programme.domLabels.get(dc) ?? DOM_LABELS[dc] ?? dc)} :</div><div class="prop-line"></div><div class="prop-line"></div>`).join('')}
 
 <div class="sigs">
   <div class="sig">LE TESTEUR</div>
@@ -621,11 +662,12 @@ export async function rapportGrillePerformance(
   const [classeRaw, etab] = await Promise.all([
     prisma.classe.findFirst({
       where: { id: classe_id, etablissement_id },
-      include: { niveau: true, annee_scolaire: { select: { libelle: true } } },
+      include: { niveau: true, annee_scolaire: { select: { libelle: true } }, filiere_ref: { select: { code: true } } },
     }),
     prisma.etablissement.findUnique({ where: { id: etablissement_id } }),
   ]);
   if (!classeRaw) throw new NotFoundError('Classe introuvable');
+  const programme = await programmeClasse(classe_id);
 
   const groupeGrille = classeRaw.niveau?.groupe_grille ?? 'AUTRE';
   // Seuils différents selon le groupe de niveau
@@ -636,8 +678,9 @@ export async function rapportGrillePerformance(
   const bandeLabels = isCI_CP
     ? [`< ${seuilBas}/10`, `${seuilBas} et ${seuilHaut}/10`, `Seuil de maîtrise (≥ ${seuilHaut}/10)`]
     : [`< ${seuilBas}/10`, `${seuilBas} et ${seuilHaut}/10`, `Seuil de maîtrise (≥ ${seuilHaut}/10)`];
-  // Domaines (seulement 3 : pas d'EPSA dans ces grilles)
-  const domCodes3 = ['LANGUE_COMMUNICATION', 'MATHEMATIQUES', 'ESVS'];
+  // Filière FR : les 3 domaines du formulaire officiel (pas d'EPSA dans ces
+  // grilles) ; autres filières : les domaines réellement enseignés dans la classe.
+  const domCodes3 = domainesGrille(classeRaw.filiere_ref?.code, programme.domCodes, ['LANGUE_COMMUNICATION', 'MATHEMATIQUES', 'ESVS']);
 
   const [inscriptions, titulaireNom] = await Promise.all([
     fetchInscriptions(classe_id, annee_scolaire_id),
@@ -650,7 +693,8 @@ export async function rapportGrillePerformance(
   const baseNote = Number(cfg?.note_max ?? DEFAULT_NOTE_MAX);
   const periodes = periode && periode > 0 ? [periode] : Array.from({ length: nbPeriodes }, (_, i) => i + 1);
   const baremes = await getBaremesClasseCohorte(classe_id, annee_scolaire_id, periodes, await filieresActivesCodes(etablissement_id), baseNote);
-  const noteWhere: Record<string, unknown> = { eleve_id: { in: eleveIds }, annee_scolaire_id };
+  // Cf. programmeClasse : uniquement les notes des matières de CETTE classe.
+  const noteWhere: Record<string, unknown> = { eleve_id: { in: eleveIds }, annee_scolaire_id, matiere_id: { in: [...programme.matiereIds] } };
   if (periode && periode > 0) noteWhere.periode = periode;
 
   const notes = await prisma.note.findMany({
@@ -760,7 +804,7 @@ export async function rapportGrillePerformance(
   // En-tête du tableau : colonnes domaine + G/F/T (+ Ressources/Compétence pour CE1-CM2)
   const thDomaines = domCodes3.map(dc => {
     const nbCols = isCI_CP ? 3 : 6;
-    return `<th colspan="${nbCols}" class="th-h">${esc(DOM_LABELS[dc] ?? dc)}</th>`;
+    return `<th colspan="${nbCols}" class="th-h">${esc(programme.domLabels.get(dc) ?? DOM_LABELS[dc] ?? dc)}</th>`;
   }).join('');
   const thSubCols = domCodes3.map(() => {
     if (isCI_CP) return '<th>G</th><th>F</th><th>T</th>';
