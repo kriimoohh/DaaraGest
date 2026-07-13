@@ -188,7 +188,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                       </div>
                       <div style={{ fontSize: 12, color: 'var(--ink-3)', textTransform: 'capitalize', marginTop: 3 }}>{role}</div>
                       {user?.identifiant && (
-                        <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--ink-4)', marginTop: 4 }}>@{user.identifiant}</div>
+                        <div dir="ltr" style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--ink-4)', marginTop: 4 }}>@{user.identifiant}</div>
                       )}
                     </div>
                   </div>
@@ -218,7 +218,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                     style={{ fontSize: 13, color: 'var(--terra-ink)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'start' }}
                     onClick={() => setProfilTab('password')}
                   >
-                    {t('profil.changer_mdp')} →
+                    {t('profil.changer_mdp')} <span aria-hidden="true" style={{ display: 'inline-block' }}>{document.documentElement.dir === 'rtl' ? '←' : '→'}</span>
                   </button>
                 </div>
               )}

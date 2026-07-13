@@ -124,6 +124,7 @@ function NiveauMentionsModal({ niveau, noteMax, defaults, api, onClose }: {
   api: ReturnType<typeof useApi>;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [mentions, setMentions] = useState<Mention[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ libelle_fr: '', libelle_ar: '', seuil_min: '', couleur: 'info' as CouleurMention });
@@ -143,17 +144,17 @@ function NiveauMentionsModal({ niveau, noteMax, defaults, api, onClose }: {
 
   const save = async () => {
     const seuil = parseFloat(form.seuil_min);
-    if (!form.libelle_fr.trim()) { toast.error('Libellé requis'); return; }
-    if (isNaN(seuil) || seuil < 0) { toast.error('Seuil invalide (≥ 0)'); return; }
+    if (!form.libelle_fr.trim()) { toast.error(t('parametre.err_libelle_requis')); return; }
+    if (isNaN(seuil) || seuil < 0) { toast.error(t('parametre.err_seuil_invalide')); return; }
     if (seuil >= noteMax) { toast.error(`Le seuil doit être inférieur à ${noteMax}`); return; }
     setSaving(true);
     try {
       const body = { libelle_fr: form.libelle_fr, libelle_ar: form.libelle_ar.trim() || null, seuil_min: seuil, couleur: form.couleur };
       if (editId) await api.patch(`/api/v1/mentions/${editId}`, body);
       else await api.post('/api/v1/mentions', { ...body, niveau_id: niveau.id });
-      toast.success('Enregistré');
+      toast.success(t('parametre.ok_enregistre'));
       reset(); reload();
-    } catch (e) { toast.error((e as Error).message || 'Erreur'); }
+    } catch (e) { toast.error((e as Error).message || t('common.erreur_generique')); }
     finally { setSaving(false); }
   };
 
@@ -170,7 +171,7 @@ function NiveauMentionsModal({ niveau, noteMax, defaults, api, onClose }: {
         <p className="muted" style={{ fontSize: 12, margin: 0 }}>
           Mentions spécifiques à ce niveau. Si aucune n'est définie, le niveau hérite des mentions par défaut de l'établissement (section « Barème des mentions » ci-dessous).
         </p>
-        {loading ? <div className="muted" style={{ fontSize: 13 }}>Chargement…</div> : (
+        {loading ? <div className="muted" style={{ fontSize: 13 }}>{t('common.chargement')}</div> : (
           <>
             {mentions.length === 0 && (
               <div style={{ fontSize: 13, color: 'var(--ink-3)', padding: '8px 12px', background: 'var(--paper-2)', borderRadius: 6, border: '1px solid var(--rule)' }}>
@@ -186,25 +187,25 @@ function NiveauMentionsModal({ niveau, noteMax, defaults, api, onClose }: {
                 </span>
                 <span style={{ display: 'flex', gap: 4 }}>
                   <button className="btn btn-ghost btn-sm" onClick={() => { setEditId(m.id); setForm({ libelle_fr: m.libelle_fr, libelle_ar: m.libelle_ar ?? '', seuil_min: String(m.seuil_min), couleur: m.couleur }); }} title="Modifier">✎</button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => remove(m.id)} title="Supprimer">✕</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => remove(m.id)} title={t('actions.supprimer')} aria-label={t('actions.supprimer')}>✕</button>
                 </span>
               </div>
             ))}
             <div style={{ borderTop: '1px solid var(--rule)', paddingTop: 12, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end' }}>
               <div style={{ flex: '1 1 120px' }}>
-                <Input label="Libellé (FR)" value={form.libelle_fr} onChange={e => setForm(f => ({ ...f, libelle_fr: e.target.value }))} placeholder="Très bien" />
+                <Input label={t('parametre.label_libelle_fr')} value={form.libelle_fr} onChange={e => setForm(f => ({ ...f, libelle_fr: e.target.value }))} placeholder="Très bien" />
               </div>
               <div style={{ flex: '1 1 100px' }}>
-                <Input label="Libellé (AR)" value={form.libelle_ar} onChange={e => setForm(f => ({ ...f, libelle_ar: e.target.value }))} placeholder="ممتاز" style={{ direction: 'rtl' }} />
+                <Input label={t('parametre.label_libelle_ar')} value={form.libelle_ar} onChange={e => setForm(f => ({ ...f, libelle_ar: e.target.value }))} placeholder="ممتاز" style={{ direction: 'rtl' }} />
               </div>
               <div style={{ flex: '0 1 90px' }}>
                 <Input label={`Seuil (/${noteMax})`} type="number" value={form.seuil_min} onChange={e => setForm(f => ({ ...f, seuil_min: e.target.value }))} />
               </div>
               <div style={{ flex: '0 1 100px' }}>
-                <Select label="Couleur" value={form.couleur} onChange={e => setForm(f => ({ ...f, couleur: e.target.value as CouleurMention }))} options={COULEUR_MENTION_OPTIONS} />
+                <Select label={t('parametre.couleur')} value={form.couleur} onChange={e => setForm(f => ({ ...f, couleur: e.target.value as CouleurMention }))} options={COULEUR_MENTION_OPTIONS.map(o => ({ value: o.value, label: t(`parametre.couleur_${o.value}`) }))} />
               </div>
-              <Button size="sm" onClick={save} loading={saving} disabled={!form.libelle_fr.trim()}>{editId ? 'Modifier' : 'Ajouter'}</Button>
-              {editId && <Button size="sm" variant="ghost" onClick={reset}>Annuler</Button>}
+              <Button size="sm" onClick={save} loading={saving} disabled={!form.libelle_fr.trim()}>{editId ? t('actions.modifier') : t('actions.ajouter')}</Button>
+              {editId && <Button size="sm" variant="ghost" onClick={reset}>{t('actions.annuler')}</Button>}
             </div>
           </>
         )}
@@ -286,6 +287,7 @@ function Toggle({ checked, onChange, label, description }: {
 // le moteur remplit les lignes/valeurs calculées. Les libellés à insérer (token +
 // description) viennent du backend. Aperçu rendu côté serveur (données d'exemple).
 function BulletinTemplateEditor() {
+  const { t } = useTranslation();
   const api = useApi();
   const canEdit = useAuthStore(s => ['admin', 'directeur'].includes(s.user?.role ?? ''));
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -307,16 +309,16 @@ function BulletinTemplateEditor() {
     setLoading(true);
     api.get<{ contenu_html: string; is_custom: boolean; placeholders: { token: string; desc: string }[]; types: { type: string; label: string; is_custom: boolean }[] }>(`/api/v1/bulletins/template/${type}`)
       .then(d => { setHtml(d.contenu_html); setIsCustom(d.is_custom); setPlaceholders(d.placeholders); setTypes(d.types); setDirty(false); })
-      .catch(() => toast.error('Impossible de charger le modèle'))
+      .catch(() => toast.error(t('parametre.err_charger_modele')))
       .finally(() => setLoading(false));
   }, [type]);
 
   useEffect(() => { load(); }, [load]);
 
-  const changeType = (t: 'FR' | 'AR' | 'EN' | 'COMBINE' | 'ANNUEL') => {
-    if (t === type) return;
-    if (dirty && !confirm('Des changements ne sont pas enregistrés. Changer de type et les perdre ?')) return;
-    setType(t);
+  const changeType = (next: 'FR' | 'AR' | 'EN' | 'COMBINE' | 'ANNUEL') => {
+    if (next === type) return;
+    if (dirty && !confirm(t('parametre.confirm_perdre_changements'))) return;
+    setType(next);
   };
 
   const insertBloc = (token: string) => {
@@ -335,7 +337,7 @@ function BulletinTemplateEditor() {
       const url = URL.createObjectURL(new Blob([res.html], { type: 'text/html' }));
       window.open(url, '_blank');
       setTimeout(() => URL.revokeObjectURL(url), 30000);
-    } catch (err) { toast.error((err as Error).message || 'Aperçu impossible'); }
+    } catch (err) { toast.error((err as Error).message || t('parametre.err_apercu')); }
     finally { setPreviewing(false); }
   };
 
@@ -343,18 +345,18 @@ function BulletinTemplateEditor() {
     setSaving(true);
     try {
       await api.put(`/api/v1/bulletins/template/${type}`, { contenu_html: html });
-      toast.success('Modèle enregistré'); setDirty(false); setIsCustom(true);
+      toast.success(t('parametre.ok_modele_enregistre')); setDirty(false); setIsCustom(true);
       setTypes(ts => ts.map(x => x.type === type ? { ...x, is_custom: true } : x));
     } catch (err) { toast.error((err as Error).message || 'Erreur'); }
     finally { setSaving(false); }
   };
 
   const handleReset = async () => {
-    if (!confirm('Supprimer le modèle personnalisé de ce type et revenir au modèle par défaut ?')) return;
+    if (!confirm(t('parametre.confirm_reset_modele'))) return;
     setResetting(true);
     try {
       await api.delete(`/api/v1/bulletins/template/${type}/reset`);
-      toast.success('Modèle réinitialisé');
+      toast.success(t('parametre.ok_modele_reinitialise'));
       setTypes(ts => ts.map(x => x.type === type ? { ...x, is_custom: false } : x));
       load();
     } catch (err) { toast.error((err as Error).message || 'Erreur'); }
@@ -373,32 +375,32 @@ function BulletinTemplateEditor() {
           <span className="sub">Un modèle <strong>distinct par type de bulletin</strong> (sélecteur ci-dessous). Modifiez directement le HTML : en-têtes de colonnes, titres, libellés, traductions FR/AR… Les {'{{{lignes}}}'} et valeurs sont calculées. Réinitialisez à tout moment.</span>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <Button variant="ghost" onClick={handlePreview} loading={previewing}>Aperçu</Button>
-          {canEdit && isCustom && <Button variant="ghost" onClick={handleReset} loading={resetting} style={{ color: 'var(--danger)' }}>Réinitialiser</Button>}
-          {canEdit && <Button onClick={handleSave} loading={saving} disabled={!dirty}>Enregistrer</Button>}
+          <Button variant="ghost" onClick={handlePreview} loading={previewing}>{t('actions.apercu')}</Button>
+          {canEdit && isCustom && <Button variant="ghost" onClick={handleReset} loading={resetting} style={{ color: 'var(--danger)' }}>{t('actions.reinitialiser')}</Button>}
+          {canEdit && <Button onClick={handleSave} loading={saving} disabled={!dirty}>{t('actions.enregistrer')}</Button>}
         </div>
       </div>
       <div className="card-pad">
         <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
-          {types.map(t => (
+          {types.map(tp => (
             <button
-              key={t.type}
+              key={tp.type}
               type="button"
-              onClick={() => changeType(t.type as 'FR' | 'AR' | 'EN' | 'COMBINE' | 'ANNUEL')}
+              onClick={() => changeType(tp.type as 'FR' | 'AR' | 'EN' | 'COMBINE' | 'ANNUEL')}
               style={{
                 padding: '6px 12px', borderRadius: 'var(--r-sm)', fontSize: 13, cursor: 'pointer',
-                border: `1px solid ${t.type === type ? 'var(--terra)' : 'var(--rule)'}`,
-                background: t.type === type ? 'var(--terra)' : 'var(--paper-2)',
-                color: t.type === type ? '#fff' : 'var(--ink)',
-                fontWeight: t.type === type ? 600 : 400,
+                border: `1px solid ${tp.type === type ? 'var(--terra)' : 'var(--rule)'}`,
+                background: tp.type === type ? 'var(--terra)' : 'var(--paper-2)',
+                color: tp.type === type ? '#fff' : 'var(--ink)',
+                fontWeight: tp.type === type ? 600 : 400,
               }}
             >
-              {t.label}{t.is_custom && <span style={{ marginInlineStart: 6, fontSize: 11 }} title="Personnalisé">✓</span>}
+              {tp.label}{tp.is_custom && <span style={{ marginInlineStart: 6, fontSize: 11 }} title={t('parametre.personnalise')}>✓</span>}
             </button>
           ))}
         </div>
         {loading ? (
-          <div style={{ padding: 30, textAlign: 'center', color: 'var(--ink-3)', fontSize: 14 }}>Chargement du modèle…</div>
+          <div style={{ padding: 30, textAlign: 'center', color: 'var(--ink-3)', fontSize: 14 }}>{t('parametre.chargement_modele')}</div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 250px', gap: 12, alignItems: 'start' }}>
             <textarea
@@ -496,7 +498,7 @@ function LogoUploader({ value, onChange }: { value: string | undefined; onChange
 
   return (
     <div>
-      <div className="field-label" style={{ marginBottom: 10 }}>Logo de l'établissement</div>
+      <div className="field-label" style={{ marginBottom: 10 }}>{t('parametre.logo_label')}</div>
 
       {value ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -559,7 +561,7 @@ function LogoUploader({ value, onChange }: { value: string | undefined; onChange
           </div>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink-2)' }}>
-              {dragging ? 'Déposez ici' : 'Cliquer ou déposer une image'}
+              {dragging ? t('parametre.dz_depose') : t('parametre.dz_clique')}
             </div>
             <div style={{ fontSize: 12, color: 'var(--ink-4)', marginTop: 3 }}>
               PNG, JPG, SVG, WebP — max 512 Ko
@@ -602,7 +604,7 @@ function ImageFieldUploader({ label, value, onChange }: { label: string; value: 
             <img src={value} alt={label} style={{ maxWidth: '100%', maxHeight: 56, objectFit: 'contain' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
-            <button className="btn btn-secondary btn-sm" type="button" onClick={() => inputRef.current?.click()}>Changer</button>
+            <button className="btn btn-secondary btn-sm" type="button" onClick={() => inputRef.current?.click()}>{t('actions.changer')}</button>
             <button className="btn btn-ghost btn-sm" type="button" onClick={() => onChange(undefined)}>Supprimer</button>
           </div>
         </div>
@@ -779,7 +781,7 @@ export function ParametresPage() {
           });
         }
       })
-      .catch(err => toast.error((err as Error).message || 'Erreur de chargement'))
+      .catch(err => toast.error((err as Error).message || t('common.erreur')))
       .finally(() => setLoading(false));
   }, []);
 
@@ -898,7 +900,7 @@ export function ParametresPage() {
   };
 
   const handleSaveFiliere = async () => {
-    if (!filiereForm.nom_fr.trim()) { toast.error('Le nom (FR) est requis'); return; }
+    if (!filiereForm.nom_fr.trim()) { toast.error(t('parametre.err_nom_fr_requis')); return; }
     setSavingFiliere(true);
     try {
       const payload = {
@@ -911,10 +913,10 @@ export function ParametresPage() {
       };
       if (editFiliere) {
         await api.patch(`/api/v1/filieres/${editFiliere.id}`, payload);
-        toast.success('Filière modifiée');
+        toast.success(t('parametre.ok_filiere_modifiee'));
       } else {
         await api.post('/api/v1/filieres', { code: filiereForm.code, ...payload });
-        toast.success('Filière ajoutée');
+        toast.success(t('parametre.ok_filiere_ajoutee'));
       }
       resetFiliereForm();
       fetchFilieres();
@@ -937,7 +939,7 @@ export function ParametresPage() {
     setDeletingFiliere(true);
     try {
       await api.delete(`/api/v1/filieres/${confirmDeleteFiliere.id}`);
-      toast.success('Filière supprimée');
+      toast.success(t('parametre.ok_filiere_supprimee'));
       setConfirmDeleteFiliere(null);
       fetchFilieres();
     } catch (err) {
@@ -955,8 +957,8 @@ export function ParametresPage() {
 
   const handleSaveMention = async () => {
     const seuil = parseFloat(mentionForm.seuil_min);
-    if (!mentionForm.libelle_fr.trim()) { toast.error('Le libellé est requis'); return; }
-    if (isNaN(seuil) || seuil < 0) { toast.error('Seuil invalide (doit être ≥ 0)'); return; }
+    if (!mentionForm.libelle_fr.trim()) { toast.error(t('parametre.err_libelle_requis')); return; }
+    if (isNaN(seuil) || seuil < 0) { toast.error(t('parametre.err_seuil_invalide')); return; }
     if (config && seuil >= config.note_max) { toast.error(`Le seuil doit être inférieur à la note max (${config.note_max})`); return; }
 
     setSavingMention(true);
@@ -968,7 +970,7 @@ export function ParametresPage() {
           seuil_min:  seuil,
           couleur:    mentionForm.couleur,
         });
-        toast.success('Mention modifiée');
+        toast.success(t('parametre.ok_mention_modifiee'));
       } else {
         await api.post('/api/v1/mentions', {
           libelle_fr: mentionForm.libelle_fr,
@@ -977,7 +979,7 @@ export function ParametresPage() {
           couleur:    mentionForm.couleur,
           filiere_id: mentionFiliere ? (filieres.find(f => f.code === mentionFiliere)?.id ?? null) : null,
         });
-        toast.success('Mention ajoutée');
+        toast.success(t('parametre.ok_mention_ajoutee'));
       }
       resetMentionForm();
       fetchMentions();
@@ -993,7 +995,7 @@ export function ParametresPage() {
     setDeletingMention(true);
     try {
       await api.delete(`/api/v1/mentions/${confirmDeleteMention.id}`);
-      toast.success('Mention supprimée');
+      toast.success(t('parametre.ok_mention_supprimee'));
       setConfirmDeleteMention(null);
       fetchMentions();
     } catch (err) {
@@ -1181,7 +1183,7 @@ export function ParametresPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Configuration" title={t('parametre.titre')} />
+      <PageHeader eyebrow={t('parametre.eyebrow')} title={t('parametre.titre')} />
 
       <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 24, alignItems: 'start' }}>
         {/* Sidebar navigation */}
@@ -1189,9 +1191,9 @@ export function ParametresPage() {
           {([
             { key: 'etablissement', label: t('parametre.etablissement') },
             { key: 'pedagogie', label: t('parametre.pedagogie') },
-            { key: 'filieres', label: 'Filières' },
-            { key: 'niveaux', label: 'Niveaux' },
-            { key: 'fonctions', label: 'Fonctions personnel' },
+            { key: 'filieres', label: t('parametre.tab_filieres') },
+            { key: 'niveaux', label: t('parametre.tab_niveaux') },
+            { key: 'fonctions', label: t('parametre.tab_fonctions') },
             { key: 'bulletins', label: t('parametre.bulletins_section') },
             { key: 'tarifs', label: t('parametre.tarifs') },
             { key: 'compte', label: t('parametre.mon_compte') },
@@ -1238,12 +1240,12 @@ export function ParametresPage() {
                   onChange={v => setEtab(p => p ? { ...p, logo_url: v ?? '' } : p)}
                 />
                 <ImageFieldUploader
-                  label="Signature (directeur)"
+                  label={t('parametre.signature_label')}
                   value={etab.signature_url ?? undefined}
                   onChange={v => setEtab(p => p ? { ...p, signature_url: v ?? '' } : p)}
                 />
                 <ImageFieldUploader
-                  label="Cachet de l'établissement"
+                  label={t('parametre.cachet_label')}
                   value={etab.cachet_url ?? undefined}
                   onChange={v => setEtab(p => p ? { ...p, cachet_url: v ?? '' } : p)}
                 />
@@ -1257,7 +1259,7 @@ export function ParametresPage() {
                 <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                   <div style={{ flex: '0 0 120px' }}>
                     <Input
-                      label="Code matricule"
+                      label={t('parametre.code_matricule')}
                       value={etab.code}
                       maxLength={4}
                       placeholder="ex: FIC"
@@ -1282,7 +1284,7 @@ export function ParametresPage() {
                 </div>
                 <div className="grid-2">
                   <Input
-                    label="Email"
+                    label={t('parametre.email')}
                     type="email"
                     placeholder="ex: contact@ecole.sn"
                     value={etab.email ?? ''}
@@ -1290,13 +1292,13 @@ export function ParametresPage() {
                   />
                   <Input
                     label="N° d'autorisation"
-                    placeholder="Autorisation d'enseigner / d'ouverture"
+                    placeholder={t('parametre.autorisation_ph')}
                     value={etab.numero_autorisation ?? ''}
                     onChange={e => setEtab(p => p ? { ...p, numero_autorisation: e.target.value } : p)}
                   />
                 </div>
                 <Select
-                  label="Directeur / Directrice (Personnel)"
+                  label={t('parametre.directeur_label')}
                   value={etab.directeur_id ?? ''}
                   onChange={e => setEtab(p => p ? { ...p, directeur_id: e.target.value || null } : p)}
                   options={personnelOptions.map(o => ({
@@ -1459,7 +1461,7 @@ export function ParametresPage() {
                             });
                           }}
                         />
-                        {jour.label}
+                        {t(`parametre.jour_${jour.value}`)}
                       </label>
                     );
                   })}
@@ -1502,24 +1504,24 @@ export function ParametresPage() {
       {/* ── Onglet Niveaux ── */}
       {tab === 'niveaux' && (
         <div className="card card-pad">
-          <h3 style={{ marginBottom: 16 }}>Gestion des niveaux</h3>
+          <h3 style={{ marginBottom: 16 }}>{t('parametre.niveaux_titre')}</h3>
 
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 20, flexWrap: 'wrap' }}>
             <Input
-              label="Libellé"
+              label={t('parametre.libelle')}
               value={niveauLibelle}
               onChange={e => setNiveauLibelle(e.target.value)}
               placeholder={t('parametre.ex_niveau')}
             />
             <Input
-              label="Ordre d'affichage"
+              label={t('parametre.ordre_affichage')}
               type="number"
               value={niveauOrdre}
               onChange={e => setNiveauOrdre(e.target.value)}
               placeholder="1"
             />
             <Input
-              label="Échelle (note max)"
+              label={t('parametre.echelle_note_max')}
               type="number"
               value={niveauNoteMax}
               onChange={e => setNiveauNoteMax(e.target.value)}
@@ -1542,7 +1544,7 @@ export function ParametresPage() {
 
           <table className="table">
             <thead>
-              <tr><th>Libellé</th><th>Ordre</th><th style={{ textAlign: 'center' }}>Échelle</th><th></th></tr>
+              <tr><th>{t('parametre.libelle')}</th><th>{t('parametre.col_ordre')}</th><th style={{ textAlign: 'center' }}>{t('parametre.col_echelle')}</th><th></th></tr>
             </thead>
             <tbody>
               {niveaux.map(n => (
@@ -1566,7 +1568,7 @@ export function ParametresPage() {
                 </tr>
               ))}
               {niveaux.length === 0 && (
-                <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Aucun niveau défini</td></tr>
+                <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{t('parametre.aucun_niveau')}</td></tr>
               )}
             </tbody>
           </table>
@@ -1576,7 +1578,7 @@ export function ParametresPage() {
       {/* ── Onglet Filières ── */}
       {tab === 'filieres' && (
         <div className="card card-pad">
-          <h3 style={{ marginBottom: 8 }}>Filières de l'établissement</h3>
+          <h3 style={{ marginBottom: 8 }}>{t('parametre.filieres_titre')}</h3>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
             Les pistes académiques que votre école propose (français, arabe, anglais).
             Une filière utilisée par des classes ou matières ne peut pas être supprimée — désactivez-la à la place.
@@ -1587,7 +1589,7 @@ export function ParametresPage() {
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 20, flexWrap: 'wrap' }}>
               {!editFiliere && (
                 <div>
-                  <label className="field-label">Code</label>
+                  <label className="field-label">{t('parametre.code')}</label>
                   <select
                     className="input"
                     value={filiereForm.code}
@@ -1601,10 +1603,10 @@ export function ParametresPage() {
                   </select>
                 </div>
               )}
-              <Input label="Nom FR" value={filiereForm.nom_fr} onChange={e => setFiliereForm(f => ({ ...f, nom_fr: e.target.value }))} placeholder="Filière anglaise" />
-              <Input label="Nom AR" value={filiereForm.nom_ar} onChange={e => setFiliereForm(f => ({ ...f, nom_ar: e.target.value }))} placeholder="اختياري" style={{ direction: 'rtl' }} />
+              <Input label={t('parametre.nom_fr_label')} value={filiereForm.nom_fr} onChange={e => setFiliereForm(f => ({ ...f, nom_fr: e.target.value }))} placeholder="Filière anglaise" />
+              <Input label={t('parametre.nom_ar_label')} value={filiereForm.nom_ar} onChange={e => setFiliereForm(f => ({ ...f, nom_ar: e.target.value }))} placeholder="اختياري" style={{ direction: 'rtl' }} />
               <div>
-                <label className="field-label">Sens</label>
+                <label className="field-label">{t('parametre.sens')}</label>
                 <select className="input" value={filiereForm.sens_ecriture} onChange={e => setFiliereForm(f => ({ ...f, sens_ecriture: e.target.value as 'LTR' | 'RTL' }))}>
                   <option value="LTR">LTR</option>
                   <option value="RTL">RTL</option>
@@ -1636,9 +1638,9 @@ export function ParametresPage() {
           <table className="table">
             <thead>
               <tr>
-                <th>Code</th><th>Nom</th><th>Langue</th>
-                <th style={{ textAlign: 'center' }}>Classes</th><th style={{ textAlign: 'center' }}>Matières</th>
-                <th style={{ textAlign: 'center' }}>Active</th>{canManageFonctions && <th></th>}
+                <th>{t('parametre.code')}</th><th>{t('parametre.col_nom')}</th><th>{t('parametre.col_langue')}</th>
+                <th style={{ textAlign: 'center' }}>{t('parametre.col_classes')}</th><th style={{ textAlign: 'center' }}>{t('parametre.col_matieres')}</th>
+                <th style={{ textAlign: 'center' }}>{t('parametre.col_active')}</th>{canManageFonctions && <th></th>}
               </tr>
             </thead>
             <tbody>
@@ -1660,7 +1662,7 @@ export function ParametresPage() {
                       {canManageFonctions ? (
                         <button
                           onClick={() => toggleFiliereActif(fi)}
-                          title={fi.actif ? 'Désactiver' : 'Activer'}
+                          title={fi.actif ? t('actions.desactiver') : t('actions.activer')}
                           style={{ cursor: 'pointer', border: 'none', background: 'transparent', fontSize: 16 }}
                         >
                           {fi.actif ? '✅' : '⬜'}
@@ -1672,7 +1674,7 @@ export function ParametresPage() {
                         <span style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
                           <Button size="sm" variant="ghost" onClick={() => openEditFiliere(fi)}>Modifier</Button>
                           {usages > 0 ? (
-                            <span title="Filière utilisée — désactivez-la au lieu de la supprimer" style={{ fontSize: 12, color: 'var(--ink-3)', fontStyle: 'italic', padding: '4px 8px', cursor: 'help' }}>utilisée</span>
+                            <span title={t('parametre.filiere_utilisee')} style={{ fontSize: 12, color: 'var(--ink-3)', fontStyle: 'italic', padding: '4px 8px', cursor: 'help' }}>utilisée</span>
                           ) : (
                             <Button size="sm" variant="danger" onClick={() => setConfirmDeleteFiliere(fi)}>Supprimer</Button>
                           )}
@@ -1683,7 +1685,7 @@ export function ParametresPage() {
                 );
               })}
               {filieres.length === 0 && (
-                <tr><td colSpan={canManageFonctions ? 8 : 7} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Aucune filière configurée</td></tr>
+                <tr><td colSpan={canManageFonctions ? 8 : 7} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{t('parametre.aucune_filiere')}</td></tr>
               )}
             </tbody>
           </table>
@@ -1693,7 +1695,7 @@ export function ParametresPage() {
       {/* ── Onglet Fonctions ── */}
       {tab === 'fonctions' && (
         <div className="card card-pad">
-          <h3 style={{ marginBottom: 8 }}>Fonctions du personnel</h3>
+          <h3 style={{ marginBottom: 8 }}>{t('parametre.fonctions_titre')}</h3>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
             Catalogue des fonctions disponibles pour les membres du personnel.
             Une fonction ayant des agents assignés ne peut pas être supprimée.
@@ -1706,14 +1708,14 @@ export function ParametresPage() {
                   label="Code"
                   value={fonctionCode}
                   onChange={e => setFonctionCode(e.target.value.toUpperCase())}
-                  placeholder="Ex: VEILLEUR_NUIT"
+                  placeholder={t('parametre.code_ph')}
                 />
               )}
               <Input
-                label="Libellé FR"
+                label={t('parametre.libelle_fr_label')}
                 value={fonctionLibelle}
                 onChange={e => setFonctionLibelle(e.target.value)}
-                placeholder="Ex: Veilleur de nuit"
+                placeholder={t('parametre.libelle_fr_ph')}
               />
               <Input
                 label="Ordre"
@@ -1737,7 +1739,7 @@ export function ParametresPage() {
 
           <table className="table">
             <thead>
-              <tr><th>Code</th><th>Libellé FR</th><th>Ordre</th><th style={{ textAlign: 'center' }}>Effectif</th>{canManageFonctions && <th></th>}</tr>
+              <tr><th>{t('parametre.code')}</th><th>{t('parametre.libelle_fr_label')}</th><th>{t('parametre.col_ordre')}</th><th style={{ textAlign: 'center' }}>{t('parametre.col_effectif')}</th>{canManageFonctions && <th></th>}</tr>
             </thead>
             <tbody>
               {fonctions.map(f => (
@@ -1799,7 +1801,7 @@ export function ParametresPage() {
                 </tr>
               ))}
               {fonctions.length === 0 && (
-                <tr><td colSpan={canManageFonctions ? 5 : 4} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Aucune fonction définie</td></tr>
+                <tr><td colSpan={canManageFonctions ? 5 : 4} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{t('parametre.aucune_fonction')}</td></tr>
               )}
             </tbody>
           </table>
@@ -1816,7 +1818,7 @@ export function ParametresPage() {
                 <SectionIcon path="M12 3C9.79 3 8 4.79 8 7s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 10c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                 <div>
                   <h3 style={{ margin: 0 }}>{t('parametre.mon_profil')}</h3>
-                  <span className="sub">Vos informations personnelles. L'identifiant et le rôle ne peuvent pas être modifiés ici.</span>
+                  <span className="sub">{t('parametre.compte_desc')}</span>
                 </div>
               </div>
               <Button onClick={saveCompte} loading={saving === 'compte'}>{t('actions.enregistrer')}</Button>
@@ -2014,7 +2016,7 @@ export function ParametresPage() {
           <div className="card-pad">
             <div className="grid-2">
               <div className="field">
-                <label className="field-label">Texte d'en-tête (FR)</label>
+                <label className="field-label">{t('parametre.entete_fr_label')}</label>
                 <textarea
                   className="input"
                   rows={4}
@@ -2195,7 +2197,7 @@ export function ParametresPage() {
                             display: 'inline-block', width: 10, height: 10, borderRadius: '50%', marginInlineEnd: 6,
                             background: { success: 'var(--success-text)', info: 'var(--info-text)', warning: 'var(--warning-text)', error: 'var(--danger-text)' }[m.couleur] ?? 'var(--ink-4)',
                           }} />
-                          {COULEUR_OPTIONS.find(c => c.value === m.couleur)?.label.split(' ')[0]}
+                          {t(`parametre.couleur_${m.couleur}`)}
                         </td>
                         {canManageFonctions && (
                           <td style={{ textAlign: 'right' }}>
@@ -2261,7 +2263,7 @@ export function ParametresPage() {
               />
             )}
             <Input
-              label="Libellé"
+              label={t('parametre.libelle')}
               value={tarifForm.libelle_fr}
               onChange={e => setTarifForm(f => ({ ...f, libelle_fr: e.target.value }))}
               placeholder="Ex: Frais d'inscription"

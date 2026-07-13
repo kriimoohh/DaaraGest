@@ -451,7 +451,7 @@ export function ElevesPage() {
   }
 
   async function handleBulkInscrire() {
-    if (!bulkInscForm.annee_scolaire_id) { toast.error('Année scolaire requise'); return; }
+    if (!bulkInscForm.annee_scolaire_id) { toast.error(t('eleve.err_annee_requise')); return; }
     setBulkInscSaving(true);
     try {
       const classes = Object.entries(bulkInscForm.classes)
@@ -467,7 +467,7 @@ export function ElevesPage() {
       setBulkInscModal(false);
       fetchEleves();
     } catch (err) {
-      toast.error((err as Error).message || "Erreur lors de l'inscription");
+      toast.error((err as Error).message || t('eleve.err_inscription'));
     } finally {
       setBulkInscSaving(false);
     }
@@ -487,7 +487,7 @@ export function ElevesPage() {
       const data = await api.get<EleveFiche>(`/api/v1/eleves/${eleve.id}`);
       setFicheModal(data);
     } catch {
-      toast.error('Impossible de charger la fiche');
+      toast.error(t('eleve.fiche_err'));
     } finally {
       setFicheLoading(null);
     }
@@ -500,7 +500,7 @@ export function ElevesPage() {
       const data = await api.get<ProgressionData>(`/api/v1/eleves/${eleveId}/progression`);
       setProgression(data);
     } catch {
-      toast.error('Impossible de charger la progression');
+      toast.error(t('eleve.progression_err'));
     } finally {
       setProgressionLoading(false);
     }
@@ -514,14 +514,14 @@ export function ElevesPage() {
     setToggleLoading(eleve.id);
     try {
       await api.patch(`/api/v1/eleves/${eleve.id}/toggle-actif`, {});
-      toast.success(eleve.actif ? 'Élève désactivé' : 'Élève réactivé');
+      toast.success(eleve.actif ? t('eleve.ok_desactive') : t('eleve.ok_reactive'));
       fetchEleves();
       if (ficheModal?.id === eleve.id) {
         const updated = await api.get<EleveFiche>(`/api/v1/eleves/${eleve.id}`);
         setFicheModal(updated);
       }
     } catch {
-      toast.error('Impossible de modifier le statut');
+      toast.error(t('eleve.err_statut'));
     } finally {
       setToggleLoading(null);
     }
@@ -538,7 +538,7 @@ export function ElevesPage() {
       setConfirmDelete(null);
       fetchEleves();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur lors de la suppression');
+      toast.error((err as Error).message || t('eleve.err_suppression'));
     } finally {
       setDeleting(false);
     }
@@ -559,7 +559,7 @@ export function ElevesPage() {
 
   const handleInscrire = async () => {
     if (!inscModal || !inscForm.annee_scolaire_id) {
-      toast.error('Année scolaire requise');
+      toast.error(t('eleve.err_annee_requise'));
       return;
     }
     setInscSaving(true);
@@ -568,10 +568,10 @@ export function ElevesPage() {
         .filter(([, classe_id]) => classe_id)
         .map(([filiere_code, classe_id]) => ({ filiere_code, classe_id }));
       await api.post(`/api/v1/eleves/${inscModal.id}/inscrire`, { annee_scolaire_id: inscForm.annee_scolaire_id, classes });
-      toast.success('Élève inscrit avec succès');
+      toast.success(t('eleve.ok_inscrit'));
       setInscModal(null);
     } catch (err) {
-      toast.error((err as Error).message || "Erreur lors de l'inscription");
+      toast.error((err as Error).message || t('eleve.err_inscription'));
     } finally {
       setInscSaving(false);
     }
@@ -618,7 +618,7 @@ export function ElevesPage() {
       const res = await api.post<{ token: string }>('/api/v1/portail-parent/generer', { eleve_id: eleve.id });
       setPortailUrl(`${window.location.origin}/portail/${res.token}`);
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur lors de la génération du lien');
+      toast.error((err as Error).message || t('eleve.err_portail'));
       setPortailModal(null);
     } finally {
       setPortailLoading(false);
@@ -678,7 +678,7 @@ export function ElevesPage() {
       } else {
         await api.post('/api/v1/eleves', payload);
       }
-      toast.success(editTarget ? 'Élève modifié' : 'Élève créé');
+      toast.success(editTarget ? t('eleve.ok_modifie') : t('eleve.ok_cree'));
       setModalOpen(false);
       fetchEleves();
     } catch (err) {
@@ -720,19 +720,19 @@ export function ElevesPage() {
         );
       },
     },
-    { key: 'matricule', header: 'Matricule', width: '140px', sortable: true },
+    { key: 'matricule', header: t('eleve.matricule'), width: '140px', sortable: true },
     { key: 'nom_fr', header: 'Nom', sortable: true },
-    { key: 'prenom_fr', header: 'Prénom', sortable: true },
+    { key: 'prenom_fr', header: t('eleve.prenom'), sortable: true },
     {
       key: 'sexe',
-      header: 'Sexe',
+      header: t('eleve.sexe'),
       width: '90px',
       sortable: true,
       render: (row) => {
         const e = row as unknown as Eleve;
         return (
           <Badge
-            label={e.sexe === 'M' ? 'Masculin' : 'Féminin'}
+            label={e.sexe === 'M' ? t('eleve.masculin') : t('eleve.feminin')}
             variant={e.sexe === 'M' ? 'info' : 'warning'}
           />
         );
@@ -740,13 +740,13 @@ export function ElevesPage() {
     },
     {
       key: 'date_naissance',
-      header: 'Date de naissance',
+      header: t('eleve.date_naissance'),
       sortable: true,
       render: (row) => formatDate((row as unknown as Eleve).date_naissance, locale),
     },
     {
       key: 'classe_fr',
-      header: 'Classe FR',
+      header: t('eleve.classe_fr_bulk'),
       render: (row) => {
         const e = row as unknown as Eleve;
         return e.inscriptions?.[0]?.classe_fr?.nom_fr ?? '—';
@@ -754,7 +754,7 @@ export function ElevesPage() {
     },
     {
       key: 'classe_ar',
-      header: 'Classe AR',
+      header: t('eleve.classe_ar_bulk'),
       render: (row) => {
         const e = row as unknown as Eleve;
         return e.inscriptions?.[0]?.classe_ar?.nom_fr ?? '—';
@@ -762,7 +762,7 @@ export function ElevesPage() {
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: t('eleve.col_actions'),
       width: '80px',
       render: (row) => {
         const e = row as unknown as Eleve;
@@ -774,14 +774,14 @@ export function ElevesPage() {
           },
           {
             label: carteUniqueLoading === e.id
-              ? 'Génération…'
-              : e.photo_url ? 'Carte ID (CR80)' : 'Carte ID — ajouter une photo d\'abord',
+              ? t('eleve.carte_generation')
+              : e.photo_url ? t('eleve.carte_id_label') : t('eleve.carte_id_photo'),
             icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x={2} y={5} width={20} height={14} rx={2}/><line x1={2} y1={10} x2={22} y2={10}/></svg>,
             onClick: () => handleCarteUnique(e.id),
             disabled: !e.photo_url || carteUniqueLoading === e.id,
           },
           {
-            label: 'Voir QR code',
+            label: t('eleve.voir_qr'),
             icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x={3} y={3} width={7} height={7}/><rect x={14} y={3} width={7} height={7}/><rect x={3} y={14} width={7} height={7}/><path d="M14 14h3v3m0-3h3v3m-3 3h3"/></svg>,
             onClick: () => setQrTarget(e),
           },
@@ -796,12 +796,12 @@ export function ElevesPage() {
             onClick: () => openTransfert(e),
           }] : []),
           ...(canPortail ? [{
-            label: 'Portail parent',
+            label: t('eleve.portail_parent_label'),
             icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>,
             onClick: () => openPortail(e),
           }] : []),
           ...(isGestion ? [{
-            label: e.actif ? 'Désactiver' : 'Réactiver',
+            label: e.actif ? t('eleve.desactiver_action') : t('eleve.reactiver'),
             icon: e.actif
               ? <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx={12} cy={12} r={10}/><line x1={8} y1={12} x2={16} y2={12}/></svg>
               : <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx={12} cy={12} r={10}/><line x1={12} y1={8} x2={12} y2={16}/><line x1={8} y1={12} x2={16} y2={12}/></svg>,
@@ -824,7 +824,7 @@ export function ElevesPage() {
               onClick={() => openFiche(e)}
               loading={ficheLoading === e.id}
               icon={ficheLoading !== e.id ? <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx={12} cy={12} r={3}/></svg> : undefined}
-              title="Fiche élève"
+              title={t('eleve.fiche_apercu')}
             />
             <ActionMenu items={menuItems} />
           </div>
@@ -841,7 +841,7 @@ export function ElevesPage() {
       header: true, skipEmptyLines: true,
       encoding: 'UTF-8',
       complete: (result) => { setImportRows(result.data); setImportModal(true); },
-      error: () => toast.error('Fichier CSV invalide'),
+      error: () => toast.error(t('eleve.import_csv_invalide')),
     });
   };
 
@@ -898,11 +898,11 @@ export function ElevesPage() {
     try {
       await api.put(`/api/v1/eleves/${ficheModal.id}`, { photo_url: dataUrl });
       setFicheModal(f => f ? { ...f, photo_url: dataUrl } : f);
-      toast.success('Photo mise à jour');
+      toast.success(t('eleve.photo_ok'));
       fetchEleves();
     } catch (err) {
       setFicheModal(f => f ? { ...f, photo_url: prevPhoto } : f);
-      toast.error((err as Error).message || 'Erreur upload photo');
+      toast.error((err as Error).message || t('eleve.photo_err_upload'));
     } finally { setPhotoSaving(false); }
   };
 
@@ -913,10 +913,10 @@ export function ElevesPage() {
     try {
       await api.put(`/api/v1/eleves/${ficheModal.id}`, { photo_url: null });
       setFicheModal(f => f ? { ...f, photo_url: undefined } : f);
-      toast.success('Photo supprimée');
+      toast.success(t('eleve.photo_supprimee'));
       fetchEleves();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur suppression photo');
+      toast.error((err as Error).message || t('eleve.photo_err_suppression'));
     } finally { setPhotoSaving(false); }
   };
 
@@ -936,7 +936,7 @@ export function ElevesPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = 'carte_eleve.pdf'; a.click();
       URL.revokeObjectURL(url);
-      toast.success('Carte générée');
+      toast.success(t('eleve.carte_generee'));
     } catch (err) { toast.error((err as Error).message); }
     finally { setCarteUniqueLoading(null); }
   }
@@ -948,7 +948,7 @@ export function ElevesPage() {
     try {
       const inscRes = await api.get<{ data: Eleve[] }>(`/api/v1/eleves?classe_id=${carteLotClasseId}&limit=200`);
       const ids = (inscRes.data ?? []).map(e => e.id);
-      if (!ids.length) { toast.error('Aucun élève dans cette classe'); return; }
+      if (!ids.length) { toast.error(t('eleve.carte_lot_aucun')); return; }
       const res = await fetch(`${API_BASE}/api/v1/documents/generer-lot`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -972,9 +972,9 @@ export function ElevesPage() {
   return (
     <>
       <PageHeader
-          eyebrow="Inscription"
-          title="Élèves"
-          subtitle="Gestion des élèves inscrits"
+          eyebrow={t('eleve.inscription_eyebrow')}
+          title={t('eleve.titre')}
+          subtitle={t('eleve.subtitle')}
           action={
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               <input ref={fileInputRef} type="file" accept=".csv" style={{ display: 'none' }}
@@ -998,8 +998,8 @@ export function ElevesPage() {
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a'); a.href = url; a.download = 'eleves.xlsx'; a.click();
                   URL.revokeObjectURL(url);
-                  toast.success('Export Excel téléchargé');
-                } catch { toast.error('Erreur lors de l\'export'); }
+                  toast.success(t('eleve.export_ok'));
+                } catch { toast.error(t('eleve.err_export')); }
               }}>
                 ⬇ Excel
               </Button>
@@ -1022,7 +1022,7 @@ export function ElevesPage() {
             <SearchInput
               value={search}
               onChange={setSearch}
-              placeholder="Rechercher par nom ou matricule..."
+              placeholder={t('eleve.rechercher_ph', 'Rechercher par nom ou matricule…')}
             />
           </div>
 
@@ -1032,7 +1032,7 @@ export function ElevesPage() {
               value={filterSexe}
               onChange={e => setFilterSexe(e.target.value)}
               options={[
-                { value: '', label: 'Tous' },
+                { value: '', label: t('eleve.tous') },
                 { value: 'M', label: 'Masculin' },
                 { value: 'F', label: 'Féminin' },
               ]}
@@ -1041,24 +1041,24 @@ export function ElevesPage() {
 
           <div style={{ width: 144 }}>
             <Select
-              label="Statut"
+              label={t('eleve.statut_label')}
               value={filterStatut}
               onChange={e => setFilterStatut(e.target.value)}
               options={[
-                { value: '', label: 'Tous' },
-                { value: 'actif', label: 'Actif' },
-                { value: 'inactif', label: 'Inactif' },
+                { value: '', label: t('eleve.tous') },
+                { value: 'actif', label: t('eleve.actif') },
+                { value: 'inactif', label: t('eleve.inactif') },
               ]}
             />
           </div>
 
           <div style={{ width: 192 }}>
             <Select
-              label="Classe"
+              label={t('eleve.classe')}
               value={filterClasse}
               onChange={e => setFilterClasse(e.target.value)}
               options={[
-                { value: '', label: 'Toutes les classes' },
+                { value: '', label: t('eleve.toutes_classes') },
                 ...allClasses.filter(c => !anneeCouranteId || c.annee_scolaire_id === anneeCouranteId).map(c => ({ value: c.id, label: `${c.nom_fr} (${c.filiere})` })),
               ]}
             />
@@ -1066,7 +1066,7 @@ export function ElevesPage() {
 
           <div style={{ width: 112 }}>
             <Select
-              label="Par page"
+              label={t('eleve.par_page')}
               value={String(limit)}
               onChange={e => setLimit(Number(e.target.value))}
               options={PAGE_SIZE_OPTIONS}
@@ -1092,7 +1092,7 @@ export function ElevesPage() {
           columns={columns}
           data={eleves as unknown as Record<string, unknown>[]}
           loading={loading}
-          emptyMessage="Aucun élève trouvé"
+          emptyMessage={t('eleve.aucun_trouve')}
           sortKey={sortBy}
           sortDir={sortDir}
           onSort={handleSort}
@@ -1104,7 +1104,7 @@ export function ElevesPage() {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editTarget ? "Modifier l'élève" : 'Ajouter un élève'}
+        title={editTarget ? t('eleve.modifier_titre') : t('eleve.ajouter')}
         size="lg"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -1127,7 +1127,7 @@ export function ElevesPage() {
             onChange={(e) => setField('sexe', e.target.value)}
             error={formErrors.sexe}
             options={SEXE_OPTIONS}
-            placeholder="Choisir..."
+            placeholder={t('eleve.choisir')}
           />
           <div className="grid-2">
             <Input
@@ -1154,7 +1154,7 @@ export function ElevesPage() {
               label="Lieu de naissance"
               value={form.lieu_naissance}
               onChange={(e) => setField('lieu_naissance', e.target.value)}
-              placeholder="Ex : Dakar"
+              placeholder={t('eleve.lieu_naissance_ph')}
             />
           </div>
           <div className="divider" />
@@ -1170,7 +1170,7 @@ export function ElevesPage() {
               value={form.parent_lien}
               onChange={(e) => setField('parent_lien', e.target.value)}
               options={LIEN_OPTIONS}
-              placeholder="Choisir..."
+              placeholder={t('eleve.choisir')}
             />
           </div>
           <Input
@@ -1181,9 +1181,9 @@ export function ElevesPage() {
             placeholder="77 000 00 00"
           />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingTop: 8 }}>
-            <Button variant="secondary" onClick={() => setModalOpen(false)}>Annuler</Button>
+            <Button variant="secondary" onClick={() => setModalOpen(false)}>{t('actions.annuler')}</Button>
             <Button onClick={handleSubmit} loading={submitting}>
-              {editTarget ? 'Modifier' : 'Ajouter'}
+              {editTarget ? t('actions.modifier') : t('actions.ajouter')}
             </Button>
           </div>
         </div>
@@ -1205,7 +1205,7 @@ export function ElevesPage() {
                 <PhotoPicker onFile={handlePhotoUpload} onError={(m) => toast.error(m)} disabled={photoSaving}>
                   {(openPicker) => (
                     <button type="button" onClick={openPicker} disabled={photoSaving}
-                      aria-label="Modifier la photo de l'élève"
+                      aria-label={t('eleve.photo_aria')}
                       style={{ position: 'relative', width: 80, height: 80, borderRadius: 16, overflow: 'hidden', border: '2px solid var(--rule)', cursor: 'pointer', padding: 0, background: 'transparent' }}>
                       {ficheModal.photo_url
                         ? <img src={ficheModal.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -1245,7 +1245,7 @@ export function ElevesPage() {
 
               {/* QR code inline */}
               <button
-                title="Voir le QR code"
+                title={t('eleve.qr_aria_voir')}
                 onClick={() => setQrTarget(ficheModal)}
                 style={{ flexShrink: 0, padding: 6, borderRadius: 10, border: '1px solid var(--rule)', background: 'var(--paper-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
@@ -1286,8 +1286,8 @@ export function ElevesPage() {
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 24, rowGap: 8 }}>
                         <FicheRow label="Téléphone" value={p.telephone || '—'} />
-                        <FicheRow label="Email" value={p.email || '—'} />
-                        {p.adresse && <FicheRow label="Adresse" value={p.adresse} />}
+                        <FicheRow label={t('eleve.email')} value={p.email || '—'} />
+                        {p.adresse && <FicheRow label={t('eleve.adresse')} value={p.adresse} />}
                       </div>
                     </div>
                   ))}
@@ -1296,14 +1296,14 @@ export function ElevesPage() {
             )}
             {ficheModal.parents.length === 0 && (
               <div style={{ padding: '20px 0', borderBottom: '1px solid var(--rule)' }}>
-                <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--ink-4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Parent / Tuteur</p>
-                <p style={{ fontSize: 13, color: 'var(--ink-4)', fontStyle: 'italic' }}>Aucun parent enregistré</p>
+                <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--ink-4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{t('eleve.parent')}</p>
+                <p style={{ fontSize: 13, color: 'var(--ink-4)', fontStyle: 'italic' }}>{t('eleve.aucun_parent')}</p>
               </div>
             )}
 
             {/* ── Scolarité (inscriptions) ── */}
             <div style={{ padding: '20px 0' }}>
-              <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--ink-4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Scolarité</p>
+              <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--ink-4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>{t('eleve.scolarite')}</p>
               {ficheModal.inscriptions?.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {ficheModal.inscriptions.map(insc => (
@@ -1322,7 +1322,7 @@ export function ElevesPage() {
                           </span>
                         )}
                         {!insc.classe_fr && !insc.classe_ar && (
-                          <span style={{ fontSize: 12, color: 'var(--ink-4)', fontStyle: 'italic' }}>Aucune classe assignée</span>
+                          <span style={{ fontSize: 12, color: 'var(--ink-4)', fontStyle: 'italic' }}>{t('eleve.aucune_classe_assignee')}</span>
                         )}
                       </div>
                       <Badge label={insc.statut} variant={insc.statut === 'actif' ? 'success' : 'neutral'} />
@@ -1330,7 +1330,7 @@ export function ElevesPage() {
                   ))}
                 </div>
               ) : (
-                <p style={{ fontSize: 13, color: 'var(--ink-4)', fontStyle: 'italic' }}>Aucune inscription</p>
+                <p style={{ fontSize: 13, color: 'var(--ink-4)', fontStyle: 'italic' }}>{t('eleve.aucune_inscription')}</p>
               )}
             </div>
 
@@ -1346,13 +1346,13 @@ export function ElevesPage() {
                     if (showProgression) { setShowProgression(false); setProgression(null); }
                     else loadProgression(ficheModal.id);
                   }}>
-                  {showProgression ? 'Masquer' : 'Afficher la progression'}
+                  {showProgression ? t('eleve.masquer') : t('eleve.afficher_progression')}
                 </Button>
               </div>
               {showProgression && progression && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {progression.progression.length === 0 ? (
-                    <p style={{ fontSize: 13, color: 'var(--ink-4)', fontStyle: 'italic' }}>Aucune donnée de progression disponible</p>
+                    <p style={{ fontSize: 13, color: 'var(--ink-4)', fontStyle: 'italic' }}>{t('eleve.aucune_progression')}</p>
                   ) : progression.progression.map((p, i) => (
                     <div key={i} style={{ borderRadius: 'var(--r-lg)', background: 'var(--paper-2)', padding: 16 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
@@ -1372,7 +1372,7 @@ export function ElevesPage() {
                             {b.rang && <span style={{ color: 'var(--ink-4)' }}>(rang {b.rang})</span>}
                           </div>
                         ))}
-                        {p.bulletins.length === 0 && <span style={{ fontStyle: 'italic', color: 'var(--ink-4)' }}>Aucun bulletin annuel</span>}
+                        {p.bulletins.length === 0 && <span style={{ fontStyle: 'italic', color: 'var(--ink-4)' }}>{t('eleve.aucun_bulletin_annuel')}</span>}
                         {p.absences.absents > 0 && (
                           <span style={{ color: 'var(--warning)', marginInlineStart: 'auto' }}>⚠ {p.absences.absents} abs.</span>
                         )}
@@ -1386,7 +1386,7 @@ export function ElevesPage() {
                             color: p.progression_decision.decision === 'admis' ? 'var(--success-text)' : p.progression_decision.decision === 'redoublant' ? 'var(--danger-text)' : 'var(--warning)',
                             border: `1px solid ${p.progression_decision.decision === 'admis' ? 'var(--success-border)' : p.progression_decision.decision === 'redoublant' ? 'var(--danger-border, var(--danger))' : 'var(--warning-border)'}`,
                           }}>
-                            {{ admis: 'Admis', redoublant: 'Redoublant', transfere: 'Transféré', exclu: 'Exclu' }[p.progression_decision.decision] ?? p.progression_decision.decision}
+                            {t(`eleve.decision_${p.progression_decision.decision}`, p.progression_decision.decision)}
                             {!p.progression_decision.validee && ' ·'}
                           </span>
                         )}
@@ -1403,7 +1403,7 @@ export function ElevesPage() {
                 <Button variant={ficheModal.actif ? 'danger' : 'primary'}
                   loading={toggleLoading === ficheModal.id}
                   onClick={() => handleToggleActif(ficheModal)}>
-                  {ficheModal.actif ? "Désactiver l'élève" : "Réactiver l'élève"}
+                  {ficheModal.actif ? t('eleve.desactiver_eleve') : t('eleve.reactiver_eleve')}
                 </Button>
               )}
               <div style={{ display: 'flex', gap: 8, marginInlineStart: 'auto' }}>
@@ -1412,7 +1412,7 @@ export function ElevesPage() {
                     Modifier
                   </Button>
                 )}
-                <Button variant="secondary" onClick={closeFiche}>Fermer</Button>
+                <Button variant="secondary" onClick={closeFiche}>{t('eleve.fermer')}</Button>
               </div>
             </div>
           </div>
@@ -1486,7 +1486,7 @@ export function ElevesPage() {
         onClose={() => setConfirmBulkSupprimer(false)}
         onConfirm={handleBulkSupprimer}
         loading={bulkSupprimant}
-        title="Suppression définitive"
+        title={t('eleve.suppression_def_titre')}
         message={`Supprimer définitivement ${selectedIds.size} élève(s) ? Cette action est irréversible et effacera toutes leurs données (inscriptions, paiements, notes, bulletins).`}
       />
 
@@ -1502,7 +1502,7 @@ export function ElevesPage() {
             Les {selectedIds.size} élèves sélectionnés seront inscrits dans les mêmes classes.
           </p>
           <Select
-            label="Année scolaire"
+            label={t('eleve.annee_scolaire')}
             value={bulkInscForm.annee_scolaire_id}
             onChange={e => setBulkInscForm(f => ({ ...f, annee_scolaire_id: e.target.value, classes: {} }))}
             options={[{ value: '', label: t('common.selectionner') }, ...bulkAnnees.map(a => ({ value: a.id, label: a.libelle }))]}
@@ -1514,7 +1514,7 @@ export function ElevesPage() {
               value={bulkInscForm.classes[fil.code] ?? ''}
               disabled={!bulkInscForm.annee_scolaire_id}
               onChange={e => setBulkInscForm(f => ({ ...f, classes: { ...f.classes, [fil.code]: e.target.value } }))}
-              options={[{ value: '', label: 'Aucune' }, ...bulkClasses.filter(c => c.filiere === fil.code && c.annee_scolaire_id === bulkInscForm.annee_scolaire_id).map(c => ({ value: c.id, label: c.nom_fr }))]}
+              options={[{ value: '', label: t('eleve.aucune') }, ...bulkClasses.filter(c => c.filiere === fil.code && c.annee_scolaire_id === bulkInscForm.annee_scolaire_id).map(c => ({ value: c.id, label: c.nom_fr }))]}
             />
           ))}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingTop: 8 }}>
@@ -1565,7 +1565,7 @@ export function ElevesPage() {
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {portailLoading ? (
-              <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--ink-4)' }}>Génération du lien…</div>
+              <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--ink-4)' }}>{t('eleve.portail_generation')}</div>
             ) : portailUrl ? (
               <>
                 <div style={{ padding: '12px 14px', background: 'var(--indigo-soft)', border: '1px solid var(--indigo)', borderRadius: 'var(--r-md)', fontSize: 12, color: 'var(--indigo-ink)' }}>
@@ -1588,7 +1588,7 @@ export function ElevesPage() {
                       setTimeout(() => setPortailCopied(false), 2000);
                     }}
                   >
-                    {portailCopied ? 'Copié !' : 'Copier'}
+                    {portailCopied ? t('eleve.copie_btn') : t('eleve.copier_btn')}
                   </Button>
                 </div>
               </>
@@ -1604,14 +1604,14 @@ export function ElevesPage() {
       <Modal
         isOpen={importModal}
         onClose={() => { setImportModal(false); setImportRows([]); setImportResult(null); }}
-        title="Importer des élèves (CSV)"
+        title={t('eleve.import_titre')}
         size="lg"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {!importResult ? (
             <>
               <div style={{ padding: 12, background: 'var(--indigo-soft)', border: '1px solid var(--indigo)', borderRadius: 'var(--r-md)', fontSize: 13, color: 'var(--indigo-ink)' }}>
-                <p style={{ fontWeight: 600, marginBottom: 4 }}>Format attendu — colonnes CSV :</p>
+                <p style={{ fontWeight: 600, marginBottom: 4 }}>{t('eleve.import_format')}</p>
                 <code style={{ fontSize: 11, display: 'block', background: 'var(--indigo-soft)', padding: 8, borderRadius: 'var(--r-sm)', marginTop: 4 }}>
                   nom_fr, prenom_fr, date_naissance, sexe, lieu_naissance, parent_nom_fr, parent_lien, parent_telephone
                 </code>
@@ -1638,7 +1638,7 @@ export function ElevesPage() {
               <p style={{ fontSize: 13, color: 'var(--ink-3)' }}>{importRows.length} ligne(s) détectée(s){importRows.length > 10 ? ' (aperçu 10 premières)' : ''}.</p>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
                 <Button variant="secondary" onClick={() => { setImportModal(false); setImportRows([]); }}>{t('actions.annuler')}</Button>
-                <Button onClick={handleImport} loading={importing}>Importer {importRows.length} élève(s)</Button>
+                <Button onClick={handleImport} loading={importing}>{t('eleve.import_n', { count: importRows.length })}</Button>
               </div>
             </>
           ) : (
@@ -1680,15 +1680,15 @@ export function ElevesPage() {
       )}
 
       {/* ── Modal Génération cartes en lot ──────────────────────────────────── */}
-      <Modal isOpen={carteLotModal} onClose={() => setCarteLotModal(false)} title="Générer cartes élèves en lot (CR80)" size="sm">
+      <Modal isOpen={carteLotModal} onClose={() => setCarteLotModal(false)} title={t('eleve.carte_lot_titre')} size="sm">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ padding: '10px 14px', background: 'var(--info-soft)', borderRadius: 8, fontSize: 13, color: 'var(--info-text)' }}>
-            🪪 Génère un PDF multi-pages au format <strong>Evolis Primacy CR80</strong> (85,6 × 54 mm). La photo est obligatoire — les élèves sans photo sont signalés.
+            <span dangerouslySetInnerHTML={{ __html: t('eleve.carte_lot_desc') }} />
           </div>
           <div className="field">
             <label className="field-label">Classe</label>
             <select className="input" value={carteLotClasseId} onChange={e => setCarteLotClasseId(e.target.value)}>
-              <option value="">Sélectionner une classe…</option>
+              <option value="">{t('eleve.carte_lot_classe_ph')}</option>
               {allClasses.filter(c => !anneeCouranteId || c.annee_scolaire_id === anneeCouranteId).map(c => <option key={c.id} value={c.id}>{c.nom_fr} ({c.filiere})</option>)}
             </select>
           </div>
