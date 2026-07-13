@@ -14,6 +14,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Pagination } from '../../components/ui/Pagination';
+import { FiliereBadge } from '../../components/ui/FiliereBadge';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -589,8 +590,8 @@ export function ClassesPage() {
       table { width: 100%; border-collapse: collapse; margin-top: 12px; }
       thead tr { background: #B85433; color: white; }
       thead th { padding: 7px 6px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
-      tbody tr:nth-child(even) { background: #f0fdf4; }
-      tbody tr:hover { background: #DCEBDF; }
+      tbody tr:nth-child(even) { background: #F7F2E7; }
+      
       td { padding: 5px 6px; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
       td:first-child { text-align: center; color: #6b7280; font-size: 10px; font-weight: 600; }
       .mono { font-family: monospace; font-size: 10px; color: #374151; }
@@ -722,7 +723,7 @@ export function ClassesPage() {
         table { width: 100%; border-collapse: collapse; margin-top: 12px; }
         thead tr { background: #B85433; color: white; }
         thead th { padding: 7px 6px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
-        tbody tr:nth-child(even) { background: #f0fdf4; }
+        tbody tr:nth-child(even) { background: #F7F2E7; }
         td { padding: 5px 6px; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
         td:first-child { text-align: center; color: #6b7280; font-size: 10px; font-weight: 600; }
         .mono { font-family: monospace; font-size: 10px; color: #374151; }
@@ -900,10 +901,9 @@ export function ClassesPage() {
                   {(() => {
                     const f = filiereByCode.get(c.filiere);
                     return (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 10px', borderRadius: 99, fontSize: 12, fontWeight: 600, background: f?.couleur ?? 'var(--paper-3)', color: '#1B254A' }}>
-                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#1B254A', opacity: 0.55 }} />
+                      <FiliereBadge couleur={f?.couleur} dot>
                         {f ? nomBilingue(f) : c.filiere}
-                      </span>
+                      </FiliereBadge>
                     );
                   })()}
                   <div className="row gap-2">
