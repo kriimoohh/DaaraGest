@@ -270,7 +270,7 @@ export function RapportsPage() {
                         alignItems: 'flex-start',
                         gap: 10,
                         textAlign: 'start',
-                        transition: 'all .15s',
+                        transition: 'background .15s, color .15s, border-color .15s',
                       }}
                     >
                       <svg width={16} height={16} viewBox="0 0 24 24" fill={selected === r.type ? 'var(--terra)' : 'var(--ink-3)'} style={{ flexShrink: 0, marginTop: 1 }}>

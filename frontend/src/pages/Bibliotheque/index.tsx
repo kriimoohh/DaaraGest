@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { fmtDate as fmtDateApp } from '../../lib/dates';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
@@ -197,7 +198,7 @@ export function BibliothequeePage() {
     return new Date(dateStr) < new Date();
   }
 
-  const fmtDate = (d: string) => new Date(d).toLocaleDateString('fr-FR');
+  const fmtDate = (d: string) => fmtDateApp(d);
 
   return (
     <>
@@ -234,7 +235,7 @@ export function BibliothequeePage() {
               fontWeight: tab === t.key ? 700 : 500,
               fontSize: 13,
               cursor: 'pointer',
-              transition: 'all .15s',
+              transition: 'background .15s, color .15s, border-color .15s',
               marginBottom: -1,
             }}
           >

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import { Badge } from '../../components/ui/Badge';
+import { fmtDate, fmtNumber, monthName } from '../../lib/dates';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -47,9 +48,6 @@ interface PortailData {
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const MOIS_FR = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-
 const TYPE_PAIEMENT_KEY: Record<string, string> = {
   mensualite: 'portail_parent.type_mensualite',
   inscription_fee: 'portail_parent.type_inscription',
@@ -87,7 +85,7 @@ function calcMoyenne(notes: PortailData['notes'], base: number): string {
 }
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  return fmtDate(dateStr, { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 // ── Tab components ─────────────────────────────────────────────────────────────
@@ -213,10 +211,10 @@ function PaiementsTab({ paiements }: { paiements: PortailData['paiements'] }) {
                   {TYPE_PAIEMENT_KEY[p.type] ? t(TYPE_PAIEMENT_KEY[p.type]) : p.type}
                 </td>
                 <td style={{ color: 'var(--ink-3)' }}>
-                  {p.mois && p.annee ? `${MOIS_FR[p.mois]} ${p.annee}` : '—'}
+                  {p.mois && p.annee ? `${monthName(p.mois)} ${p.annee}` : '—'}
                 </td>
                 <td className="num" style={{ fontWeight: 600 }}>
-                  {parseInt(p.montant).toLocaleString('fr-FR')} FCFA
+                  {fmtNumber(parseInt(p.montant))} FCFA
                 </td>
                 <td>
                   <Badge

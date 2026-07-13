@@ -48,6 +48,6 @@ describe('PortailParentPage', () => {
   it('affiche l\'état d\'erreur quand le lien est invalide', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
     renderPortail();
-    expect(await screen.findByText('portail_parent.invalide')).toBeInTheDocument();
+    expect(await screen.findByText('Lien invalide ou expiré')).toBeInTheDocument();
   });
 });

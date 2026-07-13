@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { fmtDate } from '../../lib/dates';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -295,7 +296,7 @@ export function ActivitesPage() {
               <div className="card-pad">
                 <div className="grid-2" style={{ gap: 12 }}>
                   <Select label="Année scolaire" value={anneeId} onChange={e => setAnneeId(e.target.value)}
-                    options={[{ value: '', label: 'Sélectionner...' }, ...annees.map(a => ({ value: a.id, label: a.libelle }))]} />
+                    options={[{ value: '', label: t('common.selectionner') }, ...annees.map(a => ({ value: a.id, label: a.libelle }))]} />
                   <div className="field">
                     <label className="field-label">{t('activite.rechercher_eleve')}</label>
                     <input className="input" value={eleveSearch} onChange={e => setEleveSearch(e.target.value)} placeholder={t('activite.rechercher_eleve_placeholder')} />
@@ -324,7 +325,7 @@ export function ActivitesPage() {
                         <tr key={insc.id}>
                           <td style={{ fontWeight: 500 }}>{insc.eleve.prenom_fr} {insc.eleve.nom_fr}</td>
                           <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-3)' }}>{insc.eleve.matricule}</td>
-                          <td style={{ fontSize: 12, color: 'var(--ink-3)' }}>{new Date(insc.date_inscription).toLocaleDateString('fr-FR')}</td>
+                          <td style={{ fontSize: 12, color: 'var(--ink-3)' }}>{fmtDate(insc.date_inscription)}</td>
                           <td>{canEdit && <button className="tb-btn tb-btn-danger" onClick={() => desinscrireEleve(insc)} title="Désinscrire">✕</button>}</td>
                         </tr>
                       ))}
@@ -348,7 +349,7 @@ export function ActivitesPage() {
                       <div key={s.id} onClick={() => openPresences(s)}
                         style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--rule)', background: activeSeance?.id === s.id ? 'var(--paper-2)' : undefined, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 500 }}>{new Date(s.date).toLocaleDateString('fr-FR')}</div>
+                          <div style={{ fontSize: 13, fontWeight: 500 }}>{fmtDate(s.date)}</div>
                           <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>{s.duree_min ? `${s.duree_min} min` : ''} · {s._count.presences} présences</div>
                         </div>
                         {canEdit && (
@@ -370,7 +371,7 @@ export function ActivitesPage() {
               ) : (
                 <div className="card">
                   <div className="card-hd" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
-                    <span style={{ fontSize: 13, fontWeight: 600 }}>Présences — {new Date(activeSeance.date).toLocaleDateString('fr-FR')}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>Présences — {fmtDate(activeSeance.date)}</span>
                     {canEdit && <Button onClick={savePresences} loading={savingPresences} size="sm">Enregistrer</Button>}
                   </div>
                   {inscriptions.length === 0 ? <div className="empty">Aucun élève inscrit à cette activité</div> : (
@@ -416,7 +417,7 @@ export function ActivitesPage() {
                           <td style={{ fontSize: 12, color: 'var(--ink-3)' }}>{ev?.periode ? `P${ev.periode}` : '—'}</td>
                           <td style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>{ev?.note !== undefined ? `${ev.note}/${noteMax}` : '—'}</td>
                           <td style={{ fontSize: 12, color: 'var(--ink-2)', fontStyle: ev?.appreciation ? 'normal' : 'italic' }}>{ev?.appreciation ?? '—'}</td>
-                          <td>{canEdit && <button className="tb-btn" onClick={() => openEval(insc)} title="Évaluer"><svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/></svg></button>}</td>
+                          <td>{canEdit && <button className="tb-btn" onClick={() => openEval(insc)} title="Évaluer" aria-label="Évaluer"><svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/></svg></button>}</td>
                         </tr>
                       );
                     })}
@@ -482,7 +483,7 @@ export function ActivitesPage() {
                   </div>
                   {canEdit && (
                     <div className="row" style={{ gap: 6, marginTop: 12, justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>
-                      <button className="tb-btn" onClick={() => openEdit(a)} title="Modifier"><svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/></svg></button>
+                      <button className="tb-btn" onClick={() => openEdit(a)} title="Modifier" aria-label="Modifier"><svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/></svg></button>
                       {canDelete && <button className="tb-btn tb-btn-danger" onClick={() => deleteAct(a)} title="Supprimer"><svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>}
                     </div>
                   )}

@@ -8,6 +8,7 @@ import { Modal } from '../../components/ui/Modal';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { Badge } from '../../components/ui/Badge';
 import { useApi } from '../../hooks/useApi';
+import { fmtDate } from '../../lib/dates';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
 
@@ -55,10 +56,6 @@ const STATUT_VARIANTS: Record<StatutDemande, 'warning' | 'success' | 'danger'> =
   APPROUVE:   'success',
   REFUSE:     'danger',
 };
-
-function fmtDate(s: string) {
-  return new Date(s).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
 
 export function DemandesAbsencePersonnelPage() {
   const { t } = useTranslation();

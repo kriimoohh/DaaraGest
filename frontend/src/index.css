@@ -4,6 +4,11 @@
 @tailwind utilities;
 
 :root {
+  /* Widgets natifs (calendriers de date, popups de select, scrollbars,
+     cases à cocher) alignés sur le thème et la marque. */
+  color-scheme: light;
+  accent-color: var(--terra);
+
   /* Surfaces — papier chaud */
   --paper:   #FAF6EE;
   --paper-2: #F3ECDD;
@@ -101,6 +106,8 @@
 }
 
 [data-theme="dark"] {
+  color-scheme: dark;
+
   --paper:   #1B1812;
   --paper-2: #231F18;
   --paper-3: #2C2820;
@@ -535,6 +542,14 @@ html[dir="rtl"] .app { direction: rtl; }
   border-color: var(--terra);
 }
 
+/* Focus clavier universel : tout contrôle interactif sans anneau dédié.
+   :where() garde la spécificité à zéro pour laisser .btn:focus-visible
+   et .input:focus primer. */
+:where(button, a, select, [role="button"], [tabindex], input[type="checkbox"], input[type="radio"]):focus-visible {
+  outline: 2px solid var(--terra);
+  outline-offset: 2px;
+}
+
 /* ─── Badges / Pills ─── */
 .badge {
   display: inline-flex;
@@ -875,8 +890,19 @@ html[dir="rtl"] .app { direction: rtl; }
   .card-hd { padding: 12px 14px !important; flex-wrap: wrap; gap: 8px; }
   .stat-value { font-size: 24px !important; }
   .page-title { font-size: 22px !important; }
-  .topbar { padding-inline: 12px !important; gap: 8px; }
+  .topbar { padding-inline: 10px !important; gap: 6px; }
   .tb-search { display: none; }
+  /* La topbar ne tient pas à 390px avec tout son contenu : on masque le fil
+     d'Ariane (le titre de page est juste dessous) et le nom d'utilisateur
+     (l'avatar suffit), et on compacte les deux sélecteurs. !important requis :
+     ils portent des styles inline. */
+  .crumbs { display: none; }
+  .tb-user-name { display: none; }
+  .tb-annee { width: 104px !important; min-width: 0 !important; padding-inline: 8px 22px !important; }
+  .tb-lang { max-width: 86px; padding-inline: 8px 22px !important; }
+  /* flex-shrink:0 par défaut → la rangée déborderait au lieu de se replier. */
+  .page-actions { flex-wrap: wrap; justify-content: flex-end; flex-shrink: 1; min-width: 0; width: 100%; }
+  .page-actions > div { flex-wrap: wrap; justify-content: flex-end; max-width: 100%; min-width: 0; }
   .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .tbl { min-width: 600px; }
   .tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }

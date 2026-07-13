@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
 
@@ -84,6 +85,7 @@ const TYPE_ICON_COLORS: Record<string, string> = {
 // ── NotificationBell ──────────────────────────────────────────────────────────
 
 export function NotificationBell() {
+  const { t } = useTranslation();
   const api = useApi();
   const [open, setOpen] = useState(false);
   const [notifs, setNotifs] = useState<NotifItem[]>([]);
@@ -166,7 +168,7 @@ export function NotificationBell() {
           position: 'relative',
           transition: 'background 0.15s',
         }}
-        title="Notifications"
+        title={t('notifications.titre')} aria-label={t('notifications.titre')}
       >
         <svg width={20} height={20} viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
@@ -223,7 +225,7 @@ export function NotificationBell() {
             }}
           >
             <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--ink)' }}>
-              Notifications
+              {t('notifications.titre')}
               {unread > 0 && (
                 <span
                   style={{
@@ -251,7 +253,7 @@ export function NotificationBell() {
                   padding: 0,
                 }}
               >
-                {markingAll ? '...' : 'Tout marquer comme lu'}
+                {markingAll ? '…' : t('notifications.tout_lire')}
               </button>
             )}
           </div>
@@ -265,7 +267,7 @@ export function NotificationBell() {
                   fontSize: 13, color: 'var(--ink-4)',
                 }}
               >
-                Aucune notification
+                {t('notifications.aucune')}
               </div>
             ) : (
               notifs.slice(0, 20).map(n => (

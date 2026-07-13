@@ -1,5 +1,6 @@
 import { useState, useEffect, type Dispatch, type SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
+import { fmtDate, monthName, weekdayShortNames } from '../../lib/dates';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -41,13 +42,6 @@ const TYPE_LABELS: Record<string, string> = {
   reunion:   'Réunion',
 };
 
-const MOIS_FR = [
-  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
-];
-
-const JOURS_HEADER = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-
 const GESTION_ROLES = ['admin', 'directeur', 'gestionnaire'];
 
 function formatTypeBadge(type: string): 'success' | 'warning' | 'info' | 'error' | 'neutral' {
@@ -62,7 +56,7 @@ function formatTypeBadge(type: string): 'success' | 'warning' | 'info' | 'error'
 }
 
 function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  return fmtDate(dateStr, { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 // ── Calendar grid helpers ─────────────────────────────────────────────────────
@@ -395,7 +389,7 @@ export function CalendrierPage() {
           </svg>
         </button>
         <div style={{ flex: 1, textAlign: 'center', fontWeight: 600, fontSize: 16, color: 'var(--ink)' }}>
-          {MOIS_FR[month]} {year}
+          {monthName(month + 1, year)} {year}
         </div>
         <button
           onClick={nextMonth}
@@ -439,7 +433,7 @@ export function CalendrierPage() {
                   borderBottom: '1px solid var(--rule)',
                 }}
               >
-                {JOURS_HEADER.map(j => (
+                {weekdayShortNames().map(j => (
                   <div
                     key={j}
                     style={{
@@ -513,15 +507,15 @@ export function CalendrierPage() {
                                   padding: '1px 5px',
                                   borderRadius: 3,
                                   background: ev.couleur + '22',
-                                  borderLeft: `3px solid ${ev.couleur}`,
                                   color: 'var(--ink-2)',
-                                  whiteSpace: 'nowrap',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 4,
                                   fontWeight: 500,
                                 }}
                               >
-                                {ev.titre_fr}
+                                <span style={{ width: 5, height: 5, borderRadius: '50%', background: ev.couleur, flexShrink: 0 }} />
+                                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.titre_fr}</span>
                               </div>
                             ))}
                             {dayEvents.length > 3 && (
@@ -552,7 +546,7 @@ export function CalendrierPage() {
               }}
             >
               <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 10, color: 'var(--ink)' }}>
-                {selectedDay} {MOIS_FR[month]}
+                {selectedDay} {monthName(month + 1, year)}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {selectedDayEvents.map(ev => (
@@ -562,10 +556,12 @@ export function CalendrierPage() {
                       padding: 8,
                       borderRadius: 6,
                       background: ev.couleur + '15',
-                      borderLeft: `3px solid ${ev.couleur}`,
                     }}
                   >
-                    <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--ink)' }}>{ev.titre_fr}</div>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: ev.couleur, flexShrink: 0 }} />
+                      {ev.titre_fr}
+                    </div>
                     {ev.description && (
                       <div style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 2 }}>{ev.description}</div>
                     )}
@@ -599,7 +595,7 @@ export function CalendrierPage() {
       {/* Events list for current month */}
       <div style={{ marginTop: 24 }}>
         <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--ink)', marginBottom: 10 }}>
-          Événements de {MOIS_FR[month]} {year}
+          Événements de {monthName(month + 1, year)} {year}
         </div>
         {monthEvents.length === 0 ? (
           <div className="card empty">Aucun événement ce mois</div>

@@ -35,7 +35,7 @@ export function ToastContainer() {
   if (items.length === 0) return null;
 
   return (
-    <div className="toast-stack">
+    <div className="toast-stack" role="status" aria-live="polite">
       {items.map((t) => (
         <div key={t.id} className="toast">
           <span style={{ color: colorMap[t.type], display: 'flex', flexShrink: 0 }}>{iconMap[t.type]}</span>
