@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl';
 
@@ -19,6 +20,7 @@ const sizeMap: Record<ModalSize, number> = {
 };
 
 export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }: ModalProps) {
+  const { t } = useTranslation();
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
@@ -37,7 +39,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }:
       <div className="modal" style={{ maxWidth: sizeMap[size] }} onClick={e => e.stopPropagation()}>
         <div className="modal-hd">
           <h2>{title}</h2>
-          <button className="tb-btn" onClick={onClose} aria-label="Fermer">
+          <button className="tb-btn" onClick={onClose} aria-label={t('actions.fermer')}>
             <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor">
               <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
             </svg>

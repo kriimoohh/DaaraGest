@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 export interface Column<T> {
   key: string;
@@ -32,9 +33,11 @@ function SkeletonRow({ cols }: { cols: number }) {
 }
 
 export function Table<T extends Record<string, unknown>>({
-  columns, data, loading = false, emptyMessage = 'Aucun résultat',
+  columns, data, loading = false, emptyMessage,
   sortKey, sortDir, onSort,
 }: TableProps<T>) {
+  const { t } = useTranslation();
+  const emptyText = emptyMessage ?? t('common.aucun_resultat');
   return (
     <div className="card">
       <div className="tbl-wrap">
@@ -78,7 +81,7 @@ export function Table<T extends Record<string, unknown>>({
                 ? (
                   <tr>
                     <td colSpan={columns.length}>
-                      <div className="empty">{emptyMessage}</div>
+                      <div className="empty">{emptyText}</div>
                     </td>
                   </tr>
                 )

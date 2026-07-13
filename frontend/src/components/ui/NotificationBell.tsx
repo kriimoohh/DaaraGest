@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
 
@@ -26,12 +27,12 @@ interface NotifResponse {
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return 'à l\'instant';
-  if (minutes < 60) return `il y a ${minutes}min`;
+  if (minutes < 1) return i18n.t('notifications.instant');
+  if (minutes < 60) return i18n.t('notifications.il_y_a_min', { n: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `il y a ${hours}h`;
+  if (hours < 24) return i18n.t('notifications.il_y_a_h', { n: hours });
   const days = Math.floor(hours / 24);
-  return `il y a ${days}j`;
+  return i18n.t('notifications.il_y_a_j', { n: days });
 }
 
 function TypeIcon({ type }: { type: string }) {
@@ -143,9 +144,9 @@ export function NotificationBell() {
       await api.put('/api/v1/notifications/lire-toutes', {});
       setNotifs(prev => prev.map(n => ({ ...n, lu: true })));
       setUnread(0);
-      toast.success('Toutes les notifications marquées comme lues');
+      toast.success(i18n.t('notifications.ok_tout_lu'));
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message || i18n.t('common.erreur_generique'));
     } finally { setMarkingAll(false); }
   };
 

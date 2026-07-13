@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, type ReactNode, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   onFile: (dataUrl: string) => void;
@@ -77,6 +78,7 @@ export function PhotoPicker({
   maxInputBytes = DEFAULT_MAX_INPUT_BYTES,
   children,
 }: Props) {
+  const { t } = useTranslation();
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -196,7 +198,7 @@ export function PhotoPicker({
               textTransform: 'uppercase', letterSpacing: '0.06em',
               margin: '0 4px 8px', fontFamily: 'var(--font-mono)',
             }}>
-              Ajouter une photo
+              {t('photo.ajouter')}
             </h2>
 
             <button
@@ -218,7 +220,7 @@ export function PhotoPicker({
                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                 <circle cx="12" cy="13" r="4" />
               </svg>
-              Prendre une photo
+              {t('photo.prendre')}
             </button>
 
             <button
@@ -241,7 +243,7 @@ export function PhotoPicker({
                 <circle cx="8.5" cy="8.5" r="1.5" />
                 <path d="M21 15l-5-5L5 21" />
               </svg>
-              Choisir depuis la galerie
+              {t('photo.galerie')}
             </button>
 
             <button
@@ -254,7 +256,7 @@ export function PhotoPicker({
                 font: 'inherit',
               }}
             >
-              Annuler
+              {t('actions.annuler')}
             </button>
           </div>
         </div>

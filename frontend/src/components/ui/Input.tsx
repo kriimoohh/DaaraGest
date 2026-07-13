@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -26,6 +27,7 @@ function EyeOffIcon() {
 }
 
 export function Input({ label, error, id, className = '', ...rest }: InputProps) {
+  const { t } = useTranslation();
   const inputId = id ?? label?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
   const [visible, setVisible] = useState(false);
   const isPassword = rest.type === 'password';
@@ -56,8 +58,8 @@ export function Input({ label, error, id, className = '', ...rest }: InputProps)
           <button
             type="button"
             onClick={() => setVisible(v => !v)}
-            aria-label={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-            title={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+            aria-label={visible ? t('input.masquer_mdp') : t('input.afficher_mdp')}
+            title={visible ? t('input.masquer_mdp') : t('input.afficher_mdp')}
             tabIndex={-1}
             style={{
               position: 'absolute',

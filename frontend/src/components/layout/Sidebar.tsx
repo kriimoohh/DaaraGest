@@ -6,15 +6,13 @@ import { api } from '../../lib/api';
 
 const NAV_SECTIONS = [
   {
-    label: 'Accueil',
-    labelAr: 'الرئيسية',
+    groupKey: 'groupe_accueil',
     items: [
       { key: 'accueil', path: '/', roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité', 'professeur', 'pointeur'] },
     ],
   },
   {
-    label: 'Principal',
-    labelAr: 'الرئيسي',
+    groupKey: 'groupe_principal',
     items: [
       { key: 'dashboard',   path: '/dashboard',       roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité', 'professeur', 'pointeur'] },
       { key: 'eleves',      path: '/eleves',           roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'] },
@@ -23,8 +21,7 @@ const NAV_SECTIONS = [
     ],
   },
   {
-    label: 'Pédagogie',
-    labelAr: 'التعليم',
+    groupKey: 'groupe_pedagogie',
     items: [
       { key: 'annees_scolaires',  path: '/annees-scolaires',  roles: ['admin', 'directeur', 'gestionnaire'] },
       { key: 'matieres',          path: '/matieres',           roles: ['admin', 'directeur', 'gestionnaire'] },
@@ -38,16 +35,14 @@ const NAV_SECTIONS = [
     ],
   },
   {
-    label: 'Communication',
-    labelAr: 'التواصل',
+    groupKey: 'groupe_communication',
     items: [
       { key: 'calendrier',  path: '/calendrier',  roles: ['admin', 'directeur', 'gestionnaire', 'professeur', 'agent de scolarité', 'pointeur'] },
       { key: 'messagerie',  path: '/messagerie',  roles: ['admin', 'directeur', 'gestionnaire', 'professeur', 'agent de scolarité', 'pointeur'] },
     ],
   },
   {
-    label: 'Administration',
-    labelAr: 'الإدارة',
+    groupKey: 'groupe_administration',
     items: [
       { key: 'documents',    path: '/documents',    roles: ['admin', 'directeur', 'gestionnaire'] },
       { key: 'rapports',     path: '/rapports',     roles: ['admin', 'directeur', 'gestionnaire'] },
@@ -101,11 +96,10 @@ function NavIcon({ path, size = 16 }: { path: string; size?: number }) {
 }
 
 export function Sidebar() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const location = useLocation();
   const role = user?.role ?? '';
-  const isAr = i18n.language === 'ar';
 
   const [counts, setCounts] = useState<Record<string, number>>({});
 
@@ -142,8 +136,8 @@ export function Sidebar() {
           const visible = section.items.filter(item => item.roles.includes(role));
           if (visible.length === 0) return null;
           return (
-            <div key={section.label} className="sb-section">
-              <div className="sb-section-label">{isAr ? section.labelAr : section.label}</div>
+            <div key={section.groupKey} className="sb-section">
+              <div className="sb-section-label">{t(`nav.${section.groupKey}`)}</div>
               <div>
                 {visible.map(item => {
                   const isActive = item.path === '/' ? location.pathname === '/' : location.pathname === item.path || location.pathname.startsWith(item.path + '/');
