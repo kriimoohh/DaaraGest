@@ -29,7 +29,7 @@ export function LanguageSelect({ onChange, style }: { onChange?: (code: AppLang)
   const current = currentLang(i18n.language);
   return (
     <select
-      className="input"
+      className="input tb-lang"
       value={current}
       onChange={e => {
         const code = e.target.value as AppLang;

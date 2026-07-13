@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { fmtNumber } from '../../lib/dates';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Papa from 'papaparse';
 import { useApi } from '../../hooks/useApi';
@@ -975,7 +976,7 @@ export function ElevesPage() {
           title="Élèves"
           subtitle="Gestion des élèves inscrits"
           action={
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               <input ref={fileInputRef} type="file" accept=".csv" style={{ display: 'none' }}
                 onChange={e => { if (e.target.files?.[0]) handleCsvFile(e.target.files[0]); e.target.value = ''; }} />
               <Button variant="secondary" onClick={() => { setCarteLotClasseId(''); setCarteLotErreurs([]); setCarteLotModal(true); }}>
@@ -1376,7 +1377,7 @@ export function ElevesPage() {
                           <span style={{ color: 'var(--warning)', marginInlineStart: 'auto' }}>⚠ {p.absences.absents} abs.</span>
                         )}
                         {p.total_paiements > 0 && (
-                          <span style={{ color: 'var(--success-text)' }}>{p.total_paiements.toLocaleString('fr-FR')} FCFA</span>
+                          <span style={{ color: 'var(--success-text)' }}>{fmtNumber(p.total_paiements)} FCFA</span>
                         )}
                         {p.progression_decision && (
                           <span style={{
@@ -1504,7 +1505,7 @@ export function ElevesPage() {
             label="Année scolaire"
             value={bulkInscForm.annee_scolaire_id}
             onChange={e => setBulkInscForm(f => ({ ...f, annee_scolaire_id: e.target.value, classes: {} }))}
-            options={[{ value: '', label: 'Sélectionner...' }, ...bulkAnnees.map(a => ({ value: a.id, label: a.libelle }))]}
+            options={[{ value: '', label: t('common.selectionner') }, ...bulkAnnees.map(a => ({ value: a.id, label: a.libelle }))]}
           />
           {filieresActives.map(fil => (
             <Select

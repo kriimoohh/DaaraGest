@@ -47,16 +47,24 @@ export function Table<T extends Record<string, unknown>>({
                 return (
                   <th
                     key={col.key}
-                    onClick={canSort ? () => onSort(col.key) : undefined}
-                    style={{ cursor: canSort ? 'pointer' : undefined, width: col.width }}
+                    aria-sort={isSorted ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
+                    style={{ width: col.width }}
                   >
                     {col.headerRender ? col.headerRender() : canSort ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <button
+                        type="button"
+                        onClick={() => onSort(col.key)}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
+                          background: 'none', border: 'none', padding: 0,
+                          font: 'inherit', color: 'inherit', textTransform: 'inherit', letterSpacing: 'inherit',
+                        }}
+                      >
                         {col.header}
-                        <span style={{ color: isSorted ? 'var(--terra)' : 'var(--ink-4)', fontSize: 10 }}>
+                        <span aria-hidden="true" style={{ color: isSorted ? 'var(--terra)' : 'var(--ink-4)', fontSize: 10 }}>
                           {isSorted ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
                         </span>
-                      </span>
+                      </button>
                     ) : col.header}
                   </th>
                 );

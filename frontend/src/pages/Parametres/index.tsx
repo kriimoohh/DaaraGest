@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { fmtNumber } from '../../lib/dates';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -1438,7 +1439,7 @@ export function ParametresPage() {
                           background: actif ? 'var(--terra-soft)' : 'var(--paper)',
                           color: actif ? 'var(--terra-ink)' : 'var(--ink-3)',
                           cursor: 'pointer', fontSize: 13, fontWeight: actif ? 600 : 400,
-                          transition: 'all 0.15s', userSelect: 'none',
+                          transition: 'background 0.15s, color 0.15s, border-color 0.15s', userSelect: 'none',
                         }}
                       >
                         <input
@@ -1894,7 +1895,7 @@ export function ParametresPage() {
                         fontWeight: langue === l ? 600 : 400,
                         cursor: 'pointer', fontSize: 14,
                         fontFamily: l === 'ar' ? 'var(--font-arabic)' : 'inherit',
-                        transition: 'all 0.15s',
+                        transition: 'background 0.15s, color 0.15s, border-color 0.15s',
                       }}
                     >
                       {l === 'fr' ? 'Français' : l === 'ar' ? 'العربية' : 'English'}
@@ -1921,7 +1922,7 @@ export function ParametresPage() {
                         fontWeight: themeVal === th ? 600 : 400,
                         cursor: 'pointer', fontSize: 14,
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                        transition: 'all 0.15s',
+                        transition: 'background 0.15s, color 0.15s, border-color 0.15s',
                       }}
                     >
                       {th === 'light' ? (
@@ -2335,7 +2336,7 @@ export function ParametresPage() {
                   <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{tarif.code}</td>
                   <td>{tarif.libelle_fr}</td>
                   <td style={{ fontFamily: 'var(--font-mono)' }}>
-                    {Number(tarif.montant_defaut).toLocaleString('fr-FR')} {etab?.devise ?? 'FCFA'}
+                    {fmtNumber(Number(tarif.montant_defaut))} {etab?.devise ?? 'FCFA'}
                   </td>
                   <td style={{ textTransform: 'capitalize' }}>{tarif.periodicite}</td>
                   <td>{tarif.obligatoire ? 'Oui' : 'Non'}</td>
@@ -2522,7 +2523,7 @@ export function ParametresPage() {
                 <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor" style={{ marginInlineEnd: 6 }}>
                   <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
                 </svg>
-                {saving === 'sessions' ? '...' : t('parametre.securite_deconnecter_tout')}
+                {saving === 'sessions' ? '…' : t('parametre.securite_deconnecter_tout')}
               </button>
             </div>
           </div>

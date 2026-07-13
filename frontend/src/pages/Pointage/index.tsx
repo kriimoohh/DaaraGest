@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { fmtDate } from '../../lib/dates';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
@@ -335,7 +336,7 @@ function Historique({ api }: { api: ReturnType<typeof useApi> }) {
                 {records.map(r => (
                   <tr key={r.id}>
                     <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>
-                      {new Date(r.date).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' })}
+                      {fmtDate(r.date, { weekday: 'short', day: '2-digit', month: 'short' })}
                     </td>
                     <td>{r.personnel.utilisateur.nom_fr}</td>
                     <td><Badge label={statutLabel(r.statut)} variant={statutBadge(r.statut)} /></td>

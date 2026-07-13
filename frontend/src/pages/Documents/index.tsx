@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { fmtDate } from '../../lib/dates';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -276,8 +277,8 @@ const VAR_GROUPS: { label: string; vars: { key: string; desc: string }[] }[] = [
   },
 ];
 
-function fmtDate(s: string) {
-  return new Date(s).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+function fmtDateTime(s: string) {
+  return fmtDate(s, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 // ── TypeList sidebar (shared between tabs) ────────────────────────────────────
@@ -868,7 +869,7 @@ export function DocumentsPage() {
                       <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: 'var(--paper-2)', border: '1px solid var(--rule)' }}>{item.destinataire_type}</span>
                     </td>
                     <td style={{ padding: '10px 14px', color: 'var(--ink-3)' }}>{item.utilisateur ? `${item.utilisateur.prenom} ${item.utilisateur.nom}` : '—'}</td>
-                    <td style={{ padding: '10px 14px', color: 'var(--ink-3)', fontSize: 12, whiteSpace: 'nowrap' }}>{fmtDate(item.genere_le)}</td>
+                    <td style={{ padding: '10px 14px', color: 'var(--ink-3)', fontSize: 12, whiteSpace: 'nowrap' }}>{fmtDateTime(item.genere_le)}</td>
                   </tr>
                 ))}
               </tbody>

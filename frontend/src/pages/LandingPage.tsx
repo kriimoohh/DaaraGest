@@ -506,7 +506,7 @@ export function LandingPage() {
           <option value="fr">Français</option>
           <option value="ar">العربية</option>
         </select>
-        <button className="tb-btn" onClick={toggleTheme} title="Changer de thème">
+        <button className="tb-btn" onClick={toggleTheme} title="Changer de thème" aria-label="Changer de thème">
           {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
         </button>
         {isAuthenticated ? (
@@ -616,7 +616,7 @@ export function LandingPage() {
                     fontSize: 13.5,
                     fontWeight: active ? 600 : 500,
                     cursor: 'pointer',
-                    transition: 'all 0.15s',
+                    transition: 'background 0.15s, color 0.15s, border-color 0.15s',
                     fontFamily: 'inherit',
                     lineHeight: 1,
                     minHeight: 36,

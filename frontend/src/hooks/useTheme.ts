@@ -10,6 +10,8 @@ export function useTheme() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme === 'dark' ? 'dark' : 'light';
     document.documentElement.classList.toggle('dark', theme === 'dark');
+    // Barre système / onglet navigateur assortis au fond (--paper).
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#1B1812' : '#FAF6EE');
   }, [theme]);
 
   const toggleTheme = () => {

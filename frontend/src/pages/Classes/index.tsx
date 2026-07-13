@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { fmtDate } from '../../lib/dates';
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
@@ -1447,7 +1448,7 @@ export function ClassesPage() {
                             {e.sexe === 'M' ? 'M' : 'F'}
                           </span>
                         </td>
-                        <td>{e.date_naissance ? new Date(e.date_naissance).toLocaleDateString('fr-FR') : '—'}</td>
+                        <td>{e.date_naissance ? fmtDate(e.date_naissance) : '—'}</td>
                         <td>
                           {e.parents?.[0] ? (
                             <span>{e.parents[0].nom_fr} · {e.parents[0].telephone}</span>

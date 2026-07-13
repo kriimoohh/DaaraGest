@@ -36,10 +36,10 @@ describe('DemandesAbsencePersonnelPage', () => {
     expect(await screen.findByText(/DIOP/)).toBeInTheDocument();
     // Badge de statut harmonisé (classes du design system) — le libellé apparaît
     // aussi dans les pills de filtre, on cible l'élément portant la classe badge.
-    const badge = screen.getAllByText('demande_absence.statut_attente').find(el => el.classList.contains('badge'));
+    const badge = screen.getAllByText('En attente').find(el => el.classList.contains('badge'));
     expect(badge).toHaveClass('badge', 'badge-warning');
     // Actions direction visibles sur une demande en attente
-    expect(screen.getByRole('button', { name: 'demande_absence.approuver_btn' })).toHaveClass('btn');
-    expect(screen.getByRole('button', { name: 'demande_absence.refuser_btn' })).toHaveClass('btn-danger');
+    expect(screen.getByRole('button', { name: 'Approuver' })).toHaveClass('btn');
+    expect(screen.getByRole('button', { name: 'Refuser' })).toHaveClass('btn-danger');
   });
 });

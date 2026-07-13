@@ -695,7 +695,7 @@ export function PersonnelPage() {
           title={t('personnel.titre')}
           subtitle={t('personnel.subtitle')}
           action={
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               <Button variant="secondary" onClick={() => { setCarteLotErreurs([]); setCarteLotModal(true); }}>
                 🪪 {t('personnel.cartes_lot')}
               </Button>

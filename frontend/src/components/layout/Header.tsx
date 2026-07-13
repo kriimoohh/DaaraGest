@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../../hooks/useTheme';
+import { fmtDate } from '../../lib/dates';
 import { useAuthStore } from '../../store/authStore';
 import { useAuth } from '../../hooks/useAuth';
 import { Input } from '../ui/Input';
@@ -138,7 +139,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           style={{ display: 'flex', alignItems: 'center', gap: 8 }}
         >
           <div className="sb-avatar" style={{ width: 28, height: 28, fontSize: 11 }}>{initials || '?'}</div>
-          <span style={{ fontSize: 13, fontWeight: 500, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span className="tb-user-name" style={{ fontSize: 13, fontWeight: 500, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {user?.nom_fr ?? ''}
           </span>
         </button>
@@ -152,7 +153,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           <div className="modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
             <div className="modal-hd">
               <h2>Mon profil</h2>
-              <button className="tb-btn" onClick={() => setProfilOpen(false)}>
+              <button className="tb-btn" onClick={() => setProfilOpen(false)} aria-label={t('actions.fermer')}>
                 <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" /></svg>
               </button>
             </div>
@@ -206,7 +207,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', fontSize: 13 }}>
                         <span style={{ color: 'var(--ink-3)' }}>Dernière connexion</span>
                         <span style={{ fontWeight: 500 }}>
-                          {new Date(user.last_login).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          {fmtDate(user.last_login, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                     )}
