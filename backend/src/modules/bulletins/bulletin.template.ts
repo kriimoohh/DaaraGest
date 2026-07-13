@@ -200,44 +200,44 @@ export const CSS = `
 body { font-family:Arial,'Noto Naskh Arabic',sans-serif;font-size:12.5px;color:#111;padding:18px 28px }
 
 /* ── En-tête ── */
-.header { display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px }
-.header-top { display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px }
-.entete-text { font-size:10.5px;color:#374151;line-height:1.45;flex:1 }
+.header { display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px }
+.header-top { display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:4px }
+.entete-text { font-size:10.5px;color:#374151;line-height:1.3;flex:1 }
 .entete-fr { text-align:left }
 /* Arabe : couleur sombre pour la visibilité, mais graisse NORMALE (le gras
    casse le rendu/chaînage des glyphes arabes) et taille mesurée (pas « grosse »).
    La lisibilité vient surtout de la police Noto Naskh Arabic (cf. @import). */
-.entete-ar { text-align:right;direction:rtl;font-size:11.5px;color:#1f2937;line-height:1.7 }
+.entete-ar { text-align:right;direction:rtl;font-size:11.5px;color:#1f2937;line-height:1.5 }
 .header-logo { flex-shrink:0;align-self:center }
 .school-name-line { text-align:center;font-size:15px;font-weight:bold;color:#0F172A;text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px }
 .school-block { flex:1 }
 .school-name { font-size:15px;font-weight:bold;color:#0F172A;text-transform:uppercase;letter-spacing:.3px }
 .school-name-ar { font-size:13px;color:#374151;direction:rtl;margin-top:2px }
 .header-date { font-size:11px;color:#374151;white-space:nowrap;padding-top:2px }
-.divider { border:none;border-top:2.5px solid #B85433;margin:8px 0 12px }
+.divider { border:none;border-top:2.5px solid #B85433;margin:6px 0 8px }
 
 /* ── Titre principal ── */
-.doc-title-wrap { border:2px solid #0F172A;border-radius:4px;margin-bottom:12px;overflow:hidden }
-.doc-title-main { background:#0F172A;color:#fff;text-align:center;padding:6px 10px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.4px }
+.doc-title-wrap { border:2px solid #0F172A;border-radius:4px;margin-bottom:8px;overflow:hidden }
+.doc-title-main { background:#0F172A;color:#fff;text-align:center;padding:4px 10px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.4px }
 
 /* ── Bandeau contact école ── */
-.school-band { display:flex;justify-content:center;flex-wrap:wrap;gap:4px 18px;font-size:10px;color:#374151;margin-bottom:10px;padding:5px 8px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px }
+.school-band { display:flex;justify-content:center;flex-wrap:wrap;gap:3px 18px;font-size:10px;color:#374151;margin-bottom:7px;padding:3px 8px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px }
 .school-band b { color:#0F172A;font-weight:700 }
 
 /* ── Infos élève ── */
-.student-info { display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;margin-bottom:12px;border:1px solid #d1d5db;border-radius:6px;padding:10px 14px }
+.student-info { display:grid;grid-template-columns:1fr 1fr;gap:4px 20px;margin-bottom:8px;border:1px solid #d1d5db;border-radius:6px;padding:6px 14px }
 .si-row { display:flex;gap:6px;align-items:baseline }
 .si-label { font-weight:700;font-size:11px;white-space:nowrap }
 .si-value { font-size:12px;border-bottom:1px dotted #9ca3af;flex:1;min-width:80px }
 
 /* ── Tableau d'évaluation ── */
-.eval-section { margin-bottom:14px }
-.eval-header { background:#0F172A;color:#fff;text-align:center;padding:5px 8px;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;border-radius:4px 4px 0 0 }
+.eval-section { margin-bottom:9px }
+.eval-header { background:#0F172A;color:#fff;text-align:center;padding:3px 8px;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;border-radius:4px 4px 0 0 }
 table { width:100%;border-collapse:collapse }
 thead { background:#f0fdf4 }
-th { padding:6px 8px;text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:#374151;border-bottom:2px solid #10B981;border-right:1px solid #d1d5db }
+th { padding:4px 8px;text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:#374151;border-bottom:2px solid #10B981;border-right:1px solid #d1d5db }
 th:last-child { border-right:none }
-td { padding:5px 8px;border-bottom:1px solid #e5e7eb;border-right:1px solid #f3f4f6;font-size:12px }
+td { padding:3px 8px;border-bottom:1px solid #e5e7eb;border-right:1px solid #f3f4f6;font-size:12px;line-height:1.25 }
 td:last-child { border-right:none }
 tr:last-child td { border-bottom:none }
 tr:nth-child(even) { background:#f9fafb }
@@ -261,23 +261,23 @@ tr:nth-child(even) { background:#f9fafb }
 .section-ar { background:#ecfdf5;color:#065f46;border:1px solid #10B981;direction:rtl;float:right }
 
 /* ── Résumé (combiné) ── */
-.combined-summary { width:100%;border-collapse:collapse;margin-top:12px;border:1.5px solid #0F172A;border-radius:4px;overflow:hidden }
-.combined-summary th { background:#0F172A;color:#fff;padding:5px 6px;font-size:10.5px;text-align:center;border-right:1px solid #374151;text-transform:uppercase }
-.combined-summary td { padding:5px 6px;text-align:center;font-size:12px;border-right:1px solid #d1d5db;border-top:1px solid #d1d5db }
+.combined-summary { width:100%;border-collapse:collapse;margin-top:8px;border:1.5px solid #0F172A;border-radius:4px;overflow:hidden }
+.combined-summary th { background:#0F172A;color:#fff;padding:3px 6px;font-size:10.5px;text-align:center;border-right:1px solid #374151;text-transform:uppercase }
+.combined-summary td { padding:4px 6px;text-align:center;font-size:12px;border-right:1px solid #d1d5db;border-top:1px solid #d1d5db }
 .combined-summary td:last-child, .combined-summary th:last-child { border-right:none }
 .mention-cell { font-weight:700;font-size:13px }
 .th-ar { font-weight:400;font-size:10px;opacity:1 }
 
 /* ── Boîte appréciation ── */
-.appreciation-box { border:1px solid #e5e7eb;border-radius:6px;padding:8px 12px;background:#fafafa;margin:10px 0 }
+.appreciation-box { border:1px solid #e5e7eb;border-radius:6px;padding:6px 12px;background:#fafafa;margin:8px 0 }
 .appreciation-label { font-size:9.5px;color:#6b7280;text-transform:uppercase;margin-bottom:3px }
 .observation-line { border-bottom:1px solid #d1d5db;min-height:18px;margin-top:8px }
 
 /* ── Pied de page ── */
-.footer-date { text-align:right;font-size:10.5px;color:#374151;margin-top:14px }
+.footer-date { text-align:right;font-size:10.5px;color:#374151;margin-top:8px }
 .footer { display:flex;justify-content:space-between;margin-top:8px;padding-top:10px;border-top:1.5px solid #e5e7eb }
 .signature-box { text-align:center;min-width:110px }
-.signature-line { width:110px;border-bottom:1px solid #374151;margin:26px auto 4px }
+.signature-line { width:110px;border-bottom:1px solid #374151;margin:18px auto 4px }
 .signature-label { font-size:9.5px;color:#374151;font-weight:600 }
 .footer-brand { text-align:center;font-size:9px;color:#9ca3af;align-self:flex-end;padding-bottom:2px }
 .gold-dot { display:inline-block;width:6px;height:6px;border-radius:50%;background:#F59E0B;margin:0 3px }
