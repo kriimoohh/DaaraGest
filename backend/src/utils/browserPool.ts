@@ -40,26 +40,46 @@ async function getBrowser(): Promise<Browser> {
   return browser;
 }
 
-// Réduit (transform: scale) chaque `.a4-fit` dont le contenu dépasse la hauteur
-// imprimable d'une page A4, pour garantir « 1 bulletin = 1 page ». La hauteur
-// imprimable = 297mm - 2×10mm de marges = 277mm ≈ 1046px @96dpi.
-// `transform: scale(s)` réduit AUSSI la largeur → on élargit le bloc d'autant
-// (width = 100/s %) pour qu'une fois réduit il occupe toute la largeur de la
-// page (sinon bande blanche à droite sur les bulletins denses, scale < 1).
+// Met chaque `.a4-fit` à l'échelle (transform: scale) pour garantir
+// « 1 bulletin = 1 page A4 ». La hauteur imprimable = 297mm - 2×10mm de
+// marges = 277mm ≈ 1046px @96dpi.
+//
+// `data-zoom` (Paramètres → Bulletins, échelle de police) est l'agrandissement
+// SOUHAITÉ ; l'échelle effective est plafonnée à « ce qui tient sur la page ».
+// Historiquement l'agrandissement passait par CSS `zoom`, mais scrollHeight ne
+// tient pas compte du zoom (Chromium moderne) : le contenu était mesuré « à
+// 100 % », jugé OK, puis rendu 1,5× plus grand → bas de page tronqué (visible
+// surtout sur les bulletins combinés, les plus hauts). Tout passe désormais
+// par transform: scale, mesuré ici.
+//
+// `transform: scale(s)` change AUSSI la largeur → on donne au bloc une largeur
+// locale de 100/s % (et un min-height local de H/s) pour qu'une fois mis à
+// l'échelle il occupe exactement la page. Comme la largeur locale re-coule le
+// texte, on itère jusqu'à convergence.
 const FIT_A4_SCRIPT = `(() => {
   var PRINTABLE_H = 1046;
   document.querySelectorAll('.a4-page').forEach(function (el) {
     var fit = el.querySelector('.a4-fit');
     if (!fit) return;
-    var h = fit.scrollHeight;
-    if (h > PRINTABLE_H) {
-      var s = PRINTABLE_H / h;
-      fit.style.transformOrigin = 'top left';
-      fit.style.transform = 'scale(' + s + ')';
+    var desired = parseFloat(fit.getAttribute('data-zoom') || '1') || 1;
+    var s = desired;
+    for (var i = 0; i < 4; i++) {
       fit.style.width = (100 / s) + '%';
-      el.style.height = PRINTABLE_H + 'px';
-      el.style.overflow = 'hidden';
+      fit.style.minHeight = (PRINTABLE_H / s) + 'px';
+      var h = fit.scrollHeight;
+      var next = Math.min(desired, PRINTABLE_H / h);
+      if (Math.abs(next - s) < 0.005) { s = next; break; }
+      s = next;
     }
+    if (s === 1) {
+      fit.style.width = '';
+      fit.style.minHeight = '';
+      return;
+    }
+    fit.style.transformOrigin = 'top left';
+    fit.style.transform = 'scale(' + s + ')';
+    el.style.height = PRINTABLE_H + 'px';
+    el.style.overflow = 'hidden';
   });
 })();`;
 
