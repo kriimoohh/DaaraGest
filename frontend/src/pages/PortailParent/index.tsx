@@ -147,7 +147,7 @@ function NotesTab({ notes, bulletins, base }: { notes: PortailData['notes']; bul
                 <thead>
                   <tr>
                     <th>{t('portail_parent.col_matiere')}</th>
-                    <th style={{ textAlign: 'center', width: 100 }}>Note</th>
+                    <th style={{ textAlign: 'center', width: 100 }}>{t('portail_parent.note_th')}</th>
                     <th style={{ textAlign: 'center', width: 80 }}>{t('portail_parent.col_coeff')}</th>
                   </tr>
                 </thead>
@@ -274,7 +274,7 @@ function AbsencesTab({ absences }: { absences: PortailData['absences'] }) {
               </span>
               <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{a.classe.nom_fr}</span>
               <Badge
-                label={a.statut === 'absent' ? t('portail_parent.label_absent') : a.statut === 'retard' ? 'Retard' : a.statut}
+                label={a.statut === 'absent' ? t('portail_parent.label_absent') : a.statut === 'retard' ? t('portail_parent.retard') : a.statut}
                 variant={a.statut === 'absent' ? 'danger' : a.statut === 'retard' ? 'warning' : 'neutral'}
               />
               <Badge label={a.justifiee ? t('portail_parent.justifiees') : t('portail_parent.non_justifiees')} variant={a.justifiee ? 'success' : 'danger'} />
@@ -347,7 +347,7 @@ function EvaluationsFormativesTab({ evaluations }: { evaluations: PortailData['e
                     <th>{t('portail_parent.col_titre')}</th>
                     <th>{t('portail_parent.col_type')}</th>
                     <th>{t('portail_parent.col_date')}</th>
-                    <th style={{ textAlign: 'center' }}>Note</th>
+                    <th style={{ textAlign: 'center' }}>{t('portail_parent.note_th')}</th>
                     <th style={{ textAlign: 'center' }}>{t('portail_parent.col_coeff')}</th>
                   </tr>
                 </thead>

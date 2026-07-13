@@ -48,10 +48,29 @@ export const useAuthStore = create<AuthState>()(
       },
 
       updatePreferences: (langue, theme) => {
-        set((state) => ({
-          globalTheme: theme as 'light' | 'dark',
-          user: state.user ? { ...state.user, langue, theme } : null,
-        }));
+        set((state) => {
+          // Persistance côté serveur (fire-and-forget) : sans cela, le
+          // /auth/me du prochain chargement écrase la préférence locale.
+          // fetch direct pour éviter le cycle d'import avec lib/api.
+          if (state.user) {
+            fetch(`${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/api/v1/auth/profil`, {
+              method: 'PUT',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                nom_fr: state.user.nom_fr,
+                prenom_fr: state.user.prenom_fr ?? null,
+                email: state.user.email ?? null,
+                langue,
+                theme,
+              }),
+            }).catch(() => {});
+          }
+          return {
+            globalTheme: theme as 'light' | 'dark',
+            user: state.user ? { ...state.user, langue, theme } : null,
+          };
+        });
       },
 
       updateProfile: (patch) => {

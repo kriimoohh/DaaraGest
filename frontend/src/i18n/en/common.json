@@ -131,7 +131,8 @@
     "mode_clair": "Light mode",
     "mode_sombre": "Dark mode",
     "activer_clair": "Switch to light mode",
-    "activer_sombre": "Switch to dark mode"
+    "activer_sombre": "Switch to dark mode",
+    "rechercher_aria": "Search (Ctrl+K)"
   },
   "cmd": {
     "eleves_section": "Students",
@@ -370,7 +371,12 @@
     "ok_reactive": "Student reactivated",
     "err_statut": "Could not change status",
     "statut_label": "Status",
-    "rechercher_ph": "Search by name or student ID…"
+    "rechercher_ph": "Search by name or student ID…",
+    "ok_desactive_simple": "Student deactivated",
+    "preview_prenom": "First name",
+    "preview_sexe": "Sex",
+    "classe_label": "Class",
+    "export_excel": "⬇ Excel"
   },
   "classe": {
     "titre": "Classes",
@@ -1160,7 +1166,13 @@
     "qr_pas_eleve": "This QR code is not a student card",
     "qr_camera_err": "Cannot access the camera. Check permissions.",
     "col_brut": "Gross",
-    "retirer": "Remove {{nom}}"
+    "retirer": "Remove {{nom}}",
+    "chargement": "Loading…",
+    "type_label": "Type:",
+    "statut_label": "Status:",
+    "periode_filtre_label": "Period:",
+    "tous_les_mois": "All months",
+    "col_type": "Type"
   },
   "document": {
     "titre": "Administrative documents",
@@ -1357,7 +1369,9 @@
     "etablissement": "School",
     "token_manquant": "Missing token",
     "footer": "DaaraGest — School management system",
-    "chargement": "Loading…"
+    "chargement": "Loading…",
+    "note_th": "Grade",
+    "retard": "Late"
   },
   "calendrier": {
     "titre": "School calendar",
@@ -2087,12 +2101,18 @@
     "ok_mdp_modifie": "Password changed",
     "changement_force_titre": "Password change",
     "changement_force_msg": "For security reasons, you must change your password before continuing.",
-    "ok_mdp_modifie_succes": "Password changed successfully"
+    "ok_mdp_modifie_succes": "Password changed successfully",
+    "modifier_mdp_titre": "Change password"
   },
   "photo": {
     "ajouter": "Add a photo",
     "prendre": "Take a photo",
-    "galerie": "Choose from gallery"
+    "galerie": "Choose from gallery",
+    "err_lecture": "Could not read the file",
+    "err_image": "Unreadable or corrupted image",
+    "err_dimensions": "Invalid image dimensions",
+    "err_canvas": "Canvas unavailable",
+    "traitement": "Processing image…"
   },
   "input": {
     "afficher_mdp": "Show password",

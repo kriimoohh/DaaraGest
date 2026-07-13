@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, type ReactNode, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 
 interface Props {
   onFile: (dataUrl: string) => void;
@@ -25,7 +26,7 @@ async function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error('Lecture du fichier impossible'));
+    reader.onerror = () => reject(new Error(i18n.t('photo.err_lecture')));
     reader.readAsDataURL(file);
   });
 }
@@ -34,7 +35,7 @@ async function decodeImage(dataUrl: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('Image illisible ou corrompue'));
+    img.onerror = () => reject(new Error(i18n.t('photo.err_image')));
     img.src = dataUrl;
   });
 }
@@ -45,13 +46,13 @@ async function resizeImage(file: File, maxSize: number, quality: number): Promis
 
   let w = img.naturalWidth;
   let h = img.naturalHeight;
-  if (w === 0 || h === 0) throw new Error('Dimensions image invalides');
+  if (w === 0 || h === 0) throw new Error(i18n.t('photo.err_dimensions'));
 
   if (w <= maxSize && h <= maxSize) {
     const canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
     const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Canvas indisponible');
+    if (!ctx) throw new Error(i18n.t('photo.err_canvas'));
     ctx.drawImage(img, 0, 0, w, h);
     return canvas.toDataURL('image/jpeg', quality);
   }
@@ -64,7 +65,7 @@ async function resizeImage(file: File, maxSize: number, quality: number): Promis
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Canvas indisponible');
+  if (!ctx) throw new Error(i18n.t('photo.err_canvas'));
   ctx.drawImage(img, 0, 0, w, h);
   return canvas.toDataURL('image/jpeg', quality);
 }
@@ -122,7 +123,7 @@ export function PhotoPicker({
       const dataUrl = await resizeImage(file, maxSize, quality);
       if (mountedRef.current) onFile(dataUrl);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Traitement de l\'image impossible';
+      const msg = err instanceof Error ? err.message : i18n.t('photo.traitement');
       if (mountedRef.current) reportError(msg);
     } finally {
       if (mountedRef.current) setBusy(false);
