@@ -459,7 +459,18 @@
     "override_periode_hint": "اترك \"افتراضي\" لاستخدام إعداد الفصل.",
     "evaluee_defaut": "افتراضي",
     "evaluee_evaluee": "مُقَيَّمة",
-    "evaluee_non_evaluee": "غير مُقَيَّمة"
+    "evaluee_non_evaluee": "غير مُقَيَّمة",
+    "err_deverrouillage": "خطأ أثناء إلغاء القفل",
+    "ok_config_bulletins": "تم تحديث الإعدادات — يجب إعادة إنشاء كشوف النقاط",
+    "err_duplication": "خطأ أثناء النسخ",
+    "select_annee_deverrouiller": "اختر أولاً سنة دراسية لإلغاء القفل",
+    "modifier_evaluee_titre": "تعديل «مُقيَّمة» — {{matiere}}",
+    "override_actif": "تخصيص حسب الفصل مفعّل",
+    "defaut": "افتراضي",
+    "dupliquer_titre": "نسخ إلى شعبة",
+    "filiere_cible": "الشعبة الهدف",
+    "nom_nouvelle_classe": "اسم القسم الجديد (اختياري)",
+    "annuel": "سنوي"
   },
   "annee_scolaire": {
     "titre": "السنوات الدراسية",
@@ -711,7 +722,12 @@
     "preflight_warn_sans_notes": "مواد البرنامج بدون نقاط مُدخَلة",
     "preflight_confirmer": "إصدار {{count}} شهادة",
     "non_evaluee": "غير مُقَيَّمة",
-    "genere_le": "أُنشئ في {{date}}"
+    "genere_le": "أُنشئ في {{date}}",
+    "err_selection_filieres": "اختر شعبة واحدة على الأقل للدمج",
+    "filieres_combiner": "الشعب المراد دمجها",
+    "preflight_sans_note": "بدون درجة مدخلة",
+    "preflight_hors_moyenne": "مواد غير مُقيَّمة (خارج المعدل)",
+    "col_matiere_filiere": "المادة ({{filiere}})"
   },
   "evaluation": {
     "titre": "التقييمات التكوينية",
@@ -875,7 +891,12 @@
     "remarques_placeholder": "ملاحظات، مرجع الشيك…",
     "motif_retenue_placeholder": "مثال: غياب غير مبرر، تسبيق مسترد…",
     "enregistrer_n_eleves": "حفظ ({{count}} تلاميذ)",
-    "tab_eleves_match": "التلميذ: {{prenom}} {{nom}}"
+    "tab_eleves_match": "التلميذ: {{prenom}} {{nom}}",
+    "charger": "تحميل",
+    "qr_pas_eleve": "رمز QR هذا لا يخص تلميذًا",
+    "qr_camera_err": "تعذر الوصول إلى الكاميرا. تحقق من الأذونات.",
+    "col_brut": "الإجمالي",
+    "retirer": "إزالة {{nom}}"
   },
   "parametre": {
     "titre": "الإعدادات",
@@ -1559,7 +1580,23 @@
     "appreciation_placeholder": "مثال: مشاركة جيدة جدًا وروح فريق ممتازة…",
     "present": "حاضر",
     "absent": "غائب",
-    "retard": "متأخر"
+    "retard": "متأخر",
+    "confirm_suppr_seance": "حذف هذه الحصة وحضورها؟",
+    "recherche_en_cours": "جارٍ البحث…",
+    "desinscrire": "إلغاء التسجيل",
+    "seance_select": "اختر حصة لتسجيل الحضور",
+    "col_note20": "الدرجة /20",
+    "date_label": "التاريخ *",
+    "duree_label": "المدة (دقائق)",
+    "duree_ph": "مثال: 90",
+    "periode_opt_label": "الفترة (اختياري)",
+    "appreciation_ph": "مثال: مشاركة ممتازة وروح جماعية",
+    "aucune_creee": "لم يُنشأ أي نشاط",
+    "modifier_titre": "تعديل النشاط",
+    "nom_label": "الاسم *",
+    "nom_ph": "مثال: نادي كرة القدم",
+    "capacite_label": "السعة القصوى",
+    "capacite_ph": "غير محدودة إذا تُركت فارغة"
   },
   "bibliotheque": {
     "titre": "المكتبة",

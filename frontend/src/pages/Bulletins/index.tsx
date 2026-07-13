@@ -239,7 +239,7 @@ export function BulletinsPage() {
   const confirmerGeneration = async () => {
     if (!preflight || !classeId || !anneeId) return;
     if (filiere === 'COMBINE' && combineFilieres.length === 0) {
-      toast.error('Sélectionnez au moins une filière à combiner');
+      toast.error(t('bulletin.err_selection_filieres'));
       return;
     }
     setGenerating(true);
@@ -273,7 +273,7 @@ export function BulletinsPage() {
         `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/api/v1/bulletins/${b.id}/pdf`,
         { credentials: 'include' }
       );
-      if (!resp.ok) throw new Error('Erreur génération PDF');
+      if (!resp.ok) throw new Error(t('bulletin.err_pdf'));
       const blob = await resp.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -347,13 +347,13 @@ export function BulletinsPage() {
             options={[{ value: '', label: t('common.tous') }, ...classes.map(c => ({ value: c.id, label: nomClasse(c) }))]}
             disabled={!anneeId}
           />
-          <Select label="Type de bulletin"
+          <Select label={t('bulletin.type_label')}
             value={type} onChange={(e) => { setType(e.target.value as BulletinType); setBulletins([]); }}
             options={typeOptions}
           />
           {filiere === 'COMBINE' && filieresActives.length > 0 && (
             <div className="field">
-              <label className="field-label">Filières à combiner</label>
+              <label className="field-label">{t('bulletin.filieres_combiner')}</label>
               <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center', paddingTop: 8 }}>
                 {filieresActives.map(f => (
                   <label key={f.code} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
@@ -502,7 +502,7 @@ export function BulletinsPage() {
           <table className="tbl">
             <thead>
               <tr>
-                {['Rang', 'Élève', 'Matricule', 'Filière', 'Période', 'Moyenne', 'Appréciation', 'Actions'].map(h => (
+                {[t('bulletin.col_rang'), t('bulletin.infos_eleve'), t('bulletin.col_matricule'), t('bulletin.col_filiere'), t('bulletin.col_periode'), t('bulletin.col_moyenne'), t('bulletin.col_appreciation'), t('bulletin.col_actions')].map(h => (
                   <th key={h}>{h}</th>
                 ))}
               </tr>
@@ -556,39 +556,39 @@ export function BulletinsPage() {
       {/* Modal détail */}
       <Modal isOpen={!!detail || loadingDetail} onClose={() => setDetail(null)} title={t('bulletin.detail')} size="lg">
         {loadingDetail && (
-          <div style={{ padding: '64px 0', textAlign: 'center', color: 'var(--ink-4)', fontSize: 13 }}>Chargement…</div>
+          <div style={{ padding: '64px 0', textAlign: 'center', color: 'var(--ink-4)', fontSize: 13 }}>{t('bulletin.chargement_progress')}</div>
         )}
         {detail && !loadingDetail && <BulletinDetailContent detail={detail} downloading={downloading} onDownload={downloadPdf} onClose={() => setDetail(null)} api={api} />}
       </Modal>
 
       {/* Modale de pré-vol avant génération */}
-      <Modal isOpen={!!preflight} onClose={() => setPreflight(null)} title="Vérification avant génération" size="lg">
+      <Modal isOpen={!!preflight} onClose={() => setPreflight(null)} title={t('bulletin.preflight_titre')} size="lg">
         {preflight && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Synthèse */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
               <div style={{ padding: 12, background: 'var(--success-soft)', borderRadius: 'var(--r-md)', textAlign: 'center' }}>
                 <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--success-text)' }}>{preflight.matieres_evaluees.length}</div>
-                <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>Matières évaluées</div>
+                <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>{t('bulletin.preflight_evaluees')}</div>
               </div>
               <div style={{ padding: 12, background: 'var(--paper-2)', borderRadius: 'var(--r-md)', textAlign: 'center' }}>
                 <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink-2)' }}>{preflight.matieres_non_evaluees.length}</div>
-                <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>Non évaluées</div>
+                <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>{t('bulletin.preflight_non_evaluees')}</div>
               </div>
               <div style={{ padding: 12, background: preflight.matieres_sans_notes.length > 0 ? 'var(--warning-soft)' : 'var(--paper-2)', borderRadius: 'var(--r-md)', textAlign: 'center' }}>
                 <div style={{ fontSize: 22, fontWeight: 700, color: preflight.matieres_sans_notes.length > 0 ? 'var(--warning-text)' : 'var(--ink-2)' }}>{preflight.matieres_sans_notes.length}</div>
-                <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>Sans note saisie</div>
+                <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>{t('bulletin.preflight_sans_note')}</div>
               </div>
               <div style={{ padding: 12, background: preflight.eleves_sans_aucune_note.length > 0 ? 'var(--warning-soft)' : 'var(--paper-2)', borderRadius: 'var(--r-md)', textAlign: 'center' }}>
                 <div style={{ fontSize: 22, fontWeight: 700, color: preflight.eleves_sans_aucune_note.length > 0 ? 'var(--warning-text)' : 'var(--ink-2)' }}>{preflight.eleves_sans_aucune_note.length}</div>
-                <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>Élèves sans note</div>
+                <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>{t('bulletin.preflight_eleves_sans_note')}</div>
               </div>
             </div>
 
             {/* Détails matières non évaluées */}
             {preflight.matieres_non_evaluees.length > 0 && (
               <div style={{ padding: 12, background: 'var(--paper-2)', borderRadius: 'var(--r-md)' }}>
-                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Matières non évaluées (hors moyenne)</div>
+                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>{t('bulletin.preflight_hors_moyenne')}</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {preflight.matieres_non_evaluees.map(m => (
                     <span key={m.id} style={{ fontSize: 11, padding: '2px 8px', background: 'var(--paper)', borderRadius: 999, border: '1px solid var(--rule)' }}>
@@ -646,7 +646,7 @@ export function BulletinsPage() {
 
             {/* Options */}
             <div style={{ padding: 12, border: '1px solid var(--rule)', borderRadius: 'var(--r-md)' }}>
-              <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>Options de calcul</div>
+              <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>{t('bulletin.preflight_options')}</div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, marginBottom: 6, cursor: 'pointer' }}>
                 <input type="checkbox" checked={inclureNonEvaluees} onChange={e => setInclureNonEvaluees(e.target.checked)} />
                 Inclure quand même les matières non évaluées dans la moyenne
@@ -691,9 +691,9 @@ function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere
       <table className="tbl">
         <thead>
           <tr>
-            <th style={{ textAlign: 'start' }}>Matière ({filiere})</th>
+            <th style={{ textAlign: 'start' }}>{t('bulletin.col_matiere_filiere', { filiere })}</th>
             <th style={{ textAlign: 'center', width: 56 }}>{t('bulletin.col_coeff')}</th>
-            <th style={{ textAlign: 'center', width: 96 }}>Note / Max</th>
+            <th style={{ textAlign: 'center', width: 96 }}>{t('bulletin.col_note_max')}</th>
           </tr>
         </thead>
         <tbody>
@@ -749,12 +749,12 @@ function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere
     <table className="tbl">
       <thead>
         <tr>
-          <th style={{ textAlign: 'start' }}>Matière ({filiere})</th>
+          <th style={{ textAlign: 'start' }}>{t('bulletin.col_matiere_filiere', { filiere })}</th>
           <th style={{ textAlign: 'center', width: 40 }}>{t('bulletin.col_coeff')}</th>
           {['T1', 'T2', 'T3'].map(t => (
             <th key={t} style={{ textAlign: 'center', width: 56 }}>{t}</th>
           ))}
-          <th style={{ textAlign: 'center', width: 64 }}>Moy.</th>
+          <th style={{ textAlign: 'center', width: 64 }}>{t('bulletin.col_moy')}</th>
         </tr>
       </thead>
       <tbody>

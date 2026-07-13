@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 import { fmtDate } from '../../lib/dates';
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import { useApi } from '../../hooks/useApi';
@@ -117,10 +118,10 @@ const LIMIT = 20;
 
 function validate(form: ClasseFormData): FormErrors {
   const errors: FormErrors = {};
-  if (!form.nom_fr.trim()) errors.nom_fr = 'Le nom (FR) est requis';
-  if (!form.filiere) errors.filiere = 'La filière est requise';
-  if (!form.annee_scolaire_id) errors.annee_scolaire_id = "L'année scolaire est requise";
-  if (form.capacite && isNaN(Number(form.capacite))) errors.capacite = 'Capacité invalide';
+  if (!form.nom_fr.trim()) errors.nom_fr = i18n.t('classe.val_nom_fr_requis');
+  if (!form.filiere) errors.filiere = i18n.t('classe.val_filiere_requise');
+  if (!form.annee_scolaire_id) errors.annee_scolaire_id = i18n.t('classe.val_annee_requise');
+  if (form.capacite && isNaN(Number(form.capacite))) errors.capacite = i18n.t('classe.val_capacite_invalide');
   return errors;
 }
 
@@ -235,7 +236,7 @@ export function ClassesPage() {
       setClasses(res);
       setTotal(res.length);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors du chargement');
+      setError(err instanceof Error ? err.message : t('classe.err_chargement'));
     } finally {
       setLoading(false);
     }
@@ -295,7 +296,7 @@ export function ClassesPage() {
       setModalOpen(false);
       fetchClasses();
     } catch (err) {
-      const m = err instanceof Error ? err.message : "Erreur lors de l'enregistrement";
+      const m = err instanceof Error ? err.message : t('classe.err_enregistrement', "Erreur lors de l'enregistrement");
       setError(m); toast.error(m);
     } finally {
       setSubmitting(false);
@@ -311,7 +312,7 @@ export function ClassesPage() {
       setConfirmDelete(null);
       fetchClasses();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message || t('common.erreur_generique'));
     } finally {
       setDeleting(false);
     }
@@ -355,7 +356,7 @@ export function ClassesPage() {
       const prog = await api.get<ClasseMatiere[]>(`/api/v1/classes/${programmeModal.id}/matieres`);
       setProgramme(prog);
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message || t('common.erreur_generique'));
     } finally {
       setAjoutLoading(false);
     }
@@ -381,7 +382,7 @@ export function ClassesPage() {
       const prog = await api.get<ClasseMatiere[]>(`/api/v1/classes/${programmeModal.id}/matieres`);
       setProgramme(prog);
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message || t('common.erreur_generique'));
     } finally {
       setEditProgrammeSaving(false);
     }
@@ -397,7 +398,7 @@ export function ClassesPage() {
 
   async function deverrouillerImpact(scope: { filieres: string[]; periodes: number[] }) {
     if (!anneeFilter) {
-      toast.error('Sélectionne d\'abord une année scolaire pour déverrouiller');
+      toast.error(t('classe.select_annee_deverrouiller'));
       return;
     }
     // Pour chaque (filière × période) on appelle le déverrouillage.
@@ -430,7 +431,7 @@ export function ClassesPage() {
         const payload = err.payload as { code: string; unsigned_count?: number; signed_count?: number; unsigned?: { periode: number; filiere: string }[]; signed?: { periode: number; filiere: string }[] };
         setImpactModal({
           code: payload.code === 'BULLETINS_VALIDES' ? 'BULLETINS_VALIDES' : 'BULLETINS_IMPACTES',
-          title: `Modifier "Évaluée" — ${cm.matiere.nom_fr}`,
+          title: t('classe.modifier_evaluee_titre', { matiere: cm.matiere.nom_fr }),
           unsigned_count: payload.unsigned_count ?? 0,
           signed_count: payload.signed_count ?? 0,
           unsigned: payload.unsigned, signed: payload.signed,
@@ -440,7 +441,7 @@ export function ClassesPage() {
             : undefined,
         });
       } else {
-        toast.error((err as Error).message || 'Erreur');
+        toast.error((err as Error).message || t('common.erreur_generique'));
       }
     } finally {
       setTogglingEvaluee(null);
@@ -485,7 +486,7 @@ export function ClassesPage() {
             : undefined,
         });
       } else {
-        toast.error((err as Error).message || 'Erreur');
+        toast.error((err as Error).message || t('common.erreur_generique'));
       }
     } finally {
       setPeriodeOvSaving(null);
@@ -502,7 +503,7 @@ export function ClassesPage() {
       const prog = await api.get<ClasseMatiere[]>(`/api/v1/classes/${programmeModal.id}/matieres`);
       setProgramme(prog);
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message || t('common.erreur_generique'));
     } finally {
       setSupprimerProgrammeLoading(false);
     }
@@ -536,7 +537,7 @@ export function ClassesPage() {
       setDupliquerModal(null);
       fetchClasses();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur lors de la duplication');
+      toast.error((err as Error).message || t('classe.err_duplication'));
     } finally {
       setDupliquerLoading(false);
     }
@@ -659,7 +660,7 @@ export function ClassesPage() {
       const res = await fetch(`${API_BASE}/api/v1/classes/${listeModal.id}/pdf-liste?${params}`, {
         credentials: 'include',
       });
-      if (!res.ok) throw new Error('Erreur lors de la génération du PDF');
+      if (!res.ok) throw new Error(t('classe.err_pdf'));
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -668,7 +669,7 @@ export function ClassesPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur PDF');
+      toast.error((err as Error).message || t('classe.err_pdf'));
     } finally {
       setPdfLoading(false);
     }
@@ -682,7 +683,7 @@ export function ClassesPage() {
       const res = await fetch(`${API_BASE}/api/v1/classes/pdf-toutes-classes?${params}`, {
         credentials: 'include',
       });
-      if (!res.ok) throw new Error('Erreur lors de la génération du PDF');
+      if (!res.ok) throw new Error(t('classe.err_pdf'));
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -691,7 +692,7 @@ export function ClassesPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur PDF');
+      toast.error((err as Error).message || t('classe.err_pdf'));
     } finally {
       setPdfToutesLoading(false);
     }
@@ -786,7 +787,7 @@ export function ClassesPage() {
       win.document.write(html);
       win.document.close();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message || t('common.erreur_generique'));
     } finally {
       setImprimerToutesLoading(false);
     }
@@ -1020,7 +1021,7 @@ export function ClassesPage() {
               Annuler
             </Button>
             <Button onClick={handleSubmit} loading={submitting}>
-              {editTarget ? 'Modifier' : 'Ajouter'}
+              {editTarget ? t('actions.modifier') : t('actions.ajouter')}
             </Button>
           </div>
         </div>
@@ -1043,7 +1044,7 @@ export function ClassesPage() {
         size="xl"
       >
         {programmeLoading ? (
-          <div className="empty">Chargement...</div>
+          <div className="empty">{t('common.chargement')}</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
@@ -1055,14 +1056,14 @@ export function ClassesPage() {
               {programme.length === 0 ? (
                 <div className="empty" style={{ flexDirection: 'column', gap: 6, padding: '24px 0' }}>
                   <span style={{ fontSize: 32 }}>📚</span>
-                  <p style={{ fontSize: 13, color: 'var(--ink-4)' }}>Aucune matière assignée à cette classe.</p>
+                  <p style={{ fontSize: 13, color: 'var(--ink-4)' }}>{t('classe.programme_aucune')}</p>
                 </div>
               ) : (
                 <div style={{ overflow: 'auto', maxHeight: '40vh', borderRadius: 'var(--r-lg)', border: '1px solid var(--rule)' }}>
                   <table className="tbl">
                     <thead>
                       <tr>
-                        {['Matière FR', 'Matière AR', 'Coeff effectif', 'Ordre', 'Évaluée', 'Actions'].map(h => <th key={h}>{h}</th>)}
+                        {[t('classe.col_matiere_fr'), t('classe.col_matiere_ar', 'Matière AR'), t('classe.col_coeff_effectif'), t('classe.col_ordre'), t('classe.evaluee_evaluee'), t('classe.col_actions')].map(h => <th key={h}>{h}</th>)}
                       </tr>
                     </thead>
                     <tbody>
@@ -1077,7 +1078,7 @@ export function ClassesPage() {
                             <button
                               onClick={() => setExpandedRow(isExpanded ? null : cm.matiere_id)}
                               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-3)', fontSize: 10, marginInlineEnd: 6 }}
-                              title="Configurer par trimestre"
+                              title={t('classe.override_periode')}
                             >
                               {isExpanded ? '▼' : '▶'}
                             </button>
@@ -1130,7 +1131,7 @@ export function ClassesPage() {
                                 {cm.evaluee ? 'Oui' : 'Non'}
                               </span>
                               {hasPeriodeOverride && (
-                                <span title="Override par trimestre actif" style={{ fontSize: 10, color: 'var(--warning)' }}>✎</span>
+                                <span title={t('classe.override_actif')} style={{ fontSize: 10, color: 'var(--warning)' }}>✎</span>
                               )}
                             </label>
                           </td>
@@ -1174,9 +1175,9 @@ export function ClassesPage() {
                                         className="input"
                                         style={{ width: 110, padding: '4px 6px', fontSize: 11 }}
                                       >
-                                        <option value="">Défaut</option>
+                                        <option value="">{t('classe.defaut')}</option>
                                         <option value="true">Évaluée</option>
-                                        <option value="false">Non évaluée</option>
+                                        <option value="false">{t('classe.evaluee_non_evaluee')}</option>
                                       </select>
                                     </div>
                                   );
@@ -1267,7 +1268,7 @@ export function ClassesPage() {
               </div>
               {impactModal.signed && impactModal.signed.length > 0 && (
                 <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                  {Array.from(new Set(impactModal.signed.map(s => `${s.filiere}·${s.periode === 0 ? 'Annuel' : 'T' + s.periode}`))).map(label => (
+                  {Array.from(new Set(impactModal.signed.map(s => `${s.filiere}·${s.periode === 0 ? t('classe.annuel') : 'T' + s.periode}`))).map(label => (
                     <span key={label} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'var(--paper)', border: '1px solid var(--danger)', color: 'var(--danger-text)' }}>{label}</span>
                   ))}
                 </div>
@@ -1284,7 +1285,7 @@ export function ClassesPage() {
               </div>
               {impactModal.unsigned && impactModal.unsigned.length > 0 && (
                 <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                  {Array.from(new Set(impactModal.unsigned.map(s => `${s.filiere}·${s.periode === 0 ? 'Annuel' : 'T' + s.periode}`))).map(label => (
+                  {Array.from(new Set(impactModal.unsigned.map(s => `${s.filiere}·${s.periode === 0 ? t('classe.annuel') : 'T' + s.periode}`))).map(label => (
                     <span key={label} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 999, background: 'var(--paper)', border: '1px solid var(--warning)', color: 'var(--warning-text)' }}>{label}</span>
                   ))}
                 </div>
@@ -1293,7 +1294,7 @@ export function ClassesPage() {
           )}
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-            <Button variant="secondary" onClick={() => setImpactModal(null)} disabled={impactWorking}>Annuler</Button>
+            <Button variant="secondary" onClick={() => setImpactModal(null)} disabled={impactWorking}>{t('actions.annuler')}</Button>
             {impactModal.code === 'BULLETINS_VALIDES' && impactModal.onUnlock ? (
               <Button
                 variant="danger"
@@ -1304,10 +1305,10 @@ export function ClassesPage() {
                     await impactModal.onUnlock!();
                     // Une fois déverrouillé, on tente la modif. Si encore des unsigned, on retombe en 409 "IMPACTES".
                     await impactModal.onConfirm();
-                    toast.success('Configuration mise à jour — bulletins à régénérer');
+                    toast.success(t('classe.ok_config_bulletins'));
                     setImpactModal(null);
                   } catch (err) {
-                    toast.error((err as Error).message || 'Erreur lors du déverrouillage');
+                    toast.error((err as Error).message || t('classe.err_deverrouillage'));
                   } finally {
                     setImpactWorking(false);
                   }
@@ -1322,10 +1323,10 @@ export function ClassesPage() {
                   setImpactWorking(true);
                   try {
                     await impactModal.onConfirm();
-                    toast.success('Configuration mise à jour — bulletins à régénérer');
+                    toast.success(t('classe.ok_config_bulletins'));
                     setImpactModal(null);
                   } catch (err) {
-                    toast.error((err as Error).message || 'Erreur');
+                    toast.error((err as Error).message || t('common.erreur_generique'));
                   } finally {
                     setImpactWorking(false);
                   }
@@ -1347,7 +1348,7 @@ export function ClassesPage() {
       <Modal
         isOpen={!!dupliquerModal}
         onClose={() => setDupliquerModal(null)}
-        title="Dupliquer vers une filière"
+        title={t('classe.dupliquer_titre')}
         size="sm"
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1357,13 +1358,13 @@ export function ClassesPage() {
             de classe dans la filière cible y seront automatiquement rattachés.
           </p>
           <Select
-            label="Filière cible"
+            label={t('classe.filiere_cible')}
             value={dupliquerCible}
             onChange={e => setDupliquerCible(e.target.value)}
             options={cibles.map(f => ({ value: f.code, label: nomBilingue(f) }))}
           />
           <Input
-            label="Nom de la nouvelle classe (optionnel)"
+            label={t('classe.nom_nouvelle_classe')}
             value={dupliquerNom}
             onChange={e => setDupliquerNom(e.target.value)}
             placeholder={`${dupliquerModal.nom_fr} (${dupliquerCible})`}
@@ -1387,7 +1388,7 @@ export function ClassesPage() {
         size="xl"
       >
         {listeLoading ? (
-          <div className="empty">Chargement...</div>
+          <div className="empty">{t('common.chargement')}</div>
         ) : listeData ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>

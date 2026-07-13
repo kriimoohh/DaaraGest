@@ -208,7 +208,7 @@ export function ActivitesPage() {
 
   const supprimerSeance = async (s: Seance) => {
     if (!activeAct) return;
-    if (!confirm('Supprimer cette séance et ses présences ?')) return;
+    if (!confirm(t('activite.confirm_suppr_seance'))) return;
     try {
       await api.delete(`/api/v1/activites/${activeAct.id}/seances/${s.id}`);
       toast.success(t('activite.ok_seance_supprimee'));
@@ -281,7 +281,7 @@ export function ActivitesPage() {
 
         {/* Onglets */}
         <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid var(--rule)', paddingBottom: 0 }}>
-          {([['inscriptions', 'Inscriptions'], ['seances', 'Séances & Présences'], ['evaluations', 'Évaluations']] as [Tab, string][]).map(([tab, label]) => (
+          {([['inscriptions', t('activite.tab_inscriptions')], ['seances', t('activite.tab_seances')], ['evaluations', t('activite.tab_evaluations')]] as [Tab, string][]).map(([tab, label]) => (
             <button key={tab} onClick={() => { setActiveTab(tab); setActiveSeance(null); }}
               style={{ padding: '8px 16px', fontSize: 13, fontWeight: activeTab === tab ? 600 : 400, color: activeTab === tab ? 'var(--ink)' : 'var(--ink-3)', borderBottom: activeTab === tab ? '2px solid var(--terra)' : '2px solid transparent', background: 'none', cursor: 'pointer', marginBottom: -1 }}>
               {label}
@@ -295,14 +295,14 @@ export function ActivitesPage() {
             {canEdit && (
               <div className="card-pad">
                 <div className="grid-2" style={{ gap: 12 }}>
-                  <Select label="Année scolaire" value={anneeId} onChange={e => setAnneeId(e.target.value)}
+                  <Select label={t('activite.annee_scolaire')} value={anneeId} onChange={e => setAnneeId(e.target.value)}
                     options={[{ value: '', label: t('common.selectionner') }, ...annees.map(a => ({ value: a.id, label: a.libelle }))]} />
                   <div className="field">
                     <label className="field-label">{t('activite.rechercher_eleve')}</label>
                     <input className="input" value={eleveSearch} onChange={e => setEleveSearch(e.target.value)} placeholder={t('activite.rechercher_eleve_placeholder')} />
                   </div>
                 </div>
-                {searchLoading && <div style={{ fontSize: 12, color: 'var(--ink-4)', marginTop: 8 }}>Recherche...</div>}
+                {searchLoading && <div style={{ fontSize: 12, color: 'var(--ink-4)', marginTop: 8 }}>{t('activite.recherche_en_cours')}</div>}
                 {elevesFound.length > 0 && (
                   <div style={{ marginTop: 8, border: '1px solid var(--rule)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
                     {elevesFound.map(e => (
@@ -319,14 +319,14 @@ export function ActivitesPage() {
               {inscriptions.length === 0 ? <div className="empty">{t('activite.aucun_inscrit')}</div> : (
                 <div className="tbl-wrap">
                   <table className="tbl">
-                    <thead><tr><th>Élève</th><th>Matricule</th><th>Inscrit le</th><th style={{ width: 80 }} /></tr></thead>
+                    <thead><tr><th>{t('activite.col_eleve')}</th><th>{t('activite.col_matricule')}</th><th>{t('activite.col_inscrit_le')}</th><th style={{ width: 80 }} /></tr></thead>
                     <tbody>
                       {inscriptions.map(insc => (
                         <tr key={insc.id}>
                           <td style={{ fontWeight: 500 }}>{insc.eleve.prenom_fr} {insc.eleve.nom_fr}</td>
                           <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-3)' }}>{insc.eleve.matricule}</td>
                           <td style={{ fontSize: 12, color: 'var(--ink-3)' }}>{fmtDate(insc.date_inscription)}</td>
-                          <td>{canEdit && <button className="tb-btn tb-btn-danger" onClick={() => desinscrireEleve(insc)} title="Désinscrire">✕</button>}</td>
+                          <td>{canEdit && <button className="tb-btn tb-btn-danger" onClick={() => desinscrireEleve(insc)} title={t('activite.desinscrire')} aria-label={t('activite.desinscrire')}>✕</button>}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -353,7 +353,7 @@ export function ActivitesPage() {
                           <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>{s.duree_min ? `${s.duree_min} min` : ''} · {s._count.presences} présences</div>
                         </div>
                         {canEdit && (
-                          <button className="tb-btn tb-btn-danger" onClick={ev => { ev.stopPropagation(); supprimerSeance(s); }} title="Supprimer">
+                          <button className="tb-btn tb-btn-danger" onClick={ev => { ev.stopPropagation(); supprimerSeance(s); }} title={t('actions.supprimer')} aria-label={t('actions.supprimer')}>
                             <svg width={12} height={12} viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                           </button>
                         )}
@@ -367,17 +367,17 @@ export function ActivitesPage() {
             {/* Présences */}
             <div style={{ flex: 1 }}>
               {!activeSeance ? (
-                <div className="empty">Sélectionnez une séance pour saisir les présences</div>
+                <div className="empty">{t('activite.seance_select')}</div>
               ) : (
                 <div className="card">
                   <div className="card-hd" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
-                    <span style={{ fontSize: 13, fontWeight: 600 }}>Présences — {fmtDate(activeSeance.date)}</span>
-                    {canEdit && <Button onClick={savePresences} loading={savingPresences} size="sm">Enregistrer</Button>}
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{t('activite.presences_titre')} {fmtDate(activeSeance.date)}</span>
+                    {canEdit && <Button onClick={savePresences} loading={savingPresences} size="sm">{t('actions.enregistrer')}</Button>}
                   </div>
-                  {inscriptions.length === 0 ? <div className="empty">Aucun élève inscrit à cette activité</div> : (
+                  {inscriptions.length === 0 ? <div className="empty">{t('activite.aucun_inscrit_activite')}</div> : (
                     <div className="tbl-wrap">
                       <table className="tbl">
-                        <thead><tr><th>Élève</th><th style={{ width: 160 }}>Statut</th></tr></thead>
+                        <thead><tr><th>{t('activite.col_eleve')}</th><th style={{ width: 160 }}>{t('activite.col_statut')}</th></tr></thead>
                         <tbody>
                           {inscriptions.map(insc => (
                             <tr key={insc.id}>
@@ -385,7 +385,7 @@ export function ActivitesPage() {
                               <td>
                                 <Select label="" value={presencesMap[insc.eleve.id] ?? 'present'}
                                   onChange={e => setPresencesMap(prev => ({ ...prev, [insc.eleve.id]: e.target.value }))}
-                                  options={[{ value: 'present', label: 'Présent' }, { value: 'absent', label: 'Absent' }, { value: 'retard', label: 'Retard' }]}
+                                  options={[{ value: 'present', label: t('activite.present') }, { value: 'absent', label: t('activite.absent') }, { value: 'retard', label: t('activite.retard') }]}
                                   disabled={!canEdit}
                                 />
                               </td>
@@ -404,10 +404,10 @@ export function ActivitesPage() {
         {/* ─ Évaluations ─ */}
         {activeTab === 'evaluations' && (
           <div className="card">
-            {inscriptions.length === 0 ? <div className="empty">Aucun élève inscrit</div> : (
+            {inscriptions.length === 0 ? <div className="empty">{t('activite.aucun_inscrit')}</div> : (
               <div className="tbl-wrap">
                 <table className="tbl">
-                  <thead><tr><th>Élève</th><th>Période</th><th>Note /20</th><th>Appréciation</th><th style={{ width: 80 }} /></tr></thead>
+                  <thead><tr><th>{t('activite.col_eleve')}</th><th>{t('activite.col_periode')}</th><th>{t('activite.col_note20')}</th><th>{t('activite.appreciation_label')}</th><th style={{ width: 80 }} /></tr></thead>
                   <tbody>
                     {inscriptions.map(insc => {
                       const ev = insc.evaluations[0];
@@ -429,12 +429,12 @@ export function ActivitesPage() {
         )}
 
         {/* Modal séance */}
-        <Modal isOpen={seanceModal} onClose={() => setSeanceModal(false)} title="Nouvelle séance" size="sm"
-          footer={<div className="row" style={{ gap: 8, justifyContent: 'flex-end' }}><Button variant="secondary" onClick={() => setSeanceModal(false)}>Annuler</Button><Button onClick={creerSeance} loading={savingSeance}>Créer</Button></div>}>
+        <Modal isOpen={seanceModal} onClose={() => setSeanceModal(false)} title={t('activite.nouvelle_seance')} size="sm"
+          footer={<div className="row" style={{ gap: 8, justifyContent: 'flex-end' }}><Button variant="secondary" onClick={() => setSeanceModal(false)}>{t('actions.annuler')}</Button><Button onClick={creerSeance} loading={savingSeance}>Créer</Button></div>}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <Input label="Date *" type="date" value={seanceForm.date} onChange={e => setSeanceForm(f => ({ ...f, date: e.target.value }))} />
-            <Input label="Durée (minutes)" type="number" min="1" value={seanceForm.duree_min} onChange={e => setSeanceForm(f => ({ ...f, duree_min: e.target.value }))} placeholder="Ex : 90" />
-            <div className="field"><label className="field-label">Notes (optionnel)</label><textarea className="input" rows={2} value={seanceForm.notes} onChange={e => setSeanceForm(f => ({ ...f, notes: e.target.value }))} style={{ resize: 'vertical' }} /></div>
+            <Input label={t('activite.date_label')} type="date" value={seanceForm.date} onChange={e => setSeanceForm(f => ({ ...f, date: e.target.value }))} />
+            <Input label={t('activite.duree_label')} type="number" min="1" value={seanceForm.duree_min} onChange={e => setSeanceForm(f => ({ ...f, duree_min: e.target.value }))} placeholder="Ex : 90" />
+            <div className="field"><label className="field-label">{t('activite.notes_label')}</label><textarea className="input" rows={2} value={seanceForm.notes} onChange={e => setSeanceForm(f => ({ ...f, notes: e.target.value }))} style={{ resize: 'vertical' }} /></div>
           </div>
         </Modal>
 
@@ -442,10 +442,10 @@ export function ActivitesPage() {
         <Modal isOpen={!!evalModal} onClose={() => setEvalModal(null)} title={evalModal ? `Évaluer — ${evalModal.eleve.prenom_fr} ${evalModal.eleve.nom_fr}` : ''} size="sm"
           footer={<div className="row" style={{ gap: 8, justifyContent: 'flex-end' }}><Button variant="secondary" onClick={() => setEvalModal(null)}>Annuler</Button><Button onClick={saveEval} loading={savingEval}>Enregistrer</Button></div>}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <Select label="Période (optionnel)" value={evalForm.periode} onChange={e => setEvalForm(f => ({ ...f, periode: e.target.value }))}
+            <Select label={t('activite.periode_opt_label')} value={evalForm.periode} onChange={e => setEvalForm(f => ({ ...f, periode: e.target.value }))}
               options={[{ value: '', label: '—' }, ...Array.from({ length: 3 }, (_, i) => ({ value: String(i + 1), label: `Période ${i + 1}` }))]} />
             <Input label={`Note /${noteMax}`} type="number" min="0" max={noteMax} step="0.5" value={evalForm.note} onChange={e => setEvalForm(f => ({ ...f, note: e.target.value }))} placeholder="—" />
-            <div className="field"><label className="field-label">Appréciation</label><textarea className="input" rows={3} value={evalForm.appreciation} onChange={e => setEvalForm(f => ({ ...f, appreciation: e.target.value }))} placeholder="Ex : Très bonne participation, esprit d'équipe remarquable…" style={{ resize: 'vertical' }} /></div>
+            <div className="field"><label className="field-label">{t('activite.appreciation_label')}</label><textarea className="input" rows={3} value={evalForm.appreciation} onChange={e => setEvalForm(f => ({ ...f, appreciation: e.target.value }))} placeholder="Ex : Très bonne participation, esprit d'équipe remarquable…" style={{ resize: 'vertical' }} /></div>
           </div>
         </Modal>
       </>
@@ -457,13 +457,13 @@ export function ActivitesPage() {
   return (
     <>
       <PageHeader
-        title="Activités parascolaires"
-        subtitle="Sport, clubs, ateliers et autres activités"
+        title={t('activite.titre')}
+        subtitle={t('activite.subtitle')}
         action={canEdit && <Button onClick={openCreate}>+ Créer une activité</Button>}
       />
 
-      {loading ? <div className="empty">Chargement...</div>
-        : activites.length === 0 ? <div className="empty">Aucune activité créée</div>
+      {loading ? <div className="empty">{t('common.chargement')}</div>
+        : activites.length === 0 ? <div className="empty">{t('activite.aucune_creee')}</div>
         : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
             {activites.map(a => (
@@ -474,7 +474,7 @@ export function ActivitesPage() {
                     <div>
                       <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)', margin: 0 }}>{a.nom_fr}</h3>
                     </div>
-                    <Badge label={a.actif ? 'Actif' : 'Inactif'} variant={a.actif ? 'success' : 'neutral'} />
+                    <Badge label={a.actif ? t('activite.actif') : t('activite.inactif')} variant={a.actif ? 'success' : 'neutral'} />
                   </div>
                   {a.description && <p style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 12, lineHeight: 1.5 }}>{a.description}</p>}
                   <div className="row" style={{ gap: 16, fontSize: 12, color: 'var(--ink-3)' }}>
@@ -495,12 +495,12 @@ export function ActivitesPage() {
       }
 
       {/* Modal activité */}
-      <Modal isOpen={actModal} onClose={() => setActModal(false)} title={editAct ? "Modifier l'activité" : 'Nouvelle activité'} size="md"
+      <Modal isOpen={actModal} onClose={() => setActModal(false)} title={editAct ? t('activite.modifier_titre') : t('activite.nouvelle')} size="md"
         footer={<div className="row" style={{ gap: 8, justifyContent: 'flex-end' }}><Button variant="secondary" onClick={() => setActModal(false)}>Annuler</Button><Button onClick={submitAct} loading={submitting}>{editAct ? 'Enregistrer' : 'Créer'}</Button></div>}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <Input label="Nom *" value={actForm.nom_fr} onChange={e => setActForm(f => ({ ...f, nom_fr: e.target.value }))} placeholder="Ex : Club de football" />
-          <div className="field"><label className="field-label">Description</label><textarea className="input" rows={2} value={actForm.description} onChange={e => setActForm(f => ({ ...f, description: e.target.value }))} style={{ resize: 'vertical' }} /></div>
-          <Input label="Capacité maximale" type="number" min="1" value={actForm.capacite_max} onChange={e => setActForm(f => ({ ...f, capacite_max: e.target.value }))} placeholder="Illimitée si vide" />
+          <Input label={t('activite.nom_label')} value={actForm.nom_fr} onChange={e => setActForm(f => ({ ...f, nom_fr: e.target.value }))} placeholder={t('activite.nom_ph')} />
+          <div className="field"><label className="field-label">{t('activite.description_label')}</label><textarea className="input" rows={2} value={actForm.description} onChange={e => setActForm(f => ({ ...f, description: e.target.value }))} style={{ resize: 'vertical' }} /></div>
+          <Input label={t('activite.capacite_label')} type="number" min="1" value={actForm.capacite_max} onChange={e => setActForm(f => ({ ...f, capacite_max: e.target.value }))} placeholder="Illimitée si vide" />
         </div>
       </Modal>
     </>
