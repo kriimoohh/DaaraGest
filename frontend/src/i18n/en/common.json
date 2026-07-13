@@ -453,7 +453,18 @@
     "override_periode_hint": "Leave \"Default\" to use the class setting.",
     "evaluee_defaut": "Default",
     "evaluee_evaluee": "Graded",
-    "evaluee_non_evaluee": "Not graded"
+    "evaluee_non_evaluee": "Not graded",
+    "err_deverrouillage": "Unlock failed",
+    "ok_config_bulletins": "Configuration updated — report cards must be regenerated",
+    "err_duplication": "Duplication failed",
+    "select_annee_deverrouiller": "Select a school year first to unlock",
+    "modifier_evaluee_titre": "Edit \"Graded\" — {{matiere}}",
+    "override_actif": "Per-term override active",
+    "defaut": "Default",
+    "dupliquer_titre": "Duplicate to a track",
+    "filiere_cible": "Target track",
+    "nom_nouvelle_classe": "New class name (optional)",
+    "annuel": "Annual"
   },
   "matiere": {
     "titre": "Subjects",
@@ -740,7 +751,12 @@
     "preflight_warn_sans_notes": "Curriculum subjects with no grade entered",
     "preflight_confirmer": "Generate {{count}} report card(s)",
     "non_evaluee": "Not graded",
-    "genere_le": "Generated on {{date}}"
+    "genere_le": "Generated on {{date}}",
+    "err_selection_filieres": "Select at least one track to combine",
+    "filieres_combiner": "Tracks to combine",
+    "preflight_sans_note": "No grade entered",
+    "preflight_hors_moyenne": "Ungraded subjects (excluded from average)",
+    "col_matiere_filiere": "Subject ({{filiere}})"
   },
   "evaluation": {
     "titre": "Formative assessments",
@@ -1117,7 +1133,12 @@
     "remarques_placeholder": "Remarks, cheque reference…",
     "motif_retenue_placeholder": "e.g. Unjustified absence, advance recovered…",
     "enregistrer_n_eleves": "Save ({{count}} students)",
-    "tab_eleves_match": "Student: {{prenom}} {{nom}}"
+    "tab_eleves_match": "Student: {{prenom}} {{nom}}",
+    "charger": "Load",
+    "qr_pas_eleve": "This QR code is not a student card",
+    "qr_camera_err": "Cannot access the camera. Check permissions.",
+    "col_brut": "Gross",
+    "retirer": "Remove {{nom}}"
   },
   "document": {
     "titre": "Administrative documents",
@@ -1828,7 +1849,23 @@
     "appreciation_placeholder": "e.g. Very good participation, remarkable team spirit…",
     "present": "Present",
     "absent": "Absent",
-    "retard": "Late"
+    "retard": "Late",
+    "confirm_suppr_seance": "Delete this session and its attendance?",
+    "recherche_en_cours": "Searching…",
+    "desinscrire": "Unenroll",
+    "seance_select": "Select a session to record attendance",
+    "col_note20": "Grade /20",
+    "date_label": "Date *",
+    "duree_label": "Duration (minutes)",
+    "duree_ph": "E.g. 90",
+    "periode_opt_label": "Period (optional)",
+    "appreciation_ph": "E.g. Excellent participation, team spirit",
+    "aucune_creee": "No activity created",
+    "modifier_titre": "Edit activity",
+    "nom_label": "Name *",
+    "nom_ph": "E.g. Football club",
+    "capacite_label": "Maximum capacity",
+    "capacite_ph": "Unlimited if empty"
   },
   "bibliotheque": {
     "titre": "Library",

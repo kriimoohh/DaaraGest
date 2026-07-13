@@ -50,15 +50,15 @@ interface PaiementProf {
 
 const MOIS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 const FILTER_TYPES = [
-  { value: '', label: 'Tous types' },
-  { value: 'mensualite', label: 'Mensualités' },
-  { value: 'inscription', label: 'Inscriptions' },
-  { value: 'autre', label: 'Autres' },
+  { value: '', label: 'finance.tous_types' },
+  { value: 'mensualite', label: 'finance.filtre_mensualites' },
+  { value: 'inscription', label: 'finance.filtre_inscriptions' },
+  { value: 'autre', label: 'finance.filtre_autres' },
 ];
 const FILTER_STATUTS = [
-  { value: '', label: 'Tous statuts' },
-  { value: 'paye', label: 'Payés' },
-  { value: 'impaye', label: 'Non payés' },
+  { value: '', label: 'finance.tous_statuts' },
+  { value: 'paye', label: 'finance.filtre_payes' },
+  { value: 'impaye', label: 'finance.filtre_impayes' },
 ];
 
 // ─── EleveSearchPicker ────────────────────────────────────────────────────────
@@ -112,7 +112,7 @@ function EleveSearchPicker({ eleves, selected, onChange }: EleveSearchPickerProp
   return (
     <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-        Élèves sélectionnés ({selected.length})
+        {t('finance.eleves_selectionnes', { count: selected.length })}
       </label>
 
       {/* chips */}
@@ -122,7 +122,7 @@ function EleveSearchPicker({ eleves, selected, onChange }: EleveSearchPickerProp
             <span key={e.id}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 999, fontSize: 12, background: 'var(--success-soft)', color: 'var(--success-text)', border: '1px solid var(--success-border)' }}>
               {e.prenom_fr} {e.nom_fr} <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--success)' }}>({e.matricule})</span>
-              <button onClick={() => remove(e.id)} aria-label={`Retirer ${e.nom_fr}`} style={{ marginInlineStart: 2, background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0 }}>×</button>
+              <button onClick={() => remove(e.id)} aria-label={t('finance.retirer', { nom: e.nom_fr })} style={{ marginInlineStart: 2, background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0 }}>×</button>
             </span>
           ))}
         </div>
@@ -214,7 +214,7 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
       setModal(false);
       charger();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message || t('common.erreur_generique'));
     } finally { setSaving(false); }
   };
 
@@ -224,7 +224,7 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
         <Select value={moisF} onChange={(e) => setMoisF(e.target.value)}
           options={MOIS.map((m, i) => ({ value: String(i + 1), label: m }))} />
         <Input label="" type="number" value={anneeF} onChange={(e) => setAnneeF(e.target.value)} className="w-24" />
-        <Button onClick={() => charger()} variant="secondary" loading={loading}>Charger</Button>
+        <Button onClick={() => charger()} variant="secondary" loading={loading}>{t('finance.charger')}</Button>
         <Button onClick={() => setModal(true)}>+ Ajouter paiement</Button>
       </div>
 
@@ -237,7 +237,7 @@ function ProfsTab({ api, formatMontant }: { api: ReturnType<typeof useApi>; form
           <table className="tbl">
             <thead>
               <tr>
-                {['Professeur', 'Période', 'Brut', 'Retenues', 'Net à payer', 'Statut'].map(h => (
+                {[t('finance.professeur'), t('finance.col_periode'), t('finance.col_brut'), t('finance.retenues'), t('finance.net_a_payer'), t('finance.col_statut')].map(h => (
                   <th key={h}>{h}</th>
                 ))}
               </tr>
@@ -403,7 +403,7 @@ export function FinancesPage() {
         setTotal(data.total ?? 0);
       }
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur de chargement');
+      toast.error((err as Error).message || t('finance.erreur_chargement'));
     } finally { setLoading(false); }
   };
 
@@ -438,7 +438,7 @@ export function FinancesPage() {
       charger();
       api.get<Stats>('/api/v1/finances/stats').then(setStats).catch(() => {});
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message || t('common.erreur_generique'));
     } finally { setSaving(false); }
   };
 
@@ -469,7 +469,7 @@ export function FinancesPage() {
       charger();
       api.get<Stats>('/api/v1/finances/stats').then(setStats).catch(() => {});
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message || t('common.erreur_generique'));
     } finally { setEditSaving(false); }
   };
 
@@ -488,7 +488,7 @@ export function FinancesPage() {
         `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/api/v1/finances/${endpoint}?${params}`,
         { credentials: 'include' },
       );
-      if (!resp.ok) throw new Error('Erreur lors de l\'export');
+      if (!resp.ok) throw new Error(t('eleve.err_export'));
       const blob = await resp.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -497,7 +497,7 @@ export function FinancesPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      toast.error((e as Error).message || 'Erreur export');
+      toast.error((e as Error).message || t('eleve.err_export'));
     } finally { setExporting(null); }
   };
 
@@ -513,7 +513,7 @@ export function FinancesPage() {
         `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/api/v1/finances/${endpoint}?${params}`,
         { credentials: 'include' },
       );
-      if (!resp.ok) throw new Error('Erreur lors de l\'export');
+      if (!resp.ok) throw new Error(t('eleve.err_export'));
       const blob = await resp.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -522,7 +522,7 @@ export function FinancesPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      toast.error((e as Error).message || 'Erreur export');
+      toast.error((e as Error).message || t('eleve.err_export'));
     } finally { setExporting(null); }
   };
 
@@ -549,7 +549,7 @@ export function FinancesPage() {
           try {
             const [b64] = text.split('.');
             const payload = JSON.parse(atob(b64.replace(/-/g, '+').replace(/_/g, '/')));
-            if (payload.type !== 'eleve') { setQrError('Ce QR code ne correspond pas à un élève'); qrProcessing.current = false; return; }
+            if (payload.type !== 'eleve') { setQrError(t('finance.qr_pas_eleve')); qrProcessing.current = false; return; }
             const found = allEleves.find(e => e.id === payload.id || e.matricule === payload.matricule);
             if (!found) { setQrError(`Élève introuvable (${payload.matricule ?? payload.id})`); qrProcessing.current = false; return; }
             stopQrScanner();
@@ -562,7 +562,7 @@ export function FinancesPage() {
         () => { /* non-détections ignorées */ }
       );
       setQrStarted(true);
-    } catch { setQrError("Impossible d'accéder à la caméra. Vérifiez les permissions."); }
+    } catch { setQrError(t('finance.qr_camera_err')); }
   };
 
   const handleDelete = async () => {
@@ -575,7 +575,7 @@ export function FinancesPage() {
       charger();
       api.get<Stats>('/api/v1/finances/stats').then(setStats).catch(() => {});
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message || t('common.erreur_generique'));
     } finally { setDeleting(false); }
   };
 
@@ -619,9 +619,9 @@ export function FinancesPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div className="filter-row" style={{ flexWrap: 'wrap' }}>
             <Select value={mois} onChange={e => setMois(e.target.value)}
-              options={[{ value: '', label: 'Toute l\'année' }, ...MOIS.map((m, i) => ({ value: String(i+1), label: m }))]} />
+              options={[{ value: '', label: t('finance.toute_annee') }, ...MOIS.map((m, i) => ({ value: String(i+1), label: m }))]} />
             <Input label="" type="number" value={annee} onChange={e => setAnnee(e.target.value)} />
-            <Button variant="secondary" onClick={charger} loading={loading}>Actualiser</Button>
+            <Button variant="secondary" onClick={charger} loading={loading}>{t('finance.actualiser')}</Button>
             <div style={{ marginInlineStart: 'auto', display: 'flex', gap: 8 }}>
               <Button variant="secondary" onClick={() => exportReliquats('excel')} loading={exporting === 'excel'} disabled={reliquats.length === 0}>⬇ Excel</Button>
               <Button variant="secondary" onClick={() => exportReliquats('pdf')} loading={exporting === 'pdf'} disabled={reliquats.length === 0}>🖨 Imprimer</Button>
@@ -729,7 +729,7 @@ export function FinancesPage() {
                   background: filterType === f.value ? 'var(--ink)' : 'var(--paper-3)',
                   color: filterType === f.value ? 'var(--paper)' : 'var(--ink-3)',
                 }}>
-                {f.label}
+                {t(f.label)}
               </button>
             ))}
           </div>
@@ -743,7 +743,7 @@ export function FinancesPage() {
                   background: filterStatut === f.value ? 'var(--ink)' : 'var(--paper-3)',
                   color: filterStatut === f.value ? 'var(--paper)' : 'var(--ink-3)',
                 }}>
-                {f.label}
+                {t(f.label)}
               </button>
             ))}
           </div>

@@ -459,7 +459,18 @@
     "override_periode_hint": "Laisse \"Défaut\" pour utiliser le réglage de la classe.",
     "evaluee_defaut": "Défaut",
     "evaluee_evaluee": "Évaluée",
-    "evaluee_non_evaluee": "Non évaluée"
+    "evaluee_non_evaluee": "Non évaluée",
+    "err_deverrouillage": "Erreur lors du déverrouillage",
+    "ok_config_bulletins": "Configuration mise à jour — bulletins à régénérer",
+    "err_duplication": "Erreur lors de la duplication",
+    "select_annee_deverrouiller": "Sélectionne d'abord une année scolaire pour déverrouiller",
+    "modifier_evaluee_titre": "Modifier \"Évaluée\" — {{matiere}}",
+    "override_actif": "Override par trimestre actif",
+    "defaut": "Défaut",
+    "dupliquer_titre": "Dupliquer vers une filière",
+    "filiere_cible": "Filière cible",
+    "nom_nouvelle_classe": "Nom de la nouvelle classe (optionnel)",
+    "annuel": "Annuel"
   },
   "annee_scolaire": {
     "titre": "Années scolaires",
@@ -711,7 +722,12 @@
     "preflight_warn_sans_notes": "Matières du programme sans aucune note saisie",
     "preflight_confirmer": "Générer {{count}} bulletin(s)",
     "non_evaluee": "Non évaluée",
-    "genere_le": "Généré le {{date}}"
+    "genere_le": "Généré le {{date}}",
+    "err_selection_filieres": "Sélectionnez au moins une filière à combiner",
+    "filieres_combiner": "Filières à combiner",
+    "preflight_sans_note": "Sans note saisie",
+    "preflight_hors_moyenne": "Matières non évaluées (hors moyenne)",
+    "col_matiere_filiere": "Matière ({{filiere}})"
   },
   "evaluation": {
     "titre": "Évaluations formatives",
@@ -875,7 +891,12 @@
     "remarques_placeholder": "Remarques, référence chèque…",
     "motif_retenue_placeholder": "Ex: Absence non justifiée, avance récupérée…",
     "enregistrer_n_eleves": "Enregistrer ({{count}} élèves)",
-    "tab_eleves_match": "Élève : {{prenom}} {{nom}}"
+    "tab_eleves_match": "Élève : {{prenom}} {{nom}}",
+    "charger": "Charger",
+    "qr_pas_eleve": "Ce QR code ne correspond pas à un élève",
+    "qr_camera_err": "Impossible d'accéder à la caméra. Vérifiez les permissions.",
+    "col_brut": "Brut",
+    "retirer": "Retirer {{nom}}"
   },
   "parametre": {
     "titre": "Paramètres",
@@ -1559,7 +1580,23 @@
     "appreciation_placeholder": "Ex : Très bonne participation, esprit d'équipe remarquable…",
     "present": "Présent",
     "absent": "Absent",
-    "retard": "Retard"
+    "retard": "Retard",
+    "confirm_suppr_seance": "Supprimer cette séance et ses présences ?",
+    "recherche_en_cours": "Recherche…",
+    "desinscrire": "Désinscrire",
+    "seance_select": "Sélectionnez une séance pour saisir les présences",
+    "col_note20": "Note /20",
+    "date_label": "Date *",
+    "duree_label": "Durée (minutes)",
+    "duree_ph": "Ex : 90",
+    "periode_opt_label": "Période (optionnel)",
+    "appreciation_ph": "Ex : Très bonne participation, esprit d'équipe",
+    "aucune_creee": "Aucune activité créée",
+    "modifier_titre": "Modifier l'activité",
+    "nom_label": "Nom *",
+    "nom_ph": "Ex : Club de football",
+    "capacite_label": "Capacité maximale",
+    "capacite_ph": "Illimitée si vide"
   },
   "bibliotheque": {
     "titre": "Bibliothèque",
