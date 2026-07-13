@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { monthName } from '../../lib/dates';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
 import { useApi } from '../../hooks/useApi';
@@ -11,8 +12,7 @@ import { nomClasse } from '../../lib/noms';
 interface Classe { id: string; nom_fr: string; nom_ar?: string | null; annee_scolaire_id?: string; }
 interface AnneeScolaire { id: string; libelle: string; active: boolean; }
 
-const MOIS_LABELS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-const MOIS_LABELS_AR = ['يناير','فبراير','مارس','أبريل','ماي','يونيو','يوليو','غشت','شتنبر','أكتوبر','نونبر','دجنبر'];
+// Noms de mois localisés via lib/dates (fr/ar/en).
 
 type TypeRapport =
   | 'presences-eleves'
@@ -123,8 +123,7 @@ const RAPPORTS: RapportDef[] = [
 const GROUPES = ['presences', 'academique', 'grilles_ief', 'fin_annee', 'finance', 'rh'];
 
 export function RapportsPage() {
-  const { t, i18n } = useTranslation();
-  const isAr = i18n.language === 'ar';
+  const { t } = useTranslation();
   const api = useApi();
   const [selected, setSelected] = useState<TypeRapport>('presences-eleves');
   const [format, setFormat]     = useState<FormatRapport>('pdf');
@@ -183,7 +182,7 @@ export function RapportsPage() {
 
   function validateRequired(): boolean {
     if (needsClasse && !classeId) {
-      toast.error('Veuillez sélectionner une classe');
+      toast.error(t('rapport.selectionner_classe'));
       return false;
     }
     return true;
@@ -207,7 +206,7 @@ export function RapportsPage() {
       const a = document.createElement('a');
       a.href = blobUrl; a.download = filename; a.click();
       URL.revokeObjectURL(blobUrl);
-      toast.success('Rapport téléchargé');
+      toast.success(t('rapport.rapport_telecharge'));
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -238,9 +237,9 @@ export function RapportsPage() {
     <>
       <div className="page-head">
         <div>
-          <div className="page-eyebrow">Administration</div>
-          <h1 className="page-title">Rapports</h1>
-          <p className="page-sub">Exporter les données en PDF ou CSV pour vos réunions et inspections</p>
+          <div className="page-eyebrow">{t('rapport.eyebrow')}</div>
+          <h1 className="page-title">{t('rapport.titre')}</h1>
+          <p className="page-sub">{t('rapport.subtitle')}</p>
         </div>
       </div>
 
@@ -298,11 +297,11 @@ export function RapportsPage() {
 
             {needsClasse && (
               <Select
-                label="Classe"
+                label={t('rapport.classe_label')}
                 value={classeId}
                 onChange={e => setClasseId(e.target.value)}
                 options={[
-                  { value: '', label: 'Toutes les classes' },
+                  { value: '', label: t('rapport.toutes_classes') },
                   ...classes.filter(c => !anneeId || c.annee_scolaire_id === anneeId).map(c => ({ value: c.id, label: nomClasse(c) })),
                 ]}
               />
@@ -310,11 +309,11 @@ export function RapportsPage() {
 
             {needsAnnee && (
               <Select
-                label="Année scolaire"
+                label={t('rapport.annee_scolaire')}
                 value={anneeId}
                 onChange={e => setAnneeId(e.target.value)}
                 options={[
-                  { value: '', label: 'Toutes' },
+                  { value: '', label: t('rapport.toutes') },
                   ...annees.map(a => ({ value: a.id, label: a.libelle + (a.active ? ' (active)' : '') })),
                 ]}
               />
@@ -323,13 +322,13 @@ export function RapportsPage() {
             {needsMois && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <Select
-                  label="Mois"
+                  label={t('rapport.mois_label')}
                   value={mois}
                   onChange={e => setMois(e.target.value)}
-                  options={(isAr ? MOIS_LABELS_AR : MOIS_LABELS_FR).map((m, i) => ({ value: String(i + 1), label: m }))}
+                  options={Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: monthName(i + 1) }))}
                 />
                 <Select
-                  label="Année"
+                  label={t('rapport.annee_label')}
                   value={anneeNum}
                   onChange={e => setAnneeNum(e.target.value)}
                   options={Array.from({ length: 5 }, (_, i) => {
@@ -342,7 +341,7 @@ export function RapportsPage() {
 
             {needsPeriode && (
               <Select
-                label="Période"
+                label={t('rapport.periode_label')}
                 value={periode}
                 onChange={e => setPeriode(e.target.value)}
                 options={[
@@ -363,7 +362,7 @@ export function RapportsPage() {
             {/* Format (masqué si PDF uniquement) */}
             {!info.pdfOnly && (
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-3)', marginBottom: 8 }}>Format</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-3)', marginBottom: 8 }}>{t('rapport.format')}</div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {(['pdf', 'csv'] as FormatRapport[]).map(f => (
                     <button
@@ -448,7 +447,7 @@ export function RapportsPage() {
             </div>
             <iframe
               srcDoc={previewHtml}
-              title="Aperçu rapport"
+              title={t('rapport.apercu_titre')}
               sandbox="allow-same-origin"
               style={{ flex: 1, width: '100%', border: 'none', borderRadius: 8, background: '#fff', boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}
             />

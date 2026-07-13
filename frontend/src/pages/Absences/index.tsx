@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 import { fmtDate } from '../../lib/dates';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
@@ -40,14 +41,14 @@ interface StatEleve {
 const MOIS_LABELS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 
 const STATUTS = [
-  { value: 'present',  label: 'Présent',  badge: 'success' as const },
-  { value: 'absent',   label: 'Absent',   badge: 'error'   as const },
-  { value: 'retard',   label: 'Retard',   badge: 'warning' as const },
-  { value: 'dispense', label: 'Dispensé', badge: 'info'    as const },
+  { value: 'present',  label: 'absences.present',  badge: 'success' as const },
+  { value: 'absent',   label: 'absences.absent',   badge: 'error'   as const },
+  { value: 'retard',   label: 'absences.retard',   badge: 'warning' as const },
+  { value: 'dispense', label: 'absences.dispense', badge: 'info'    as const },
 ];
 
 function statutBadge(s: string) { return STATUTS.find(x => x.value === s)?.badge ?? 'neutral'; }
-function statutLabel(s: string) { return STATUTS.find(x => x.value === s)?.label ?? s; }
+function statutLabel(s: string) { const l = STATUTS.find(x => x.value === s)?.label; return l ? i18n.t(l) : s; }
 function dateAujourdHui() { return new Date().toISOString().split('T')[0]; }
 
 // ── Saisie journalière ────────────────────────────────────────────────────────
@@ -158,7 +159,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
           options={classes.map(c => ({ value: c.id, label: c.nom_fr }))}
           placeholder={t('absences.classe_placeholder')} />
         <div className="row">
-          <label style={{ fontSize: 13, color: 'var(--ink-3)', flexShrink: 0 }}>Date :</label>
+          <label style={{ fontSize: 13, color: 'var(--ink-3)', flexShrink: 0 }}>{t('absences.date_label')}</label>
           <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
         </div>
         <Button variant="secondary" onClick={charger} loading={loading}>{t('absences.charger')}</Button>
@@ -173,10 +174,10 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
       {eleves.length > 0 && (
         <div className="grid-4">
           {([
-            ['Présents', nbPresents, 'success'],
-            ['Absents', nbAbsents, 'danger'],
-            ['Retards', nbRetards, 'warning'],
-            ['Dispensés', nbDispenses, 'info'],
+            [t('absences.presents'), nbPresents, 'success'],
+            [t('absences.absents'), nbAbsents, 'danger'],
+            [t('absences.retards'), nbRetards, 'warning'],
+            [t('absences.dispenses'), nbDispenses, 'info'],
           ] as [string, number, string][]).map(([label, val, kind]) => (
             <div key={label} className="card stat">
               <div className="stat-label">
@@ -201,7 +202,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
             <table className="tbl">
               <thead>
                 <tr>
-                  {['Élève', 'Matricule', 'Statut', 'Justifiée', 'H. arrivée', 'Motif'].map(h => (
+                  {[t('absences.col_eleve'), t('absences.col_matricule'), t('absences.col_statut'), t('absences.col_justifiee'), t('absences.col_h_arrivee'), t('absences.col_motif')].map(h => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>
@@ -230,7 +231,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
                                 background: s.statut === st.value ? `var(--${st.badge === 'success' ? 'success' : st.badge === 'warning' ? 'warning' : st.badge === 'error' ? 'danger' : 'info'})` : 'var(--paper-3)',
                                 color: s.statut === st.value ? '#fff' : 'var(--ink-3)',
                               }}>
-                              {st.label}
+                              {t(st.label)}
                             </button>
                           ))}
                         </div>
@@ -301,30 +302,30 @@ function Historique({ api }: { api: ReturnType<typeof useApi> }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div className="filter-row">
-        <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>Période :</span>
+        <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>{t('absences.periode_label')}</span>
         <Select value={mois} onChange={e => setMois(e.target.value)}
           options={MOIS_LABELS.map((m, i) => ({ value: String(i + 1), label: m }))} />
         <Input type="number" value={annee} onChange={e => setAnnee(e.target.value)} />
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          {[{ value: '', label: 'Tous' }, ...STATUTS].map(s => (
+          {[{ value: '', label: 'absences.tous' }, ...STATUTS].map(s => (
             <button key={s.value} onClick={() => setStatut(s.value)}
               style={{
                 padding: '4px 12px', borderRadius: 99, fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer',
                 background: statut === s.value ? 'var(--ink)' : 'var(--paper-3)',
                 color: statut === s.value ? 'var(--paper)' : 'var(--ink-3)',
-              }}>{s.label}</button>
+              }}>{t(s.label)}</button>
           ))}
         </div>
       </div>
 
       <div className="card">
-        {loading ? <div className="empty">Chargement…</div> :
+        {loading ? <div className="empty">{t('absences.chargement')}</div> :
         records.length === 0 ? <div className="empty">{t('absences.aucun_enregistrement')}</div> : (
           <div className="tbl-wrap">
             <table className="tbl">
               <thead>
                 <tr>
-                  {['Date','Élève','Matricule','Classe','Statut','Justifiée','Motif'].map(h => (
+                  {[t('absences.col_date'), t('absences.col_eleve'), t('absences.col_matricule'), t('absences.col_classe'), t('absences.col_statut'), t('absences.col_justifiee'), t('absences.col_motif')].map(h => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>
@@ -415,7 +416,7 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
           options={annees.map(a => ({ value: a.id, label: a.libelle }))}
           placeholder={t('absences.annee_placeholder')} />
         <Select value={classeId} onChange={e => setClasseId(e.target.value)}
-          options={[{ value: '', label: 'Toutes les classes' }, ...classes.map(c => ({ value: c.id, label: c.nom_fr }))]} />
+          options={[{ value: '', label: t('absences.toutes_classes') }, ...classes.map(c => ({ value: c.id, label: c.nom_fr }))]} />
         <Select value={mois} onChange={e => setMois(e.target.value)}
           options={MOIS_LABELS.map((m, i) => ({ value: String(i + 1), label: m }))} />
         <Input type="number" value={annee} onChange={e => setAnnee(e.target.value)} />
@@ -425,9 +426,9 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
       {stats.length > 0 && (
         <div className="grid-4">
           {[
-            { label: 'Présences', value: total.presents, color: 'var(--success)' },
-            { label: 'Absences', value: total.absents, color: 'var(--danger)' },
-            { label: 'Non justifiées', value: total.absents_njustifies, color: 'var(--warning)' },
+            { label: t('absences.stat_presences'), value: total.presents, color: 'var(--success)' },
+            { label: t('absences.stat_absences'), value: total.absents, color: 'var(--danger)' },
+            { label: t('absences.non_justifiees'), value: total.absents_njustifies, color: 'var(--warning)' },
             { label: 'Retards', value: total.retards, color: 'var(--warning)' },
           ].map(c => (
             <div key={c.label} className="card" style={{ textAlign: 'center', padding: 16 }}>
@@ -439,13 +440,13 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
       )}
 
       <div className="card">
-        {loading ? <div className="empty">Chargement…</div> :
+        {loading ? <div className="empty">{t('absences.chargement')}</div> :
         stats.length === 0 ? <div className="empty">{t('absences.aucune_donnee_periode')}</div> : (
           <div className="tbl-wrap">
             <table className="tbl">
               <thead>
                 <tr>
-                  {['Élève','Matricule','Jours','✓ Présents','✗ Absents','⚠ Non just.','⚡ Retards','Taux'].map(h => (
+                  {[t('absences.col_eleve'), t('absences.col_matricule'), t('absences.col_jours'), '✓ ' + t('absences.presents'), '✗ ' + t('absences.absents'), t('absences.col_non_just'), '⚡ ' + t('absences.retards'), t('absences.col_taux')].map(h => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>

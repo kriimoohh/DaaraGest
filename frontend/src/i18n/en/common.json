@@ -69,7 +69,8 @@
     "precedent": "Previous",
     "suivant": "Next",
     "sur_total": "of",
-    "erreur_generique": "Error"
+    "erreur_generique": "Error",
+    "module_en_dev": "Module under development"
   },
   "actions": {
     "ajouter": "Add",
@@ -558,7 +559,14 @@
     "tableau_lecture_seule_annuel": "Read-only in annual view — choose a term to edit",
     "enregistrer_modifs": "Save ({{count}})",
     "tableau_choisir_classe": "Select a year and a class to view the grade grid.",
-    "tableau_description": "This view shows all entered grades and allows direct editing."
+    "tableau_description": "This view shows all entered grades and allows direct editing.",
+    "th_total_notes": "Grade total",
+    "th_total_pondere": "Total ×c",
+    "tt_total_pondere": "Weighted total: Σ (grade × coefficient)",
+    "th_moy": "Avg. /{{echelle}}",
+    "tt_somme_notes": "Sum of entered grades (no coefficient)",
+    "tt_somme_coeffs": "Sum of program coefficients (graded subjects)",
+    "tt_total_brut": "Raw sum of all entered grades, without coefficient (like the transcript)"
   },
   "domaine": {
     "titre": "Academic domains",
@@ -921,7 +929,9 @@
     "telecharger_format": "Download ({{format}})",
     "fermer": "✕ Close",
     "apercu_html_note": "HTML preview — very close to the final PDF rendering.",
-    "iframe_titre_apercu": "Report preview"
+    "iframe_titre_apercu": "Report preview",
+    "mois_label": "Month",
+    "annee_label": "Year"
   },
   "absences": {
     "titre": "Student absences",
@@ -977,7 +987,11 @@
     "err_select_classe": "Select a class and a year",
     "err_chargement": "Loading error",
     "err_aucune_presence": "No attendance to save",
-    "ok_saved": "{{count}} record(s) saved"
+    "ok_saved": "{{count}} record(s) saved",
+    "chargement": "Loading…",
+    "stat_presences": "Presences",
+    "stat_absences": "Absences",
+    "col_h_arrivee": "Arrival"
   },
   "pointage": {
     "titre": "Teacher check-in",
@@ -1032,7 +1046,15 @@
     "action_depart": "Departure recorded",
     "action_deja_complet": "Already recorded today",
     "label_arrivee": "Arrival",
-    "label_depart": "Departure"
+    "label_depart": "Departure",
+    "col_duree_simple": "Duration",
+    "chargement": "Loading…",
+    "actualiser": "Refresh",
+    "stat_presences": "Presences",
+    "stat_absences": "Absences",
+    "scan_err": "Scan error",
+    "scan_err_reseau": "Network error. Check the connection.",
+    "scan_err_camera": "Cannot access the camera. Check permissions."
   },
   "finance": {
     "titre": "Finance",
@@ -1388,7 +1410,8 @@
     "jour_sam": "Sat",
     "jour_dim": "Sun",
     "ajouter_evenement": "Add an event",
-    "modifier_evenement": "Edit event"
+    "modifier_evenement": "Edit event",
+    "chargement": "Loading…"
   },
   "messagerie": {
     "titre": "Messaging",
@@ -1432,7 +1455,9 @@
     "role_gestionnaire": "Manager",
     "role_agent_scolarite": "Registrar",
     "role_professeur": "Teacher",
-    "role_pointeur": "Attendance clerk"
+    "role_pointeur": "Attendance clerk",
+    "chargement": "Loading…",
+    "ecrire_ph": "Write a message… (Ctrl+Enter to send)"
   },
   "emploi_du_temps": {
     "titre": "Timetable",
@@ -1465,7 +1490,14 @@
     "classe_select_placeholder": "Select a class…",
     "matiere_placeholder": "Select a subject…",
     "professeur_placeholder": "Select a teacher…",
-    "salle_placeholder": "e.g. Room A1"
+    "salle_placeholder": "e.g. Room A1",
+    "chargement": "Loading…",
+    "jour_lundi": "Monday",
+    "jour_mardi": "Tuesday",
+    "jour_mercredi": "Wednesday",
+    "jour_jeudi": "Thursday",
+    "jour_vendredi": "Friday",
+    "jour_samedi": "Saturday"
   },
   "utilisateur": {
     "titre": "Users",
@@ -1507,7 +1539,8 @@
     "ok_reactive": "User reactivated",
     "supprimer_definitif": "Delete permanently",
     "confirm_supprimer_definitif_msg": "PERMANENTLY delete the account \"{{id}}\"? This action is irreversible.",
-    "ok_supprime_definitif": "User permanently deleted"
+    "ok_supprime_definitif": "User permanently deleted",
+    "changement_role_titre": "Role change"
   },
   "personnel": {
     "rh": "Human resources",
@@ -1544,7 +1577,40 @@
     "contrat_label": "Contract",
     "carte_lot_ignores": "{{count}} member(s) skipped:",
     "generer_pdf": "Generate PDF",
-    "cartes_lot": "Batch cards"
+    "cartes_lot": "Batch cards",
+    "fonction_ENSEIGNANT": "Teacher",
+    "fonction_DIRECTEUR": "Principal",
+    "fonction_SURVEILLANT": "Supervisor",
+    "fonction_AGENT_SCOLARITE": "Registrar",
+    "fonction_COMPTABLE": "Accountant",
+    "fonction_AGENT_ENTRETIEN": "Maintenance worker",
+    "contrat_permanent": "Permanent",
+    "contrat_cdd": "Fixed-term",
+    "contrat_vacataire": "Hourly",
+    "contrat_stagiaire": "Intern",
+    "err_nom_requis": "Name is required",
+    "err_mdp_requis": "Password is required",
+    "err_email_invalide": "Invalid email",
+    "err_contrat_requis": "Contract type is required",
+    "err_fin_cdd": "Contract end date is required for a fixed-term contract",
+    "err_debut_stage": "Internship start date required",
+    "err_fin_stage": "Internship end date required",
+    "err_chargement": "Loading error",
+    "col_identifiant": "Username",
+    "col_specialite": "Specialty",
+    "col_contrat": "Contract",
+    "col_actions": "Actions",
+    "carte_generation": "Generating…",
+    "carte_id_label": "ID card (CR80)",
+    "carte_id_photo": "ID card — add a photo first",
+    "modifier_titre": "Edit teacher",
+    "ajouter_titre": "Add a teacher",
+    "masculin": "Male",
+    "feminin": "Female",
+    "date_naissance": "Date of birth",
+    "lieu_naissance": "Place of birth",
+    "diplome_academique": "Academic degree",
+    "diplome_professionnel": "Professional degree"
   },
   "parametre": {
     "titre": "Settings",
@@ -1931,7 +1997,13 @@
     "ok_retour": "Return recorded",
     "confirm_suppression_livre": "Delete this book?",
     "confirm_retour": "Record the return of this book?",
-    "jours_retard": "+{{n}} d"
+    "jours_retard": "+{{n}} d",
+    "confirm_suppr_livre": "Delete this book?",
+    "suppr_btn": "Del.",
+    "badge_retard": "Late",
+    "annee_edition_label": "Publication year",
+    "nb_exemplaires_label": "Number of copies",
+    "rechercher_ph": "Name or student ID…"
   },
   "demande_absence": {
     "titre": "Leave requests (Teachers)",
@@ -1988,7 +2060,10 @@
     "date": "Date",
     "acteur": "Actor",
     "details": "Details",
-    "aucun": "No records"
+    "aucun": "No records",
+    "action_CREATE": "Created",
+    "action_UPDATE": "Updated",
+    "action_DELETE": "Deleted"
   },
   "profil": {
     "titre": "My profile",

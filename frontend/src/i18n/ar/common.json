@@ -353,7 +353,40 @@
     "contrat_label": "العقد",
     "carte_lot_ignores": "{{count}} موظف(ون) تم تجاهلهم:",
     "generer_pdf": "إنشاء PDF",
-    "cartes_lot": "بطاقات بالجملة"
+    "cartes_lot": "بطاقات بالجملة",
+    "fonction_ENSEIGNANT": "مدرّس",
+    "fonction_DIRECTEUR": "المدير / المديرة",
+    "fonction_SURVEILLANT": "مراقب",
+    "fonction_AGENT_SCOLARITE": "موظف شؤون التلاميذ",
+    "fonction_COMPTABLE": "محاسب",
+    "fonction_AGENT_ENTRETIEN": "عامل صيانة",
+    "contrat_permanent": "دائم",
+    "contrat_cdd": "عقد محدد المدة",
+    "contrat_vacataire": "متعاقد بالحصة",
+    "contrat_stagiaire": "متدرب",
+    "err_nom_requis": "الاسم مطلوب",
+    "err_mdp_requis": "كلمة المرور مطلوبة",
+    "err_email_invalide": "بريد إلكتروني غير صالح",
+    "err_contrat_requis": "نوع العقد مطلوب",
+    "err_fin_cdd": "تاريخ نهاية العقد مطلوب للعقد محدد المدة",
+    "err_debut_stage": "تاريخ بداية التدريب مطلوب",
+    "err_fin_stage": "تاريخ نهاية التدريب مطلوب",
+    "err_chargement": "خطأ أثناء التحميل",
+    "col_identifiant": "المعرف",
+    "col_specialite": "التخصص",
+    "col_contrat": "العقد",
+    "col_actions": "إجراءات",
+    "carte_generation": "جارٍ الإنشاء…",
+    "carte_id_label": "بطاقة (CR80)",
+    "carte_id_photo": "البطاقة — أضف صورة أولاً",
+    "modifier_titre": "تعديل الأستاذ",
+    "ajouter_titre": "إضافة أستاذ",
+    "masculin": "ذكر",
+    "feminin": "أنثى",
+    "date_naissance": "تاريخ الميلاد",
+    "lieu_naissance": "مكان الميلاد",
+    "diplome_academique": "الشهادة الأكاديمية",
+    "diplome_professionnel": "الشهادة المهنية"
   },
   "professeur": {
     "titre": "الأساتذة",
@@ -627,7 +660,14 @@
     "tableau_lecture_seule_annuel": "قراءة فقط في العرض السنوي — اختر فصلاً للتعديل",
     "enregistrer_modifs": "حفظ ({{count}})",
     "tableau_choisir_classe": "اختر سنة دراسية وقسماً لعرض جدول الدرجات.",
-    "tableau_description": "يعرض هذا الجدول جميع الدرجات المسجلة ويسمح بالتعديل المباشر."
+    "tableau_description": "يعرض هذا الجدول جميع الدرجات المسجلة ويسمح بالتعديل المباشر.",
+    "th_total_notes": "مجموع الدرجات",
+    "th_total_pondere": "المجموع ×م",
+    "tt_total_pondere": "المجموع المرجح: Σ (الدرجة × المعامل)",
+    "th_moy": "المعدل /{{echelle}}",
+    "tt_somme_notes": "مجموع الدرجات المدخلة (بدون معامل)",
+    "tt_somme_coeffs": "مجموع معاملات البرنامج (المواد المقيَّمة)",
+    "tt_total_brut": "المجموع الخام لكل الدرجات المدخلة، بدون معامل (كما في الكشف)"
   },
   "bulletin": {
     "titre": "شهادات النتائج",
@@ -1174,7 +1214,8 @@
     "ok_reactive": "تمت إعادة تفعيل المستخدم",
     "supprimer_definitif": "حذف نهائي",
     "confirm_supprimer_definitif_msg": "حذف الحساب \"{{id}}\" نهائيًا؟ هذا الإجراء لا رجعة فيه.",
-    "ok_supprime_definitif": "تم حذف المستخدم نهائيًا"
+    "ok_supprime_definitif": "تم حذف المستخدم نهائيًا",
+    "changement_role_titre": "تغيير الدور"
   },
   "tb": {
     "search": "البحث عن تلاميذ، أقسام، مدفوعات…",
@@ -1248,7 +1289,11 @@
     "err_select_classe": "اختر قسماً وسنة دراسية",
     "err_chargement": "خطأ في التحميل",
     "err_aucune_presence": "لا يوجد حضور للحفظ",
-    "ok_saved": "تم حفظ {{count}} تسجيل"
+    "ok_saved": "تم حفظ {{count}} تسجيل",
+    "chargement": "جارٍ التحميل…",
+    "stat_presences": "الحضور",
+    "stat_absences": "الغيابات",
+    "col_h_arrivee": "وقت الوصول"
   },
   "emploi_du_temps": {
     "titre": "جدول الحصص",
@@ -1281,7 +1326,14 @@
     "classe_select_placeholder": "اختر قسماً…",
     "matiere_placeholder": "اختر مادة…",
     "professeur_placeholder": "اختر أستاذاً…",
-    "salle_placeholder": "مثال: قاعة A1"
+    "salle_placeholder": "مثال: قاعة A1",
+    "chargement": "جارٍ التحميل…",
+    "jour_lundi": "الاثنين",
+    "jour_mardi": "الثلاثاء",
+    "jour_mercredi": "الأربعاء",
+    "jour_jeudi": "الخميس",
+    "jour_vendredi": "الجمعة",
+    "jour_samedi": "السبت"
   },
   "calendrier": {
     "titre": "التقويم الدراسي",
@@ -1334,7 +1386,8 @@
     "jour_sam": "سب",
     "jour_dim": "أح",
     "ajouter_evenement": "إضافة حدث",
-    "modifier_evenement": "تعديل الحدث"
+    "modifier_evenement": "تعديل الحدث",
+    "chargement": "جارٍ التحميل…"
   },
   "notifications": {
     "titre": "الإشعارات",
@@ -1403,7 +1456,15 @@
     "action_depart": "تم تسجيل المغادرة",
     "action_deja_complet": "تم التسجيل مسبقاً اليوم",
     "label_arrivee": "الوصول",
-    "label_depart": "المغادرة"
+    "label_depart": "المغادرة",
+    "col_duree_simple": "المدة",
+    "chargement": "جارٍ التحميل…",
+    "actualiser": "تحديث",
+    "stat_presences": "الحضور",
+    "stat_absences": "الغيابات",
+    "scan_err": "خطأ أثناء المسح",
+    "scan_err_reseau": "خطأ في الشبكة. تحقق من الاتصال.",
+    "scan_err_camera": "تعذر الوصول إلى الكاميرا. تحقق من الأذونات."
   },
   "messagerie": {
     "titre": "الرسائل",
@@ -1447,7 +1508,9 @@
     "role_gestionnaire": "المسير",
     "role_agent_scolarite": "عون التمدرس",
     "role_professeur": "الأستاذ",
-    "role_pointeur": "مسجّل الحضور"
+    "role_pointeur": "مسجّل الحضور",
+    "chargement": "جارٍ التحميل…",
+    "ecrire_ph": "اكتب رسالة… (Ctrl+Enter للإرسال)"
   },
   "portail_parent": {
     "titre": "بوابة ولي الأمر",
@@ -1662,7 +1725,13 @@
     "ok_retour": "تم تسجيل الإرجاع",
     "confirm_suppression_livre": "حذف هذا الكتاب؟",
     "confirm_retour": "تسجيل إرجاع هذا الكتاب؟",
-    "jours_retard": "+{{n}} يوم"
+    "jours_retard": "+{{n}} يوم",
+    "confirm_suppr_livre": "حذف هذا الكتاب؟",
+    "suppr_btn": "حذف",
+    "badge_retard": "متأخر",
+    "annee_edition_label": "سنة النشر",
+    "nb_exemplaires_label": "عدد النسخ",
+    "rechercher_ph": "الاسم أو رقم التسجيل…"
   },
   "demande_absence": {
     "titre": "طلبات الغياب (الأساتذة)",
@@ -1809,7 +1878,9 @@
     "telecharger_format": "تنزيل ({{format}})",
     "fermer": "✕ إغلاق",
     "apercu_html_note": "معاينة HTML — قريبة جداً من شكل PDF النهائي.",
-    "iframe_titre_apercu": "معاينة التقرير"
+    "iframe_titre_apercu": "معاينة التقرير",
+    "mois_label": "الشهر",
+    "annee_label": "السنة"
   },
   "document": {
     "titre": "الوثائق الإدارية",
@@ -1976,7 +2047,8 @@
     "precedent": "السابق",
     "suivant": "التالي",
     "sur_total": "من",
-    "erreur_generique": "خطأ"
+    "erreur_generique": "خطأ",
+    "module_en_dev": "الوحدة قيد التطوير"
   },
   "audit": {
     "subtitle": "من فعل ماذا — إنشاء وتعديل وحذف البيانات.",
@@ -1988,7 +2060,10 @@
     "date": "التاريخ",
     "acteur": "المستخدم",
     "details": "التفاصيل",
-    "aucun": "لا توجد سجلات"
+    "aucun": "لا توجد سجلات",
+    "action_CREATE": "إنشاء",
+    "action_UPDATE": "تعديل",
+    "action_DELETE": "حذف"
   },
   "profil": {
     "titre": "ملفي الشخصي",

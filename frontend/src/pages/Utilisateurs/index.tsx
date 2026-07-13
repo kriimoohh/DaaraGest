@@ -374,7 +374,7 @@ export function UtilisateursPage() {
         onClose={() => setConfirmRoleChange(null)}
         onConfirm={persistSave}
         loading={saving}
-        title="Changement de rôle"
+        title={t('utilisateur.changement_role_titre')}
         message={`Confirmer le changement de rôle de "${edit?.identifiant ?? ''}" — ancien : ${(edit?.role.libelle_fr ?? '').charAt(0).toUpperCase() + (edit?.role.libelle_fr ?? '').slice(1)}, nouveau : ${confirmRoleChange?.nextRoleLabel ?? ''} ?`}
       />
     </>

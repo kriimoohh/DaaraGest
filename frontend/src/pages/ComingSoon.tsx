@@ -14,7 +14,7 @@ export function ComingSoon({ pageKey }: Props) {
       <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 500, letterSpacing: '-0.01em', margin: 0 }}>
         {t(`nav.${pageKey}`)}
       </h2>
-      <p style={{ fontSize: 13, color: 'var(--ink-3)' }}>Module en cours de développement</p>
+      <p style={{ fontSize: 13, color: 'var(--ink-3)' }}>{t('common.module_en_dev')}</p>
     </div>
   );
 }

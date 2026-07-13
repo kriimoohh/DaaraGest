@@ -35,11 +35,11 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  vacances:  'Vacances',
-  examen:    'Examen',
-  evenement: 'Événement',
-  fermeture: 'Fermeture',
-  reunion:   'Réunion',
+  vacances:  'calendrier.vacances',
+  examen:    'calendrier.examen',
+  evenement: 'calendrier.evenement',
+  fermeture: 'calendrier.fermeture',
+  reunion:   'calendrier.reunion',
 };
 
 const GESTION_ROLES = ['admin', 'directeur', 'gestionnaire'];
@@ -148,11 +148,11 @@ function EventForm({
             const t = e.target.value;
             setForm(f => ({ ...f, type: t, couleur: TYPE_COLORS[t] ?? f.couleur }));
           }}
-          options={Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label }))}
+          options={Object.entries(TYPE_LABELS).map(([value, label]) => ({ value, label: t(label) }))}
           placeholder={t('calendrier.type_placeholder')}
         />
         <div className="field">
-          <label className="field-label">Couleur</label>
+          <label className="field-label">{t('calendrier.couleur')}</label>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input
               type="color"
@@ -171,14 +171,14 @@ function EventForm({
                     border: form.couleur === color ? '2px solid var(--ink)' : '2px solid transparent',
                     cursor: 'pointer',
                   }}
-                  title={TYPE_LABELS[key]}
+                  title={t(TYPE_LABELS[key])}
                 />
               ))}
             </div>
           </div>
         </div>
         <div className="field">
-          <label className="field-label">Description (optionnel)</label>
+          <label className="field-label">{t('calendrier.description')}</label>
           <textarea
             value={form.description}
             onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
@@ -231,7 +231,7 @@ export function CalendrierPage() {
       const data = await api.get<Evenement[]>(`/api/v1/calendrier?annee=${year}&mois=${month + 1}`);
       setEvents(data ?? []);
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur de chargement');
+      toast.error((err as Error).message || t('common.erreur'));
     } finally {
       setLoading(false);
     }
@@ -271,7 +271,7 @@ export function CalendrierPage() {
       setAddForm(emptyForm);
       loadEvents();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message || t('common.erreur_generique'));
     } finally { setSaving(false); }
   };
 
@@ -295,18 +295,18 @@ export function CalendrierPage() {
       setEditEvt(null);
       loadEvents();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message || t('common.erreur_generique'));
     } finally { setSaving(false); }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Supprimer cet événement ?')) return;
+    if (!confirm(t('calendrier.confirm_suppression'))) return;
     try {
       await api.delete(`/api/v1/calendrier/${id}`);
       toast.success(t('calendrier.evenement_supprime'));
       setEvents(prev => prev.filter(e => e.id !== id));
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message || t('common.erreur_generique'));
     }
   };
 
@@ -412,7 +412,7 @@ export function CalendrierPage() {
       </div>
 
       {loading ? (
-        <div className="card empty">Chargement...</div>
+        <div className="card empty">{t('calendrier.chargement')}</div>
       ) : (
         <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
           {/* Calendar grid */}
@@ -598,14 +598,14 @@ export function CalendrierPage() {
           Événements de {monthName(month + 1, year)} {year}
         </div>
         {monthEvents.length === 0 ? (
-          <div className="card empty">Aucun événement ce mois</div>
+          <div className="card empty">{t('calendrier.aucun_mois')}</div>
         ) : (
           <div className="card">
             <div className="tbl-wrap">
               <table className="tbl">
                 <thead>
                   <tr>
-                    {['Titre', 'Début', 'Fin', 'Type', canManage ? 'Actions' : ''].filter(Boolean).map(h => (
+                    {[t('calendrier.col_titre'), t('calendrier.col_debut'), t('calendrier.col_fin', 'Fin'), t('calendrier.col_type'), canManage ? t('calendrier.col_actions') : ''].filter(Boolean).map(h => (
                       <th key={h}>{h}</th>
                     ))}
                   </tr>
@@ -627,7 +627,7 @@ export function CalendrierPage() {
                       <td style={{ fontSize: 13, color: 'var(--ink-3)' }}>{formatDate(ev.date_debut)}</td>
                       <td style={{ fontSize: 13, color: 'var(--ink-3)' }}>{formatDate(ev.date_fin)}</td>
                       <td>
-                        <Badge label={TYPE_LABELS[ev.type] ?? ev.type} variant={formatTypeBadge(ev.type)} />
+                        <Badge label={TYPE_LABELS[ev.type] ? t(TYPE_LABELS[ev.type]) : ev.type} variant={formatTypeBadge(ev.type)} />
                       </td>
                       {canManage && (
                         <td>
