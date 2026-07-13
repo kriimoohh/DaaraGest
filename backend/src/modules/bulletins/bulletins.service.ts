@@ -939,7 +939,7 @@ body { padding: 0; margin: 0 }
 /* min-height ≈ hauteur imprimable (277mm ≈ 1046px @96dpi, marge de sécurité)
    + colonne flex : le bulletin remplit la page A4 au lieu de flotter en haut.
    Le pied de page (date + signatures) est poussé en bas via margin-top:auto. */
-.a4-fit { transform-origin: top left; padding: 18px 28px; display: flex; flex-direction: column; min-height: 1040px }
+.a4-fit { transform-origin: top left; padding: 10px 24px; display: flex; flex-direction: column; min-height: 1040px }
 .a4-fit > .footer-date { margin-top: auto }
 </style></head><body>
 ${pageContents.map(c => `<div class="a4-page"><div class="a4-fit" data-zoom="${zoom}">${c}</div></div>`).join('\n')}
