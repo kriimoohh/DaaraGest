@@ -30,7 +30,12 @@
     "rapports": "Reports",
     "bibliotheque": "Library",
     "demandes_absence_personnel": "Leave & Permissions",
-    "securite": "Security"
+    "securite": "Security",
+    "groupe_accueil": "Home",
+    "groupe_principal": "Main",
+    "groupe_pedagogie": "Academics",
+    "groupe_communication": "Communication",
+    "groupe_administration": "Administration"
   },
   "common": {
     "actif": "Active",
@@ -60,7 +65,11 @@
     "tous": "All",
     "aucune_note": "No grade recorded",
     "erreur": "Loading error",
-    "reinitialiser": "Reset"
+    "reinitialiser": "Reset",
+    "precedent": "Previous",
+    "suivant": "Next",
+    "sur_total": "of",
+    "erreur_generique": "Error"
   },
   "actions": {
     "ajouter": "Add",
@@ -115,7 +124,13 @@
     "en": "English"
   },
   "tb": {
-    "search": "Search students, classes, payments…"
+    "search": "Search students, classes, payments…",
+    "annee_travail": "Working school year",
+    "menu": "Menu",
+    "mode_clair": "Light mode",
+    "mode_sombre": "Dark mode",
+    "activer_clair": "Switch to light mode",
+    "activer_sombre": "Switch to dark mode"
   },
   "cmd": {
     "eleves_section": "Students",
@@ -133,7 +148,12 @@
     "absence_eleve": "Student absences",
     "paiement_retard": "Payment overdue",
     "note_insuffisante": "Insufficient grade",
-    "absence_professeur": "Teacher absence"
+    "absence_professeur": "Teacher absence",
+    "ok_tout_lu": "All notifications marked as read",
+    "instant": "just now",
+    "il_y_a_min": "{{n}}min ago",
+    "il_y_a_h": "{{n}}h ago",
+    "il_y_a_j": "{{n}}d ago"
   },
   "dashboard": {
     "welcome": "Welcome",
@@ -1818,5 +1838,41 @@
     "acteur": "Actor",
     "details": "Details",
     "aucun": "No records"
+  },
+  "profil": {
+    "titre": "My profile",
+    "ouvrir": "Open profile menu",
+    "sections": "Profile sections",
+    "tab_infos": "Information",
+    "tab_mdp": "Password",
+    "langue": "Language",
+    "theme": "Theme",
+    "theme_sombre": "🌙 Dark",
+    "theme_clair": "☀️ Light",
+    "derniere_connexion": "Last login",
+    "changer_mdp": "Change password",
+    "mdp_actuel": "Current password",
+    "nouveau_mdp": "New password",
+    "confirmer_mdp": "Confirm new password",
+    "mdp_min": "Minimum 8 characters",
+    "err_champs_requis": "All fields are required",
+    "err_mdp_differents": "Passwords do not match",
+    "err_mdp_court": "Minimum 8 characters",
+    "ok_mdp_modifie": "Password changed",
+    "changement_force_titre": "Password change",
+    "changement_force_msg": "For security reasons, you must change your password before continuing.",
+    "ok_mdp_modifie_succes": "Password changed successfully"
+  },
+  "photo": {
+    "ajouter": "Add a photo",
+    "prendre": "Take a photo",
+    "galerie": "Choose from gallery"
+  },
+  "input": {
+    "afficher_mdp": "Show password",
+    "masquer_mdp": "Hide password"
+  },
+  "confirm": {
+    "titre_suppression": "Confirm deletion"
   }
 }

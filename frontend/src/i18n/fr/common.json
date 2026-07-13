@@ -44,7 +44,12 @@
     "rapports": "Rapports",
     "bibliotheque": "Bibliothèque",
     "demandes_absence_personnel": "Congés & Permissions",
-    "securite": "Sécurité"
+    "securite": "Sécurité",
+    "groupe_accueil": "Accueil",
+    "groupe_principal": "Principal",
+    "groupe_pedagogie": "Pédagogie",
+    "groupe_communication": "Communication",
+    "groupe_administration": "Administration"
   },
   "theme": {
     "light": "Mode clair",
@@ -1081,7 +1086,13 @@
     "ok_supprime_definitif": "Utilisateur supprimé définitivement"
   },
   "tb": {
-    "search": "Rechercher élèves, classes, paiements…"
+    "search": "Rechercher élèves, classes, paiements…",
+    "annee_travail": "Année scolaire de travail",
+    "menu": "Menu",
+    "mode_clair": "Mode clair",
+    "mode_sombre": "Mode sombre",
+    "activer_clair": "Activer le mode clair",
+    "activer_sombre": "Activer le mode sombre"
   },
   "cmd": {
     "eleves_section": "Élèves",
@@ -1241,7 +1252,12 @@
     "absence_eleve": "Absences élève",
     "paiement_retard": "Paiement en retard",
     "note_insuffisante": "Note insuffisante",
-    "absence_professeur": "Absence professeur"
+    "absence_professeur": "Absence professeur",
+    "ok_tout_lu": "Toutes les notifications marquées comme lues",
+    "instant": "à l'instant",
+    "il_y_a_min": "il y a {{n}}min",
+    "il_y_a_h": "il y a {{n}}h",
+    "il_y_a_j": "il y a {{n}}j"
   },
   "pointage": {
     "titre": "Pointage des professeurs",
@@ -1805,7 +1821,11 @@
     "tous": "Tous",
     "aucune_note": "Aucune note enregistrée",
     "erreur": "Erreur de chargement",
-    "reinitialiser": "Réinitialiser"
+    "reinitialiser": "Réinitialiser",
+    "precedent": "Précédent",
+    "suivant": "Suivant",
+    "sur_total": "sur",
+    "erreur_generique": "Erreur"
   },
   "audit": {
     "subtitle": "Qui a fait quoi — création, modification et suppression sur les données.",
@@ -1818,5 +1838,41 @@
     "acteur": "Acteur",
     "details": "Détails",
     "aucun": "Aucune entrée"
+  },
+  "profil": {
+    "titre": "Mon profil",
+    "ouvrir": "Ouvrir le menu profil",
+    "sections": "Sections du profil",
+    "tab_infos": "Informations",
+    "tab_mdp": "Mot de passe",
+    "langue": "Langue",
+    "theme": "Thème",
+    "theme_sombre": "🌙 Sombre",
+    "theme_clair": "☀️ Clair",
+    "derniere_connexion": "Dernière connexion",
+    "changer_mdp": "Changer le mot de passe",
+    "mdp_actuel": "Mot de passe actuel",
+    "nouveau_mdp": "Nouveau mot de passe",
+    "confirmer_mdp": "Confirmer le nouveau mot de passe",
+    "mdp_min": "Minimum 8 caractères",
+    "err_champs_requis": "Tous les champs sont requis",
+    "err_mdp_differents": "Les mots de passe ne correspondent pas",
+    "err_mdp_court": "Minimum 8 caractères",
+    "ok_mdp_modifie": "Mot de passe modifié",
+    "changement_force_titre": "Changement de mot de passe",
+    "changement_force_msg": "Pour des raisons de sécurité, vous devez changer votre mot de passe avant de continuer.",
+    "ok_mdp_modifie_succes": "Mot de passe modifié avec succès"
+  },
+  "photo": {
+    "ajouter": "Ajouter une photo",
+    "prendre": "Prendre une photo",
+    "galerie": "Choisir depuis la galerie"
+  },
+  "input": {
+    "afficher_mdp": "Afficher le mot de passe",
+    "masquer_mdp": "Masquer le mot de passe"
+  },
+  "confirm": {
+    "titre_suppression": "Confirmer la suppression"
   }
 }

@@ -44,7 +44,12 @@
     "rapports": "التقارير",
     "bibliotheque": "المكتبة",
     "demandes_absence_personnel": "الإجازات والتصاريح",
-    "securite": "الأمان"
+    "securite": "الأمان",
+    "groupe_accueil": "الرئيسية",
+    "groupe_principal": "الرئيسي",
+    "groupe_pedagogie": "التعليم",
+    "groupe_communication": "التواصل",
+    "groupe_administration": "الإدارة"
   },
   "theme": {
     "light": "الوضع الفاتح",
@@ -1081,7 +1086,13 @@
     "ok_supprime_definitif": "تم حذف المستخدم نهائيًا"
   },
   "tb": {
-    "search": "البحث عن تلاميذ، أقسام، مدفوعات…"
+    "search": "البحث عن تلاميذ، أقسام، مدفوعات…",
+    "annee_travail": "السنة الدراسية الحالية",
+    "menu": "القائمة",
+    "mode_clair": "الوضع الفاتح",
+    "mode_sombre": "الوضع الداكن",
+    "activer_clair": "تفعيل الوضع الفاتح",
+    "activer_sombre": "تفعيل الوضع الداكن"
   },
   "cmd": {
     "eleves_section": "التلاميذ",
@@ -1241,7 +1252,12 @@
     "absence_eleve": "غياب تلميذ",
     "paiement_retard": "تأخر في الدفع",
     "note_insuffisante": "نقطة غير كافية",
-    "absence_professeur": "غياب أستاذ"
+    "absence_professeur": "غياب أستاذ",
+    "ok_tout_lu": "تم تعليم جميع الإشعارات كمقروءة",
+    "instant": "الآن",
+    "il_y_a_min": "منذ {{n}} دقيقة",
+    "il_y_a_h": "منذ {{n}} ساعة",
+    "il_y_a_j": "منذ {{n}} يوم"
   },
   "pointage": {
     "titre": "حضور الأساتذة",
@@ -1805,7 +1821,11 @@
     "tous": "الكل",
     "aucune_note": "لا توجد درجات مسجلة",
     "erreur": "خطأ في التحميل",
-    "reinitialiser": "إعادة تعيين"
+    "reinitialiser": "إعادة تعيين",
+    "precedent": "السابق",
+    "suivant": "التالي",
+    "sur_total": "من",
+    "erreur_generique": "خطأ"
   },
   "audit": {
     "subtitle": "من فعل ماذا — إنشاء وتعديل وحذف البيانات.",
@@ -1818,5 +1838,41 @@
     "acteur": "المستخدم",
     "details": "التفاصيل",
     "aucun": "لا توجد سجلات"
+  },
+  "profil": {
+    "titre": "ملفي الشخصي",
+    "ouvrir": "فتح قائمة الملف الشخصي",
+    "sections": "أقسام الملف الشخصي",
+    "tab_infos": "معلومات",
+    "tab_mdp": "كلمة المرور",
+    "langue": "اللغة",
+    "theme": "المظهر",
+    "theme_sombre": "🌙 داكن",
+    "theme_clair": "☀️ فاتح",
+    "derniere_connexion": "آخر تسجيل دخول",
+    "changer_mdp": "تغيير كلمة المرور",
+    "mdp_actuel": "كلمة المرور الحالية",
+    "nouveau_mdp": "كلمة المرور الجديدة",
+    "confirmer_mdp": "تأكيد كلمة المرور الجديدة",
+    "mdp_min": "8 أحرف على الأقل",
+    "err_champs_requis": "جميع الحقول مطلوبة",
+    "err_mdp_differents": "كلمتا المرور غير متطابقتين",
+    "err_mdp_court": "8 أحرف على الأقل",
+    "ok_mdp_modifie": "تم تغيير كلمة المرور",
+    "changement_force_titre": "تغيير كلمة المرور",
+    "changement_force_msg": "لأسباب أمنية، يجب تغيير كلمة المرور قبل المتابعة.",
+    "ok_mdp_modifie_succes": "تم تغيير كلمة المرور بنجاح"
+  },
+  "photo": {
+    "ajouter": "إضافة صورة",
+    "prendre": "التقاط صورة",
+    "galerie": "اختيار من المعرض"
+  },
+  "input": {
+    "afficher_mdp": "إظهار كلمة المرور",
+    "masquer_mdp": "إخفاء كلمة المرور"
+  },
+  "confirm": {
+    "titre_suppression": "تأكيد الحذف"
   }
 }

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Modal } from './Modal';
 import { Button } from './Button';
 
@@ -14,19 +15,20 @@ export function ConfirmModal({
   isOpen,
   onClose,
   onConfirm,
-  title = 'Confirmer la suppression',
-  message = 'Cette action est irréversible. Êtes-vous sûr ?',
+  title,
+  message,
   loading,
 }: Props) {
+  const { t } = useTranslation();
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
-      <p style={{ color: 'var(--ink-3)', marginBottom: 24 }}>{message}</p>
+    <Modal isOpen={isOpen} onClose={onClose} title={title ?? t('confirm.titre_suppression')} size="sm">
+      <p style={{ color: 'var(--ink-3)', marginBottom: 24 }}>{message ?? t('common.confirmation_suppression')}</p>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
         <Button variant="secondary" onClick={onClose} disabled={loading}>
-          Annuler
+          {t('actions.annuler')}
         </Button>
         <Button variant="danger" onClick={onConfirm} loading={loading}>
-          Supprimer
+          {t('actions.supprimer')}
         </Button>
       </div>
     </Modal>

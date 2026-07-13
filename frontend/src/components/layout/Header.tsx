@@ -53,27 +53,27 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const [saving, setSaving] = useState(false);
 
   const handleChangePassword = async () => {
-    if (!ancienMdp || !nouveauMdp) { toast.error('Tous les champs sont requis'); return; }
-    if (nouveauMdp !== confirmMdp) { toast.error('Les mots de passe ne correspondent pas'); return; }
-    if (nouveauMdp.length < 8) { toast.error('Minimum 8 caractères'); return; }
+    if (!ancienMdp || !nouveauMdp) { toast.error(t('profil.err_champs_requis')); return; }
+    if (nouveauMdp !== confirmMdp) { toast.error(t('profil.err_mdp_differents')); return; }
+    if (nouveauMdp.length < 8) { toast.error(t('profil.err_mdp_court')); return; }
     setSaving(true);
     try {
       await api.put('/api/v1/auth/change-password', {
         ancien_mot_de_passe: ancienMdp,
         nouveau_mot_de_passe: nouveauMdp,
       });
-      toast.success('Mot de passe modifié');
+      toast.success(t('profil.ok_mdp_modifie'));
       setAncienMdp(''); setNouveauMdp(''); setConfirmMdp('');
       setProfilOpen(false);
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message || t('common.erreur_generique'));
     } finally { setSaving(false); }
   };
 
   return (
     <>
       <header className="topbar">
-        <button className="tb-burger" onClick={onMenuClick} aria-label="Menu">
+        <button className="tb-burger" onClick={onMenuClick} aria-label={t('tb.menu')}>
           <svg width={18} height={18} viewBox="0 0 24 24" fill="currentColor">
             <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
           </svg>
@@ -104,8 +104,8 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             className="input tb-annee"
             value={currentId}
             onChange={e => setCurrent(e.target.value)}
-            title="Année scolaire de travail"
-            aria-label="Année scolaire de travail"
+            title={t('tb.annee_travail')}
+            aria-label={t('tb.annee_travail')}
             style={{ width: 'auto', minWidth: 110, height: 32, padding: '0 26px 0 10px', fontSize: 13 }}
           >
             {annees.map(a => (
@@ -116,7 +116,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
         <LanguageSelect onChange={code => updatePreferences(code, theme)} />
 
-        <button className="tb-btn" onClick={toggleTheme} title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'} aria-label={theme === 'dark' ? 'Activer le mode clair' : 'Activer le mode sombre'}>
+        <button className="tb-btn" onClick={toggleTheme} title={theme === 'dark' ? t('tb.mode_clair') : t('tb.mode_sombre')} aria-label={theme === 'dark' ? t('tb.activer_clair') : t('tb.activer_sombre')}>
           {theme === 'dark' ? (
             <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor">
               <path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z" />
@@ -134,8 +134,8 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         <button
           className="tb-btn"
           onClick={() => { setProfilOpen(true); setProfilTab('info'); }}
-          title="Mon profil"
-          aria-label="Ouvrir le menu profil"
+          title={t('profil.titre')}
+          aria-label={t('profil.ouvrir')}
           style={{ display: 'flex', alignItems: 'center', gap: 8 }}
         >
           <div className="sb-avatar" style={{ width: 28, height: 28, fontSize: 11 }}>{initials || '?'}</div>
@@ -152,13 +152,13 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         <div className="modal-backdrop" onClick={() => setProfilOpen(false)}>
           <div className="modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
             <div className="modal-hd">
-              <h2>Mon profil</h2>
+              <h2>{t('profil.titre')}</h2>
               <button className="tb-btn" onClick={() => setProfilOpen(false)} aria-label={t('actions.fermer')}>
                 <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" /></svg>
               </button>
             </div>
             <div className="modal-body">
-              <div className="tabs" style={{ marginBottom: 16 }} role="tablist" aria-label="Sections du profil">
+              <div className="tabs" style={{ marginBottom: 16 }} role="tablist" aria-label={t('profil.sections')}>
                 <button
                   className={`tab${profilTab === 'info' ? ' active' : ''}`}
                   onClick={() => setProfilTab('info')}
@@ -166,7 +166,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                   aria-selected={profilTab === 'info'}
                   aria-controls="profil-info-panel"
                   id="profil-info-tab"
-                >Informations</button>
+                >{t('profil.tab_infos')}</button>
                 <button
                   className={`tab${profilTab === 'password' ? ' active' : ''}`}
                   onClick={() => setProfilTab('password')}
@@ -174,7 +174,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                   aria-selected={profilTab === 'password'}
                   aria-controls="profil-password-panel"
                   id="profil-password-tab"
-                >Mot de passe</button>
+                >{t('profil.tab_mdp')}</button>
               </div>
 
               {profilTab === 'info' && (
@@ -196,16 +196,16 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                   {/* Infos */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 0, border: '1px solid var(--rule)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--rule)', fontSize: 13 }}>
-                      <span style={{ color: 'var(--ink-3)' }}>Langue</span>
+                      <span style={{ color: 'var(--ink-3)' }}>{t('profil.langue')}</span>
                       <span style={{ fontWeight: 500 }}>{user?.langue === 'ar' ? 'العربية' : user?.langue === 'en' ? 'English' : 'Français'}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--rule)', fontSize: 13 }}>
-                      <span style={{ color: 'var(--ink-3)' }}>Thème</span>
-                      <span style={{ fontWeight: 500 }}>{theme === 'dark' ? '🌙 Sombre' : '☀️ Clair'}</span>
+                      <span style={{ color: 'var(--ink-3)' }}>{t('profil.theme')}</span>
+                      <span style={{ fontWeight: 500 }}>{theme === 'dark' ? t('profil.theme_sombre') : t('profil.theme_clair')}</span>
                     </div>
                     {user?.last_login && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', fontSize: 13 }}>
-                        <span style={{ color: 'var(--ink-3)' }}>Dernière connexion</span>
+                        <span style={{ color: 'var(--ink-3)' }}>{t('profil.derniere_connexion')}</span>
                         <span style={{ fontWeight: 500 }}>
                           {fmtDate(user.last_login, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
@@ -218,16 +218,16 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                     style={{ fontSize: 13, color: 'var(--terra-ink)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'start' }}
                     onClick={() => setProfilTab('password')}
                   >
-                    Changer le mot de passe →
+                    {t('profil.changer_mdp')} →
                   </button>
                 </div>
               )}
 
               {profilTab === 'password' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }} role="tabpanel" id="profil-password-panel" aria-labelledby="profil-password-tab">
-                  <Input label="Mot de passe actuel" type="password" value={ancienMdp} onChange={e => setAncienMdp(e.target.value)} />
-                  <Input label="Nouveau mot de passe" type="password" value={nouveauMdp} onChange={e => setNouveauMdp(e.target.value)} placeholder="Minimum 8 caractères" />
-                  <Input label="Confirmer le nouveau mot de passe" type="password" value={confirmMdp} onChange={e => setConfirmMdp(e.target.value)} />
+                  <Input label={t('profil.mdp_actuel')} type="password" value={ancienMdp} onChange={e => setAncienMdp(e.target.value)} />
+                  <Input label={t('profil.nouveau_mdp')} type="password" value={nouveauMdp} onChange={e => setNouveauMdp(e.target.value)} placeholder={t('profil.mdp_min')} />
+                  <Input label={t('profil.confirmer_mdp')} type="password" value={confirmMdp} onChange={e => setConfirmMdp(e.target.value)} />
                 </div>
               )}
             </div>
@@ -237,7 +237,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
               )}
               {profilTab === 'info' && (
                 <button className="btn btn-danger btn-sm" onClick={() => { setProfilOpen(false); signOut(); }}>
-                  Déconnexion
+                  {t('auth.logout')}
                 </button>
               )}
               {profilTab === 'password' && (
