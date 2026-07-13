@@ -534,7 +534,7 @@ export function ElevesPage() {
     setDeleting(true);
     try {
       await api.delete(`/api/v1/eleves/${confirmDelete.id}`);
-      toast.success('Élève désactivé');
+      toast.success(t('eleve.ok_desactive_simple'));
       setConfirmDelete(null);
       fetchEleves();
     } catch (err) {
@@ -721,7 +721,7 @@ export function ElevesPage() {
       },
     },
     { key: 'matricule', header: t('eleve.matricule'), width: '140px', sortable: true },
-    { key: 'nom_fr', header: 'Nom', sortable: true },
+    { key: 'nom_fr', header: t('eleve.nom'), sortable: true },
     { key: 'prenom_fr', header: t('eleve.prenom'), sortable: true },
     {
       key: 'sexe',
@@ -980,10 +980,10 @@ export function ElevesPage() {
               <input ref={fileInputRef} type="file" accept=".csv" style={{ display: 'none' }}
                 onChange={e => { if (e.target.files?.[0]) handleCsvFile(e.target.files[0]); e.target.value = ''; }} />
               <Button variant="secondary" onClick={() => { setCarteLotClasseId(''); setCarteLotErreurs([]); setCarteLotModal(true); }}>
-                🪪 Cartes en lot
+                {t('eleve.cartes_en_lot')}
               </Button>
               <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>
-                ⬆ Importer CSV
+                {t('eleve.importer_csv')}
               </Button>
               <Button variant="secondary" onClick={async () => {
                 try {
@@ -1001,7 +1001,7 @@ export function ElevesPage() {
                   toast.success(t('eleve.export_ok'));
                 } catch { toast.error(t('eleve.err_export')); }
               }}>
-                ⬇ Excel
+                {t('eleve.export_excel')}
               </Button>
               <Button onClick={openAdd} icon={<span>+</span>}>
                 {t('eleve.ajouter')}
@@ -1028,13 +1028,13 @@ export function ElevesPage() {
 
           <div style={{ width: 144 }}>
             <Select
-              label="Sexe"
+              label={t('eleve.sexe')}
               value={filterSexe}
               onChange={e => setFilterSexe(e.target.value)}
               options={[
                 { value: '', label: t('eleve.tous') },
-                { value: 'M', label: 'Masculin' },
-                { value: 'F', label: 'Féminin' },
+                { value: 'M', label: t('eleve.masculin') },
+                { value: 'F', label: t('eleve.feminin') },
               ]}
             />
           </div>
@@ -1074,7 +1074,7 @@ export function ElevesPage() {
           </div>
 
           <span style={{ fontSize: 12, color: 'var(--ink-3)', whiteSpace: 'nowrap', marginInlineStart: 'auto' }}>
-            {total} résultat{total !== 1 ? 's' : ''}
+            {t('eleve.resultats', { count: total })}
           </span>
 
           {(filterSexe || filterStatut || filterClasse || search) && (
@@ -1083,7 +1083,7 @@ export function ElevesPage() {
               size="sm"
               onClick={() => { setSearch(''); setFilterSexe(''); setFilterStatut(''); setFilterClasse(''); }}
             >
-              Réinitialiser
+              {t('eleve.reinitialiser')}
             </Button>
           )}
         </div>
@@ -1238,7 +1238,7 @@ export function ElevesPage() {
                 </h2>
                 <p style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--ink-4)', marginTop: 2 }}>{ficheModal.matricule}</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-                  <Badge label={ficheModal.actif ? 'Actif' : 'Inactif'} variant={ficheModal.actif ? 'success' : 'neutral'} />
+                  <Badge label={ficheModal.actif ? t('eleve.actif') : t('eleve.inactif')} variant={ficheModal.actif ? 'success' : 'neutral'} />
                   <Badge label={ficheModal.sexe === 'M' ? 'Masculin' : 'Féminin'} variant={ficheModal.sexe === 'M' ? 'info' : 'warning'} />
                 </div>
               </div>
@@ -1266,8 +1266,8 @@ export function ElevesPage() {
                 <FicheRow label="Prénom" value={ficheModal.prenom_fr} />
                 <FicheRow label={t('eleve.date_naissance')} value={formatDate(ficheModal.date_naissance, locale)} />
                 <FicheRow label="Lieu de naissance" value={ficheModal.lieu_naissance || '—'} />
-                <FicheRow label="Sexe" value={ficheModal.sexe === 'M' ? 'Masculin' : 'Féminin'} />
-                <FicheRow label="Matricule" value={<span className="font-mono text-sm">{ficheModal.matricule}</span>} />
+                <FicheRow label={t('eleve.sexe')} value={ficheModal.sexe === 'M' ? 'Masculin' : 'Féminin'} />
+                <FicheRow label={t('eleve.matricule')} value={<span className="font-mono text-sm">{ficheModal.matricule}</span>} />
               </div>
             </div>
 
@@ -1518,7 +1518,7 @@ export function ElevesPage() {
             />
           ))}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingTop: 8 }}>
-            <Button variant="secondary" onClick={() => setBulkInscModal(false)}>Annuler</Button>
+            <Button variant="secondary" onClick={() => setBulkInscModal(false)}>{t('actions.annuler')}</Button>
             <Button onClick={handleBulkInscrire} loading={bulkInscSaving}>
               Inscrire {selectedIds.size} élève(s)
             </Button>
@@ -1594,7 +1594,7 @@ export function ElevesPage() {
               </>
             ) : null}
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button variant="secondary" onClick={() => { setPortailModal(null); setPortailUrl(null); setPortailCopied(false); }}>Fermer</Button>
+              <Button variant="secondary" onClick={() => { setPortailModal(null); setPortailUrl(null); setPortailCopied(false); }}>{t('eleve.fermer')}</Button>
             </div>
           </div>
         </Modal>
@@ -1686,7 +1686,7 @@ export function ElevesPage() {
             <span dangerouslySetInnerHTML={{ __html: t('eleve.carte_lot_desc') }} />
           </div>
           <div className="field">
-            <label className="field-label">Classe</label>
+            <label className="field-label">{t('eleve.classe_label')}</label>
             <select className="input" value={carteLotClasseId} onChange={e => setCarteLotClasseId(e.target.value)}>
               <option value="">{t('eleve.carte_lot_classe_ph')}</option>
               {allClasses.filter(c => !anneeCouranteId || c.annee_scolaire_id === anneeCouranteId).map(c => <option key={c.id} value={c.id}>{c.nom_fr} ({c.filiere})</option>)}

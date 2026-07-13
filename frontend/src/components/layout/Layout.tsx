@@ -10,6 +10,8 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { api } from '../../lib/api';
 import { toast } from '../../store/toastStore';
+import i18nInstance from '../../i18n';
+import { applyDocumentLang, currentLang, type AppLang } from '../ui/LanguageSelect';
 
 function MustChangePasswordModal() {
   const { t } = useTranslation();
@@ -66,6 +68,17 @@ export function Layout() {
   const { isAuthenticated, user, login, logout } = useAuthStore();
   const navigate = useNavigate();
   useTheme();
+
+  // Applique la langue préférée de l'utilisateur au démarrage (i18next boote
+  // en fr) — sinon la préférence n'était honorée qu'après bascule manuelle.
+  const userLang = user?.langue;
+  useEffect(() => {
+    if (userLang && currentLang(i18nInstance.language) !== userLang) {
+      i18nInstance.changeLanguage(userLang);
+      applyDocumentLang(userLang as AppLang);
+    }
+  }, [userLang]);
+
   useEffect(() => {
     api.get<AuthUser>('/api/v1/auth/me')
       .then((freshUser) => {

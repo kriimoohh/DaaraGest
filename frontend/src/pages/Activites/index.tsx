@@ -430,22 +430,22 @@ export function ActivitesPage() {
 
         {/* Modal séance */}
         <Modal isOpen={seanceModal} onClose={() => setSeanceModal(false)} title={t('activite.nouvelle_seance')} size="sm"
-          footer={<div className="row" style={{ gap: 8, justifyContent: 'flex-end' }}><Button variant="secondary" onClick={() => setSeanceModal(false)}>{t('actions.annuler')}</Button><Button onClick={creerSeance} loading={savingSeance}>Créer</Button></div>}>
+          footer={<div className="row" style={{ gap: 8, justifyContent: 'flex-end' }}><Button variant="secondary" onClick={() => setSeanceModal(false)}>{t('actions.annuler')}</Button><Button onClick={creerSeance} loading={savingSeance}>{t('activite.creer')}</Button></div>}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <Input label={t('activite.date_label')} type="date" value={seanceForm.date} onChange={e => setSeanceForm(f => ({ ...f, date: e.target.value }))} />
-            <Input label={t('activite.duree_label')} type="number" min="1" value={seanceForm.duree_min} onChange={e => setSeanceForm(f => ({ ...f, duree_min: e.target.value }))} placeholder="Ex : 90" />
+            <Input label={t('activite.duree_label')} type="number" min="1" value={seanceForm.duree_min} onChange={e => setSeanceForm(f => ({ ...f, duree_min: e.target.value }))} placeholder={t('activite.duree_ph')} />
             <div className="field"><label className="field-label">{t('activite.notes_label')}</label><textarea className="input" rows={2} value={seanceForm.notes} onChange={e => setSeanceForm(f => ({ ...f, notes: e.target.value }))} style={{ resize: 'vertical' }} /></div>
           </div>
         </Modal>
 
         {/* Modal évaluation */}
         <Modal isOpen={!!evalModal} onClose={() => setEvalModal(null)} title={evalModal ? `Évaluer — ${evalModal.eleve.prenom_fr} ${evalModal.eleve.nom_fr}` : ''} size="sm"
-          footer={<div className="row" style={{ gap: 8, justifyContent: 'flex-end' }}><Button variant="secondary" onClick={() => setEvalModal(null)}>Annuler</Button><Button onClick={saveEval} loading={savingEval}>Enregistrer</Button></div>}>
+          footer={<div className="row" style={{ gap: 8, justifyContent: 'flex-end' }}><Button variant="secondary" onClick={() => setEvalModal(null)}>{t('actions.annuler')}</Button><Button onClick={saveEval} loading={savingEval}>{t('actions.enregistrer')}</Button></div>}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <Select label={t('activite.periode_opt_label')} value={evalForm.periode} onChange={e => setEvalForm(f => ({ ...f, periode: e.target.value }))}
               options={[{ value: '', label: '—' }, ...Array.from({ length: 3 }, (_, i) => ({ value: String(i + 1), label: `Période ${i + 1}` }))]} />
             <Input label={`Note /${noteMax}`} type="number" min="0" max={noteMax} step="0.5" value={evalForm.note} onChange={e => setEvalForm(f => ({ ...f, note: e.target.value }))} placeholder="—" />
-            <div className="field"><label className="field-label">{t('activite.appreciation_label')}</label><textarea className="input" rows={3} value={evalForm.appreciation} onChange={e => setEvalForm(f => ({ ...f, appreciation: e.target.value }))} placeholder="Ex : Très bonne participation, esprit d'équipe remarquable…" style={{ resize: 'vertical' }} /></div>
+            <div className="field"><label className="field-label">{t('activite.appreciation_label')}</label><textarea className="input" rows={3} value={evalForm.appreciation} onChange={e => setEvalForm(f => ({ ...f, appreciation: e.target.value }))} placeholder={t('activite.appreciation_ph')} style={{ resize: 'vertical' }} /></div>
           </div>
         </Modal>
       </>
@@ -500,7 +500,7 @@ export function ActivitesPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <Input label={t('activite.nom_label')} value={actForm.nom_fr} onChange={e => setActForm(f => ({ ...f, nom_fr: e.target.value }))} placeholder={t('activite.nom_ph')} />
           <div className="field"><label className="field-label">{t('activite.description_label')}</label><textarea className="input" rows={2} value={actForm.description} onChange={e => setActForm(f => ({ ...f, description: e.target.value }))} style={{ resize: 'vertical' }} /></div>
-          <Input label={t('activite.capacite_label')} type="number" min="1" value={actForm.capacite_max} onChange={e => setActForm(f => ({ ...f, capacite_max: e.target.value }))} placeholder="Illimitée si vide" />
+          <Input label={t('activite.capacite_label')} type="number" min="1" value={actForm.capacite_max} onChange={e => setActForm(f => ({ ...f, capacite_max: e.target.value }))} placeholder={t('activite.capacite_ph')} />
         </div>
       </Modal>
     </>

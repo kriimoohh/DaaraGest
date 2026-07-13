@@ -627,11 +627,11 @@ export function FinancesPage() {
               <Button variant="secondary" onClick={() => exportReliquats('pdf')} loading={exporting === 'pdf'} disabled={reliquats.length === 0}>🖨 Imprimer</Button>
             </div>
           </div>
-          {loading ? <div className="empty">Chargement...</div> :
+          {loading ? <div className="empty">{t('finance.chargement')}</div> :
           reliquats.length === 0 ? (
             <div className="card empty" style={{ flexDirection: 'column', gap: 8, padding: 32 }}>
               <span style={{ fontSize: 28 }}>✅</span>
-              <p>Aucun reliquat — tous les élèves sont à jour</p>
+              <p>{t('finance.aucun_reliquat')}</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -650,7 +650,7 @@ export function FinancesPage() {
                 <table className="tbl">
                   <thead>
                     <tr>
-                      {['Élève', 'Matricule', 'Mois dus', 'Mois manquants', 'Montant dû', 'Actions'].map(h => (
+                      {[t('finance.col_eleve'), t('finance.col_matricule'), t('finance.col_mois_dus'), t('finance.col_mois_manquants'), t('finance.col_montant_du'), t('finance.col_actions')].map(h => (
                         <th key={h}>{h}</th>
                       ))}
                     </tr>
@@ -721,7 +721,7 @@ export function FinancesPage() {
           </div>
 
           <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
-            <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>Type :</span>
+            <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>{t('finance.type_label')}</span>
             {FILTER_TYPES.map(f => (
               <button key={f.value} onClick={() => setFilterType(f.value)}
                 style={{
@@ -735,7 +735,7 @@ export function FinancesPage() {
           </div>
 
           <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
-            <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>Statut :</span>
+            <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>{t('finance.statut_label')}</span>
             {FILTER_STATUTS.map(f => (
               <button key={f.value} onClick={() => setFilterStatut(f.value)}
                 style={{
@@ -749,9 +749,9 @@ export function FinancesPage() {
           </div>
 
           <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>Période :</span>
+            <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>{t('finance.periode_filtre_label')}</span>
             <Select value={mois} onChange={e => setMois(e.target.value)}
-              options={[{ value: '', label: 'Tous les mois' }, ...MOIS.map((m, i) => ({ value: String(i+1), label: m }))]} />
+              options={[{ value: '', label: t('finance.tous_les_mois') }, ...MOIS.map((m, i) => ({ value: String(i+1), label: m }))]} />
             <Input label="" type="number" value={annee} onChange={e => setAnnee(e.target.value)} />
             <div style={{ marginInlineStart: 'auto', display: 'flex', gap: 8 }}>
               <Button variant="secondary" onClick={() => exportPaiements('excel')} loading={exporting === 'excel'}>⬇ Excel</Button>
@@ -760,13 +760,13 @@ export function FinancesPage() {
           </div>
 
           <div className="card">
-            {loading ? <div className="empty">Chargement...</div> :
-            paiements.length === 0 ? <div className="empty">Aucun paiement trouvé</div> : (
+            {loading ? <div className="empty">{t('finance.chargement')}</div> :
+            paiements.length === 0 ? <div className="empty">{t('finance.aucun_paiement')}</div> : (
               <div className="tbl-wrap">
                 <table className="tbl">
                   <thead>
                     <tr>
-                      {['Élève', 'Matricule', 'Type', 'Montant', 'Période', 'N° Reçu', 'Statut', ...(isAdmin ? ['Actions'] : [])].map(h => (
+                      {[t('finance.col_eleve'), t('finance.col_matricule'), t('finance.col_type'), t('finance.col_montant'), t('finance.col_periode'), t('finance.col_recu', 'N° Reçu'), t('finance.col_statut'), ...(isAdmin ? [t('finance.col_actions')] : [])].map(h => (
                         <th key={h}>{h}</th>
                       ))}
                     </tr>
@@ -784,8 +784,8 @@ export function FinancesPage() {
                         {isAdmin && (
                           <td>
                             <div className="row" style={{ gap: 4 }}>
-                              <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>Modifier</Button>
-                              <Button size="sm" variant="danger" onClick={() => setDeleteTarget(p)}>Supprimer</Button>
+                              <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>{t('actions.modifier')}</Button>
+                              <Button size="sm" variant="danger" onClick={() => setDeleteTarget(p)}>{t('actions.supprimer')}</Button>
                             </div>
                           </td>
                         )}
@@ -852,7 +852,7 @@ export function FinancesPage() {
       </Modal>
 
       {/* Modal édition paiement (admin) */}
-      <Modal isOpen={!!editTarget} onClose={() => setEditTarget(null)} title="Modifier le paiement" size="md">
+      <Modal isOpen={!!editTarget} onClose={() => setEditTarget(null)} title={t('finance.modifier_paiement')} size="md">
         {editTarget && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>

@@ -87,7 +87,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           <span className="here">{currentTitle}</span>
         </div>
 
-        <button className="tb-search" onClick={() => setCmdOpen(true)} aria-label="Rechercher (Ctrl+K)">
+        <button className="tb-search" onClick={() => setCmdOpen(true)} aria-label={t('tb.rechercher_aria')}>
           <svg width={13} height={13} viewBox="0 0 24 24" fill="currentColor">
             <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
           </svg>
@@ -233,7 +233,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             </div>
             <div className="modal-foot" style={{ justifyContent: profilTab === 'password' ? 'space-between' : 'flex-end' }}>
               {profilTab === 'password' && (
-                <button className="btn btn-secondary" onClick={() => setProfilOpen(false)}>Annuler</button>
+                <button className="btn btn-secondary" onClick={() => setProfilOpen(false)}>{t('actions.annuler')}</button>
               )}
               {profilTab === 'info' && (
                 <button className="btn btn-danger btn-sm" onClick={() => { setProfilOpen(false); signOut(); }}>
@@ -241,7 +241,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                 </button>
               )}
               {profilTab === 'password' && (
-                <Button onClick={handleChangePassword} loading={saving}>Modifier le mot de passe</Button>
+                <Button onClick={handleChangePassword} loading={saving}>{t('profil.modifier_mdp_titre')}</Button>
               )}
             </div>
           </div>

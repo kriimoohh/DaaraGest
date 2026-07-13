@@ -303,7 +303,12 @@
     "ok_reactive": "Élève réactivé",
     "err_statut": "Impossible de modifier le statut",
     "statut_label": "Statut",
-    "rechercher_ph": "Rechercher par nom ou matricule…"
+    "rechercher_ph": "Rechercher par nom ou matricule…",
+    "ok_desactive_simple": "Élève désactivé",
+    "preview_prenom": "Prénom",
+    "preview_sexe": "Sexe",
+    "classe_label": "Classe",
+    "export_excel": "⬇ Excel"
   },
   "affectation": {
     "menu": "Affectations (classes)",
@@ -936,7 +941,13 @@
     "qr_pas_eleve": "Ce QR code ne correspond pas à un élève",
     "qr_camera_err": "Impossible d'accéder à la caméra. Vérifiez les permissions.",
     "col_brut": "Brut",
-    "retirer": "Retirer {{nom}}"
+    "retirer": "Retirer {{nom}}",
+    "chargement": "Chargement…",
+    "type_label": "Type :",
+    "statut_label": "Statut :",
+    "periode_filtre_label": "Période :",
+    "tous_les_mois": "Tous les mois",
+    "col_type": "Type"
   },
   "parametre": {
     "titre": "Paramètres",
@@ -1224,7 +1235,8 @@
     "mode_clair": "Mode clair",
     "mode_sombre": "Mode sombre",
     "activer_clair": "Activer le mode clair",
-    "activer_sombre": "Activer le mode sombre"
+    "activer_sombre": "Activer le mode sombre",
+    "rechercher_aria": "Rechercher (Ctrl+K)"
   },
   "cmd": {
     "eleves_section": "Élèves",
@@ -1574,7 +1586,9 @@
     "etablissement": "Établissement",
     "token_manquant": "Token manquant",
     "footer": "DaaraGest — Système de gestion scolaire",
-    "chargement": "Chargement…"
+    "chargement": "Chargement…",
+    "note_th": "Note",
+    "retard": "Retard"
   },
   "activite": {
     "titre": "Activités parascolaires",
@@ -2087,12 +2101,18 @@
     "ok_mdp_modifie": "Mot de passe modifié",
     "changement_force_titre": "Changement de mot de passe",
     "changement_force_msg": "Pour des raisons de sécurité, vous devez changer votre mot de passe avant de continuer.",
-    "ok_mdp_modifie_succes": "Mot de passe modifié avec succès"
+    "ok_mdp_modifie_succes": "Mot de passe modifié avec succès",
+    "modifier_mdp_titre": "Modifier le mot de passe"
   },
   "photo": {
     "ajouter": "Ajouter une photo",
     "prendre": "Prendre une photo",
-    "galerie": "Choisir depuis la galerie"
+    "galerie": "Choisir depuis la galerie",
+    "err_lecture": "Lecture du fichier impossible",
+    "err_image": "Image illisible ou corrompue",
+    "err_dimensions": "Dimensions image invalides",
+    "err_canvas": "Canvas indisponible",
+    "traitement": "Traitement de l'image…"
   },
   "input": {
     "afficher_mdp": "Afficher le mot de passe",

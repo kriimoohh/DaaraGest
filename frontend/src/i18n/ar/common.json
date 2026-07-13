@@ -303,7 +303,12 @@
     "ok_reactive": "تمت إعادة تفعيل التلميذ",
     "err_statut": "تعذر تغيير الحالة",
     "statut_label": "الحالة",
-    "rechercher_ph": "البحث بالاسم أو رقم التسجيل…"
+    "rechercher_ph": "البحث بالاسم أو رقم التسجيل…",
+    "ok_desactive_simple": "تم تعطيل التلميذ",
+    "preview_prenom": "اللقب",
+    "preview_sexe": "الجنس",
+    "classe_label": "القسم",
+    "export_excel": "⬇ Excel"
   },
   "affectation": {
     "menu": "الإسنادات (الأقسام)",
@@ -936,7 +941,13 @@
     "qr_pas_eleve": "رمز QR هذا لا يخص تلميذًا",
     "qr_camera_err": "تعذر الوصول إلى الكاميرا. تحقق من الأذونات.",
     "col_brut": "الإجمالي",
-    "retirer": "إزالة {{nom}}"
+    "retirer": "إزالة {{nom}}",
+    "chargement": "جارٍ التحميل…",
+    "type_label": "النوع :",
+    "statut_label": "الحالة :",
+    "periode_filtre_label": "الفترة :",
+    "tous_les_mois": "كل الأشهر",
+    "col_type": "النوع"
   },
   "parametre": {
     "titre": "الإعدادات",
@@ -1224,7 +1235,8 @@
     "mode_clair": "الوضع الفاتح",
     "mode_sombre": "الوضع الداكن",
     "activer_clair": "تفعيل الوضع الفاتح",
-    "activer_sombre": "تفعيل الوضع الداكن"
+    "activer_sombre": "تفعيل الوضع الداكن",
+    "rechercher_aria": "بحث (Ctrl+K)"
   },
   "cmd": {
     "eleves_section": "التلاميذ",
@@ -1574,7 +1586,9 @@
     "etablissement": "المؤسسة",
     "token_manquant": "الرمز مفقود",
     "footer": "دارا جيست — نظام الإدارة المدرسية",
-    "chargement": "جار التحميل…"
+    "chargement": "جار التحميل…",
+    "note_th": "الدرجة",
+    "retard": "تأخر"
   },
   "activite": {
     "titre": "الأنشطة اللاصفية",
@@ -2087,12 +2101,18 @@
     "ok_mdp_modifie": "تم تغيير كلمة المرور",
     "changement_force_titre": "تغيير كلمة المرور",
     "changement_force_msg": "لأسباب أمنية، يجب تغيير كلمة المرور قبل المتابعة.",
-    "ok_mdp_modifie_succes": "تم تغيير كلمة المرور بنجاح"
+    "ok_mdp_modifie_succes": "تم تغيير كلمة المرور بنجاح",
+    "modifier_mdp_titre": "تعديل كلمة المرور"
   },
   "photo": {
     "ajouter": "إضافة صورة",
     "prendre": "التقاط صورة",
-    "galerie": "اختيار من المعرض"
+    "galerie": "اختيار من المعرض",
+    "err_lecture": "تعذرت قراءة الملف",
+    "err_image": "صورة غير قابلة للقراءة أو تالفة",
+    "err_dimensions": "أبعاد الصورة غير صالحة",
+    "err_canvas": "Canvas غير متاح",
+    "traitement": "جارٍ معالجة الصورة…"
   },
   "input": {
     "afficher_mdp": "إظهار كلمة المرور",
