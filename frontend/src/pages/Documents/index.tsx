@@ -95,23 +95,27 @@ const DEST_TYPE: Record<TypeDocument, DestType> = {
   CARTE_PROFESSEUR:             'professeur',
 };
 
-const GROUPS: { label: string; icon: string; types: TypeDocument[] }[] = [
+const GROUPS: { key: string; label: string; icon: string; types: TypeDocument[] }[] = [
   {
+    key: 'groupe_eleves',
     label: 'Documents élèves',
     icon: 'M12 3C9.79 3 8 4.79 8 7s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 10c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
     types: ['CERTIFICAT_SCOLARITE','ATTESTATION_INSCRIPTION','CONVOCATION_EXAMEN','CONVOCATION_PARENT','FICHE_TRANSFERT','EMPLOI_DU_TEMPS_ELEVE','RELEVE_NOTES','CERTIFICAT_BONNE_CONDUITE','FICHE_RENSEIGNEMENTS','ATTESTATION_RESULTATS','AUTORISATION_ABSENCE_ELEVE','BILLET_ENTREE'],
   },
   {
+    key: 'groupe_classe',
     label: 'Documents de classe',
     icon: 'M12 3L1 9l4 2.18V15c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-3.82L21 9 12 3z',
     types: ['LISTE_CLASSE', 'RELEVE_NOTES_CLASSE', 'RELEVE_NOTES_VIERGE'],
   },
   {
+    key: 'groupe_professeurs',
     label: 'Documents professeurs',
     icon: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
     types: ['ATTESTATION_TRAVAIL','CERTIFICAT_TRAVAIL_PERMANENT','CERTIFICAT_TRAVAIL_STAGIAIRE','ORDRE_MISSION','FICHE_PAIE','PLANNING_COURS','AUTORISATION_ABSENCE_PERSONNEL'],
   },
   {
+    key: 'groupe_cartes',
     label: "Cartes d'identité (CR80)",
     icon: 'M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z',
     types: ['CARTE_ELEVE','CARTE_PROFESSEUR'],
@@ -289,13 +293,14 @@ function TypeList({ selected, onSelect, templates, activeColor = false }: {
   templates: TemplateInfo[];
   activeColor?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
       {GROUPS.map(group => (
-        <div key={group.label}>
+        <div key={group.key}>
           <div style={{ padding: '10px 14px', background: 'var(--paper-2)', borderBottom: '1px solid var(--rule)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <svg width={14} height={14} viewBox="0 0 24 24" fill="var(--ink-3)"><path d={group.icon} /></svg>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{group.label}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t(`document.${group.key}`)}</span>
           </div>
           {group.types.map(type => {
             const tpl = templates.find(t => t.type === type);
@@ -312,10 +317,10 @@ function TypeList({ selected, onSelect, templates, activeColor = false }: {
                 }}
               >
                 <span style={{ fontSize: 13, color: active ? (activeColor ? 'var(--info-text)' : 'var(--terra-ink)') : 'var(--ink)', fontWeight: active ? 600 : 400 }}>
-                  {LABELS[type]}
+                  {t(`document.type_${type}`)}
                 </span>
                 {tpl?.has_custom && (
-                  <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: 'var(--success-soft)', color: 'var(--success-text)', flexShrink: 0 }}>✓ perso</span>
+                  <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: 'var(--success-soft)', color: 'var(--success-text)', flexShrink: 0 }}>{t('document.badge_perso')}</span>
                 )}
               </button>
             );
@@ -389,7 +394,7 @@ function TemplateEditor({ type, templates, onSaved }: {
   };
 
   const handleReset = async () => {
-    if (!confirm('Supprimer le template personnalisé et revenir au modèle par défaut ?')) return;
+    if (!confirm(t('document.template_reset_confirm'))) return;
     setResetting(true);
     try {
       await api.delete(`/api/v1/documents/${type}/reset`);
@@ -403,14 +408,14 @@ function TemplateEditor({ type, templates, onSaved }: {
     finally { setResetting(false); }
   };
 
-  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--ink-3)', fontSize: 14 }}>Chargement du template…</div>;
+  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--ink-3)', fontSize: 14 }}>{t('document.chargement_template')}</div>;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0, height: '100%' }}>
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: '1px solid var(--rule)', flexWrap: 'wrap' }}>
         <div style={{ flex: 1 }}>
-          <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>{LABELS[type]}</span>
+          <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>{t(`document.type_${type}`)}</span>
           {dirty && <span style={{ fontSize: 11, marginInlineStart: 8, color: 'var(--warning)' }}>● Non sauvegardé</span>}
           {hasCustom && !dirty && <span style={{ fontSize: 11, marginInlineStart: 8, padding: '1px 7px', borderRadius: 4, background: 'var(--success-soft)', color: 'var(--success-text)' }}>✓ Template personnalisé</span>}
         </div>
@@ -455,7 +460,7 @@ function TemplateEditor({ type, templates, onSaved }: {
         {/* Variables panel */}
         <div style={{ overflowY: 'auto', maxHeight: 560 }}>
           <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--rule)', fontSize: 11, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Variables disponibles
+            {t('document.variables_disponibles')}
           </div>
           {VAR_GROUPS.map(group => (
             <div key={group.label}>
@@ -680,9 +685,9 @@ export function DocumentsPage() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <div>
-                  <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>{LABELS[selectedType]}</h3>
+                  <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>{t(`document.type_${selectedType}`)}</h3>
                   <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-3)' }}>
-                    Destinataire : {destType === 'eleve' ? 'Élève' : destType === 'professeur' ? 'Professeur' : 'Classe'}
+                    {t('document.destinataire')} : {destType === 'eleve' ? t('document.destinataire_eleve') : destType === 'professeur' ? t('document.destinataire_professeur') : t('document.destinataire_classe')}
                   </p>
                 </div>
 
@@ -690,8 +695,8 @@ export function DocumentsPage() {
                   <div style={{ padding: '10px 14px', background: 'var(--info-soft)', borderRadius: 8, border: '1px solid var(--rule-2)', fontSize: 13, color: 'var(--info-text)', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                     <span style={{ fontSize: 16, flexShrink: 0 }}>🪪</span>
                     <div>
-                      <strong>Carte CR80 — format Evolis Primacy</strong><br />
-                      La photo est <strong>obligatoire</strong> pour générer cette carte. Pour imprimer plusieurs cartes d'un coup, utilisez le bouton "Générer en lot" depuis la page <strong>Élèves</strong> ou <strong>Professeurs</strong>.
+                      <strong>{t('document.carte_cr80')}</strong><br />
+                      <span dangerouslySetInnerHTML={{ __html: t('document.carte_cr80_info') }} />
                     </div>
                   </div>
                 )}
@@ -712,7 +717,7 @@ export function DocumentsPage() {
                         <Input placeholder={t('document.rechercher_eleve_ph')} value={eleveSearch} onChange={e => setEleveSearch(e.target.value)} />
                         {(elevesFound.length > 0 || searchLoading) && (
                           <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--paper)', border: '1px solid var(--rule)', borderRadius: 'var(--r-md)', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', marginTop: 4 }}>
-                            {searchLoading && <div style={{ padding: 10, fontSize: 13, color: 'var(--ink-3)', textAlign: 'center' }}>Recherche…</div>}
+                            {searchLoading && <div style={{ padding: 10, fontSize: 13, color: 'var(--ink-3)', textAlign: 'center' }}>{t('document.recherche_en_cours')}</div>}
                             {elevesFound.map(e => (
                               <button key={e.id} onClick={() => { setSelectedEleve(e); setEleveSearch(''); setElevesFound([]); }} style={{ display: 'flex', flexDirection: 'column', width: '100%', padding: '10px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'start', borderBottom: '1px solid var(--rule)', color: 'var(--ink)' }}>
                                 <span style={{ fontSize: 13, fontWeight: 600 }}>{e.prenom_fr} {e.nom_fr}</span>
@@ -730,7 +735,7 @@ export function DocumentsPage() {
                   <div className="field">
                     <label className="field-label">{t('document.professeur_label')}</label>
                     <select className="input" value={selectedProfId} onChange={e => setSelectedProfId(e.target.value)}>
-                      <option value="">Sélectionner un professeur…</option>
+                      <option value="">{t('document.selectionner_professeur')}</option>
                       {professeurs.map(p => <option key={p.id} value={p.id}>{[p.prenom_fr, p.nom_fr].filter(Boolean).join(' ')}</option>)}
                     </select>
                   </div>
@@ -741,29 +746,29 @@ export function DocumentsPage() {
                     <div className="field">
                       <label className="field-label">{t('document.classe_label')}</label>
                       <select className="input" value={selectedClasseId} onChange={e => setSelectedClasseId(e.target.value)}>
-                        <option value="">Sélectionner une classe…</option>
+                        <option value="">{t('document.selectionner_classe')}</option>
                         {classes.filter(c => !extraParams.annee_scolaire_id || c.annee_scolaire_id === extraParams.annee_scolaire_id).map(c => <option key={c.id} value={c.id}>{nomClasse(c)} ({c.filiere})</option>)}
                       </select>
                     </div>
                     <div className="field">
                       <label className="field-label">{t('document.annee_scolaire')}</label>
                       <select className="input" value={extraParams.annee_scolaire_id ?? ''} onChange={e => setExtraParams(p => ({ ...p, annee_scolaire_id: e.target.value }))}>
-                        <option value="">Sélectionner…</option>
+                        <option value="">{t('document.selectionner')}</option>
                         {annees.map(a => <option key={a.id} value={a.id}>{a.libelle}{a.active ? ' (active)' : ''}</option>)}
                       </select>
                     </div>
                     {selectedType && CLASSE_TYPES_WITH_PERIODE.has(selectedType) && (
                       <div className="field">
-                        <label className="field-label">Période</label>
+                        <label className="field-label">{t('document.periode')}</label>
                         <select
                           className="input"
                           value={extraParams.periode ?? ''}
                           onChange={e => setExtraParams(p => ({ ...p, periode: e.target.value }))}
                         >
-                          <option value="">Annuel (toutes périodes)</option>
-                          <option value="1">1er Trimestre</option>
-                          <option value="2">2ème Trimestre</option>
-                          <option value="3">3ème Trimestre</option>
+                          <option value="">{t('document.periode_annuel')}</option>
+                          <option value="1">{t('common.trimestre_1')}</option>
+                          <option value="2">{t('common.trimestre_2')}</option>
+                          <option value="3">{t('common.trimestre_3')}</option>
                         </select>
                       </div>
                     )}
@@ -771,10 +776,8 @@ export function DocumentsPage() {
                       <div style={{ padding: '10px 14px', background: 'var(--info-soft)', borderRadius: 8, border: '1px solid var(--rule-2)', fontSize: 12, color: 'var(--info-text)', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                         <span style={{ fontSize: 16, flexShrink: 0 }}>📝</span>
                         <div>
-                          <strong>Relevé vierge à remplir manuellement</strong><br />
-                          La liste des élèves et les colonnes des matières sont pré-imprimées ;
-                          les cases de notes restent blanches pour saisie manuscrite par le titulaire.
-                          Format A4 paysage.
+                          <strong>{t('document.releve_vierge_titre')}</strong><br />
+                          {t('document.releve_vierge_desc')}
                         </div>
                       </div>
                     )}
@@ -789,11 +792,11 @@ export function DocumentsPage() {
                         <div key={p.key} className={p.type === 'textarea' ? 'grid-span-2' : ''}>
                           {p.type === 'textarea' ? (
                             <div className="field">
-                              <label className="field-label">{p.label}</label>
+                              <label className="field-label">{t(`document.param_${p.key}`)}</label>
                               <textarea className="input" rows={2} style={{ resize: 'vertical' }} value={extraParams[p.key] ?? ''} onChange={e => setExtraParams(prev => ({ ...prev, [p.key]: e.target.value }))} />
                             </div>
                           ) : (
-                            <Input label={p.label} type={p.type} value={extraParams[p.key] ?? ''} onChange={e => setExtraParams(prev => ({ ...prev, [p.key]: e.target.value }))} />
+                            <Input label={t(`document.param_${p.key}`)} type={p.type} value={extraParams[p.key] ?? ''} onChange={e => setExtraParams(prev => ({ ...prev, [p.key]: e.target.value }))} />
                           )}
                         </div>
                       ))}
@@ -849,14 +852,14 @@ export function DocumentsPage() {
       {tab === 'historique' && (
         <div className="card" style={{ padding: 0 }}>
           {histLoading ? (
-            <div style={{ padding: 40, textAlign: 'center', color: 'var(--ink-3)', fontSize: 14 }}>Chargement…</div>
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--ink-3)', fontSize: 14 }}>{t('document.chargement')}</div>
           ) : historique.length === 0 ? (
             <div style={{ padding: 40, textAlign: 'center', color: 'var(--ink-3)', fontSize: 14 }}>{t('document.aucun_doc_genere')}</div>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: 'var(--paper-2)', borderBottom: '2px solid var(--rule)' }}>
-                  {['Type de document', 'Destinataire', 'Généré par', 'Date'].map(h => (
+                  {[t('document.col_type'), t('document.col_destinataire'), t('document.col_genere_par'), t('document.col_date')].map(h => (
                     <th key={h} style={{ padding: '10px 14px', textAlign: 'start', fontWeight: 600, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
@@ -946,7 +949,7 @@ export function DocumentsPage() {
                     <div style={{ position: 'absolute', top: 0, left: 0, width: naturalW, height: naturalH, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
                       <iframe
                         srcDoc={previewHtml}
-                        title="Aperçu carte"
+                        title={t('document.apercu')}
                         sandbox="allow-same-origin"
                         style={{ width: naturalW, height: naturalH, border: 'none', display: 'block' }}
                       />
@@ -995,7 +998,7 @@ export function DocumentsPage() {
               </div>
               <iframe
                 srcDoc={previewHtml}
-                title="Aperçu document"
+                title={t('document.apercu')}
                 sandbox="allow-same-origin"
                 style={{ flex: 1, width: '100%', border: 'none', borderRadius: 8, background: '#fff', boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}
               />
