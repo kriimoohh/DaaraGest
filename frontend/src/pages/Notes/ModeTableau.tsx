@@ -358,8 +358,8 @@ export function ModeTableau({
                       );
                     })}
                     <th style={{ textAlign: 'center', background: 'var(--paper-2)' }} title="Somme brute de toutes les notes saisies, sans coefficient (comme le relevé de notes)">Total notes</th>
-                    <th style={{ textAlign: 'center', background: 'var(--paper-2)' }} title="Total pondéré : Σ (note × coefficient)">Total ×c</th>
-                    <th style={{ textAlign: 'center', background: 'var(--paper-2)' }}>Moy. /{echelle}</th>
+                    <th style={{ textAlign: 'center', background: 'var(--paper-2)' }} title={t('note.tt_total_pondere')}>{t('note.th_total_pondere')}</th>
+                    <th style={{ textAlign: 'center', background: 'var(--paper-2)' }}>{t('note.th_moy', { echelle })}</th>
                     <th style={{ textAlign: 'center' }}>{t('note.col_appreciation_court')}</th>
                   </tr>
                 </thead>
@@ -418,7 +418,7 @@ export function ModeTableau({
                           );
                         })}
                         <td style={{ textAlign: 'center', background: 'var(--paper-2)', fontVariantNumeric: 'tabular-nums', fontSize: 12, fontWeight: 600 }}
-                            title="Somme des notes saisies (sans coefficient)">
+                            title={t('note.tt_somme_notes')}>
                           {agg === null ? '—' : agg.totalBrut.toFixed(2)}
                         </td>
                         <td style={{ textAlign: 'center', background: 'var(--paper-2)', fontVariantNumeric: 'tabular-nums', fontSize: 12 }}

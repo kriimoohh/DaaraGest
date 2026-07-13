@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 import { fmtDate } from '../../lib/dates';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../components/ui/PageHeader';
@@ -44,13 +45,13 @@ interface StatProf {
 const MOIS_LABELS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 
 const STATUTS = [
-  { value: 'present', label: 'Présent', badge: 'success' as const },
-  { value: 'retard',  label: 'Retard',  badge: 'warning' as const },
-  { value: 'absent',  label: 'Absent',  badge: 'error'   as const },
-  { value: 'conge',   label: 'Congé',   badge: 'info'    as const },
+  { value: 'present', label: 'pointage.present', badge: 'success' as const },
+  { value: 'retard',  label: 'pointage.retard',  badge: 'warning' as const },
+  { value: 'absent',  label: 'pointage.absent',  badge: 'error'   as const },
+  { value: 'conge',   label: 'pointage.conge',   badge: 'info'    as const },
 ];
 
-function statutLabel(s: string) { return STATUTS.find(x => x.value === s)?.label ?? s; }
+function statutLabel(s: string) { const l = STATUTS.find(x => x.value === s)?.label; return l ? i18n.t(l) : s; }
 function statutBadge(s: string) { return STATUTS.find(x => x.value === s)?.badge ?? 'neutral'; }
 
 function dateAujourdHui() {
@@ -88,7 +89,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
       }
       setSaisie(init);
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur de chargement');
+      toast.error((err as Error).message || t('pointage.err_chargement'));
     } finally { setLoading(false); }
   };
 
@@ -139,7 +140,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
       toast.success(`${res.saved} présence(s) enregistrée(s)`);
       charger();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message || t('common.erreur_generique'));
     } finally { setSaving(false); }
   };
 
@@ -153,10 +154,10 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div className="filter-row">
         <div className="row">
-          <label style={{ fontSize: 13, color: 'var(--ink-3)', flexShrink: 0 }}>Date :</label>
+          <label style={{ fontSize: 13, color: 'var(--ink-3)', flexShrink: 0 }}>{t('pointage.date_label')}</label>
           <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
         </div>
-        <Button variant="secondary" onClick={charger} loading={loading}>Actualiser</Button>
+        <Button variant="secondary" onClick={charger} loading={loading}>{t('pointage.actualiser')}</Button>
         <Button onClick={handleSave} loading={saving} disabled={nbSaisis === 0}>
           Enregistrer ({nbSaisis})
         </Button>
@@ -165,10 +166,10 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
       {profs.length > 0 && (
         <div className="grid-4">
           {([
-            ['Présents', nbPresents, 'success'],
-            ['Absents', nbAbsents, 'danger'],
-            ['Retards', nbRetards, 'warning'],
-            ['Congés', nbConges, 'info'],
+            [t('pointage.presents'), nbPresents, 'success'],
+            [t('pointage.absents'), nbAbsents, 'danger'],
+            [t('pointage.retards'), nbRetards, 'warning'],
+            [t('pointage.conges'), nbConges, 'info'],
           ] as [string, number, string][]).map(([label, val, kind]) => (
             <div key={label} className="card stat">
               <div className="stat-label">
@@ -183,11 +184,11 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
       )}
 
       {loading ? (
-        <div className="empty">Chargement…</div>
+        <div className="empty">{t('pointage.chargement')}</div>
       ) : profs.length === 0 ? (
         <div className="card empty" style={{ flexDirection: 'column', gap: 8, padding: 48 }}>
           <span style={{ fontSize: 36 }}>👨‍🏫</span>
-          <p>Aucun professeur actif</p>
+          <p>{t('pointage.aucun_professeur')}</p>
         </div>
       ) : (
         <div className="card">
@@ -195,7 +196,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
             <table className="tbl">
               <thead>
                 <tr>
-                  {['Professeur', 'Statut', 'Arrivée', 'Départ', 'Durée (h)', 'Motif'].map(h => (
+                  {[t('pointage.col_professeur'), t('pointage.col_statut'), t('pointage.label_arrivee'), t('pointage.label_depart'), t('pointage.col_duree'), t('pointage.col_motif')].map(h => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>
@@ -222,7 +223,7 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
                                 color: s.statut === st.value ? '#fff' : 'var(--ink-3)',
                               }}
                             >
-                              {st.label}
+                              {t(st.label)}
                             </button>
                           ))}
                         </div>
@@ -302,32 +303,32 @@ function Historique({ api }: { api: ReturnType<typeof useApi> }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div className="filter-row">
-        <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>Période :</span>
+        <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>{t('pointage.periode_label')}</span>
         <Select value={mois} onChange={e => setMois(e.target.value)}
           options={MOIS_LABELS.map((m, i) => ({ value: String(i + 1), label: m }))} />
         <Input type="number" value={annee} onChange={e => setAnnee(e.target.value)} />
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          {[{ value: '', label: 'Tous' }, ...STATUTS].map(s => (
+          {[{ value: '', label: 'pointage.tous' }, ...STATUTS].map(s => (
             <button key={s.value} onClick={() => setStatut(s.value)}
               style={{
                 padding: '4px 12px', borderRadius: 99, fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer',
                 background: statut === s.value ? 'var(--ink)' : 'var(--paper-3)',
                 color: statut === s.value ? 'var(--paper)' : 'var(--ink-3)',
               }}>
-              {s.label}
+              {t(s.label)}
             </button>
           ))}
         </div>
       </div>
 
       <div className="card">
-        {loading ? <div className="empty">Chargement…</div> :
-        records.length === 0 ? <div className="empty">Aucun enregistrement</div> : (
+        {loading ? <div className="empty">{t('pointage.chargement')}</div> :
+        records.length === 0 ? <div className="empty">{t('pointage.aucun_enregistrement')}</div> : (
           <div className="tbl-wrap">
             <table className="tbl">
               <thead>
                 <tr>
-                  {['Date', 'Professeur', 'Statut', 'Source', 'Arrivée', 'Départ', 'Durée', 'Motif'].map(h => (
+                  {[t('pointage.col_date'), t('pointage.col_professeur'), t('pointage.col_statut'), t('pointage.col_source'), t('pointage.label_arrivee'), t('pointage.label_depart'), t('pointage.col_duree_simple'), t('pointage.col_motif')].map(h => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>
@@ -343,7 +344,7 @@ function Historique({ api }: { api: ReturnType<typeof useApi> }) {
                     <td>
                       {r.source === 'qr'
                         ? <Badge label="QR" variant="info" />
-                        : <Badge label="Manuel" variant="neutral" />}
+                        : <Badge label={t('pointage.source_manuel')} variant="neutral" />}
                     </td>
                     <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{r.heure_arrivee ?? '—'}</td>
                     <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{r.heure_depart ?? '—'}</td>
@@ -392,18 +393,18 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div className="filter-row">
-        <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>Période :</span>
+        <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>{t('pointage.periode_label')}</span>
         <Select value={mois} onChange={e => setMois(e.target.value)}
           options={MOIS_LABELS.map((m, i) => ({ value: String(i + 1), label: m }))} />
         <Input type="number" value={annee} onChange={e => setAnnee(e.target.value)} />
-        <Button variant="secondary" onClick={charger} loading={loading}>Actualiser</Button>
+        <Button variant="secondary" onClick={charger} loading={loading}>{t('pointage.actualiser')}</Button>
       </div>
 
       {stats.length > 0 && (
         <div className="grid-4">
           {[
-            { label: 'Présences', value: total.presents, color: 'var(--success)' },
-            { label: 'Absences', value: total.absents, color: 'var(--danger)' },
+            { label: t('pointage.stat_presences'), value: total.presents, color: 'var(--success)' },
+            { label: t('pointage.stat_absences'), value: total.absents, color: 'var(--danger)' },
             { label: 'Retards', value: total.retards, color: 'var(--warning)' },
             { label: 'Congés', value: total.conges, color: 'var(--info-text)' },
           ].map(c => (
@@ -416,13 +417,13 @@ function Statistiques({ api }: { api: ReturnType<typeof useApi> }) {
       )}
 
       <div className="card">
-        {loading ? <div className="empty">Chargement…</div> :
-        stats.length === 0 ? <div className="empty">Aucune donnée pour cette période</div> : (
+        {loading ? <div className="empty">{t('pointage.chargement')}</div> :
+        stats.length === 0 ? <div className="empty">{t('pointage.aucune_donnee_periode')}</div> : (
           <div className="tbl-wrap">
             <table className="tbl">
               <thead>
                 <tr>
-                  {['Professeur', 'Jours saisis', '✓ Présents', '✗ Absents', '⚡ Retards', '✈ Congés', 'Taux'].map(h => (
+                  {[t('pointage.col_professeur'), t('pointage.col_jours_saisis'), '✓ ' + t('pointage.presents'), '✗ ' + t('pointage.absents'), '⚡ ' + t('pointage.retards'), '✈ ' + t('pointage.conges'), t('pointage.col_taux')].map(h => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>
@@ -471,9 +472,9 @@ export function PointagePage() {
   const [tab, setTab] = useState<'saisie' | 'historique' | 'stats'>('saisie');
 
   const TABS = [
-    { key: 'saisie'      as const, label: 'Saisie du jour' },
-    { key: 'historique'  as const, label: 'Historique' },
-    { key: 'stats'       as const, label: 'Statistiques' },
+    { key: 'saisie'      as const, label: t('pointage.tab_saisie') },
+    { key: 'historique'  as const, label: t('pointage.tab_historique') },
+    { key: 'stats'       as const, label: t('pointage.tab_stats') },
   ];
 
   return (

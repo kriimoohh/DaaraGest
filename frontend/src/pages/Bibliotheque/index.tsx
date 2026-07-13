@@ -152,7 +152,7 @@ export function BibliothequeePage() {
   }
 
   async function supprimerLivre(id: string) {
-    if (!confirm('Supprimer ce livre ?')) return;
+    if (!confirm(t('bibliotheque.confirm_suppr_livre'))) return;
     try {
       await api.delete(`/api/v1/bibliotheque/livres/${id}`);
       toast.success(t('bibliotheque.ok_livre_supprime'));
@@ -184,7 +184,7 @@ export function BibliothequeePage() {
   }
 
   async function enregistrerRetour(id: string) {
-    if (!confirm('Enregistrer le retour de ce livre ?')) return;
+    if (!confirm(t('bibliotheque.confirm_retour'))) return;
     try {
       await api.put(`/api/v1/bibliotheque/emprunts/${id}/retour`, { statut: 'rendu' });
       toast.success(t('bibliotheque.ok_retour'));
@@ -206,7 +206,7 @@ export function BibliothequeePage() {
         <div>
           <div className="page-eyebrow">{t('bibliotheque.eyebrow')}</div>
           <h1 className="page-title">{t('bibliotheque.titre')}</h1>
-          <p className="page-sub">Gestion des livres, emprunts et retours</p>
+          <p className="page-sub">{t('bibliotheque.subtitle')}</p>
         </div>
         {canEdit && tab === 'livres' && (
           <Button onClick={openNewLivre}>+ Ajouter un livre</Button>
@@ -219,8 +219,8 @@ export function BibliothequeePage() {
       {/* Tabs */}
       <div className="tabs mb-4" style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--border)', marginBottom: 20 }}>
         {[
-          { key: 'livres', label: 'Livres' },
-          { key: 'emprunts', label: 'Emprunts' },
+          { key: 'livres', label: t('bibliotheque.tab_livres') },
+          { key: 'emprunts', label: t('bibliotheque.tab_emprunts') },
           { key: 'retards', label: `Retards${retards.length > 0 ? ` (${retards.length})` : ''}` },
         ].map(t => (
           <button
@@ -262,7 +262,7 @@ export function BibliothequeePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {loading && <tr><td colSpan={7} className="empty">Chargement…</td></tr>}
+                  {loading && <tr><td colSpan={7} className="empty">{t('bibliotheque.chargement')}</td></tr>}
                   {!loading && livres.length === 0 && <tr><td colSpan={7} className="empty">{t('bibliotheque.aucun_livre')}</td></tr>}
                   {livres.map(l => (
                     <tr key={l.id}>
@@ -277,13 +277,13 @@ export function BibliothequeePage() {
                       <td>
                         <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                           {canEdit && l.quantite_dispo > 0 && (
-                            <Button size="sm" variant="secondary" onClick={() => openEmprunt(l.id)}>Emprunter</Button>
+                            <Button size="sm" variant="secondary" onClick={() => openEmprunt(l.id)}>{t('bibliotheque.emprunter')}</Button>
                           )}
                           {canEdit && (
-                            <Button size="sm" variant="ghost" onClick={() => openEditLivre(l)}>Modifier</Button>
+                            <Button size="sm" variant="ghost" onClick={() => openEditLivre(l)}>{t('bibliotheque.modifier_btn')}</Button>
                           )}
                           {canDelete && (
-                            <Button size="sm" variant="ghost" onClick={() => supprimerLivre(l.id)}>Suppr.</Button>
+                            <Button size="sm" variant="ghost" onClick={() => supprimerLivre(l.id)}>{t('bibliotheque.suppr_btn')}</Button>
                           )}
                         </div>
                       </td>
@@ -304,9 +304,9 @@ export function BibliothequeePage() {
               value={statutFilter}
               onChange={e => { setStatutFilter(e.target.value); setPage(1); }}
               options={[
-                { value: 'en_cours', label: 'En cours' },
-                { value: 'rendu',    label: 'Rendus' },
-                { value: 'perdu',    label: 'Perdus' },
+                { value: 'en_cours', label: t('bibliotheque.en_cours') },
+                { value: 'rendu',    label: t('bibliotheque.rendus') },
+                { value: 'perdu',    label: t('bibliotheque.perdus') },
               ]}
             />
           </div>
@@ -315,13 +315,13 @@ export function BibliothequeePage() {
               <table className="tbl">
                 <thead>
                   <tr>
-                    <th>Livre</th><th>Élève</th><th>Matricule</th>
-                    <th>Emprunté le</th><th>Retour prévu</th><th>Statut</th><th></th>
+                    <th>{t('bibliotheque.col_livre')}</th><th>{t('bibliotheque.col_eleve')}</th><th>{t('bibliotheque.col_matricule', 'Matricule')}</th>
+                    <th>{t('bibliotheque.col_emprunte_le')}</th><th>{t('bibliotheque.col_retour_prevu')}</th><th>{t('bibliotheque.col_statut')}</th><th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {loading && <tr><td colSpan={7} className="empty">Chargement…</td></tr>}
-                  {!loading && emprunts.length === 0 && <tr><td colSpan={7} className="empty">Aucun emprunt</td></tr>}
+                  {loading && <tr><td colSpan={7} className="empty">{t('bibliotheque.chargement')}</td></tr>}
+                  {!loading && emprunts.length === 0 && <tr><td colSpan={7} className="empty">{t('bibliotheque.aucun_emprunt')}</td></tr>}
                   {emprunts.map(e => {
                     const enRetard = e.statut === 'en_cours' && isEnRetard(e.date_retour_prevue);
                     return (
@@ -336,13 +336,13 @@ export function BibliothequeePage() {
                         </td>
                         <td>
                           <Badge
-                            label={e.statut === 'en_cours' ? 'En cours' : e.statut === 'rendu' ? 'Rendu' : 'Perdu'}
+                            label={e.statut === 'en_cours' ? t('bibliotheque.en_cours') : e.statut === 'rendu' ? t('bibliotheque.rendu') : t('bibliotheque.perdu')}
                             variant={e.statut === 'rendu' ? 'success' : e.statut === 'perdu' ? 'danger' : 'neutral'}
                           />
                         </td>
                         <td>
                           {canEdit && e.statut === 'en_cours' && (
-                            <Button size="sm" variant="secondary" onClick={() => enregistrerRetour(e.id)}>Retour</Button>
+                            <Button size="sm" variant="secondary" onClick={() => enregistrerRetour(e.id)}>{t('bibliotheque.retour_btn')}</Button>
                           )}
                         </td>
                       </tr>
@@ -361,13 +361,13 @@ export function BibliothequeePage() {
           {retards.length === 0 ? (
             <div className="empty" style={{ padding: 32 }}>
               <svg width={32} height={32} viewBox="0 0 24 24" fill="var(--ink-4)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-              <div style={{ marginTop: 8, color: 'var(--ink-3)' }}>Aucun emprunt en retard</div>
+              <div style={{ marginTop: 8, color: 'var(--ink-3)' }}>{t('bibliotheque.aucun_retard')}</div>
             </div>
           ) : (
             <div className="tbl-wrap">
               <table className="tbl">
                 <thead>
-                  <tr><th>Livre</th><th>Élève</th><th>Matricule</th><th>Retour prévu</th><th>Jours de retard</th><th></th></tr>
+                  <tr><th>{t('bibliotheque.col_livre')}</th><th>{t('bibliotheque.col_eleve')}</th><th>{t('bibliotheque.col_matricule', 'Matricule')}</th><th>{t('bibliotheque.col_retour_prevu')}</th><th>{t('bibliotheque.col_jours_retard')}</th><th></th></tr>
                 </thead>
                 <tbody>
                   {retards.map(e => {
@@ -381,7 +381,7 @@ export function BibliothequeePage() {
                         <td><Badge label={`+${joursRetard} j`} variant="danger" /></td>
                         <td>
                           {canEdit && (
-                            <Button size="sm" variant="secondary" onClick={() => enregistrerRetour(e.id)}>Retour</Button>
+                            <Button size="sm" variant="secondary" onClick={() => enregistrerRetour(e.id)}>{t('bibliotheque.retour_btn')}</Button>
                           )}
                         </td>
                       </tr>
@@ -398,22 +398,22 @@ export function BibliothequeePage() {
       {livreModal && (
         <Modal
           isOpen={livreModal}
-          title={editLivre ? 'Modifier le livre' : 'Ajouter un livre'}
+          title={editLivre ? t('bibliotheque.modifier_livre') : t('bibliotheque.ajouter_livre_titre')}
           onClose={() => setLivreModal(false)}
-          footer={<><Button variant="ghost" onClick={() => setLivreModal(false)}>Annuler</Button><Button onClick={saveLivre} loading={saving}>Enregistrer</Button></>}
+          footer={<><Button variant="ghost" onClick={() => setLivreModal(false)}>{t('actions.annuler')}</Button><Button onClick={saveLivre} loading={saving}>{t('actions.enregistrer')}</Button></>}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Input label="Titre *" value={livreForm.titre} onChange={e => setLivreForm(f => ({ ...f, titre: e.target.value }))} />
-            <Input label="Auteur" value={livreForm.auteur} onChange={e => setLivreForm(f => ({ ...f, auteur: e.target.value }))} />
+            <Input label={t('bibliotheque.titre_label')} value={livreForm.titre} onChange={e => setLivreForm(f => ({ ...f, titre: e.target.value }))} />
+            <Input label={t('bibliotheque.auteur_label')} value={livreForm.auteur} onChange={e => setLivreForm(f => ({ ...f, auteur: e.target.value }))} />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <Input label="ISBN" value={livreForm.isbn} onChange={e => setLivreForm(f => ({ ...f, isbn: e.target.value }))} />
-              <Input label="Catégorie" value={livreForm.categorie} onChange={e => setLivreForm(f => ({ ...f, categorie: e.target.value }))} />
+              <Input label={t('bibliotheque.categorie_label')} value={livreForm.categorie} onChange={e => setLivreForm(f => ({ ...f, categorie: e.target.value }))} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <Input label="Éditeur" value={livreForm.editeur} onChange={e => setLivreForm(f => ({ ...f, editeur: e.target.value }))} />
-              <Input label="Année d'édition" type="number" value={livreForm.annee_edition} onChange={e => setLivreForm(f => ({ ...f, annee_edition: e.target.value }))} />
+              <Input label={t('bibliotheque.editeur_label')} value={livreForm.editeur} onChange={e => setLivreForm(f => ({ ...f, editeur: e.target.value }))} />
+              <Input label={t('bibliotheque.annee_edition_label')} type="number" value={livreForm.annee_edition} onChange={e => setLivreForm(f => ({ ...f, annee_edition: e.target.value }))} />
             </div>
-            <Input label="Nombre d'exemplaires" type="number" min={1} value={livreForm.quantite_totale} onChange={e => setLivreForm(f => ({ ...f, quantite_totale: e.target.value }))} />
+            <Input label={t('bibliotheque.nb_exemplaires_label')} type="number" min={1} value={livreForm.quantite_totale} onChange={e => setLivreForm(f => ({ ...f, quantite_totale: e.target.value }))} />
           </div>
         </Modal>
       )}
@@ -422,14 +422,14 @@ export function BibliothequeePage() {
       {empruntModal && (
         <Modal
           isOpen={empruntModal}
-          title="Nouvel emprunt"
+          title={t('bibliotheque.nouvel_emprunt_titre')}
           onClose={() => setEmpruntModal(false)}
           footer={<><Button variant="ghost" onClick={() => setEmpruntModal(false)}>Annuler</Button><Button onClick={creerEmprunt} loading={savingEmp}>Enregistrer</Button></>}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {!livreSelId && (
               <Select
-                label="Livre *"
+                label={t('bibliotheque.livre_label')}
                 value={livreSelId}
                 onChange={e => setLivreSelId(e.target.value)}
                 options={[
@@ -446,10 +446,10 @@ export function BibliothequeePage() {
             )}
             <div>
               <Input
-                label="Rechercher un élève"
+                label={t('bibliotheque.rechercher_eleve')}
                 value={eleveSearch}
                 onChange={e => setEleveSearch(e.target.value)}
-                placeholder="Nom ou matricule..."
+                placeholder={t('bibliotheque.rechercher_ph')}
               />
               {elevesFound.length > 0 && !eleveSelId && (
                 <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-md)', marginTop: 4, overflow: 'hidden' }}>
@@ -471,7 +471,7 @@ export function BibliothequeePage() {
                 </div>
               )}
             </div>
-            <Input label="Date de retour prévue *" type="date" value={dateRetour} onChange={e => setDateRetour(e.target.value)} />
+            <Input label={t('bibliotheque.date_retour_label')} type="date" value={dateRetour} onChange={e => setDateRetour(e.target.value)} />
           </div>
         </Modal>
       )}

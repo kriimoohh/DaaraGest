@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -41,12 +42,12 @@ interface ConversationDetail {
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const ROLE_LABELS: Record<string, string> = {
-  'admin': 'Administrateur',
-  'directeur': 'Directeur',
-  'gestionnaire': 'Gestionnaire',
-  'agent de scolarité': 'Agent de scolarité',
-  'professeur': 'Professeur',
-  'pointeur': 'Pointeur',
+  'admin': 'messagerie.role_admin',
+  'directeur': 'messagerie.role_directeur',
+  'gestionnaire': 'messagerie.role_gestionnaire',
+  'agent de scolarité': 'messagerie.role_agent',
+  'professeur': 'messagerie.role_professeur',
+  'pointeur': 'messagerie.role_pointeur',
 };
 
 const BROADCAST_ROLES = ['directeur', 'gestionnaire', 'agent de scolarité', 'professeur', 'pointeur'];
@@ -136,7 +137,7 @@ function NouvelleConversationModal({ isOpen, onClose, onCreated, api }: Nouvelle
       onCreated(conv);
       onClose();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur lors de l\'envoi');
+      toast.error((err as Error).message || t('messagerie.err_envoi'));
     } finally {
       setSaving(false);
     }
@@ -160,7 +161,7 @@ function NouvelleConversationModal({ isOpen, onClose, onCreated, api }: Nouvelle
                   borderColor: type === t ? 'var(--terra)' : 'var(--rule)',
                   color: type === t ? '#fff' : 'var(--ink-3)',
                 }}>
-                {t === 'individuel' ? 'Individuel' : 'Diffusion (par rôle)'}
+                {t === 'individuel' ? i18n.t('messagerie.individuel') : i18n.t('messagerie.broadcast')}
               </button>
             ))}
           </div>
@@ -186,7 +187,7 @@ function NouvelleConversationModal({ isOpen, onClose, onCreated, api }: Nouvelle
                   <input type="checkbox" checked={selectedUsers.has(u.id)} onChange={() => toggleUser(u.id)} style={{ flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink)' }}>{u.prenom_fr} {u.nom_fr}</span>
-                    <span style={{ fontSize: 11, color: 'var(--ink-4)', marginInlineStart: 8 }}>{ROLE_LABELS[u.role] ?? u.role}</span>
+                    <span style={{ fontSize: 11, color: 'var(--ink-4)', marginInlineStart: 8 }}>{ROLE_LABELS[u.role] ? i18n.t(ROLE_LABELS[u.role]) : u.role}</span>
                   </div>
                 </label>
               ))}
@@ -201,7 +202,7 @@ function NouvelleConversationModal({ isOpen, onClose, onCreated, api }: Nouvelle
               {BROADCAST_ROLES.map(role => (
                 <label key={role} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px', borderRadius: 'var(--r-md)', cursor: 'pointer', background: selectedRoles.has(role) ? 'var(--terra-soft)' : 'var(--paper-2)' }}>
                   <input type="checkbox" checked={selectedRoles.has(role)} onChange={() => toggleRole(role)} />
-                  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink)' }}>{ROLE_LABELS[role]}</span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink)' }}>{i18n.t(ROLE_LABELS[role])}</span>
                 </label>
               ))}
             </div>
@@ -289,7 +290,7 @@ export function MessageriePage() {
       // Refresh conversation list for updated timestamps
       loadConversations();
     } catch (err) {
-      toast.error((err as Error).message || 'Erreur');
+      toast.error((err as Error).message || t('common.erreur_generique'));
     } finally {
       setSending(false);
     }
@@ -338,7 +339,7 @@ export function MessageriePage() {
           {/* List */}
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {loadingConvs ? (
-              <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--ink-4)' }}>Chargement…</div>
+              <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--ink-4)' }}>{t('messagerie.chargement')}</div>
             ) : filteredConvs.length === 0 ? (
               <div style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--ink-4)' }}>{t('messagerie.aucune_conversation')}</div>
             ) : filteredConvs.map(conv => {
@@ -346,7 +347,7 @@ export function MessageriePage() {
               const otherParticipants = conv.participants.filter(p => p.id !== userId);
               const participantsLabel = otherParticipants.length > 0
                 ? otherParticipants.map(p => p.prenom_fr).join(', ')
-                : 'Vous';
+                : t('messagerie.vous');
               return (
                 <button key={conv.id} onClick={() => openConversation(conv)}
                   style={{
@@ -410,7 +411,7 @@ export function MessageriePage() {
               <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--rule)', flexShrink: 0 }}>
                 <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginBottom: 4 }}>{selected.sujet}</h3>
                 <div style={{ fontSize: 12, color: 'var(--ink-4)' }}>
-                  <span style={{ fontWeight: 500 }}>Participants : </span>
+                  <span style={{ fontWeight: 500 }}>{t('messagerie.participants')} </span>
                   {selected.participants.map((p, i) => (
                     <span key={p.id}>
                       {p.prenom_fr} {p.nom_fr}{p.id === userId ? ' (Vous)' : ''}
@@ -457,7 +458,7 @@ export function MessageriePage() {
                   value={reponse}
                   onChange={e => setReponse(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Écrire un message… (Ctrl+Entrée pour envoyer)"
+                  placeholder={t('messagerie.ecrire_ph')}
                   rows={2}
                   className="input"
                   style={{ flex: 1, resize: 'none', fontFamily: 'inherit', fontSize: 13 }}

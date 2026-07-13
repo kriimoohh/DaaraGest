@@ -353,7 +353,40 @@
     "contrat_label": "Contrat",
     "carte_lot_ignores": "{{count}} membre(s) ignoré(s) :",
     "generer_pdf": "Générer PDF",
-    "cartes_lot": "Cartes en lot"
+    "cartes_lot": "Cartes en lot",
+    "fonction_ENSEIGNANT": "Enseignant",
+    "fonction_DIRECTEUR": "Directeur / Directrice",
+    "fonction_SURVEILLANT": "Surveillant",
+    "fonction_AGENT_SCOLARITE": "Agent de scolarité",
+    "fonction_COMPTABLE": "Comptable",
+    "fonction_AGENT_ENTRETIEN": "Agent d'entretien",
+    "contrat_permanent": "Permanent",
+    "contrat_cdd": "CDD",
+    "contrat_vacataire": "Vacataire",
+    "contrat_stagiaire": "Stagiaire",
+    "err_nom_requis": "Le nom est requis",
+    "err_mdp_requis": "Le mot de passe est requis",
+    "err_email_invalide": "Email invalide",
+    "err_contrat_requis": "Le type de contrat est requis",
+    "err_fin_cdd": "La date de fin de contrat est requise pour un CDD",
+    "err_debut_stage": "Date de début de stage requise",
+    "err_fin_stage": "Date de fin de stage requise",
+    "err_chargement": "Erreur lors du chargement",
+    "col_identifiant": "Identifiant",
+    "col_specialite": "Spécialité",
+    "col_contrat": "Contrat",
+    "col_actions": "Actions",
+    "carte_generation": "Génération…",
+    "carte_id_label": "Carte ID (CR80)",
+    "carte_id_photo": "Carte ID — ajouter une photo d'abord",
+    "modifier_titre": "Modifier le professeur",
+    "ajouter_titre": "Ajouter un professeur",
+    "masculin": "Masculin",
+    "feminin": "Féminin",
+    "date_naissance": "Date de naissance",
+    "lieu_naissance": "Lieu de naissance",
+    "diplome_academique": "Diplôme académique",
+    "diplome_professionnel": "Diplôme professionnel"
   },
   "professeur": {
     "titre": "Professeurs",
@@ -627,7 +660,14 @@
     "tableau_lecture_seule_annuel": "Lecture seule en vue annuelle — choisissez un trimestre pour modifier",
     "enregistrer_modifs": "Enregistrer ({{count}})",
     "tableau_choisir_classe": "Sélectionnez une année et une classe pour visualiser la grille de notes.",
-    "tableau_description": "Cette vue affiche toutes les notes saisies et permet une édition directe."
+    "tableau_description": "Cette vue affiche toutes les notes saisies et permet une édition directe.",
+    "th_total_notes": "Total notes",
+    "th_total_pondere": "Total ×c",
+    "tt_total_pondere": "Total pondéré : Σ (note × coefficient)",
+    "th_moy": "Moy. /{{echelle}}",
+    "tt_somme_notes": "Somme des notes saisies (sans coefficient)",
+    "tt_somme_coeffs": "Somme des coefficients du programme (matières évaluées)",
+    "tt_total_brut": "Somme brute de toutes les notes saisies, sans coefficient (comme le relevé)"
   },
   "bulletin": {
     "titre": "Bulletins",
@@ -1174,7 +1214,8 @@
     "ok_reactive": "Utilisateur réactivé",
     "supprimer_definitif": "Supprimer définitivement",
     "confirm_supprimer_definitif_msg": "Supprimer DÉFINITIVEMENT le compte \"{{id}}\" ? Cette action est irréversible.",
-    "ok_supprime_definitif": "Utilisateur supprimé définitivement"
+    "ok_supprime_definitif": "Utilisateur supprimé définitivement",
+    "changement_role_titre": "Changement de rôle"
   },
   "tb": {
     "search": "Rechercher élèves, classes, paiements…",
@@ -1248,7 +1289,11 @@
     "err_select_classe": "Sélectionnez une classe et une année",
     "err_chargement": "Erreur de chargement",
     "err_aucune_presence": "Aucune présence à enregistrer",
-    "ok_saved": "{{count}} enregistrement(s) sauvegardé(s)"
+    "ok_saved": "{{count}} enregistrement(s) sauvegardé(s)",
+    "chargement": "Chargement…",
+    "stat_presences": "Présences",
+    "stat_absences": "Absences",
+    "col_h_arrivee": "H. arrivée"
   },
   "emploi_du_temps": {
     "titre": "Emploi du temps",
@@ -1281,7 +1326,14 @@
     "classe_select_placeholder": "Sélectionner une classe…",
     "matiere_placeholder": "Sélectionner une matière…",
     "professeur_placeholder": "Sélectionner un professeur…",
-    "salle_placeholder": "Ex: Salle A1"
+    "salle_placeholder": "Ex: Salle A1",
+    "chargement": "Chargement…",
+    "jour_lundi": "Lundi",
+    "jour_mardi": "Mardi",
+    "jour_mercredi": "Mercredi",
+    "jour_jeudi": "Jeudi",
+    "jour_vendredi": "Vendredi",
+    "jour_samedi": "Samedi"
   },
   "calendrier": {
     "titre": "Calendrier scolaire",
@@ -1334,7 +1386,8 @@
     "jour_sam": "Sam",
     "jour_dim": "Dim",
     "ajouter_evenement": "Ajouter un événement",
-    "modifier_evenement": "Modifier l'événement"
+    "modifier_evenement": "Modifier l'événement",
+    "chargement": "Chargement…"
   },
   "notifications": {
     "titre": "Notifications",
@@ -1403,7 +1456,15 @@
     "action_depart": "Départ enregistré",
     "action_deja_complet": "Déjà enregistré aujourd'hui",
     "label_arrivee": "Arrivée",
-    "label_depart": "Départ"
+    "label_depart": "Départ",
+    "col_duree_simple": "Durée",
+    "chargement": "Chargement…",
+    "actualiser": "Actualiser",
+    "stat_presences": "Présences",
+    "stat_absences": "Absences",
+    "scan_err": "Erreur lors du scan",
+    "scan_err_reseau": "Erreur réseau. Vérifiez la connexion.",
+    "scan_err_camera": "Impossible d'accéder à la caméra. Vérifiez les permissions."
   },
   "messagerie": {
     "titre": "Messagerie",
@@ -1447,7 +1508,9 @@
     "role_gestionnaire": "Gestionnaire",
     "role_agent_scolarite": "Agent de scolarité",
     "role_professeur": "Professeur",
-    "role_pointeur": "Pointeur"
+    "role_pointeur": "Pointeur",
+    "chargement": "Chargement…",
+    "ecrire_ph": "Écrire un message… (Ctrl+Entrée pour envoyer)"
   },
   "portail_parent": {
     "titre": "Portail parent",
@@ -1662,7 +1725,13 @@
     "ok_retour": "Retour enregistré",
     "confirm_suppression_livre": "Supprimer ce livre ?",
     "confirm_retour": "Enregistrer le retour de ce livre ?",
-    "jours_retard": "+{{n}} j"
+    "jours_retard": "+{{n}} j",
+    "confirm_suppr_livre": "Supprimer ce livre ?",
+    "suppr_btn": "Suppr.",
+    "badge_retard": "Retard",
+    "annee_edition_label": "Année d'édition",
+    "nb_exemplaires_label": "Nombre d'exemplaires",
+    "rechercher_ph": "Nom ou matricule…"
   },
   "demande_absence": {
     "titre": "Demandes d'absence (Professeurs)",
@@ -1809,7 +1878,9 @@
     "telecharger_format": "Télécharger ({{format}})",
     "fermer": "✕ Fermer",
     "apercu_html_note": "Aperçu HTML — rendu très proche du PDF final.",
-    "iframe_titre_apercu": "Aperçu rapport"
+    "iframe_titre_apercu": "Aperçu rapport",
+    "mois_label": "Mois",
+    "annee_label": "Année"
   },
   "document": {
     "titre": "Documents administratifs",
@@ -1976,7 +2047,8 @@
     "precedent": "Précédent",
     "suivant": "Suivant",
     "sur_total": "sur",
-    "erreur_generique": "Erreur"
+    "erreur_generique": "Erreur",
+    "module_en_dev": "Module en cours de développement"
   },
   "audit": {
     "subtitle": "Qui a fait quoi — création, modification et suppression sur les données.",
@@ -1988,7 +2060,10 @@
     "date": "Date",
     "acteur": "Acteur",
     "details": "Détails",
-    "aucun": "Aucune entrée"
+    "aucun": "Aucune entrée",
+    "action_CREATE": "Création",
+    "action_UPDATE": "Modification",
+    "action_DELETE": "Suppression"
   },
   "profil": {
     "titre": "Mon profil",

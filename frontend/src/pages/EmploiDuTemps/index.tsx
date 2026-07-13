@@ -36,12 +36,12 @@ interface Creneau {
 // ── Constantes ────────────────────────────────────────────────────────────────
 
 const TOUS_LES_JOURS = [
-  { value: 'lundi',    label: 'Lundi' },
-  { value: 'mardi',    label: 'Mardi' },
-  { value: 'mercredi', label: 'Mercredi' },
-  { value: 'jeudi',    label: 'Jeudi' },
-  { value: 'vendredi', label: 'Vendredi' },
-  { value: 'samedi',   label: 'Samedi' },
+  { value: 'lundi',    label: 'emploi_du_temps.jour_lundi' },
+  { value: 'mardi',    label: 'emploi_du_temps.jour_mardi' },
+  { value: 'mercredi', label: 'emploi_du_temps.jour_mercredi' },
+  { value: 'jeudi',    label: 'emploi_du_temps.jour_jeudi' },
+  { value: 'vendredi', label: 'emploi_du_temps.jour_vendredi' },
+  { value: 'samedi',   label: 'emploi_du_temps.jour_samedi' },
 ];
 
 const ROLES_EDIT = ['admin', 'directeur', 'gestionnaire'];
@@ -64,6 +64,7 @@ function CreneauCard({
   canEdit: boolean;
   onDelete: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const colors = getCreneauColor(creneau.classe.filiere);
   const profName = creneau.personnel
@@ -91,7 +92,7 @@ function CreneauCard({
       </div>
       <div style={{ fontSize: 11, color: 'var(--ink-4)', marginTop: 2 }}>{profName}</div>
       {creneau.salle && (
-        <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>Salle : {creneau.salle}</div>
+        <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>{t('emploi_du_temps.salle_label')} {creneau.salle}</div>
       )}
       {expanded && canEdit && (
         <div
@@ -297,11 +298,11 @@ export function EmploiDuTempsPage() {
         <div style={{ display: 'flex', gap: 12, marginInlineStart: 'auto', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--indigo-soft)', border: '1px solid var(--info-border)' }} />
-            <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>Filière FR</span>
+            <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{t('emploi_du_temps.filiere_fr')}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--sahel-soft)', border: '1px solid var(--warning-border)' }} />
-            <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>Filière AR</span>
+            <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>{t('emploi_du_temps.filiere_ar')}</span>
           </div>
         </div>
       </div>
@@ -315,7 +316,7 @@ export function EmploiDuTempsPage() {
           <p style={{ color: 'var(--ink-3)' }}>{t('emploi_du_temps.selectionner_classe')}</p>
         </div>
       ) : loading ? (
-        <div className="card empty">Chargement...</div>
+        <div className="card empty">{t('emploi_du_temps.chargement')}</div>
       ) : (
         <div
           style={{
@@ -340,7 +341,7 @@ export function EmploiDuTempsPage() {
                   marginBottom: 8,
                 }}
               >
-                {jour.label}
+                {t(jour.label)}
               </div>
               {/* Créneaux */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 80 }}>

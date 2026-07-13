@@ -95,7 +95,7 @@ export function ScannerPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error ?? 'Erreur lors du scan');
+        setError(data.error ?? t('pointage.scan_err'));
         if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
         feedbackTimer.current = setTimeout(() => {
           setError(null);
@@ -126,7 +126,7 @@ export function ScannerPage() {
         processingRef.current = false;
       }, 3000);
     } catch {
-      setError('Erreur réseau. Vérifiez la connexion.');
+      setError(t('pointage.scan_err_reseau'));
       if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
       feedbackTimer.current = setTimeout(() => {
         setError(null);
@@ -147,7 +147,7 @@ export function ScannerPage() {
       );
       setStarted(true);
     } catch {
-      setError('Impossible d\'accéder à la caméra. Vérifiez les permissions.');
+      setError(t('pointage.scan_err_camera'));
     }
   };
 

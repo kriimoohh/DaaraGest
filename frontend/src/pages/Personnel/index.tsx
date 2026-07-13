@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 import { useState, useEffect, useCallback } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { API_BASE } from '../../lib/api';
@@ -299,23 +300,23 @@ const FONCTION_VALUES = ['ENSEIGNANT', 'DIRECTEUR', 'SURVEILLANT', 'AGENT_SCOLAR
 type Fonction = typeof FONCTION_VALUES[number];
 
 const FONCTION_LABELS: Record<Fonction, string> = {
-  ENSEIGNANT:      'Enseignant',
-  DIRECTEUR:       'Directeur / Directrice',
-  SURVEILLANT:     'Surveillant',
-  AGENT_SCOLARITE: 'Agent de scolarité',
-  COMPTABLE:       'Comptable',
-  AGENT_ENTRETIEN: "Agent d'entretien",
+  ENSEIGNANT:      'personnel.fonction_ENSEIGNANT',
+  DIRECTEUR:       'personnel.fonction_DIRECTEUR',
+  SURVEILLANT:     'personnel.fonction_SURVEILLANT',
+  AGENT_SCOLARITE: 'personnel.fonction_AGENT_SCOLARITE',
+  COMPTABLE:       'personnel.fonction_COMPTABLE',
+  AGENT_ENTRETIEN: 'personnel.fonction_AGENT_ENTRETIEN',
 };
 
 type Sexe = 'M' | 'F' | '';
 type TypeContratValue = '' | 'permanent' | 'vacataire' | 'stagiaire' | 'CDD' | 'CDI';
 
 const TYPE_CONTRAT_LABELS: Record<Exclude<TypeContratValue, ''>, string> = {
-  permanent: 'Permanent',
+  permanent: 'personnel.contrat_permanent',
   CDI:       'CDI',
   CDD:       'CDD',
-  vacataire: 'Vacataire',
-  stagiaire: 'Stagiaire',
+  vacataire: 'personnel.contrat_vacataire',
+  stagiaire: 'personnel.contrat_stagiaire',
 };
 
 interface PersonnelFormData {
@@ -361,19 +362,19 @@ const LIMIT = 20;
 
 function validate(form: PersonnelFormData, isEdit: boolean): FormErrors {
   const errors: FormErrors = {};
-  if (!form.nom_fr.trim()) errors.nom_fr = 'Le nom est requis';
+  if (!form.nom_fr.trim()) errors.nom_fr = i18n.t('personnel.err_nom_requis');
   if (!form.identifiant.trim()) errors.identifiant = "L'identifiant est requis";
-  if (!isEdit && !form.mot_de_passe.trim()) errors.mot_de_passe = 'Le mot de passe est requis';
+  if (!isEdit && !form.mot_de_passe.trim()) errors.mot_de_passe = i18n.t('personnel.err_mdp_requis');
   if (form.email.trim() && !/^\S+@\S+\.\S+$/.test(form.email.trim())) {
-    errors.email = 'Email invalide';
+    errors.email = i18n.t('personnel.err_email_invalide');
   }
-  if (!form.type_contrat) errors.type_contrat = 'Le type de contrat est requis';
+  if (!form.type_contrat) errors.type_contrat = i18n.t('personnel.err_contrat_requis');
   if (form.type_contrat === 'CDD' && !form.date_fin_contrat) {
-    errors.date_fin_contrat = "La date de fin de contrat est requise pour un CDD";
+    errors.date_fin_contrat = i18n.t('personnel.err_fin_cdd');
   }
   if (form.type_contrat === 'stagiaire') {
-    if (!form.date_debut_stage) errors.date_debut_stage = 'Date de début de stage requise';
-    if (!form.date_fin_stage)   errors.date_fin_stage   = 'Date de fin de stage requise';
+    if (!form.date_debut_stage) errors.date_debut_stage = i18n.t('personnel.err_debut_stage');
+    if (!form.date_fin_stage)   errors.date_fin_stage   = i18n.t('personnel.err_fin_stage');
   }
   return errors;
 }
@@ -418,7 +419,7 @@ export function PersonnelPage() {
       .then(setFonctions)
       .catch(() => {
         // En cas d'erreur (DB pas migrée…), fallback sur la liste hardcodée
-        setFonctions(FONCTION_VALUES.map((code) => ({ id: code, code, libelle_fr: FONCTION_LABELS[code] })));
+        setFonctions(FONCTION_VALUES.map((code) => ({ id: code, code, libelle_fr: i18n.t(FONCTION_LABELS[code]) })));
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -441,7 +442,7 @@ export function PersonnelPage() {
         return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors du chargement');
+      setError(err instanceof Error ? err.message : t('personnel.err_chargement'));
     } finally {
       setLoading(false);
     }
@@ -583,10 +584,10 @@ export function PersonnelPage() {
         );
       },
     },
-    { key: 'identifiant', header: 'Identifiant' },
+    { key: 'identifiant', header: t('personnel.col_identifiant') },
     {
       key: 'specialite_fr',
-      header: 'Spécialité',
+      header: t('personnel.col_specialite'),
       render: (row) => {
         const p = row as unknown as PersonnelRow;
         return profSpecialite(p) || <span className="muted">—</span>;
@@ -594,7 +595,7 @@ export function PersonnelPage() {
     },
     {
       key: 'type_contrat',
-      header: 'Contrat',
+      header: t('personnel.col_contrat'),
       render: (row) => {
         const p = row as unknown as PersonnelRow;
         const contrat = profContrat(p);
@@ -604,7 +605,7 @@ export function PersonnelPage() {
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: t('personnel.col_actions'),
       width: '120px',
       render: (row) => {
         const p = row as unknown as PersonnelRow;
@@ -625,8 +626,8 @@ export function PersonnelPage() {
               }] : []),
               {
                 label: carteUniqueLoading === p.id
-                  ? 'Génération…'
-                  : hasPhoto ? 'Carte ID (CR80)' : 'Carte ID — ajouter une photo d\'abord',
+                  ? t('personnel.carte_generation')
+                  : hasPhoto ? t('personnel.carte_id_label') : t('personnel.carte_id_photo'),
                 icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x={2} y={5} width={20} height={14} rx={2}/><line x1={2} y1={10} x2={22} y2={10}/></svg>,
                 onClick: () => handleCarteUnique(p.id),
                 disabled: !hasPhoto || carteUniqueLoading === p.id,
@@ -798,7 +799,7 @@ export function PersonnelPage() {
                       },
                       {
                         label: carteUniqueLoading === p.id
-                          ? 'Génération…'
+                          ? t('personnel.carte_generation')
                           : photo ? 'Carte ID (CR80)' : 'Carte ID — ajouter une photo d\'abord',
                         icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x={2} y={5} width={20} height={14} rx={2}/><line x1={2} y1={10} x2={22} y2={10}/></svg>,
                         onClick: () => handleCarteUnique(p.id),
@@ -824,7 +825,7 @@ export function PersonnelPage() {
             columns={columns}
             data={profs as unknown as Record<string, unknown>[]}
             loading={false}
-            emptyMessage="Aucun professeur trouvé"
+            emptyMessage={t('personnel.aucun_trouve')}
           />
         )}
 
@@ -833,7 +834,7 @@ export function PersonnelPage() {
       <Modal
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
-          title={editTarget ? 'Modifier le professeur' : 'Ajouter un professeur'}
+          title={editTarget ? t('personnel.modifier_titre') : t('personnel.ajouter_titre')}
           size="lg"
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -903,8 +904,8 @@ export function PersonnelPage() {
                 value={form.sexe}
                 onChange={(e) => setField('sexe', e.target.value as Sexe)}
                 options={[
-                  { value: 'M', label: 'Masculin' },
-                  { value: 'F', label: 'Féminin' },
+                  { value: 'M', label: t('personnel.masculin') },
+                  { value: 'F', label: t('personnel.feminin') },
                 ]}
                 placeholder="— Non précisé —"
               />
@@ -925,13 +926,13 @@ export function PersonnelPage() {
             />
             <div className="grid-2">
               <Input
-                label="Date de naissance"
+                label={t('personnel.date_naissance')}
                 type="date"
                 value={form.date_naissance}
                 onChange={(e) => setField('date_naissance', e.target.value)}
               />
               <Input
-                label="Lieu de naissance"
+                label={t('personnel.lieu_naissance')}
                 value={form.lieu_naissance}
                 onChange={(e) => setField('lieu_naissance', e.target.value)}
               />
@@ -950,12 +951,12 @@ export function PersonnelPage() {
                 />
                 <div className="grid-2">
                   <Input
-                    label="Diplôme académique"
+                    label={t('personnel.diplome_academique')}
                     value={form.diplome_academique}
                     onChange={(e) => setField('diplome_academique', e.target.value)}
                   />
                   <Input
-                    label="Diplôme professionnel"
+                    label={t('personnel.diplome_professionnel')}
                     value={form.diplome_professionnel}
                     onChange={(e) => setField('diplome_professionnel', e.target.value)}
                   />
@@ -968,11 +969,11 @@ export function PersonnelPage() {
               onChange={(e) => setField('type_contrat', e.target.value as TypeContratValue)}
               error={formErrors.type_contrat}
               options={[
-                { value: 'permanent', label: TYPE_CONTRAT_LABELS.permanent },
-                { value: 'CDI',       label: TYPE_CONTRAT_LABELS.CDI },
-                { value: 'CDD',       label: TYPE_CONTRAT_LABELS.CDD },
-                { value: 'vacataire', label: TYPE_CONTRAT_LABELS.vacataire },
-                { value: 'stagiaire', label: TYPE_CONTRAT_LABELS.stagiaire },
+                { value: 'permanent', label: t(TYPE_CONTRAT_LABELS.permanent) },
+                { value: 'CDI',       label: t(TYPE_CONTRAT_LABELS.CDI) },
+                { value: 'CDD',       label: t(TYPE_CONTRAT_LABELS.CDD) },
+                { value: 'vacataire', label: t(TYPE_CONTRAT_LABELS.vacataire) },
+                { value: 'stagiaire', label: t(TYPE_CONTRAT_LABELS.stagiaire) },
               ]}
               placeholder={t('common.selectionner')}
             />
@@ -1017,7 +1018,7 @@ export function PersonnelPage() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
               <Button variant="secondary" onClick={() => setModalOpen(false)}>{t('actions.annuler')}</Button>
               <Button onClick={handleSubmit} loading={submitting}>
-                {editTarget ? 'Modifier' : 'Ajouter'}
+                {editTarget ? t('actions.modifier') : t('actions.ajouter')}
               </Button>
             </div>
           </div>

@@ -23,7 +23,7 @@ interface AuditResponse { total: number; page: number; limit: number; data: Audi
 const ACTION_VARIANT: Record<string, 'success' | 'info' | 'danger' | 'neutral'> = {
   CREATE: 'success', UPDATE: 'info', DELETE: 'danger',
 };
-const ACTION_LABEL: Record<string, string> = { CREATE: 'Création', UPDATE: 'Modification', DELETE: 'Suppression' };
+const ACTION_LABEL: Record<string, string> = { CREATE: 'audit.action_CREATE', UPDATE: 'audit.action_UPDATE', DELETE: 'audit.action_DELETE' };
 
 export function AuditPage() {
   const { t, i18n } = useTranslation();
@@ -75,7 +75,7 @@ export function AuditPage() {
       <div className="card card-pad" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 16 }}>
         <div style={{ minWidth: 160 }}>
           <Select label={t('audit.action', 'Action')} value={fAction} onChange={e => setFAction(e.target.value)}
-            options={[{ value: '', label: t('common.tous', 'Toutes') }, ...Object.keys(ACTION_LABEL).map(a => ({ value: a, label: ACTION_LABEL[a] }))]} />
+            options={[{ value: '', label: t('common.tous', 'Toutes') }, ...Object.keys(ACTION_LABEL).map(a => ({ value: a, label: t(ACTION_LABEL[a]) }))]} />
         </div>
         <div style={{ minWidth: 180 }}>
           <Select label={t('audit.entite', 'Type de donnée')} value={fEntite} onChange={e => setFEntite(e.target.value)}
@@ -115,7 +115,7 @@ export function AuditPage() {
                     <div style={{ fontWeight: 600 }}>{l.acteur}</div>
                     {l.acteur_role && <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>{l.acteur_role}</div>}
                   </td>
-                  <td><Badge label={ACTION_LABEL[l.action] ?? l.action} variant={ACTION_VARIANT[l.action] ?? 'neutral'} /></td>
+                  <td><Badge label={ACTION_LABEL[l.action] ? t(ACTION_LABEL[l.action]) : l.action} variant={ACTION_VARIANT[l.action] ?? 'neutral'} /></td>
                   <td style={{ fontSize: 13 }}>{l.entite}</td>
                   <td style={{ fontSize: 12, color: 'var(--ink-3)', maxWidth: 340, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                       title={l.details ? JSON.stringify(l.details) : ''}>
