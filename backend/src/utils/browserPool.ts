@@ -57,25 +57,42 @@ async function getBrowser(): Promise<Browser> {
 // l'échelle il occupe exactement la page. Comme la largeur locale re-coule le
 // texte, on itère jusqu'à convergence.
 const FIT_A4_SCRIPT = `(() => {
+  // 1046px = 277mm imprimables ; cible réduite de 8px : scrollHeight arrondit
+  // à l'entier inférieur et l'échelle fractionnaire ré-arrondit au rendu — sans
+  // cette marge, la dernière ligne (signatures) glissait sur une 2e page.
   var PRINTABLE_H = 1046;
+  var TARGET_H = PRINTABLE_H - 8;
   document.querySelectorAll('.a4-page').forEach(function (el) {
     var fit = el.querySelector('.a4-fit');
     if (!fit) return;
     var desired = parseFloat(fit.getAttribute('data-zoom') || '1') || 1;
+    // Mesure SANS plancher de hauteur : min-height gonflerait scrollHeight
+    // (h = max(contenu, P/s)) et verrouillerait l'échelle à sa première
+    // valeur basse — à 150 % le rendu sortait PLUS PETIT qu'à 100 %.
+    fit.style.minHeight = '0';
     var s = desired;
-    for (var i = 0; i < 4; i++) {
+    for (var i = 0; i < 5; i++) {
       fit.style.width = (100 / s) + '%';
-      fit.style.minHeight = (PRINTABLE_H / s) + 'px';
-      var h = fit.scrollHeight;
-      var next = Math.min(desired, PRINTABLE_H / h);
+      var next = Math.min(desired, TARGET_H / fit.scrollHeight);
       if (Math.abs(next - s) < 0.005) { s = next; break; }
       s = next;
+    }
+    // Clamp final : garantit h×s ≤ P à la largeur réellement appliquée
+    // (élargir ne peut que réduire h, donc un seul clamp suffit).
+    fit.style.width = (100 / s) + '%';
+    var hf = fit.scrollHeight;
+    if (hf * s > TARGET_H) {
+      s = TARGET_H / hf;
+      fit.style.width = (100 / s) + '%';
     }
     if (s === 1) {
       fit.style.width = '';
       fit.style.minHeight = '';
       return;
     }
+    // Le plancher n'est appliqué qu'APRÈS le choix de l'échelle : il sert
+    // uniquement à caler le pied de page en bas des bulletins aérés.
+    fit.style.minHeight = (TARGET_H / s) + 'px';
     fit.style.transformOrigin = 'top left';
     fit.style.transform = 'scale(' + s + ')';
     el.style.height = PRINTABLE_H + 'px';
