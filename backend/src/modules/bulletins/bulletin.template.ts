@@ -497,7 +497,12 @@ function ctxTableauAnnuel(matieres: TrimestreRow[], bilingue: boolean, nbPeriode
   }).join('');
   return {
     bilingue,
-    periodes: Array.from({ length: nbPeriodes }, (_, i) => ({ label: periodeNomFr(i + 1, nbPeriodes, nomsFr) })),
+    // label = nom FR (colonnes FR/EN) ; label_ar = nom AR (colonnes du tableau arabe,
+    // qui n'affichait que le nom FR du trimestre — le reste de l'en-tête AR est bilingue).
+    periodes: Array.from({ length: nbPeriodes }, (_, i) => ({
+      label: periodeNomFr(i + 1, nbPeriodes, nomsFr),
+      label_ar: periodeNomAr(i + 1),
+    })),
     lignes: rows,
   };
 }
@@ -679,7 +684,7 @@ const FRAG_TABLE_ANNUEL_AR = `{{#tableau_annuel_ar}}
     <thead><tr>
       <th style="width:35%">Matière<br><span class="th-ar" dir="rtl">المجال</span></th>
       <th class="center" style="width:7%">Coeff.<br><span class="th-ar" dir="rtl">معامل</span></th>
-      {{#periodes}}<th class="center">{{label}}</th>{{/periodes}}
+      {{#periodes}}<th class="center">{{label}}<br><span class="th-ar" dir="rtl">{{label_ar}}</span></th>{{/periodes}}
       <th class="center" style="background:#f0fdf4;color:#059669">Moy. Ann.</th>
       <th style="width:22%">Appréciation<br><span class="th-ar" dir="rtl">التقدير</span></th>
     </tr></thead>
@@ -911,10 +916,15 @@ export function generateBulletinAnnuelHtml(data: BulletinAnnuelData): string {
   const mEN = data.matieres_en ?? [];
 
   // Sous-moyenne annuelle d'une filière (matières non évaluées exclues).
+  // Chaque moyenne annuelle par matière est sur le BARÈME de la matière (ex: /60) —
+  // on la ramène sur l'échelle d'affichage avant de pondérer, sinon une matière /60
+  // pesait ses points bruts et la sous-moyenne dépassait 10 (MOY. FR affichait ~36).
   const moyOf = (mats: TrimestreRow[]): number | null => {
     const withMoy = mats.filter(m => m.evaluee !== false && m.moyenne_annuelle !== null);
     const coeff = withMoy.reduce((s, m) => s + m.coeff, 0);
-    return coeff > 0 ? withMoy.reduce((s, m) => s + m.moyenne_annuelle! * m.coeff, 0) / coeff : null;
+    if (coeff <= 0) return null;
+    const pts = withMoy.reduce((s, m) => s + (m.moyenne_annuelle! / (m.note_max || RENDER_BASE)) * RENDER_BASE * m.coeff, 0);
+    return pts / coeff;
   };
   const frMoy = moyOf(mFR);
   const arMoy = moyOf(mAR);
