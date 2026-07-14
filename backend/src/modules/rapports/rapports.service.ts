@@ -523,8 +523,9 @@ export async function rapportGrilleIef(
 
   const absentSet = new Set(absentRecords.map(a => a.eleve_id));
 
-  // Moyenne générale normalisée/pondérée — même calcul que le bulletin.
-  const moyGen = await calculerMoyennesClasse(etablissement_id, classe_id, annee_scolaire_id, periodes, await filieresActivesCodes(etablissement_id));
+  // Moyenne générale pondérée sur la filière de la classe (cohérent avec les
+  // domaines de la grille, déjà scindés par filière) — pas la combinaison FR+AR.
+  const moyGen = await calculerMoyennesClasse(etablissement_id, classe_id, annee_scolaire_id, periodes, [codeFiliere(classeRaw) as 'FR' | 'AR' | 'EN']);
 
   // Moyennes par domaine, chaque note ramenée sur l'échelle établissement via son barème effectif.
   const baremes = await getBaremesClasseCohorte(classe_id, annee_scolaire_id, periodes, await filieresActivesCodes(etablissement_id), baseNote);
@@ -1107,7 +1108,11 @@ export async function rapportReleveNotes(
   const eleveIds = inscriptions.map(i => i.eleve_id);
   const nbPeriodes = cfg?.nb_periodes ?? 3;
   const periodes = periode && periode > 0 ? [periode] : Array.from({ length: nbPeriodes }, (_, i) => i + 1);
-  const moyennes = await calculerMoyennesClasse(etablissement_id, classe_id, annee_scolaire_id, periodes, await filieresActivesCodes(etablissement_id));
+  // Moyenne + rang d'un relevé de CLASSE = filière de cette classe (les colonnes
+  // affichées), PAS la combinaison FR+AR : sinon la Moy incluait les matières de
+  // l'autre filière (non montrées) et divergeait du total des colonnes — un relevé
+  // FR affichait 9.24 (combiné) au lieu de 9.32 (matières FR seules).
+  const moyennes = await calculerMoyennesClasse(etablissement_id, classe_id, annee_scolaire_id, periodes, [codeFiliere(classeRaw) as 'FR' | 'AR' | 'EN']);
   const noteWhere: Record<string, unknown> = {
     eleve_id: { in: eleveIds },
     annee_scolaire_id,
