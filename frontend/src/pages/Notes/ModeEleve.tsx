@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
+import { Segmented } from '../../components/ui/Segmented';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
 import {
@@ -152,22 +153,7 @@ export function ModeEleve({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>{t('note.periode')} :</span>
-          <div style={{ display: 'flex', gap: 4 }}>
-            {periodeOptions.map(p => (
-              <button
-                key={p.value}
-                onClick={() => setPeriode(p.value)}
-                style={{
-                  padding: '4px 16px', borderRadius: 99, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer',
-                  background: periode === p.value ? 'var(--terra)' : 'var(--paper-3)',
-                  color: periode === p.value ? '#fff' : 'var(--ink-3)',
-                  transition: 'background 0.15s',
-                }}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
+          <Segmented ariaLabel={t('note.periode')} value={periode} onChange={setPeriode} options={periodeOptions} />
         </div>
       </div>
 

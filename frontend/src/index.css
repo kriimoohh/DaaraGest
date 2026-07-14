@@ -753,6 +753,51 @@ html[dir="rtl"] .app { direction: rtl; }
   border-radius: 999px;
 }
 
+/* ─── Segmented (groupes de pills filtre / bascule) ─── */
+.seg { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.seg-pill {
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  background: var(--paper-3);
+  color: var(--ink-3);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.seg-pill:hover:not(.active) { background: var(--paper-2); color: var(--ink-2); }
+.seg-sm .seg-pill { padding: 3px 11px; font-size: 12px; }
+/* Variante accent (terra) — sélecteurs de période, bascules primaires */
+.seg-accent .seg-pill.active { background: var(--terra); color: #fff; border-color: var(--terra); }
+/* Variante neutre (encre) — filtres de listes */
+.seg-neutral .seg-pill.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+/* Variante outline — bascules sur fond clair */
+.seg-outline .seg-pill { background: transparent; border-color: var(--rule); }
+.seg-outline .seg-pill.active { background: var(--terra); color: #fff; border-color: var(--terra); }
+
+/* Sélecteur de statut en cellule (couleur sémantique par option, désélectionnable) */
+.status-pick { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.status-pick button {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  background: var(--paper-3);
+  color: var(--ink-3);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s, color 0.12s;
+}
+.status-pick button:hover:not(.on) { background: var(--paper-2); color: var(--ink-2); }
+.status-pick button.on { color: #fff; }
+.status-pick button.on.tone-success { background: var(--success); }
+.status-pick button.on.tone-warning { background: var(--warning); }
+.status-pick button.on.tone-danger  { background: var(--danger); }
+.status-pick button.on.tone-info    { background: var(--info); }
+
 /* ─── Misc ─── */
 .divider { height: 1px; background: var(--rule); margin: 16px 0; }
 .muted { color: var(--ink-3) !important; }

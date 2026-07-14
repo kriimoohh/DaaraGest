@@ -15,6 +15,7 @@ interface PortailData {
     classe_ar: { id: string; nom_fr: string; filiere: string } | null
   } | null
   note_max_base: number
+  periode_labels?: string[]
   notes: Array<{
     id: string; periode: number; valeur: string;
     note_max_effectif: number; coeff_effectif: number;
@@ -55,11 +56,11 @@ const TYPE_PAIEMENT_KEY: Record<string, string> = {
   autre: 'portail_parent.type_autre',
 };
 
-const PERIODE_LABEL: Record<number, string> = {
-  1: '1er Trimestre',
-  2: '2ème Trimestre',
-  3: '3ème Trimestre',
-};
+// Libellé de période : noms résolus par le backend (configurables : trimestres,
+// semestres, bimestres, noms personnalisés) ; repli traduit si absent.
+function periodeLabel(labels: string[] | undefined, periode: number, t: (k: string, o?: Record<string, unknown>) => string): string {
+  return labels?.[periode - 1] ?? t('portail_parent.periode_n', { n: periode });
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -90,7 +91,7 @@ function formatDate(dateStr: string): string {
 
 // ── Tab components ─────────────────────────────────────────────────────────────
 
-function NotesTab({ notes, bulletins, base }: { notes: PortailData['notes']; bulletins: PortailData['bulletins']; base: number }) {
+function NotesTab({ notes, bulletins, base, periodeLabels }: { notes: PortailData['notes']; bulletins: PortailData['bulletins']; base: number; periodeLabels?: string[] }) {
   const { t } = useTranslation();
   const periodes = [...new Set(notes.map(n => n.periode))].sort();
 
@@ -109,7 +110,7 @@ function NotesTab({ notes, bulletins, base }: { notes: PortailData['notes']; bul
           <div key={periode} className="card">
             {/* Period header */}
             <div className="card-hd" style={{ background: 'var(--paper-2)', flexWrap: 'wrap' }}>
-              <h3>{PERIODE_LABEL[periode] ?? t('portail_parent.periode_n', { n: periode })}</h3>
+              <h3>{periodeLabel(periodeLabels, periode, t)}</h3>
               <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                 {bulletin?.moyenne && (
                   <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>
@@ -322,7 +323,7 @@ const TYPE_EVAL_BADGE: Record<string, string> = {
   EXAMEN:  'badge-accent',
 };
 
-function EvaluationsFormativesTab({ evaluations }: { evaluations: PortailData['evaluations_formatives'] }) {
+function EvaluationsFormativesTab({ evaluations, periodeLabels }: { evaluations: PortailData['evaluations_formatives']; periodeLabels?: string[] }) {
   const { t } = useTranslation();
   if (evaluations.length === 0) {
     return <div className="empty">{t('portail_parent.aucune_evaluation')}</div>;
@@ -337,7 +338,7 @@ function EvaluationsFormativesTab({ evaluations }: { evaluations: PortailData['e
         return (
           <div key={periode} className="card">
             <div className="card-hd" style={{ background: 'var(--paper-2)' }}>
-              <h3>{PERIODE_LABEL[periode] ?? t('portail_parent.periode_n', { n: periode })}</h3>
+              <h3>{periodeLabel(periodeLabels, periode, t)}</h3>
             </div>
             <div className="tbl-wrap">
               <table className="tbl">
@@ -382,7 +383,7 @@ function EvaluationsFormativesTab({ evaluations }: { evaluations: PortailData['e
   );
 }
 
-function ActivitesTab({ activites, base }: { activites: PortailData['activites']; base: number }) {
+function ActivitesTab({ activites, base, periodeLabels }: { activites: PortailData['activites']; base: number; periodeLabels?: string[] }) {
   const { t } = useTranslation();
   if (activites.length === 0) {
     return <div className="empty">{t('portail_parent.aucune_activite')}</div>;
@@ -404,7 +405,7 @@ function ActivitesTab({ activites, base }: { activites: PortailData['activites']
             <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
               {insc.evaluations.map(ev => (
                 <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 12, color: 'var(--ink-3)', minWidth: 100 }}>{PERIODE_LABEL[ev.periode] ?? t('portail_parent.periode_n', { n: ev.periode })}</span>
+                  <span style={{ fontSize: 12, color: 'var(--ink-3)', minWidth: 100 }}>{periodeLabel(periodeLabels, ev.periode, t)}</span>
                   {ev.note !== null && (
                     <span className="font-num" style={{ fontSize: 14, fontWeight: 700, color: 'var(--terra)' }}>{parseFloat(ev.note).toFixed(1)}/{base}</span>
                   )}
@@ -537,11 +538,11 @@ export function PortailParentPage() {
         </div>
 
         {/* Tab content */}
-        {tab === 'notes' && <NotesTab notes={data.notes} bulletins={data.bulletins} base={data.note_max_base ?? 20} />}
-        {tab === 'evaluations' && <EvaluationsFormativesTab evaluations={data.evaluations_formatives} />}
+        {tab === 'notes' && <NotesTab notes={data.notes} bulletins={data.bulletins} base={data.note_max_base ?? 20} periodeLabels={data.periode_labels} />}
+        {tab === 'evaluations' && <EvaluationsFormativesTab evaluations={data.evaluations_formatives} periodeLabels={data.periode_labels} />}
         {tab === 'paiements' && <PaiementsTab paiements={data.paiements} />}
         {tab === 'absences' && <AbsencesTab absences={data.absences} />}
-        {tab === 'activites' && <ActivitesTab activites={data.activites} base={data.note_max_base ?? 20} />}
+        {tab === 'activites' && <ActivitesTab activites={data.activites} base={data.note_max_base ?? 20} periodeLabels={data.periode_labels} />}
         {tab === 'infos' && <InfosTab data={data} />}
 
         {/* Footer */}

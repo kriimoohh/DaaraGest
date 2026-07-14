@@ -8,6 +8,8 @@ import { Badge } from '../../components/ui/Badge';
 import { Select } from '../../components/ui/Select';
 import { Input } from '../../components/ui/Input';
 import { Pagination } from '../../components/ui/Pagination';
+import { Segmented } from '../../components/ui/Segmented';
+import { StatusPicker } from '../../components/ui/StatusPicker';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
 import { useAnneeScolaire } from '../../store/anneeStore';
@@ -222,19 +224,11 @@ function SaisieJour({ api }: { api: ReturnType<typeof useApi> }) {
                       </td>
                       <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{e.matricule}</td>
                       <td>
-                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                          {STATUTS.map(st => (
-                            <button key={st.value}
-                              onClick={() => setStatut(e.eleve_id, st.value)}
-                              style={{
-                                padding: '3px 10px', borderRadius: 99, fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer',
-                                background: s.statut === st.value ? `var(--${st.badge === 'success' ? 'success' : st.badge === 'warning' ? 'warning' : st.badge === 'error' ? 'danger' : 'info'})` : 'var(--paper-3)',
-                                color: s.statut === st.value ? '#fff' : 'var(--ink-3)',
-                              }}>
-                              {t(st.label)}
-                            </button>
-                          ))}
-                        </div>
+                        <StatusPicker
+                          value={s.statut}
+                          onChange={v => setStatut(e.eleve_id, v)}
+                          options={STATUTS.map(st => ({ value: st.value, label: t(st.label), tone: st.badge === 'error' ? 'danger' : st.badge }))}
+                        />
                       </td>
                       <td>
                         {needMotif && (
@@ -306,16 +300,14 @@ function Historique({ api }: { api: ReturnType<typeof useApi> }) {
         <Select value={mois} onChange={e => setMois(e.target.value)}
           options={MOIS_LABELS.map((m, i) => ({ value: String(i + 1), label: m }))} />
         <Input type="number" value={annee} onChange={e => setAnnee(e.target.value)} />
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          {[{ value: '', label: 'absences.tous' }, ...STATUTS].map(s => (
-            <button key={s.value} onClick={() => setStatut(s.value)}
-              style={{
-                padding: '4px 12px', borderRadius: 99, fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer',
-                background: statut === s.value ? 'var(--ink)' : 'var(--paper-3)',
-                color: statut === s.value ? 'var(--paper)' : 'var(--ink-3)',
-              }}>{t(s.label)}</button>
-          ))}
-        </div>
+        <Segmented
+          variant="neutral"
+          size="sm"
+          ariaLabel={t('absences.col_statut')}
+          value={statut}
+          onChange={setStatut}
+          options={[{ value: '', label: t('absences.tous') }, ...STATUTS.map(s => ({ value: s.value, label: t(s.label) }))]}
+        />
       </div>
 
       <div className="card">

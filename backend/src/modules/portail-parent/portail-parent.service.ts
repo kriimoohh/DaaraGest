@@ -64,10 +64,24 @@ export async function getPortailData(token: string) {
   // de période prioritaire), pour normaliser les notes comme les bulletins.
   const config = await prisma.configNotes.findUnique({
     where: { etablissement_id: record.etablissement_id },
-    select: { note_max: true, nb_periodes: true },
+    select: { note_max: true, nb_periodes: true, noms_periodes: true },
   });
   const noteMaxBase = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
-  const periodes = Array.from({ length: config?.nb_periodes ?? 3 }, (_, i) => i + 1);
+  const nbPeriodes = config?.nb_periodes ?? 3;
+  const periodes = Array.from({ length: nbPeriodes }, (_, i) => i + 1);
+
+  // Libellés de période résolus (noms personnalisés > ordinal + mot par défaut),
+  // pour que le portail affiche « 1er Semestre / Bimestre… » comme les bulletins
+  // au lieu de « 1er Trimestre » codé en dur côté front.
+  const ORDINAL_FR = ['1er', '2ème', '3ème', '4ème', '5ème', '6ème'];
+  const motPeriode = nbPeriodes === 2 ? 'Semestre' : nbPeriodes === 6 ? 'Bimestre' : 'Trimestre';
+  const nomsCustom = Array.isArray((config?.noms_periodes as { fr?: unknown } | null)?.fr)
+    ? (config!.noms_periodes as { fr: string[] }).fr
+    : [];
+  const periodeLabels = periodes.map(p => {
+    const custom = nomsCustom[p - 1];
+    return custom && custom.trim() ? custom : `${ORDINAL_FR[p - 1] ?? `${p}ème`} ${motPeriode}`;
+  });
 
   const baremes = new Map<string, { coeff: number; note_max: number; evaluee: boolean }>();
   if (classeIdFR) {
@@ -157,6 +171,7 @@ export async function getPortailData(token: string) {
     },
     inscription,
     note_max_base: noteMaxBase,
+    periode_labels: periodeLabels,
     notes,
     bulletins,
     paiements,
