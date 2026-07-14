@@ -422,7 +422,7 @@ async function buildTableauNotesClasse(
       where: { classe_id },
       include: {
         matiere: {
-          select: { id: true, nom_fr: true, code_court: true, ordre_bulletin: true, active: true, note_max: true },
+          select: { id: true, nom_fr: true, code_court: true, ordre_bulletin: true, active: true, note_max: true, coeff_defaut: true },
         },
       },
       orderBy: [{ ordre_override: 'asc' }, { matiere: { ordre_bulletin: 'asc' } }],
@@ -454,19 +454,31 @@ async function buildTableauNotesClasse(
       nom_fr: cm.matiere.nom_fr,
       code_court: cm.matiere.code_court,
       note_max: Number(cm.note_max_override ?? cm.matiere.note_max ?? baseNote),
+      // Coefficient et « évaluée » effectifs, pour une moyenne PONDÉRÉE identique
+      // au bulletin (une moyenne arithmétique simple ignorait les coefficients et
+      // divergeait de la moyenne officielle, surtout en arabe où « L&C Ressources »
+      // pèse coeff 6).
+      coeff: Number(cm.coeff_override ?? cm.matiere.coeff_defaut ?? 1),
+      evaluee: cm.evaluee !== false,
     }))
     .filter(m => classeMatieres.find(cm => cm.matiere.id === m.id)?.matiere.active !== false);
 
-  // Barème par trimestre prioritaire : certaines matières changent d'échelle entre
-  // T1 et T2 (CLC arabe, RER…). Pour un relevé d'un trimestre donné, normaliser sur
-  // le barème de CE trimestre, pas le barème par défaut de la classe.
+  // Barème / coeff / évaluée par trimestre prioritaires : certaines matières changent
+  // d'échelle ou de pondération entre T1 et T2 (CLC arabe, RER…). Pour un relevé d'un
+  // trimestre donné, utiliser les valeurs de CE trimestre, pas celles par défaut.
   if (periode && periode > 0) {
     const cmps = await prisma.classeMatierePeriode.findMany({
       where: { classe_id, periode, matiere_id: { in: matieres.map(m => m.id) } },
-      select: { matiere_id: true, note_max: true },
+      select: { matiere_id: true, note_max: true, coeff: true, evaluee: true },
     });
-    const ovr = new Map(cmps.map(c => [c.matiere_id, Number(c.note_max)]));
-    for (const m of matieres) { const o = ovr.get(m.id); if (o != null) m.note_max = o; }
+    const ovr = new Map(cmps.map(c => [c.matiere_id, c]));
+    for (const m of matieres) {
+      const o = ovr.get(m.id);
+      if (!o) continue;
+      if (o.note_max != null) m.note_max = Number(o.note_max);
+      if (o.coeff != null) m.coeff = Number(o.coeff);
+      if (o.evaluee != null) m.evaluee = o.evaluee;
+    }
   }
 
   // Récupérer un éventuel titulaire (premier prof de la classe)
@@ -522,15 +534,20 @@ async function buildTableauNotesClasse(
       const v = nm?.get(m.id);
       return v === undefined ? null : v;
     });
-    let totalNorm = 0, count = 0;
+    // Moyenne PONDÉRÉE par coefficient (cohérente avec le bulletin) : chaque note
+    // ramenée sur l'échelle établissement via son barème, puis pondérée par son
+    // coefficient. Les matières non évaluées sont exclues.
+    let totalNorm = 0, totalCoeff = 0;
     for (let i = 0; i < vals.length; i++) {
       const v = vals[i];
-      if (v === null) continue;
+      if (v === null || !matieres[i].evaluee) continue;
       const max = matieres[i].note_max || baseNote;
-      totalNorm += (v / max) * baseNote;
-      count++;
+      const c = matieres[i].coeff;
+      if (max <= 0 || c <= 0) continue;
+      totalNorm += (v / max) * baseNote * c;
+      totalCoeff += c;
     }
-    const moy = count > 0 ? totalNorm / count : null;
+    const moy = totalCoeff > 0 ? totalNorm / totalCoeff : null;
     return { eleve: insc.eleve, vals, moy };
   });
 
