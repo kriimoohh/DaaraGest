@@ -5,6 +5,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
+import { Segmented } from '../../components/ui/Segmented';
 import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
@@ -151,20 +152,16 @@ function NouvelleConversationModal({ isOpen, onClose, onCreated, api }: Nouvelle
         {/* Type toggle */}
         <div>
           <label style={{ fontSize: 12, color: 'var(--ink-3)', fontWeight: 600, display: 'block', marginBottom: 6 }}>{t('messagerie.type')}</label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {(['individuel', 'broadcast'] as const).map(t => (
-              <button key={t} onClick={() => setType(t)}
-                style={{
-                  padding: '6px 16px', borderRadius: 99, fontSize: 13, fontWeight: 500, border: '1.5px solid',
-                  cursor: 'pointer',
-                  background: type === t ? 'var(--terra)' : 'transparent',
-                  borderColor: type === t ? 'var(--terra)' : 'var(--rule)',
-                  color: type === t ? '#fff' : 'var(--ink-3)',
-                }}>
-                {t === 'individuel' ? i18n.t('messagerie.individuel') : i18n.t('messagerie.broadcast')}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            variant="outline"
+            ariaLabel={t('messagerie.type')}
+            value={type}
+            onChange={v => setType(v as 'individuel' | 'broadcast')}
+            options={[
+              { value: 'individuel', label: t('messagerie.individuel') },
+              { value: 'broadcast', label: t('messagerie.broadcast') },
+            ]}
+          />
         </div>
 
         {/* Destinataires */}

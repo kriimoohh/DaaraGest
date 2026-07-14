@@ -10,6 +10,7 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { SearchInput } from '../../components/ui/SearchInput';
 import { Pagination } from '../../components/ui/Pagination';
+import { Segmented } from '../../components/ui/Segmented';
 import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
@@ -722,30 +723,24 @@ export function FinancesPage() {
 
           <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
             <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>{t('finance.type_label')}</span>
-            {FILTER_TYPES.map(f => (
-              <button key={f.value} onClick={() => setFilterType(f.value)}
-                style={{
-                  padding: '4px 12px', borderRadius: 99, fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer',
-                  background: filterType === f.value ? 'var(--ink)' : 'var(--paper-3)',
-                  color: filterType === f.value ? 'var(--paper)' : 'var(--ink-3)',
-                }}>
-                {t(f.label)}
-              </button>
-            ))}
+            <Segmented
+              variant="neutral"
+              ariaLabel={t('finance.type_label')}
+              value={filterType}
+              onChange={setFilterType}
+              options={FILTER_TYPES.map(f => ({ value: f.value, label: t(f.label) }))}
+            />
           </div>
 
           <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
             <span style={{ fontSize: 12, color: 'var(--ink-3)', flexShrink: 0 }}>{t('finance.statut_label')}</span>
-            {FILTER_STATUTS.map(f => (
-              <button key={f.value} onClick={() => setFilterStatut(f.value)}
-                style={{
-                  padding: '4px 12px', borderRadius: 99, fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer',
-                  background: filterStatut === f.value ? 'var(--ink)' : 'var(--paper-3)',
-                  color: filterStatut === f.value ? 'var(--paper)' : 'var(--ink-3)',
-                }}>
-                {t(f.label)}
-              </button>
-            ))}
+            <Segmented
+              variant="neutral"
+              ariaLabel={t('finance.statut_label')}
+              value={filterStatut}
+              onChange={setFilterStatut}
+              options={FILTER_STATUTS.map(f => ({ value: f.value, label: t(f.label) }))}
+            />
           </div>
 
           <div className="row" style={{ gap: 12, flexWrap: 'wrap' }}>

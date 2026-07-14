@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../hooks/useTheme';
@@ -430,8 +430,161 @@ const T = {
   },
 } as const;
 
-type Lang = 'fr' | 'ar';
+type Lang = 'fr' | 'ar' | 'en';
 type RoleId = 'admin' | 'directeur' | 'gestionnaire' | 'agent' | 'professeur' | 'pointeur';
+
+interface LandingContent {
+  hero_title: string; hero_sub: string;
+  hero_cta_login: string; hero_cta_guide: string; hero_cta_dashboard: string;
+  features_title: string; features_sub: string;
+  guides_title: string; guides_sub: string;
+  cta_title: string; cta_sub: string; cta_btn: string;
+  footer_tagline: string;
+  features: readonly { icon: ReactNode; title: string; desc: string }[];
+  roles: readonly { id: string; label: string }[];
+  role_guides: Record<RoleId, { title: string; desc: string; access: readonly { label: string; detail: string }[] }>;
+}
+
+// Anglais : mêmes icônes que le FR (identiques), texte traduit.
+const EN: LandingContent = {
+  hero_title: 'The Franco-Arabic school management platform',
+  hero_sub: 'DaaraGest centralizes the running of your school in one simple, bilingual tool tailored to Franco-Arabic schools in Senegal.',
+  hero_cta_login: 'Sign in',
+  hero_cta_guide: 'View the guides',
+  hero_cta_dashboard: 'Go to the dashboard',
+  features_title: 'Everything you need',
+  features_sub: 'A complete suite of modules to manage every part of your school',
+  guides_title: 'Guides by role',
+  guides_sub: 'Discover the features available for your role in the school',
+  cta_title: 'Ready to get started?',
+  cta_sub: 'Sign in to your workspace and take charge of running your school.',
+  cta_btn: 'Access the platform',
+  footer_tagline: 'Franco-Arabic school management · Senegal',
+  features: [
+    { icon: T.fr.features[0].icon, title: 'Students & Enrollment', desc: 'Complete student records, class enrollment management and guardian information, with an integrated parent portal.' },
+    { icon: T.fr.features[1].icon, title: 'Teachers & Classes', desc: 'Teacher directory, assignment to classes and tracks, contract management and teaching-staff records.' },
+    { icon: T.fr.features[2].icon, title: 'Grades & Report Cards', desc: 'Grade entry by term, automatic average calculation and generation of bilingual PDF report cards.' },
+    { icon: T.fr.features[3].icon, title: 'Finances', desc: 'Track student and teacher payments, manage outstanding balances, automatic receipts and monthly reports.' },
+    { icon: T.fr.features[4].icon, title: 'Timetable', desc: 'Weekly scheduling by class, French and Arabic tracks, with automatic conflict detection.' },
+    { icon: T.fr.features[5].icon, title: 'Messaging & Calendar', desc: 'Internal staff messaging, shared school calendar and a parent portal to follow up on results.' },
+    { icon: T.fr.features[6].icon, title: 'Attendance & Absences', desc: 'Daily tracking of teacher and student attendance, justifications and per-class statistics.' },
+    { icon: T.fr.features[7].icon, title: 'Official Documents', desc: 'Automatic generation of enrollment certificates, attestations, registrations and other official documents as print-ready PDFs.' },
+    { icon: T.fr.features[8].icon, title: 'Library', desc: "Manage the school's collection: book catalog, loans to students and teachers, return tracking and stock inventory." },
+  ],
+  roles: [
+    { id: 'admin', label: 'Administrator' },
+    { id: 'directeur', label: 'Principal' },
+    { id: 'gestionnaire', label: 'Manager' },
+    { id: 'agent', label: 'Registrar' },
+    { id: 'professeur', label: 'Teacher' },
+    { id: 'pointeur', label: 'Attendance officer' },
+  ],
+  role_guides: {
+    admin: {
+      title: 'Administrator',
+      desc: 'The administrator has full access to every feature of DaaraGest. They configure the school, manage user accounts and oversee all operations.',
+      access: [
+        { label: 'Dashboard', detail: "Overview of the school's statistics: enrolled students, active teachers, open classes and the month's financial summary." },
+        { label: 'User management', detail: 'Create, edit and deactivate staff accounts. Assign roles (principal, manager, teacher, etc.) and manage access.' },
+        { label: 'System settings', detail: "Configure the school's information, the grading scale, school terms, tuition fees and display preferences." },
+        { label: 'Students & Enrollment', detail: 'Full access to student records, class enrollment and generation of parent-portal access links.' },
+        { label: 'Teachers', detail: 'Full management of teacher records: specialties, contract types, salaries and class assignments.' },
+        { label: 'Classes, Subjects & Years', detail: 'Create and manage classes by track (FR/AR), levels, subjects and configure school years.' },
+        { label: 'Grades & Assessments', detail: 'Oversee grade entry, access all assessments by term and generate bilingual PDF report cards.' },
+        { label: 'Finances', detail: 'Full access: student payments, teacher disbursements, deductions, outstanding balances and monthly financial reports.' },
+        { label: 'Official documents', detail: 'Generate all official documents: enrollment certificates, attestations and any other document as PDF.' },
+        { label: 'Library', detail: 'Full management of the collection: book catalog, loan management, return tracking and stock status.' },
+        { label: 'Analytics', detail: 'Advanced analytics dashboard: attendance rate by class, averages by track, top/bottom students and active alerts.' },
+        { label: 'Assessments & Progress', detail: "Review formative assessments and track students' multi-year academic progress." },
+        { label: 'Extracurricular activities', detail: 'Full management of activities, enrollment, sessions and assessment of participating students.' },
+        { label: 'Reports', detail: 'Summary reports: student and teacher attendance, results by class, monthly financial summary.' },
+        { label: 'Messaging & Calendar', detail: 'Messaging with all staff members and full management of the school calendar.' },
+        { label: 'Attendance & Absences', detail: 'Oversee teacher attendance and full tracking of student absences with statistics.' },
+      ],
+    },
+    directeur: {
+      title: 'Principal',
+      desc: 'The principal has an overall view of every activity in the school. They lead the teams, monitor pedagogical indicators and coordinate day-to-day operations.',
+      access: [
+        { label: 'Dashboard', detail: "School statistics, payment trends over 6 months and performance indicators." },
+        { label: 'Students & Enrollment', detail: 'Review and full management of student records, class enrollment and headcount tracking.' },
+        { label: 'Teachers', detail: 'Manage teacher records, track assignments, specialties and contractual details.' },
+        { label: 'Classes, Subjects & School Years', detail: 'Configure classes, levels, tracks, subjects and manage active school years.' },
+        { label: 'Grades, Assessments & Report Cards', detail: 'Review grades, access all assessments and generate PDF report cards by class and term.' },
+        { label: 'Finances (read-only)', detail: 'Review student payments, teacher disbursements and outstanding balances — without editing financial data.' },
+        { label: 'Timetable', detail: 'Review and edit the timetables of every class.' },
+        { label: 'Teacher attendance', detail: 'Daily tracking of teacher presence, lateness or absence.' },
+        { label: 'Student absences', detail: 'Review and manage absence tracking, attendance rates and per-class alerts.' },
+        { label: 'Analytics', detail: 'Analytics dashboard: attendance rate, averages by class and track, top students and active alerts.' },
+        { label: 'Reports', detail: 'Student and teacher attendance reports, results by class and financial summary.' },
+        { label: 'Student progress', detail: "Validate and track students' multi-year academic progress, per-student history." },
+        { label: 'Extracurricular activities', detail: 'Review and manage extracurricular activities, sessions and assessments.' },
+        { label: 'Messaging & Calendar', detail: 'Internal messaging with the team and management of school-calendar events.' },
+        { label: 'Official documents', detail: 'Generate and review certificates, attestations and official documents.' },
+        { label: 'Library', detail: "Review the catalog and ongoing loans in the school's library." },
+      ],
+    },
+    gestionnaire: {
+      title: 'Manager',
+      desc: 'The manager handles the administrative and financial coordination of the school. They manage enrollment, payments and the production of official documents.',
+      access: [
+        { label: 'Dashboard', detail: "Overview of key indicators: the month's enrollments, payments collected and active classes." },
+        { label: 'Students & Enrollment', detail: 'Create, edit and enroll students in classes. Generate parent-portal links.' },
+        { label: 'Teachers', detail: 'Manage teacher records, class assignments and contract information.' },
+        { label: 'Classes, Subjects & Years', detail: 'Create and manage classes, subjects and school years.' },
+        { label: 'Finances', detail: 'Record student payments (tuition, enrollment, uniform), teacher disbursements, manage outstanding balances and issue receipts.' },
+        { label: 'Official documents', detail: 'Generate enrollment certificates, attestations and all official documents as PDF.' },
+        { label: 'Timetable', detail: 'Review and update the timetables of every class.' },
+        { label: 'Formative assessments', detail: 'Review and enter formative assessments (homework, tests, exams) by class and subject.' },
+        { label: 'Extracurricular activities', detail: 'Manage enrollment, sessions and attendance for extracurricular activities.' },
+        { label: 'Reports', detail: 'Attendance and results reports by class. Monthly financial summary.' },
+        { label: 'Student absences', detail: 'Review absence tracking and per-class attendance statistics.' },
+        { label: 'Library', detail: 'Manage book loans, returns and review the document catalog.' },
+        { label: 'Messaging & Calendar', detail: 'Internal messaging with the team and access to the school calendar.' },
+      ],
+    },
+    agent: {
+      title: 'Registrar',
+      desc: 'The registrar is in direct contact with families and students. They manage enrollment, record payments and handle day-to-day attendance tracking.',
+      access: [
+        { label: 'Students', detail: 'Review and manage student records, update personal and family information.' },
+        { label: 'Student absences', detail: 'Daily entry and tracking of absences by class. Manage justifications, lateness and exemptions. Attendance statistics.' },
+        { label: 'Finances', detail: 'Record tuition payments (monthly fees, enrollment, etc.), issue receipts and track outstanding balances.' },
+        { label: 'Timetable', detail: 'Review class timetables to inform families.' },
+        { label: 'School calendar', detail: 'Review the calendar of events, exams and school holidays.' },
+        { label: 'Library', detail: 'Review the catalog and manage book loans to students.' },
+        { label: 'Messaging', detail: 'Internal communication with the teaching and administrative team.' },
+      ],
+    },
+    professeur: {
+      title: 'Teacher',
+      desc: 'The teacher has the pedagogical tools needed to manage their classes, enter grades and follow the academic progress of their students.',
+      access: [
+        { label: 'My classes', detail: 'Review the list of students in each assigned class, split by track and level.' },
+        { label: 'Grades & Assessments', detail: 'Enter grades by subject and term, create and manage assessments for their classes.' },
+        { label: 'Report cards', detail: 'Generate and review report cards. View averages by student and by subject.' },
+        { label: 'Pedagogical activities', detail: 'Plan and track school activities and projects for assigned classes.' },
+        { label: 'Student progress', detail: "Track students' academic progress across terms in their classes." },
+        { label: 'Timetable', detail: 'Review their personal timetable and the schedules of their classes.' },
+        { label: 'Absences (read-only)', detail: 'Review their students’ absence tracking to adjust their teaching.' },
+        { label: 'Messaging & Calendar', detail: 'Internal messaging with the team and review of the school-events calendar.' },
+      ],
+    },
+    pointeur: {
+      title: 'Attendance officer',
+      desc: 'The attendance officer is dedicated to the day-to-day management of teaching-staff attendance. Their work is essential for absence tracking and payroll calculation.',
+      access: [
+        { label: 'Teacher attendance', detail: 'Daily recording of each teacher’s status: present, absent, late or on leave. Full history available.' },
+        { label: 'Timetable', detail: 'Review timetables to know each teacher’s slots and organize attendance.' },
+        { label: 'Student absences (read-only)', detail: 'Review student absence tracking for information.' },
+        { label: 'School calendar', detail: 'Access the calendar to identify public holidays and school events.' },
+        { label: 'Messaging', detail: 'Internal communication with the school team.' },
+      ],
+    },
+  },
+};
+
+const LANGS: Record<Lang, LandingContent> = { fr: T.fr, ar: T.ar, en: EN };
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 function SunIcon() {
@@ -459,12 +612,15 @@ function CheckIcon() {
 // ─── Component ────────────────────────────────────────────────────────────────
 export function LandingPage() {
   const { i18n } = useTranslation();
-  const [lang, setLang] = useState<Lang>((i18n.language as Lang) === 'ar' ? 'ar' : 'fr');
+  const [lang, setLang] = useState<Lang>(() => {
+    const l = i18n.language;
+    return l.startsWith('ar') ? 'ar' : l.startsWith('en') ? 'en' : 'fr';
+  });
   const [activeRole, setActiveRole] = useState<RoleId>('admin');
   const { theme, toggleTheme } = useTheme();
   const { isAuthenticated } = useAuthStore();
 
-  const t = T[lang];
+  const t = LANGS[lang];
   const guide = t.role_guides[activeRole];
 
   // Page vitrine : contenu FR/AR uniquement (dictionnaire local T), donc sélecteur
@@ -505,6 +661,7 @@ export function LandingPage() {
         >
           <option value="fr">Français</option>
           <option value="ar">العربية</option>
+          <option value="en">English</option>
         </select>
         <button className="tb-btn" onClick={toggleTheme} title="Changer de thème" aria-label="Changer de thème">
           {theme === 'dark' ? <SunIcon /> : <MoonIcon />}

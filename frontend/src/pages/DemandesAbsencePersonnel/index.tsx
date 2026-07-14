@@ -7,6 +7,7 @@ import { Select } from '../../components/ui/Select';
 import { Modal } from '../../components/ui/Modal';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
 import { Badge } from '../../components/ui/Badge';
+import { Segmented } from '../../components/ui/Segmented';
 import { useApi } from '../../hooks/useApi';
 import { fmtDate } from '../../lib/dates';
 import { useAuthStore } from '../../store/authStore';
@@ -158,22 +159,17 @@ export function DemandesAbsencePersonnelPage() {
       />
 
       {/* Filtres */}
-      <div style={{ display: 'flex', gap: 8, margin: '16px 0', flexWrap: 'wrap' }}>
-        {(['', 'EN_ATTENTE', 'APPROUVE', 'REFUSE'] as const).map(s => (
-          <button
-            key={s}
-            onClick={() => setFiltreStatut(s)}
-            style={{
-              padding: '6px 16px', borderRadius: 99, fontSize: 13, fontWeight: 500, border: '1.5px solid',
-              cursor: 'pointer',
-              background: filtreStatut === s ? 'var(--terra)' : 'transparent',
-              borderColor: filtreStatut === s ? 'var(--terra)' : 'var(--rule)',
-              color: filtreStatut === s ? '#fff' : 'var(--ink-3)',
-            }}
-          >
-            {s === '' ? t('demande_absence.filtre_toutes') : t(STATUT_KEYS[s])}
-          </button>
-        ))}
+      <div style={{ margin: '16px 0' }}>
+        <Segmented
+          variant="outline"
+          ariaLabel={t('demande_absence.col_statut')}
+          value={filtreStatut}
+          onChange={setFiltreStatut}
+          options={[
+            { value: '', label: t('demande_absence.filtre_toutes') },
+            ...(['EN_ATTENTE', 'APPROUVE', 'REFUSE'] as const).map(s => ({ value: s, label: t(STATUT_KEYS[s]) })),
+          ]}
+        />
       </div>
 
       {/* Table */}
