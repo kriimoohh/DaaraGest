@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
-import { classeSchema, classeMatiereSchema, classeMatiereUpdateSchema, classeMatierePeriodeSchema, dupliquerClasseSchema } from './classes.schema';
-import { listerClasses, getClasse, creerClasse, modifierClasse, supprimerClasse, listerElevesDeClasse, genererPdfListeClasse, genererPdfToutesClasses, listerMatieresDeclasse, ajouterMatiereClasse, modifierMatiereClasse, supprimerMatiereClasse, dupliquerClasse, upsertOverridePeriode, supprimerOverridePeriode } from './classes.service';
+import { classeSchema, classeMatiereSchema, classeMatiereUpdateSchema, classeMatierePeriodeSchema, programmeModeSchema, dupliquerClasseSchema } from './classes.schema';
+import { listerClasses, getClasse, creerClasse, modifierClasse, setProgrammeMode, supprimerClasse, listerElevesDeClasse, genererPdfListeClasse, genererPdfToutesClasses, listerMatieresDeclasse, ajouterMatiereClasse, modifierMatiereClasse, supprimerMatiereClasse, dupliquerClasse, upsertOverridePeriode, supprimerOverridePeriode } from './classes.service';
 
 export async function listerHandler(
   request: FastifyRequest, reply: FastifyReply
@@ -50,6 +50,23 @@ export async function modifierHandler(
   }
   try {
     const data = await modifierClasse(id, etablissement_id, parsed.data);
+    return reply.send(data);
+  } catch (err) {
+    return reply.status(404).send({ error: (err as Error).message });
+  }
+}
+
+export async function setProgrammeModeHandler(
+  request: FastifyRequest, reply: FastifyReply
+) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { id } = request.params as { id: string };
+  const parsed = programmeModeSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: parsed.error.errors[0].message });
+  }
+  try {
+    const data = await setProgrammeMode(id, etablissement_id, parsed.data.programme_par_periode);
     return reply.send(data);
   } catch (err) {
     return reply.status(404).send({ error: (err as Error).message });

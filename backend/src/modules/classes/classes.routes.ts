@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { authMiddleware } from '../../middlewares/auth.middleware';
 import { requireRole } from '../../middlewares/role.middleware';
 import { ROLE_GROUPS } from '../../config/roles';
-import { listerHandler, getHandler, creerHandler, modifierHandler, supprimerHandler, listerElevesHandler, pdfListeClasseHandler, pdfToutesClassesHandler, listerMatieresClasseHandler, ajouterMatiereClasseHandler, modifierMatiereClasseHandler, supprimerMatiereClasseHandler, dupliquerHandler, upsertOverridePeriodeHandler, supprimerOverridePeriodeHandler } from './classes.controller';
+import { listerHandler, getHandler, creerHandler, modifierHandler, setProgrammeModeHandler, supprimerHandler, listerElevesHandler, pdfListeClasseHandler, pdfToutesClassesHandler, listerMatieresClasseHandler, ajouterMatiereClasseHandler, modifierMatiereClasseHandler, supprimerMatiereClasseHandler, dupliquerHandler, upsertOverridePeriodeHandler, supprimerOverridePeriodeHandler } from './classes.controller';
 
 const lecture        = requireRole(...ROLE_GROUPS.ACADEMIQUE);
 const gestion        = requireRole(...ROLE_GROUPS.GESTION);
@@ -14,6 +14,7 @@ export async function classeRoutes(fastify: FastifyInstance) {
   fastify.get('/pdf-toutes-classes',            { preHandler: [authMiddleware, lecture] }, pdfToutesClassesHandler);
   fastify.get('/:id',                           { preHandler: [authMiddleware, lecture] }, getHandler);
   fastify.put('/:id',                           { preHandler: [authMiddleware, gestion] }, modifierHandler);
+  fastify.put('/:id/programme-mode',            { preHandler: [authMiddleware, gestion] }, setProgrammeModeHandler);
   fastify.delete('/:id',                        { preHandler: [authMiddleware, adminSeulement] }, supprimerHandler);
   fastify.get('/:id/eleves',                    { preHandler: [authMiddleware, lecture] }, listerElevesHandler);
   fastify.post('/:id/dupliquer',                { preHandler: [authMiddleware, gestion] }, dupliquerHandler);

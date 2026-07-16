@@ -125,6 +125,20 @@ export async function modifierClasse(id: string, etablissement_id: string, data:
   return exposeCode(updated);
 }
 
+// Bascule le mode du programme (identique toute l'année ↔ par période). Le calcul des
+// moyennes applique de toute façon les surcharges par période existantes ; ce drapeau
+// pilote surtout l'éditeur "Programme" (affichage annuel vs grille par période).
+export async function setProgrammeMode(id: string, etablissement_id: string, programme_par_periode: boolean) {
+  const existing = await prisma.classe.findFirst({ where: { id, etablissement_id } });
+  if (!existing) throw new NotFoundError('Classe introuvable');
+  const updated = await prisma.classe.update({
+    where: { id },
+    data: { programme_par_periode },
+    include: { ...selectFiliereRef },
+  });
+  return exposeCode(updated);
+}
+
 export async function supprimerClasse(id: string, etablissement_id: string) {
   const existing = await prisma.classe.findFirst({ where: { id, etablissement_id } });
   if (!existing) throw new NotFoundError('Classe introuvable');
