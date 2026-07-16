@@ -753,7 +753,7 @@ function NotesTable({ notes, filiere, isAnnuel, base }: { notes: NoteDetail[]; f
     const withVal = rows.filter(r => getVal(r) !== null);
     const totalCoeff = withVal.reduce((s, r) => s + r.coeff, 0);
     if (totalCoeff <= 0) return null;
-    const pts = withVal.reduce((s, r) => s + (getVal(r)! / r.noteMax) * base * r.coeff, 0);
+    const pts = withVal.reduce((s, r) => s + (getVal(r)! / (r.noteMax || base)) * base * r.coeff, 0);
     return pts / totalCoeff;
   };
   const fmtMoy = (v: number | null) => v !== null ? v.toFixed(2) : '—';
