@@ -203,6 +203,23 @@ describe('noms de périodes (trimestre/semestre, complets, AR)', () => {
   });
 });
 
+describe('en-tête de colonne : « Domaines » (tableaux arabes) vs « Matières » (FR)', () => {
+  it('la filière arabe utilise « Domaines »', () => {
+    const html = generateBulletinHtml({ ...base, type: 'AR', periode: 1, notes_ar: [noteAR] });
+    expect(html).toContain('Domaines');
+  });
+  it('la filière française garde « Matières » (pas « Domaines »)', () => {
+    const html = generateBulletinHtml({ ...base, type: 'FR', periode: 1, notes_fr: [noteFR] });
+    expect(html).toContain('Matières');
+    expect(html).not.toContain('Domaines');
+  });
+  it('annuel arabe : « Domaines »', () => {
+    const matAR = { nom_fr: 'Coran', nom_ar: 'القرآن', coeff: 3, note_max: 10, valeurs: [8, 8, 8], moyenne_annuelle: 8, evaluee: true };
+    const html = generateBulletinAnnuelHtml({ ...base, type: 'ANNUEL_AR', nb_periodes: 3, matieres_ar: [matAR] });
+    expect(html).toContain('Domaines');
+  });
+});
+
 describe('en-tête : classe + sexe (tous types)', () => {
   it('affiche la classe et le sexe (libellé complet) dans l\'encadré identité', () => {
     const html = generateBulletinHtml({ ...base, type: 'FR', periode: 1, eleve_classe: 'CM2 B', eleve_sexe: 'M', notes_fr: [noteFR] });
