@@ -54,8 +54,10 @@ export async function getPolitiqueSaisieNotesHandler(request: FastifyRequest, re
   // Échelle de l'établissement (ConfigNotes.note_max) : exposée ici car /parametres/notes
   // est admin-only, or les écrans de saisie (prof) en ont besoin pour aligner la moyenne
   // affichée sur celle du bulletin.
-  const config = await getConfigNotes(etablissement_id) as { note_max?: number | string } | null;
-  return reply.send({ ...politique, note_max: Number(config?.note_max ?? 20) });
+  const config = await getConfigNotes(etablissement_id) as { note_max?: number | string; nb_periodes?: number } | null;
+  // nb_periodes : découpage de l'année (2=semestres, 3=trimestres, 6=bimestres) —
+  // utile aux écrans qui affichent une grille par période (programme de classe).
+  return reply.send({ ...politique, note_max: Number(config?.note_max ?? 20), nb_periodes: config?.nb_periodes ?? 3 });
 }
 
 export async function getConfigNotificationsHandler(request: FastifyRequest, reply: FastifyReply) {
