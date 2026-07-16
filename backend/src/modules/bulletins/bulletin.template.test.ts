@@ -202,3 +202,68 @@ describe('noms de périodes (trimestre/semestre, complets, AR)', () => {
     expect(html).not.toMatch(/>T1</);
   });
 });
+
+describe('en-tête : classe + sexe (tous types)', () => {
+  it('affiche la classe et le sexe (libellé complet) dans l\'encadré identité', () => {
+    const html = generateBulletinHtml({ ...base, type: 'FR', periode: 1, eleve_classe: 'CM2 B', eleve_sexe: 'M', notes_fr: [noteFR] });
+    expect(html).toContain('Classe :');
+    expect(html).toContain('CM2 B');
+    expect(html).toContain('Sexe :');
+    expect(html).toContain('Masculin');
+  });
+  it('sexe F → « Féminin »', () => {
+    const html = generateBulletinHtml({ ...base, type: 'AR', periode: 1, eleve_sexe: 'F', notes_ar: [noteAR] });
+    expect(html).toContain('Féminin');
+  });
+});
+
+describe('bulletin trimestriel : coeffs retirés, total = somme simple', () => {
+  const notes = [
+    { nom_fr: 'Mathématiques', nom_ar: 'الرياضيات', coeff: 2, valeur: 8, note_max: 10, evaluee: true },
+    { nom_fr: 'Français', nom_ar: 'الفرنسية', coeff: 4, valeur: 6, note_max: 10, evaluee: true },
+  ];
+  const html = generateBulletinHtml({ ...base, type: 'FR', periode: 1, notes_fr: notes });
+
+  it('ne contient plus de colonne/label de coefficient', () => {
+    expect(html).not.toContain('Coeff.');
+    expect(html).not.toContain('Coef:');
+  });
+  it('total = somme simple des notes (8 + 6 = 14), pas la somme pondérée (40)', () => {
+    expect(html).toContain('Total: 14.00');
+    expect(html).not.toContain('Total: 40');
+  });
+  it('la moyenne reste pondérée/normalisée ((8·2 + 6·4)/6 = 6.67)', () => {
+    expect(html).toContain('6.67');
+  });
+});
+
+describe('bulletin annuel : note max + ligne « Moyennes »', () => {
+  const matieres = [
+    { nom_fr: 'Maths', nom_ar: 'Maths', coeff: 2, note_max: 10, valeurs: [8, 7, 9], moyenne_annuelle: 8, evaluee: true },
+    { nom_fr: 'Français', nom_ar: 'Français', coeff: 4, note_max: 10, valeurs: [6, 6, 6], moyenne_annuelle: 6, evaluee: true },
+  ];
+  const html = generateBulletinAnnuelHtml({ ...base, type: 'ANNUEL_FR', nb_periodes: 3, matieres_fr: matieres });
+
+  it('remplace la colonne Coeff par « Note max »', () => {
+    expect(html).toContain('Note max');
+    expect(html).not.toContain('Coeff.');
+  });
+  it('ajoute la ligne « Moyennes » (moyenne pondérée par trimestre : T2 = (7·2+6·4)/6 = 6.33)', () => {
+    expect(html).toContain('Moyennes');
+    expect(html).toContain('6.33');
+  });
+});
+
+describe('bulletin annuel COMBINÉ FR+AR : moyennes (FR+AR)/2 par trimestre', () => {
+  const matFR = { nom_fr: 'Maths', nom_ar: 'الرياضيات', coeff: 2, note_max: 10, valeurs: [8, 8, 8], moyenne_annuelle: 8, evaluee: true };
+  const matAR = { nom_fr: 'Coran', nom_ar: 'القرآن', coeff: 2, note_max: 10, valeurs: [6, 6, 6], moyenne_annuelle: 6, evaluee: true };
+  const html = generateBulletinAnnuelHtml({ ...base, type: 'ANNUEL_COMBINE', nb_periodes: 3, filieres_combine: ['FR', 'AR'], matieres_fr: [matFR], matieres_ar: [matAR] });
+
+  it('remplace « Résultats FR — AR » par la ligne combinée (FR+AR)/2', () => {
+    expect(html).toContain('Moyennes (FR + AR) / 2');
+    expect(html).not.toContain('Résultats FR — AR');
+  });
+  it('chaque trimestre = (Moy. FR + Moy. AR)/2 = (8 + 6)/2 = 7.00', () => {
+    expect(html).toContain('7.00');
+  });
+});

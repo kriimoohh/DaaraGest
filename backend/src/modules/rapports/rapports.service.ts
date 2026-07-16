@@ -1259,49 +1259,26 @@ export async function rapportPropositionsFin(
 
   const eleveIds = inscriptions.map(i => i.eleve_id);
 
-  // Bulletins pour T1, T2, T3 (et annuel = période 4 si existe)
-  const bulletins = await prisma.bulletin.findMany({
-    where: { eleve_id: { in: eleveIds }, annee_scolaire_id, filiere: codeFiliere(classeRaw) },
-    select: { eleve_id: true, periode: true, moyenne: true },
-  });
-
   // Progressions (décision déjà saisie)
   const progressions = await prisma.progressionEleve.findMany({
     where: { eleve_id: { in: eleveIds }, annee_scolaire_id },
     select: { eleve_id: true, decision: true, validee: true },
   });
-
-  // Index bulletins : eleveId → periode → moyenne
-  const bulIdx = new Map<string, Map<number, number>>();
-  for (const b of bulletins) {
-    if (!bulIdx.has(b.eleve_id)) bulIdx.set(b.eleve_id, new Map());
-    bulIdx.get(b.eleve_id)!.set(b.periode, Number(b.moyenne ?? 0));
-  }
   // Index progressions : eleveId → decision
   const progIdx = new Map(progressions.map(p => [p.eleve_id, p]));
 
-  // Si pas de bulletins générés, on calcule depuis les notes
-  const notesParEleve = await prisma.note.findMany({
-    where: { eleve_id: { in: eleveIds }, annee_scolaire_id },
-    select: { eleve_id: true, periode: true, valeur: true },
-  });
-  const notesPeriodeIdx = new Map<string, Map<number, number[]>>();
-  for (const n of notesParEleve) {
-    if (!notesPeriodeIdx.has(n.eleve_id)) notesPeriodeIdx.set(n.eleve_id, new Map());
-    const pm = notesPeriodeIdx.get(n.eleve_id)!;
-    if (!pm.has(n.periode)) pm.set(n.periode, []);
-    pm.get(n.periode)!.push(Number(n.valeur));
+  // Moyennes par trimestre = MÊME calcul pondéré et normalisé que le bulletin et le
+  // relevé de classe (calculerMoyennesClasse), sur la filière de la classe. L'ancien
+  // repli « pas de bulletin » faisait une moyenne BRUTE des notes (barèmes mélangés
+  // /10, /20, /60…) → des moyennes hétérogènes selon l'élève (certaines paraissaient
+  // « sur 20 »). Tout est désormais ramené à l'échelle de l'établissement.
+  const filiereClasse = codeFiliere(classeRaw) as 'FR' | 'AR' | 'EN';
+  const moyParPeriode = new Map<number, Map<string, number>>();
+  for (const p of [1, 2, 3]) {
+    moyParPeriode.set(p, await calculerMoyennesClasse(etablissement_id, classe_id, annee_scolaire_id, [p], [filiereClasse]));
   }
-
-  const getMoy = (eleveId: string, periode: number): number | null => {
-    // Priorité : bulletin généré
-    const fromBul = bulIdx.get(eleveId)?.get(periode);
-    if (fromBul !== undefined && fromBul > 0) return fromBul;
-    // Sinon : calcul depuis notes
-    const vals = notesPeriodeIdx.get(eleveId)?.get(periode);
-    if (!vals || !vals.length) return null;
-    return vals.reduce((s, v) => s + v, 0) / vals.length;
-  };
+  const getMoy = (eleveId: string, periode: number): number | null =>
+    moyParPeriode.get(periode)?.get(eleveId) ?? null;
 
   const DECISION_LABELS: Record<string, string> = {
     admis:       'Admis(e)',

@@ -48,6 +48,7 @@ interface DetailBulletin extends Bulletin {
   observation_fr: string | null;
   observation_prof: string | null;
   eleve: Bulletin['eleve'] & {
+    sexe?: string | null;
     // Liens génériques classe↔filière (InscriptionClasse) — remplace l'ancien
     // couple classe_fr/classe_ar supprimé en Phase 2d.
     inscriptions: {
@@ -682,17 +683,17 @@ function noteColor(valeur: number | string | null, noteMax: number | string): st
   return 'var(--danger)';
 }
 
-function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere: string; isAnnuel: boolean }) {
+function NotesTable({ notes, filiere, isAnnuel, base }: { notes: NoteDetail[]; filiere: string; isAnnuel: boolean; base: number }) {
   const { t } = useTranslation();
   if (notes.length === 0) return null;
 
   if (!isAnnuel) {
+    // Trimestriel : plus de colonne Coeff (coefficients masqués sur les bulletins).
     return (
       <table className="tbl">
         <thead>
           <tr>
             <th style={{ textAlign: 'start' }}>{t('bulletin.col_matiere_filiere', { filiere })}</th>
-            <th style={{ textAlign: 'center', width: 56 }}>{t('bulletin.col_coeff')}</th>
             <th style={{ textAlign: 'center', width: 96 }}>{t('bulletin.col_note_max')}</th>
           </tr>
         </thead>
@@ -705,11 +706,10 @@ function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere
                 {n.matiere.nom_fr}
                 {nonEvaluee && (
                   <span style={{ fontSize: 10, fontStyle: 'italic', color: 'var(--ink-4)', marginInlineStart: 6 }}>
-                    · Non évaluée
+                    · {t('bulletin.non_evaluee')}
                   </span>
                 )}
               </td>
-              <td style={{ textAlign: 'center', color: 'var(--ink-3)', fontSize: 12 }}>{n.matiere.coeff_defaut}</td>
               <td style={{ textAlign: 'center' }}>
                 {nonEvaluee ? (
                   <span style={{ color: 'var(--ink-4)', fontSize: 12 }}>—</span>
@@ -730,7 +730,8 @@ function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere
     );
   }
 
-  // Annuel: group by matiere, columns T1 | T2 | T3 | Moy.
+  // Annuel : regroupé par matière, colonnes T1 | T2 | T3 | Moy. | Note max
+  // (Coeff remplacé par la note max, placée juste avant la dernière colonne).
   const matMap = new Map<string, { nom_fr: string; coeff: number; noteMax: number; vals: Record<number, number | null> }>();
   for (const n of notes) {
     if (!matMap.has(n.matiere.nom_fr)) {
@@ -745,23 +746,34 @@ function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere
     return { ...m, vs, moy };
   });
 
+  // Ligne « Moyennes » : moyenne pondérée + normalisée de la filière (note ramenée à
+  // l'échelle établissement, pondérée par le coeff) par trimestre puis annuelle —
+  // même logique que la moyenne du bulletin.
+  const moyPonderee = (getVal: (r: typeof rows[number]) => number | null): number | null => {
+    const withVal = rows.filter(r => getVal(r) !== null);
+    const totalCoeff = withVal.reduce((s, r) => s + r.coeff, 0);
+    if (totalCoeff <= 0) return null;
+    const pts = withVal.reduce((s, r) => s + (getVal(r)! / r.noteMax) * base * r.coeff, 0);
+    return pts / totalCoeff;
+  };
+  const fmtMoy = (v: number | null) => v !== null ? v.toFixed(2) : '—';
+
   return (
     <table className="tbl">
       <thead>
         <tr>
           <th style={{ textAlign: 'start' }}>{t('bulletin.col_matiere_filiere', { filiere })}</th>
-          <th style={{ textAlign: 'center', width: 40 }}>{t('bulletin.col_coeff')}</th>
-          {['T1', 'T2', 'T3'].map(t => (
-            <th key={t} style={{ textAlign: 'center', width: 56 }}>{t}</th>
+          {['T1', 'T2', 'T3'].map(tk => (
+            <th key={tk} style={{ textAlign: 'center', width: 56 }}>{tk}</th>
           ))}
           <th style={{ textAlign: 'center', width: 64 }}>{t('bulletin.col_moy')}</th>
+          <th style={{ textAlign: 'center', width: 64 }}>{t('bulletin.col_note_max_seul')}</th>
         </tr>
       </thead>
       <tbody>
         {rows.map((r, i) => (
           <tr key={i}>
             <td style={{ color: 'var(--ink-2)' }}>{r.nom_fr}</td>
-            <td style={{ textAlign: 'center', color: 'var(--ink-4)', fontSize: 12 }}>{r.coeff}</td>
             {r.vs.map((v, j) => (
               <td key={j} style={{ textAlign: 'center', fontSize: 12, color: noteColor(v, r.noteMax), fontWeight: v !== null ? 600 : 400 }}>
                 {v !== null ? v.toFixed(1) : '—'}
@@ -770,8 +782,17 @@ function NotesTable({ notes, filiere, isAnnuel }: { notes: NoteDetail[]; filiere
             <td style={{ textAlign: 'center', fontSize: 12, color: noteColor(r.moy, r.noteMax), fontWeight: r.moy !== null ? 600 : 400 }}>
               {r.moy !== null ? r.moy.toFixed(2) : '—'}
             </td>
+            <td style={{ textAlign: 'center', color: 'var(--ink-4)', fontSize: 12 }}>/{r.noteMax}</td>
           </tr>
         ))}
+        <tr style={{ borderTop: '2px solid var(--rule)', fontWeight: 600 }}>
+          <td style={{ color: 'var(--ink-2)' }}>{t('bulletin.moyennes')}</td>
+          {[1, 2, 3].map(p => (
+            <td key={p} style={{ textAlign: 'center', fontSize: 12, color: 'var(--ink-2)' }}>{fmtMoy(moyPonderee(r => r.vals[p] ?? null))}</td>
+          ))}
+          <td style={{ textAlign: 'center', fontSize: 12, color: 'var(--ink)' }}>{fmtMoy(moyPonderee(r => r.moy))}</td>
+          <td></td>
+        </tr>
       </tbody>
     </table>
   );
@@ -829,6 +850,8 @@ function BulletinDetailContent({
     .map(f => liens.find(l => l.filiere?.code === f)?.classe?.nom_fr)
     .filter((n): n is string => Boolean(n));
   const classeNom = nomsClasses.length ? [...new Set(nomsClasses)].join(' · ') : '—';
+  // Sexe : 'M'/'F' → libellé complet (localisé).
+  const sexeLabel = detail.eleve.sexe === 'M' ? t('bulletin.sexe_m') : detail.eleve.sexe === 'F' ? t('bulletin.sexe_f') : '—';
 
   // Libellé de section par filière : FR/AR gardent leurs libellés traduits ;
   // les autres codes (EN…) prennent le nom de la filière configurée (repli sur le code).
@@ -868,6 +891,7 @@ function BulletinDetailContent({
           <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 2 }}>{t('bulletin.col_eleve')}</div>
           <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{detail.eleve.prenom_fr} {detail.eleve.nom_fr}</div>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-4)' }}>{detail.eleve.matricule}</div>
+          <div style={{ fontSize: 12, color: 'var(--ink-4)', marginTop: 2 }}>{t('bulletin.col_sexe')} : {sexeLabel}</div>
         </div>
         <div style={{ padding: 12, background: 'var(--paper-2)', borderRadius: 'var(--r-md)' }}>
           <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 2 }}>{t('classe.titre')}</div>
@@ -900,7 +924,7 @@ function BulletinDetailContent({
               <div style={{ padding: '0 16px 12px' }}>
                 {notes.length === 0
                   ? <p style={{ padding: '16px 0', fontSize: 12, color: 'var(--ink-4)', textAlign: 'center' }}>{t('common.aucune_note')}</p>
-                  : <NotesTable notes={notes} filiere={f} isAnnuel={isAnnuel} />
+                  : <NotesTable notes={notes} filiere={f} isAnnuel={isAnnuel} base={noteMax} />
                 }
               </div>
             </div>
