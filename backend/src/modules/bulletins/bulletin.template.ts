@@ -643,7 +643,7 @@ const FRAG_TABLE_AR = `{{#tableau_ar}}
   <div class="eval-header">Évaluation des acquis — Filière Arabe <span dir="rtl" style="font-weight:400">— تقييم أداء التلاميذ في القسم العربي</span></div>
   <table>
     <thead><tr>
-      <th style="width:50%">Matières<br><span class="th-ar" dir="rtl">المجال</span></th>
+      <th style="width:50%">Domaines<br><span class="th-ar" dir="rtl">المجال</span></th>
       <th class="center" style="width:12%">Note<br><span class="th-ar" dir="rtl">الدرجات</span></th>
       <th class="center" style="width:8%">/ Max<br><span class="th-ar" dir="rtl">على</span></th>
       <th style="width:30%">Appréciation<br><span class="th-ar" dir="rtl">التقدير</span></th>
@@ -714,7 +714,7 @@ const FRAG_TABLE_ANNUEL_AR = `{{#tableau_annuel_ar}}
   <div class="eval-header">Évaluation annuelle — Filière Arabe <span dir="rtl" style="font-weight:400">— تقييم أداء التلاميذ في القسم العربي</span></div>
   <table>
     <thead><tr>
-      <th style="width:33%">Matière<br><span class="th-ar" dir="rtl">المجال</span></th>
+      <th style="width:33%">Domaines<br><span class="th-ar" dir="rtl">المجال</span></th>
       {{#periodes}}<th class="center">{{label}}<br><span class="th-ar" dir="rtl">{{label_ar}}</span></th>{{/periodes}}
       <th class="center" style="background:#f0fdf4;color:#059669">Moy. Ann.</th>
       <th class="center" style="width:8%">Note max<br><span class="th-ar" dir="rtl">على</span></th>
