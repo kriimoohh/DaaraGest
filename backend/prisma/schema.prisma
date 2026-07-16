@@ -440,6 +440,11 @@ model Classe {
   niveau_id         String?
   capacite          Int     @default(30)
   active            Boolean @default(true)
+  // Mode du programme : false = identique toute l'année (barème ClasseMatiere) ;
+  // true = par période (barème/coeff/évaluée pouvant varier par trimestre via
+  // ClasseMatierePeriode). Pilote l'éditeur "Programme" ; le calcul applique les
+  // surcharges par période quand elles existent, indépendamment du drapeau.
+  programme_par_periode Boolean @default(false)
   // Identité STABLE de la classe entre les années (ex: "CE1-A-FR"). Dérivée de
   // nom_fr (sans marqueur de filière) + filière. Permet de reconnaître « la même »
   // classe d'une année sur l'autre (rapports de promotion/comparaison). Une classe

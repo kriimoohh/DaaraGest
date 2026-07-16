@@ -33,6 +33,11 @@ export const classeMatierePeriodeSchema = z.object({
   evaluee: z.boolean().nullable().optional(),
 });
 
+// Mode du programme de la classe : identique toute l'année (false) ou par période (true).
+export const programmeModeSchema = z.object({
+  programme_par_periode: z.boolean(),
+});
+
 // Duplication d'une classe vers une AUTRE filière (générique : AR, EN…). Les
 // élèves de la classe source sont rattachés à la nouvelle classe pour la filière
 // cible (sauf ceux qui y ont déjà une classe).
@@ -45,4 +50,5 @@ export type ClasseInput = z.infer<typeof classeSchema>;
 export type ClasseMatiereInput = z.infer<typeof classeMatiereSchema>;
 export type ClasseMatiereUpdateInput = z.infer<typeof classeMatiereUpdateSchema>;
 export type ClasseMatierePeriodeInput = z.infer<typeof classeMatierePeriodeSchema>;
+export type ProgrammeModeInput = z.infer<typeof programmeModeSchema>;
 export type DupliquerClasseInput = z.infer<typeof dupliquerClasseSchema>;

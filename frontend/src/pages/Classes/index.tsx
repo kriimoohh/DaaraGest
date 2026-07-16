@@ -17,6 +17,11 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Pagination } from '../../components/ui/Pagination';
 import { FiliereBadge } from '../../components/ui/FiliereBadge';
+import { Segmented } from '../../components/ui/Segmented';
+import { useNbPeriodes } from '../../store/noteScaleStore';
+
+// Préfixe court d'une période selon le découpage (2=semestres → S, 6=bimestres → B, sinon T).
+const motPeriodeCourt = (nb: number) => (nb === 2 ? 'S' : nb === 6 ? 'B' : 'T');
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -27,6 +32,9 @@ interface Matiere {
   filiere: string;
   coeff_defaut: number;
   note_min: number;
+  // Barème effectif de la matière pour la classe (note_max_effectif renvoyé par le backend
+  // dans le programme ; nullable/absent dans la liste brute des matières de la filière).
+  note_max?: number | null;
   ordre_bulletin: number;
 }
 
@@ -87,6 +95,8 @@ interface Classe {
   annee_scolaire_id: string;
   annee_scolaire?: { id: string; libelle: string } | string;
   effectif?: number;
+  // Mode du programme : false = identique toute l'année ; true = par période.
+  programme_par_periode?: boolean;
 }
 
 interface ClasseFormData {
@@ -130,6 +140,7 @@ function validate(form: ClasseFormData): FormErrors {
 export function ClassesPage() {
   const { t } = useTranslation();
   const api = useApi();
+  const nbPeriodes = useNbPeriodes();
   const isAdmin    = useAuthStore(s => s.user?.role === 'admin');
   const isGestion  = useAuthStore(s => ['admin', 'directeur', 'gestionnaire'].includes(s.user?.role ?? ''));
   const { filieres, actives: filieresActives } = useFilieres();
@@ -448,39 +459,57 @@ export function ClassesPage() {
     }
   }
 
-  async function applyEvalueePeriodeChange(cm: ClasseMatiere, periode: number, evaluee: boolean | null, params: { force: boolean }): Promise<void> {
+  // Applique une surcharge de période (patch partiel : coeff / note_max / évaluée).
+  // Si, après application, tout revient au défaut de la classe → on supprime la ligne
+  // d'override (retour à l'héritage). Sinon on upsert l'override complet.
+  async function applyPeriodeOverride(
+    cm: ClasseMatiere, periode: number,
+    patch: { coeff?: number; note_max?: number; evaluee?: boolean | null },
+    params: { force: boolean },
+  ): Promise<void> {
+    const classCoeff = Number(cm.coeff_override ?? cm.matiere.coeff_defaut);
+    const classNoteMax = Number(cm.matiere.note_max); // barème effectif de la classe
     const existing = cm.periodes_override?.find(o => o.periode === periode);
-    const baseCoeff = Number(cm.coeff_override ?? cm.matiere.coeff_defaut);
-    const onlyEvalueeOverridden = existing
-      && Number(existing.coeff) === baseCoeff
-      && existing.evaluee !== null;
-    if (evaluee === null && onlyEvalueeOverridden) {
-      await api.delete(`/api/v1/classes/${programmeModal!.id}/matieres/${cm.matiere_id}/periode/${periode}${params.force ? '?force=true' : ''}`);
+    const curCoeff = existing ? Number(existing.coeff) : classCoeff;
+    const curNoteMax = existing ? Number(existing.note_max) : classNoteMax;
+    const curEvaluee = existing ? existing.evaluee : null; // null = hérite
+    const nextCoeff = patch.coeff ?? curCoeff;
+    const nextNoteMax = patch.note_max ?? curNoteMax;
+    const nextEvaluee = patch.evaluee !== undefined ? patch.evaluee : curEvaluee;
+    // Un override n'est utile que s'il diffère du défaut de la classe.
+    const differs = nextCoeff !== classCoeff || nextNoteMax !== classNoteMax
+      || (nextEvaluee !== null && nextEvaluee !== cm.evaluee);
+    const q = params.force ? '?force=true' : '';
+    if (!differs) {
+      if (existing) await api.delete(`/api/v1/classes/${programmeModal!.id}/matieres/${cm.matiere_id}/periode/${periode}${q}`);
     } else {
-      await api.put(`/api/v1/classes/${programmeModal!.id}/matieres/${cm.matiere_id}/periode${params.force ? '?force=true' : ''}`, {
-        matiere_id: cm.matiere_id, periode, evaluee,
+      await api.put(`/api/v1/classes/${programmeModal!.id}/matieres/${cm.matiere_id}/periode${q}`, {
+        matiere_id: cm.matiere_id, periode, coeff: nextCoeff, note_max: nextNoteMax, evaluee: nextEvaluee,
       });
     }
     const prog = await api.get<ClasseMatiere[]>(`/api/v1/classes/${programmeModal!.id}/matieres`);
     setProgramme(prog);
   }
 
-  async function setEvalueePeriode(cm: ClasseMatiere, periode: number, evaluee: boolean | null) {
+  async function savePeriodeOverride(
+    cm: ClasseMatiere, periode: number,
+    patch: { coeff?: number; note_max?: number; evaluee?: boolean | null },
+  ) {
     if (!programmeModal) return;
     const key = `${cm.matiere_id}|${periode}`;
     setPeriodeOvSaving(key);
     try {
-      await applyEvalueePeriodeChange(cm, periode, evaluee, { force: false });
+      await applyPeriodeOverride(cm, periode, patch, { force: false });
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         const payload = err.payload as { code: string; unsigned_count?: number; signed_count?: number; unsigned?: { periode: number; filiere: string }[]; signed?: { periode: number; filiere: string }[] };
         setImpactModal({
           code: payload.code === 'BULLETINS_VALIDES' ? 'BULLETINS_VALIDES' : 'BULLETINS_IMPACTES',
-          title: `Modifier T${periode} — ${cm.matiere.nom_fr}`,
+          title: `${motPeriodeCourt(nbPeriodes)}${periode} — ${cm.matiere.nom_fr}`,
           unsigned_count: payload.unsigned_count ?? 0,
           signed_count: payload.signed_count ?? 0,
           unsigned: payload.unsigned, signed: payload.signed,
-          onConfirm: async () => { await applyEvalueePeriodeChange(cm, periode, evaluee, { force: true }); },
+          onConfirm: async () => { await applyPeriodeOverride(cm, periode, patch, { force: true }); },
           onUnlock: payload.code === 'BULLETINS_VALIDES'
             ? async () => { await deverrouillerImpact(scopeFromImpact(payload.signed)); }
             : undefined,
@@ -490,6 +519,19 @@ export function ClassesPage() {
       }
     } finally {
       setPeriodeOvSaving(null);
+    }
+  }
+
+  // Bascule le mode du programme (identique toute l'année ↔ par période) — persiste
+  // et met à jour la modale + la liste des classes.
+  async function toggleProgrammeMode(val: boolean) {
+    if (!programmeModal) return;
+    try {
+      await api.put(`/api/v1/classes/${programmeModal.id}/programme-mode`, { programme_par_periode: val });
+      setProgrammeModal(m => (m ? { ...m, programme_par_periode: val } : m));
+      setClasses(cs => cs.map(c => (c.id === programmeModal.id ? { ...c, programme_par_periode: val } : c)));
+    } catch (err) {
+      toast.error((err as Error).message || t('common.erreur_generique'));
     }
   }
 
@@ -1048,6 +1090,23 @@ export function ClassesPage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
+            {/* Mode du programme : identique toute l'année vs par période */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-2)' }}>{t('classe.programme_mode')}</span>
+              <Segmented
+                ariaLabel={t('classe.programme_mode')}
+                value={programmeModal.programme_par_periode ? 'periode' : 'annuel'}
+                onChange={v => toggleProgrammeMode(v === 'periode')}
+                options={[
+                  { value: 'annuel', label: t('classe.programme_mode_annuel') },
+                  { value: 'periode', label: t('classe.programme_mode_periode') },
+                ]}
+              />
+              <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>
+                {programmeModal.programme_par_periode ? t('classe.programme_mode_periode_hint') : t('classe.programme_mode_annuel_hint')}
+              </span>
+            </div>
+
             {/* Liste des matières assignées */}
             <div>
               <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--ink-2)' }}>
@@ -1069,19 +1128,26 @@ export function ClassesPage() {
                     <tbody>
                       {programme.map(cm => {
                         const periodesOv = cm.periodes_override ?? [];
-                        const hasPeriodeOverride = periodesOv.some(o => o.evaluee !== null);
-                        const isExpanded = expandedRow === cm.matiere_id;
+                        const classCoeff = Number(cm.coeff_override ?? cm.matiere.coeff_defaut);
+                        const classNoteMax = Number(cm.matiere.note_max);
+                        // Une matière a une vraie surcharge de période si l'un des champs diffère du défaut classe.
+                        const hasPeriodeOverride = periodesOv.some(o =>
+                          o.evaluee !== null || Number(o.coeff) !== classCoeff || Number(o.note_max) !== classNoteMax);
+                        const perPeriode = programmeModal.programme_par_periode === true;
+                        const isExpanded = perPeriode && expandedRow === cm.matiere_id;
                         return (
                         <Fragment key={cm.id}>
                         <tr>
                           <td>
-                            <button
-                              onClick={() => setExpandedRow(isExpanded ? null : cm.matiere_id)}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-3)', fontSize: 10, marginInlineEnd: 6 }}
-                              title={t('classe.override_periode')}
-                            >
-                              {isExpanded ? '▼' : '▶'}
-                            </button>
+                            {perPeriode && (
+                              <button
+                                onClick={() => setExpandedRow(isExpanded ? null : cm.matiere_id)}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-3)', fontSize: 10, marginInlineEnd: 6 }}
+                                title={t('classe.override_periode')}
+                              >
+                                {isExpanded ? '▼' : '▶'}
+                              </button>
+                            )}
                             {cm.matiere.nom_fr}
                           </td>
                           <td dir="rtl">{cm.matiere.nom_ar}</td>
@@ -1153,32 +1219,69 @@ export function ClassesPage() {
                         </tr>
                         {isExpanded && (
                           <tr>
-                            <td colSpan={6} style={{ background: 'var(--paper-2)', padding: '8px 16px' }}>
+                            <td colSpan={6} style={{ background: 'var(--paper-2)', padding: '10px 16px' }}>
                               <div style={{ fontSize: 11, color: 'var(--ink-3)', marginBottom: 8 }}>
-                                Override par trimestre — laisse blanc pour utiliser le défaut classe ({cm.evaluee ? 'évaluée' : 'non évaluée'}).
+                                {t('classe.override_periode_intro', { note_max: classNoteMax, coeff: classCoeff })}
                               </div>
-                              <div style={{ display: 'flex', gap: 12 }}>
-                                {[1, 2, 3].map(p => {
+                              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                                {Array.from({ length: nbPeriodes }, (_, i) => i + 1).map(p => {
                                   const ov = periodesOv.find(o => o.periode === p);
-                                  const value = ov?.evaluee ?? null; // null = hérite
                                   const saving = periodeOvSaving === `${cm.matiere_id}|${p}`;
+                                  const nmOverridden = ov ? Number(ov.note_max) !== classNoteMax : false;
+                                  const coeffOverridden = ov ? Number(ov.coeff) !== classCoeff : false;
+                                  const evalueeVal = ov?.evaluee ?? null; // null = hérite
                                   return (
-                                    <div key={p} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                      <span style={{ fontSize: 11, fontWeight: 600 }}>T{p}</span>
-                                      <select
-                                        value={value === null ? '' : value ? 'true' : 'false'}
-                                        onChange={e => {
-                                          const v = e.target.value;
-                                          setEvalueePeriode(cm, p, v === '' ? null : v === 'true');
-                                        }}
-                                        disabled={saving}
-                                        className="input"
-                                        style={{ width: 110, padding: '4px 6px', fontSize: 11 }}
-                                      >
-                                        <option value="">{t('classe.defaut')}</option>
-                                        <option value="true">Évaluée</option>
-                                        <option value="false">{t('classe.evaluee_non_evaluee')}</option>
-                                      </select>
+                                    <div key={p} style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 140, border: '1px solid var(--rule)', borderRadius: 'var(--r-md)', padding: 8, background: 'var(--paper)', opacity: saving ? 0.6 : 1 }}>
+                                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-2)' }}>{motPeriodeCourt(nbPeriodes)}{p}</span>
+                                      <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 10, color: 'var(--ink-3)' }}>
+                                        {t('classe.periode_note_max')}
+                                        <input
+                                          key={`nm-${cm.matiere_id}-${p}-${nmOverridden ? ov!.note_max : 'd'}`}
+                                          type="number" step="0.25" min="0"
+                                          defaultValue={nmOverridden ? ov!.note_max : ''}
+                                          placeholder={String(classNoteMax)}
+                                          disabled={saving}
+                                          className="input" style={{ padding: '3px 6px', fontSize: 12 }}
+                                          onBlur={e => {
+                                            const raw = e.target.value.trim();
+                                            const val = raw === '' ? classNoteMax : parseFloat(raw);
+                                            if (!Number.isFinite(val) || val <= 0) return;
+                                            const cur = nmOverridden ? Number(ov!.note_max) : classNoteMax;
+                                            if (val !== cur) savePeriodeOverride(cm, p, { note_max: val });
+                                          }}
+                                        />
+                                      </label>
+                                      <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 10, color: 'var(--ink-3)' }}>
+                                        {t('classe.periode_coeff')}
+                                        <input
+                                          key={`cf-${cm.matiere_id}-${p}-${coeffOverridden ? ov!.coeff : 'd'}`}
+                                          type="number" step="0.25" min="0"
+                                          defaultValue={coeffOverridden ? ov!.coeff : ''}
+                                          placeholder={String(classCoeff)}
+                                          disabled={saving}
+                                          className="input" style={{ padding: '3px 6px', fontSize: 12 }}
+                                          onBlur={e => {
+                                            const raw = e.target.value.trim();
+                                            const val = raw === '' ? classCoeff : parseFloat(raw);
+                                            if (!Number.isFinite(val) || val <= 0) return;
+                                            const cur = coeffOverridden ? Number(ov!.coeff) : classCoeff;
+                                            if (val !== cur) savePeriodeOverride(cm, p, { coeff: val });
+                                          }}
+                                        />
+                                      </label>
+                                      <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 10, color: 'var(--ink-3)' }}>
+                                        {t('classe.periode_evaluee')}
+                                        <select
+                                          value={evalueeVal === null ? '' : evalueeVal ? 'true' : 'false'}
+                                          onChange={e => { const v = e.target.value; savePeriodeOverride(cm, p, { evaluee: v === '' ? null : v === 'true' }); }}
+                                          disabled={saving}
+                                          className="input" style={{ padding: '3px 6px', fontSize: 12 }}
+                                        >
+                                          <option value="">{t('classe.defaut')}</option>
+                                          <option value="true">{t('classe.evaluee_evaluee')}</option>
+                                          <option value="false">{t('classe.evaluee_non_evaluee')}</option>
+                                        </select>
+                                      </label>
                                     </div>
                                   );
                                 })}
