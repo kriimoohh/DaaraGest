@@ -149,7 +149,6 @@ function NotesTab({ notes, bulletins, base, periodeLabels }: { notes: PortailDat
                   <tr>
                     <th>{t('portail_parent.col_matiere')}</th>
                     <th style={{ textAlign: 'center', width: 100 }}>{t('portail_parent.note_th')}</th>
-                    <th style={{ textAlign: 'center', width: 80 }}>{t('portail_parent.col_coeff')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -161,9 +160,6 @@ function NotesTab({ notes, bulletins, base, periodeLabels }: { notes: PortailDat
                         <td style={{ fontWeight: 500 }}>{note.matiere.nom_fr}</td>
                         <td className="num" style={{ textAlign: 'center', fontWeight: 700, color: !isNaN(val) ? (nm > 0 && val >= nm * 0.5 ? 'var(--success-text)' : 'var(--danger-text)') : 'var(--ink-3)' }}>
                           {note.valeur}{nm > 0 ? <span style={{ color: 'var(--ink-4)', fontWeight: 400, fontSize: 12 }}>/{nm}</span> : null}
-                        </td>
-                        <td className="num" style={{ textAlign: 'center', color: 'var(--ink-3)' }}>
-                          {note.matiere.coeff_defaut}
                         </td>
                       </tr>
                     );

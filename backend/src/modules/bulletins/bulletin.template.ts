@@ -33,6 +33,10 @@ interface BulletinBaseData {
   eleve_matricule: string;
   eleve_date_naissance?: string | null;
   eleve_lieu_naissance?: string | null;
+  // Classe de l'élève (filière du bulletin) et sexe ('M' | 'F') — affichés dans
+  // l'encadré identité, sur tous les types de bulletins.
+  eleve_classe?: string | null;
+  eleve_sexe?: string | null;
   annee_libelle: string;
   moyenne: number | null;
   rang: number | null;
@@ -373,6 +377,8 @@ function studentInfoHtml(data: BulletinBaseData): string {
   // Maître(s) de la classe : les deux (FR + AR) sur un bulletin combiné, sinon un seul.
   const siRow = (label: string, value: string) =>
     `<div class="si-row"><span class="si-label">${label}</span><span class="si-value">${escapeHtml(value)}</span></div>`;
+  // Sexe : 'M'/'F' → libellé complet pour un document officiel.
+  const sexeLabel = data.eleve_sexe === 'M' ? 'Masculin' : data.eleve_sexe === 'F' ? 'Féminin' : (data.eleve_sexe ?? '—');
   let maitresRows = '';
   if (data.maitre_fr && data.maitre_ar) {
     maitresRows = siRow('Enseignant(e) FR :', data.maitre_fr) + siRow('Enseignant(e) AR :', data.maitre_ar);
@@ -389,6 +395,14 @@ function studentInfoHtml(data: BulletinBaseData): string {
     <div class="si-row">
       <span class="si-label">Matricule :</span>
       <span class="si-value">${escapeHtml(data.eleve_matricule)}</span>
+    </div>
+    <div class="si-row">
+      <span class="si-label">Classe :</span>
+      <span class="si-value">${escapeHtml(data.eleve_classe ?? '—')}</span>
+    </div>
+    <div class="si-row">
+      <span class="si-label">Sexe :</span>
+      <span class="si-value">${escapeHtml(sexeLabel)}</span>
     </div>
     <div class="si-row">
       <span class="si-label">Né(e) le :</span>
@@ -427,8 +441,9 @@ function footerHtml(data: BulletinBaseData): string {
 // désormais dans le modèle éditable (cf. DEFAULT_BULLETIN_TEMPLATE).
 function ctxTableauTrim(notes: NoteRow[], bilingue: boolean) {
   const evaluees = notes.filter(n => n.evaluee !== false && n.valeur !== null);
-  const totalCoeff = evaluees.reduce((s, n) => s + n.coeff, 0);
-  const totalPoints = evaluees.reduce((s, n) => s + (n.valeur! * n.coeff), 0);
+  // Total = simple somme des notes (sans multiplication par les coefficients). La
+  // MOYENNE reste pondérée/normalisée (moyenneNorm) : les coeffs sont juste masqués.
+  const totalPoints = evaluees.reduce((s, n) => s + n.valeur!, 0);
   const moy = moyenneNorm(notes);
 
   const rows = notes.map(n => {
@@ -437,7 +452,6 @@ function ctxTableauTrim(notes: NoteRow[], bilingue: boolean) {
       return `
       <tr>
         <td style="font-weight:500;color:#6b7280">${matiereLabel(n.nom_fr, n.nom_ar, bilingue)}</td>
-        <td class="center" style="color:#9ca3af">${n.coeff}</td>
         <td class="center" style="color:#9ca3af">—</td>
         <td class="center" style="font-size:10px;color:#9ca3af">/${nmax}</td>
         <td style="color:#6b7280;font-style:italic;font-size:10px">Non évaluée</td>
@@ -448,7 +462,6 @@ function ctxTableauTrim(notes: NoteRow[], bilingue: boolean) {
     return `
     <tr>
       <td style="font-weight:500">${matiereLabel(n.nom_fr, n.nom_ar, bilingue)}</td>
-      <td class="center">${n.coeff}</td>
       <td class="center grade ${isFail ? 'fail' : 'pass'}">
         ${n.valeur !== null ? Number(n.valeur).toFixed(2) : '—'}
       </td>
@@ -459,8 +472,7 @@ function ctxTableauTrim(notes: NoteRow[], bilingue: boolean) {
 
   return {
     bilingue,
-    lignes: rows || '<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:10px">Aucune note saisie</td></tr>',
-    coef_total: totalCoeff > 0 ? Number(totalCoeff).toFixed(1) : '—',
+    lignes: rows || '<tr><td colspan="4" style="text-align:center;color:#9ca3af;padding:10px">Aucune note saisie</td></tr>',
     total: totalPoints > 0 ? Number(totalPoints).toFixed(2) : '—',
     moyenne: moy !== null ? Number(moy).toFixed(2) : '—',
   };
@@ -471,30 +483,44 @@ function ctxTableauTrim(notes: NoteRow[], bilingue: boolean) {
 // Contexte d'un tableau annuel : lignes calculées (HTML brut) + libellés de périodes.
 function ctxTableauAnnuel(matieres: TrimestreRow[], bilingue: boolean, nbPeriodes: number, nomsFr?: string[]) {
   const rows = matieres.map(m => {
+    const nmax = m.note_max ?? RENDER_BASE;
     if (m.evaluee === false) {
       const cells = m.valeurs.map(() => '<td class="center" style="color:#9ca3af">—</td>').join('');
       return `
       <tr>
         <td style="font-weight:500;color:#6b7280">${matiereLabel(m.nom_fr, m.nom_ar, bilingue)}</td>
-        <td class="center" style="color:#9ca3af">${m.coeff}</td>
         ${cells}
         <td class="center" style="color:#9ca3af;background:#f9fafb">—</td>
+        <td class="center" style="font-size:10px;color:#9ca3af">/${nmax}</td>
         <td style="color:#6b7280;font-style:italic;font-size:10px">Non évaluée</td>
       </tr>`;
     }
     return `
     <tr>
       <td style="font-weight:500">${matiereLabel(m.nom_fr, m.nom_ar, bilingue)}</td>
-      <td class="center">${m.coeff}</td>
-      ${m.valeurs.map(v => `<td class="center grade ${v !== null && v < (m.note_max ?? RENDER_BASE) / 2 ? 'fail' : 'pass'}">${v !== null ? Number(v).toFixed(2) : '—'}</td>`).join('')}
-      <td class="center grade ${m.moyenne_annuelle !== null && m.moyenne_annuelle < (m.note_max ?? RENDER_BASE) / 2 ? 'fail' : 'pass'}" style="font-weight:700;background:#f0fdf4">
+      ${m.valeurs.map(v => `<td class="center grade ${v !== null && v < nmax / 2 ? 'fail' : 'pass'}">${v !== null ? Number(v).toFixed(2) : '—'}</td>`).join('')}
+      <td class="center grade ${m.moyenne_annuelle !== null && m.moyenne_annuelle < nmax / 2 ? 'fail' : 'pass'}" style="font-weight:700;background:#f0fdf4">
         ${m.moyenne_annuelle !== null ? Number(m.moyenne_annuelle).toFixed(2) : '—'}
       </td>
-      <td class="${m.moyenne_annuelle !== null ? apprClass(m.moyenne_annuelle, m.note_max ?? RENDER_BASE) : ''}">
-        ${getApprNom(m.moyenne_annuelle, m.note_max ?? RENDER_BASE)}
+      <td class="center" style="font-size:10px;color:#6b7280">/${nmax}</td>
+      <td class="${m.moyenne_annuelle !== null ? apprClass(m.moyenne_annuelle, nmax) : ''}">
+        ${getApprNom(m.moyenne_annuelle, nmax)}
       </td>
     </tr>`;
   }).join('');
+
+  // Ligne « Moyennes » (bas de tableau) : moyenne pondérée/normalisée de la filière
+  // pour chaque période, puis moyenne annuelle. Même logique que la moyenne du
+  // bulletin (matières non évaluées exclues, note ramenée à l'échelle d'affichage).
+  const moyPonderee = (getVal: (m: TrimestreRow) => number | null): number | null => {
+    const withVal = matieres.filter(m => m.evaluee !== false && getVal(m) !== null);
+    const coeff = withVal.reduce((s, m) => s + m.coeff, 0);
+    if (coeff <= 0) return null;
+    const pts = withVal.reduce((s, m) => s + (getVal(m)! / (m.note_max || RENDER_BASE)) * RENDER_BASE * m.coeff, 0);
+    return pts / coeff;
+  };
+  const fmt = (v: number | null) => v !== null ? Number(v).toFixed(2) : '—';
+
   return {
     bilingue,
     // label = nom FR (colonnes FR/EN) ; label_ar = nom AR (colonnes du tableau arabe,
@@ -504,6 +530,9 @@ function ctxTableauAnnuel(matieres: TrimestreRow[], bilingue: boolean, nbPeriode
       label_ar: periodeNomAr(i + 1),
     })),
     lignes: rows,
+    // Valeurs de la ligne « Moyennes » : une par période + la moyenne annuelle.
+    moy_periodes: Array.from({ length: nbPeriodes }, (_, i) => ({ valeur: fmt(moyPonderee(m => m.valeurs[i] ?? null)) })),
+    moy_annuelle: fmt(moyPonderee(m => m.moyenne_annuelle)),
   };
 }
 
@@ -592,17 +621,15 @@ const FRAG_TABLE_FR = `{{#tableau_fr}}
   <div class="eval-header">Évaluation des acquis — Filière Française</div>
   <table>
     <thead><tr>
-      <th style="width:42%">Matières</th>
-      <th class="center" style="width:8%">Coeff.</th>
-      <th class="center" style="width:10%">Note</th>
+      <th style="width:50%">Matières</th>
+      <th class="center" style="width:12%">Note</th>
       <th class="center" style="width:8%">/ Max</th>
-      <th style="width:32%">Appréciation</th>
+      <th style="width:30%">Appréciation</th>
     </tr></thead>
     <tbody>
       {{{lignes}}}
       <tr class="results-row">
         <td>Résultats</td>
-        <td class="center">Coef: {{coef_total}}</td>
         <td class="center" colspan="2">Total: {{total}}</td>
         <td class="center">Moyenne: {{moyenne}} / {{note_max_etab}}</td>
       </tr>
@@ -616,19 +643,17 @@ const FRAG_TABLE_AR = `{{#tableau_ar}}
   <div class="eval-header">Évaluation des acquis — Filière Arabe <span dir="rtl" style="font-weight:400">— تقييم أداء التلاميذ في القسم العربي</span></div>
   <table>
     <thead><tr>
-      <th style="width:42%">Matières<br><span class="th-ar" dir="rtl">المجال</span></th>
-      <th class="center" style="width:8%">Coeff.<br><span class="th-ar" dir="rtl">معامل</span></th>
-      <th class="center" style="width:10%">Note<br><span class="th-ar" dir="rtl">الدرجات</span></th>
+      <th style="width:50%">Matières<br><span class="th-ar" dir="rtl">المجال</span></th>
+      <th class="center" style="width:12%">Note<br><span class="th-ar" dir="rtl">الدرجات</span></th>
       <th class="center" style="width:8%">/ Max<br><span class="th-ar" dir="rtl">على</span></th>
-      <th style="width:32%">Appréciation<br><span class="th-ar" dir="rtl">التقدير</span></th>
+      <th style="width:30%">Appréciation<br><span class="th-ar" dir="rtl">التقدير</span></th>
     </tr></thead>
     <tbody>
       {{{lignes}}}
       <tr class="results-row">
         <td>Résultats<br><span class="th-ar" dir="rtl">النتائج</span></td>
-        <td class="center">Coef: {{coef_total}} <span class="th-ar" dir="rtl">معامل</span></td>
         <td class="center" colspan="2">Total: {{total}} <span class="th-ar" dir="rtl">المجموع</span></td>
-        <td class="center">Moyenne: {{moyenne}} / {{note_max_etab}} <span class="th-ar" dir="rtl">التقدير</span></td>
+        <td class="center">Moyenne: {{moyenne}} / {{note_max_etab}} <span class="th-ar" dir="rtl">المعدل</span></td>
       </tr>
     </tbody>
   </table>
@@ -642,17 +667,15 @@ const FRAG_TABLE_EN = `{{#tableau_en}}
   <div class="eval-header">Évaluation des acquis — Filière Anglaise <span style="font-weight:400">— English Section</span></div>
   <table>
     <thead><tr>
-      <th style="width:42%">Matières <span style="font-weight:400;color:#6b7280">/ Subjects</span></th>
-      <th class="center" style="width:8%">Coeff.</th>
-      <th class="center" style="width:10%">Note <span style="font-weight:400;color:#6b7280">/ Mark</span></th>
+      <th style="width:50%">Matières <span style="font-weight:400;color:#6b7280">/ Subjects</span></th>
+      <th class="center" style="width:12%">Note <span style="font-weight:400;color:#6b7280">/ Mark</span></th>
       <th class="center" style="width:8%">/ Max</th>
-      <th style="width:32%">Appréciation <span style="font-weight:400;color:#6b7280">/ Remark</span></th>
+      <th style="width:30%">Appréciation <span style="font-weight:400;color:#6b7280">/ Remark</span></th>
     </tr></thead>
     <tbody>
       {{{lignes}}}
       <tr class="results-row">
         <td>Résultats <span class="th-ar">/ Results</span></td>
-        <td class="center">Coef: {{coef_total}}</td>
         <td class="center" colspan="2">Total: {{total}}</td>
         <td class="center">Moyenne: {{moyenne}} / {{note_max_etab}} <span class="th-ar">/ Average</span></td>
       </tr>
@@ -666,13 +689,22 @@ const FRAG_TABLE_ANNUEL_FR = `{{#tableau_annuel_fr}}
   <div class="eval-header">Évaluation annuelle — Filière Française</div>
   <table>
     <thead><tr>
-      <th style="width:35%">Matière</th>
-      <th class="center" style="width:7%">Coeff.</th>
+      <th style="width:33%">Matière</th>
       {{#periodes}}<th class="center">{{label}}</th>{{/periodes}}
       <th class="center" style="background:#f0fdf4;color:#059669">Moy. Ann.</th>
-      <th style="width:22%">Appréciation</th>
+      <th class="center" style="width:8%">Note max</th>
+      <th style="width:20%">Appréciation</th>
     </tr></thead>
-    <tbody>{{{lignes}}}</tbody>
+    <tbody>
+      {{{lignes}}}
+      <tr class="results-row">
+        <td>Moyennes</td>
+        {{#moy_periodes}}<td class="center">{{valeur}}</td>{{/moy_periodes}}
+        <td class="center">{{moy_annuelle}}</td>
+        <td></td>
+        <td></td>
+      </tr>
+    </tbody>
   </table>
 </div>
 {{/tableau_annuel_fr}}`;
@@ -682,13 +714,22 @@ const FRAG_TABLE_ANNUEL_AR = `{{#tableau_annuel_ar}}
   <div class="eval-header">Évaluation annuelle — Filière Arabe <span dir="rtl" style="font-weight:400">— تقييم أداء التلاميذ في القسم العربي</span></div>
   <table>
     <thead><tr>
-      <th style="width:35%">Matière<br><span class="th-ar" dir="rtl">المجال</span></th>
-      <th class="center" style="width:7%">Coeff.<br><span class="th-ar" dir="rtl">معامل</span></th>
+      <th style="width:33%">Matière<br><span class="th-ar" dir="rtl">المجال</span></th>
       {{#periodes}}<th class="center">{{label}}<br><span class="th-ar" dir="rtl">{{label_ar}}</span></th>{{/periodes}}
       <th class="center" style="background:#f0fdf4;color:#059669">Moy. Ann.</th>
-      <th style="width:22%">Appréciation<br><span class="th-ar" dir="rtl">التقدير</span></th>
+      <th class="center" style="width:8%">Note max<br><span class="th-ar" dir="rtl">على</span></th>
+      <th style="width:20%">Appréciation<br><span class="th-ar" dir="rtl">التقدير</span></th>
     </tr></thead>
-    <tbody>{{{lignes}}}</tbody>
+    <tbody>
+      {{{lignes}}}
+      <tr class="results-row">
+        <td>Moyennes<br><span class="th-ar" dir="rtl">المعدلات</span></td>
+        {{#moy_periodes}}<td class="center">{{valeur}}</td>{{/moy_periodes}}
+        <td class="center">{{moy_annuelle}}</td>
+        <td></td>
+        <td></td>
+      </tr>
+    </tbody>
   </table>
 </div>
 {{/tableau_annuel_ar}}`;
@@ -698,13 +739,22 @@ const FRAG_TABLE_ANNUEL_EN = `{{#tableau_annuel_en}}
   <div class="eval-header">Évaluation annuelle — Filière Anglaise <span style="font-weight:400">— English Section</span></div>
   <table>
     <thead><tr>
-      <th style="width:35%">Matière <span style="font-weight:400;color:#6b7280">/ Subject</span></th>
-      <th class="center" style="width:7%">Coeff.</th>
+      <th style="width:33%">Matière <span style="font-weight:400;color:#6b7280">/ Subject</span></th>
       {{#periodes}}<th class="center">{{label}}</th>{{/periodes}}
       <th class="center" style="background:#f0fdf4;color:#059669">Moy. Ann.</th>
-      <th style="width:22%">Appréciation <span style="font-weight:400;color:#6b7280">/ Remark</span></th>
+      <th class="center" style="width:8%">Note max</th>
+      <th style="width:20%">Appréciation <span style="font-weight:400;color:#6b7280">/ Remark</span></th>
     </tr></thead>
-    <tbody>{{{lignes}}}</tbody>
+    <tbody>
+      {{{lignes}}}
+      <tr class="results-row">
+        <td>Moyennes <span class="th-ar">/ Averages</span></td>
+        {{#moy_periodes}}<td class="center">{{valeur}}</td>{{/moy_periodes}}
+        <td class="center">{{moy_annuelle}}</td>
+        <td></td>
+        <td></td>
+      </tr>
+    </tbody>
   </table>
 </div>
 {{/tableau_annuel_en}}`;
@@ -741,6 +791,27 @@ const FRAG_RESUME_COMBINE = `<table class="combined-summary">
   </tr></tbody>
 </table>`;
 
+// Résumé combiné ANNUEL FR+AR : à la place de la ligne « Résultats FR — AR »,
+// une moyenne combinée (Moy. FR + Moy. AR) / 2 par trimestre (via {{#combi_trimestres}}),
+// puis la moyenne générale annuelle. Réservé à l'annuel FR+AR (le trimestriel FR+AR
+// garde FRAG_RESUME_COMBINE, un seul trimestre à afficher).
+const FRAG_RESUME_COMBINE_ANNUEL = `<table class="combined-summary">
+  <thead><tr>
+    <th>Moyennes (FR + AR) / 2<br><span class="th-ar">المعدلات المدمجة</span></th>
+    {{#combi_trimestres}}<th>{{label}}</th>{{/combi_trimestres}}
+    <th>Moyenne Générale<br><span class="th-ar">المعدل العام</span></th>
+    {{#afficher_rang}}<th>Rang<br><span class="th-ar">الترتيب</span></th>{{/afficher_rang}}
+    <th>Mention<br><span class="th-ar">التقدير</span></th>
+  </tr></thead>
+  <tbody><tr>
+    <td style="font-weight:600">{{annee}}</td>
+    {{#combi_trimestres}}<td>{{valeur}}</td>{{/combi_trimestres}}
+    <td style="font-weight:700;font-size:13px;color:{{moy_color}}">{{moyenne_generale}}</td>
+    {{#afficher_rang}}<td>{{rang}}</td>{{/afficher_rang}}
+    <td class="mention-cell" style="color:{{moy_color}}">{{{mention}}}</td>
+  </tr></tbody>
+</table>`;
+
 // Résumé combiné GÉNÉRIQUE (N filières) : une sous-moyenne par filière via
 // {{#sous_moyennes}}. Utilisé pour tout combiné qui n'est PAS exactement FR+AR
 // (celui-ci garde FRAG_RESUME_COMBINE, inchangé au pixel près).
@@ -771,7 +842,8 @@ function buildCombineTemplate(codes: string[], annuel = false): string {
   const map = annuel ? FRAG_TABLE_ANNUEL_BY_CODE : FRAG_TABLE_BY_CODE;
   const tables = codes.map(c => map[c]).filter(Boolean).join('\n');
   const isClassicFrAr = codes.length === 2 && codes[0] === 'FR' && codes[1] === 'AR';
-  const resume = isClassicFrAr ? FRAG_RESUME_COMBINE : FRAG_RESUME_COMBINE_N;
+  // FR+AR : résumé historique en trimestriel ; en annuel, résumé (FR+AR)/2 par trimestre.
+  const resume = isClassicFrAr ? (annuel ? FRAG_RESUME_COMBINE_ANNUEL : FRAG_RESUME_COMBINE) : FRAG_RESUME_COMBINE_N;
   return `${FRAG_CHROME_TOP}\n${tables}\n${resume}\n${FRAG_CHROME_BOTTOM}`;
 }
 
@@ -794,7 +866,7 @@ export const DEFAULT_BULLETIN_TEMPLATES: Record<TypeModeleBulletin, string> = {
   COMBINE: buildCombineTemplate(['FR', 'AR'], false),
   // La section {{#tableau_annuel_en}} n'apparaît que si des matières EN sont fournies
   // (undefined pour FR/AR/COMBINE) → aucune régression sur les annuels existants.
-  ANNUEL:  `${FRAG_CHROME_TOP}\n${FRAG_TABLE_ANNUEL_FR}\n${FRAG_TABLE_ANNUEL_AR}\n${FRAG_TABLE_ANNUEL_EN}\n{{#est_combine}}${FRAG_RESUME_COMBINE}{{/est_combine}}{{^est_combine}}${FRAG_RESUME_SIMPLE}{{/est_combine}}\n${FRAG_CHROME_BOTTOM}`,
+  ANNUEL:  `${FRAG_CHROME_TOP}\n${FRAG_TABLE_ANNUEL_FR}\n${FRAG_TABLE_ANNUEL_AR}\n${FRAG_TABLE_ANNUEL_EN}\n{{#est_combine}}${FRAG_RESUME_COMBINE_ANNUEL}{{/est_combine}}{{^est_combine}}${FRAG_RESUME_SIMPLE}{{/est_combine}}\n${FRAG_CHROME_BOTTOM}`,
 };
 
 // Blocs « décor » calculés (HTML brut) communs à toutes les variantes.
@@ -929,6 +1001,23 @@ export function generateBulletinAnnuelHtml(data: BulletinAnnuelData): string {
   const frMoy = moyOf(mFR);
   const arMoy = moyOf(mAR);
 
+  // Moyenne d'une filière pour UNE période (même normalisation/pondération que moyOf,
+  // appliquée aux notes de la période au lieu de la moyenne annuelle).
+  const moyPeriodeFiliere = (mats: TrimestreRow[], idx: number): number | null => {
+    const withVal = mats.filter(m => m.evaluee !== false && m.valeurs[idx] != null);
+    const coeff = withVal.reduce((s, m) => s + m.coeff, 0);
+    if (coeff <= 0) return null;
+    const pts = withVal.reduce((s, m) => s + (m.valeurs[idx]! / (m.note_max || RENDER_BASE)) * RENDER_BASE * m.coeff, 0);
+    return pts / coeff;
+  };
+  // Résumé annuel combiné FR+AR : moyenne (Moy. FR + Moy. AR) / 2 par période (moyenne
+  // des filières réellement notées cette période-là), en plus de la moyenne générale annuelle.
+  const combi_trimestres = Array.from({ length: nbPeriodes }, (_, i) => {
+    const parts = [moyPeriodeFiliere(mFR, i), moyPeriodeFiliere(mAR, i)].filter((v): v is number => v !== null);
+    const combi = parts.length ? parts.reduce((a, b) => a + b, 0) / parts.length : null;
+    return { label: periodeNomFr(i + 1, nbPeriodes, data.noms_periodes?.fr), valeur: combi !== null ? Number(combi).toFixed(2) : '—' };
+  });
+
   // COMBINE = fusion des filières actives (défaut ['FR','AR']) ; simple = filière unique.
   const codes = isCombine ? (data.filieres_combine?.length ? data.filieres_combine : ['FR', 'AR']) : [];
 
@@ -952,5 +1041,6 @@ export function generateBulletinAnnuelHtml(data: BulletinAnnuelData): string {
     tableau_annuel_ar,
     tableau_annuel_en,
     sous_moyennes: sousMoyennes,
+    combi_trimestres,
   });
 }

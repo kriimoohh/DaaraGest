@@ -1027,6 +1027,16 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
   // Échelle d'affichage = celle du NIVEAU de la classe (repli établissement).
   const echelleAffichage = await echelleNiveau(niveauId);
 
+  // Classe affichée dans l'encadré identité : celle de la filière du bulletin
+  // (FR pour un combiné), repli sur n'importe quelle classe rattachée à l'élève.
+  // Dérivée des liens OBJET (getBulletin charge classe.nom_fr via selectLiensClasseObjet).
+  const inscObjet = data.eleve.inscriptions.find(i => i.annee_scolaire_id === data.annee_scolaire_id) ?? data.eleve.inscriptions[0];
+  const classeLiens = inscObjet?.classes ?? [];
+  const classePref = data.filiere === 'AR' ? 'AR' : data.filiere === 'EN' ? 'EN' : 'FR';
+  const eleveClasse = classeLiens.find(l => l.filiere?.code === classePref)?.classe?.nom_fr
+    ?? classeLiens.map(l => l.classe?.nom_fr).find(Boolean)
+    ?? null;
+
   const base = {
     etablissement_nom_fr: etab.nom_fr,
     etablissement_logo_url: etab.logo_url,
@@ -1036,6 +1046,8 @@ export async function genererPdfBulletin(id: string, etablissement_id: string): 
     eleve_matricule: data.eleve.matricule,
     eleve_date_naissance: data.eleve.date_naissance ? new Date(data.eleve.date_naissance).toLocaleDateString('fr-FR') : null,
     eleve_lieu_naissance: data.eleve.lieu_naissance ?? null,
+    eleve_classe: eleveClasse,
+    eleve_sexe: data.eleve.sexe,
     annee_libelle: data.annee_scolaire.libelle,
     moyenne: data.moyenne !== null ? Number(data.moyenne) : null, rang: data.rang,
     appreciation: data.appreciation, devise: etab.devise,
@@ -1133,7 +1145,7 @@ export async function genererPdfClasse(
   const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
   const templateHtml = (await prisma.bulletinTemplate.findUnique({ where: { etablissement_id_type: { etablissement_id, type: periode === 0 ? 'ANNUEL' : filiere } } }))?.contenu_html ?? null;
   // Mentions effectives = celles du niveau de la classe imprimée, sinon défauts établissement.
-  const classeNiveau = await prisma.classe.findUnique({ where: { id: classe_id }, select: { niveau_id: true } });
+  const classeNiveau = await prisma.classe.findUnique({ where: { id: classe_id }, select: { niveau_id: true, nom_fr: true } });
   const mentions = await resolveMentions(etablissement_id, filiere === 'COMBINE' ? null : filiere, classeNiveau?.niveau_id);
   // Échelle d'affichage = celle du NIVEAU de la classe imprimée (repli établissement).
   const echelleAffichage = await echelleNiveau(classeNiveau?.niveau_id);
@@ -1236,6 +1248,9 @@ export async function genererPdfClasse(
       eleve_matricule: bulletin.eleve.matricule,
       eleve_date_naissance: bulletin.eleve.date_naissance ? new Date(bulletin.eleve.date_naissance).toLocaleDateString('fr-FR') : null,
       eleve_lieu_naissance: bulletin.eleve.lieu_naissance ?? null,
+      // Classe imprimée (commune au lot) + sexe de l'élève.
+      eleve_classe: classeNiveau?.nom_fr ?? null,
+      eleve_sexe: bulletin.eleve.sexe,
       annee_libelle: bulletin.annee_scolaire.libelle,
       moyenne: bulletin.moyenne !== null ? Number(bulletin.moyenne) : null,
       rang: bulletin.rang, appreciation: bulletin.appreciation, devise: etab.devise,
@@ -1331,6 +1346,8 @@ export async function apercuBulletinTemplate(etablissement_id: string, type: Typ
     eleve_matricule: `${etab.code}-2026-014`,
     eleve_date_naissance: '15/05/2011',
     eleve_lieu_naissance: 'Touba',
+    eleve_classe: 'CE2 A (exemple)',
+    eleve_sexe: 'M',
     annee_libelle: '2025-2026',
     moyenne: Math.round(baseNote * 0.716 * 100) / 100,
     rang: 3,
