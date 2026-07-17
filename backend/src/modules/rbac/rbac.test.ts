@@ -1,39 +1,24 @@
 import { describe, it, expect } from 'vitest';
+import { ROLES, ROLE_GROUPS, hasRole } from '../../config/roles';
 
 // ── Matrice de contrôle d'accès (RBAC) ───────────────────────────────────────
-// Source de vérité : src/config/roles.ts + routes de chaque module
-
-const ROLES = {
-  ADMIN:           'admin',
-  DIRECTEUR:       'directeur',
-  GESTIONNAIRE:    'gestionnaire',
-  AGENT_SCOLARITE: 'agent de scolarité',
-  PROFESSEUR:      'professeur',
-  POINTEUR:        'pointeur',
-} as const;
+// ROLES, ROLE_GROUPS et le prédicat hasRole sont IMPORTÉS du code de production
+// (src/config/roles.ts) — pas recopiés. Une élévation de privilège dans un groupe
+// (ex. ajouter 'professeur' à GESTION) ferait donc échouer ces tests. Seule la
+// matrice ENDPOINTS ci-dessous reste une spécification maintenue à la main : elle
+// documente le groupe attendu par route, et référence les vrais ROLE_GROUPS.
 
 type Role = typeof ROLES[keyof typeof ROLES];
 
-const ROLE_GROUPS = {
-  ADMIN_ONLY:   [ROLES.ADMIN],
-  DIRECTION:    [ROLES.ADMIN, ROLES.DIRECTEUR],
-  GESTION:      [ROLES.ADMIN, ROLES.DIRECTEUR, ROLES.GESTIONNAIRE],
-  SCOLARITE:    [ROLES.ADMIN, ROLES.DIRECTEUR, ROLES.GESTIONNAIRE, ROLES.AGENT_SCOLARITE],
-  ACADEMIQUE:   [ROLES.ADMIN, ROLES.DIRECTEUR, ROLES.GESTIONNAIRE, ROLES.PROFESSEUR],
-  PRESENCE:     [ROLES.ADMIN, ROLES.DIRECTEUR, ROLES.GESTIONNAIRE, ROLES.AGENT_SCOLARITE, ROLES.PROFESSEUR, ROLES.POINTEUR],
-  TOUS:         [ROLES.ADMIN, ROLES.DIRECTEUR, ROLES.GESTIONNAIRE, ROLES.AGENT_SCOLARITE, ROLES.PROFESSEUR, ROLES.POINTEUR],
-};
-
-function hasAccess(role: Role, group: Role[]): boolean {
-  return group.includes(role);
-}
+// hasAccess = le prédicat d'autorisation RÉEL (celui de requireRole).
+const hasAccess = (role: string, group: readonly string[]): boolean => hasRole(role, group);
 
 // ── Structure des endpoints par module ────────────────────────────────────────
 
 const ENDPOINTS: Array<{
   methode: string;
   path: string;
-  groupe: Role[];
+  groupe: readonly Role[];
   description: string;
 }> = [
   // AUTH
