@@ -22,7 +22,7 @@ async function getMentions(etablissement_id: string): Promise<MentionDef[]> {
  * filière+niveau > filière > niveau > établissement (défaut). `filiereCode` null ou
  * 'COMBINE' = pas de filière (base canonique établissement).
  */
-async function resolveMentions(
+export async function resolveMentions(
   etablissement_id: string, filiereCode?: string | null, niveau_id?: string | null,
 ): Promise<MentionDef[]> {
   let filiere_id: string | null = null;
@@ -40,7 +40,7 @@ async function resolveMentions(
 
 
 /** niveau_id de la classe FR (prioritaire) ou AR pour résoudre les mentions du bulletin. */
-async function niveauPourBulletin(classe_fr_id?: string | null, classe_ar_id?: string | null): Promise<string | null> {
+export async function niveauPourBulletin(classe_fr_id?: string | null, classe_ar_id?: string | null): Promise<string | null> {
   const cid = classe_fr_id ?? classe_ar_id;
   if (!cid) return null;
   const c = await prisma.classe.findUnique({ where: { id: cid }, select: { niveau_id: true } });
@@ -127,7 +127,7 @@ export async function filieresActivesCodes(etablissement_id: string): Promise<('
 // sinon repli sur l'échelle établissement (→ aucun re-scale). Un élève étant dans UN
 // seul niveau, tout le bulletin (y compris le combiné) partage la même échelle. Le
 // calcul reste toujours canonique (base établissement). undefined = pas de re-scale.
-async function echelleNiveau(niveau_id: string | null | undefined): Promise<number | undefined> {
+export async function echelleNiveau(niveau_id: string | null | undefined): Promise<number | undefined> {
   if (!niveau_id) return undefined;
   const n = await prisma.niveau.findUnique({ where: { id: niveau_id }, select: { note_max: true } });
   return n?.note_max != null ? Number(n.note_max) : undefined;
@@ -219,7 +219,14 @@ export async function calculerMoyennesClasse(
   return res;
 }
 
-/** Mentions configurables de l'établissement (réutilisable par les rapports). */
+/**
+ * Mentions PAR DÉFAUT de l'établissement (filiere_id = null, niveau_id = null).
+ *
+ * ⚠️ Ne PAS utiliser pour un élève ou une classe réels : ces défauts ignorent les
+ * mentions spécifiques à une (filière, niveau), et le rapport contredirait alors
+ * le bulletin du même élève. Utiliser `resolveMentions()` dans ce cas.
+ * Réservé aux rendus SANS classe réelle (aperçu de modèle à données factices).
+ */
 export async function getMentionsEtab(etablissement_id: string): Promise<MentionDef[]> {
   return getMentions(etablissement_id);
 }

@@ -2,8 +2,8 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import type { PDFOptions } from 'puppeteer';
 import prisma from '../../config/database';
 import { renderPdfHtml as _renderPdfHtmlReal } from '../../utils/browserPool';
-import { calculerMoyennesClasse, getMentionsEtab, getBaremesClasseCohorte, filieresActivesCodes } from '../bulletins/bulletins.service';
-import { DEFAULT_NOTE_MAX, mentionPour, classer } from '../../utils/notes';
+import { calculerMoyennesClasse, getBaremesClasseCohorte, filieresActivesCodes, resolveMentions, echelleNiveau } from '../bulletins/bulletins.service';
+import { DEFAULT_NOTE_MAX, mentionPour, classer, contexteAffichage } from '../../utils/notes';
 import { codeFiliere, selectFiliereRef } from '../../utils/filiere';
 import { NotFoundError } from '../../utils/errors';
 
@@ -199,13 +199,22 @@ export async function rapportResultatsClasse(
 ) {
   const { classe_id, annee_scolaire_id, periode, format } = params;
 
-  const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
+  const classe = await prisma.classe.findFirst({
+    where: { id: classe_id, etablissement_id },
+    include: { ...selectFiliereRef },
+  });
   if (!classe) throw new NotFoundError('Classe introuvable');
 
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
   const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
   const nbPeriodes = config?.nb_periodes ?? 3;
-  const mentions = await getMentionsEtab(etablissement_id);
+  // Mentions et échelle EXACTEMENT comme le bulletin du même élève : mentions
+  // résolues par (filière, niveau) et non les seuls défauts de l'établissement,
+  // moyenne rendue sur l'échelle du niveau (Niveau.note_max) et non sur la base
+  // canonique — sinon ce rapport contredit le bulletin qu'il est censé refléter.
+  const mentionsCanon = await resolveMentions(etablissement_id, codeFiliere(classe), classe.niveau_id);
+  const affichage = contexteAffichage(baseNote, await echelleNiveau(classe.niveau_id));
+  const mentions = affichage.mentions(mentionsCanon);
   const periodes = periode !== undefined && periode > 0 ? [periode] : Array.from({ length: nbPeriodes }, (_, i) => i + 1);
 
   const inscriptions = await prisma.inscription.findMany({
@@ -231,7 +240,8 @@ export async function rapportResultatsClasse(
     inscriptions.map(i => ({
       matricule: i.eleve.matricule,
       nom: `${i.eleve.nom_fr} ${i.eleve.prenom_fr}`,
-      moyenne: moyennes.get(i.eleve_id) ?? null,
+      // Le re-scale est proportionnel : il ne change jamais le classement.
+      moyenne: affichage.moyenne(moyennes.get(i.eleve_id) ?? null),
       nb: nbNotes.get(i.eleve_id) ?? 0,
     })),
     r => r.moyenne,
@@ -239,7 +249,7 @@ export async function rapportResultatsClasse(
 
   if (format === 'csv') {
     const lines = [
-      csvRow(['Matricule','Nom','Moyenne','Nb notes']),
+      csvRow(['Matricule','Nom',`Moyenne / ${affichage.base}`,'Nb notes']),
       ...rows.map(r => csvRow([r.matricule, r.nom, r.moyenne ?? 'N/A', r.nb])),
     ];
     return { buffer: Buffer.from(lines.join('\n'), 'utf-8'), mime: 'text/csv', filename: `resultats-${classe.nom_fr}.csv` };
@@ -258,11 +268,12 @@ export async function rapportResultatsClasse(
 <h1>${esc(titre)}</h1>
 <div class="sub">Généré le ${new Date().toLocaleDateString('fr-FR')} — ${rows.length} élèves</div>
 <table>
-<thead><tr><th>#</th><th>Matricule</th><th>Nom</th><th>Moyenne</th><th>Appréciation</th></tr></thead>
+<thead><tr><th>#</th><th>Matricule</th><th>Nom</th><th>Moyenne / ${affichage.base}</th><th>Appréciation</th></tr></thead>
 <tbody>
 ${rows.map(r => {
   const m = r.moyenne;
-  const cls = m === null ? '' : m >= baseNote / 2 ? 'ok' : 'nok';
+  // Seuil de réussite = moitié de l'échelle AFFICHÉE (la moyenne est re-scalée).
+  const cls = m === null ? '' : m >= affichage.base / 2 ? 'ok' : 'nok';
   const app = m === null ? '—' : mentionPour(m, mentions);
   return `<tr>
   <td class="rang">${r.rang ?? '—'}</td>
@@ -1109,6 +1120,8 @@ export async function rapportReleveNotes(
 
   const cfg = await prisma.configNotes.findUnique({ where: { etablissement_id }, select: { nb_periodes: true, note_max: true } });
   const baseNote = Number(cfg?.note_max ?? DEFAULT_NOTE_MAX);
+  // Échelle d'affichage de la Moy = celle du niveau, comme le bulletin.
+  const affichage = contexteAffichage(baseNote, await echelleNiveau(classeRaw.niveau_id));
   // Barème effectif par matière = override de classe si présent, sinon échelle établissement.
   const matieres = classeMatieres.map(cm => ({ ...cm.matiere, note_max_eff: Number(cm.note_max_override ?? cm.matiere.note_max ?? baseNote) }));
   const eleveIds = inscriptions.map(i => i.eleve_id);
@@ -1141,8 +1154,11 @@ export async function rapportReleveNotes(
     const vals = matieres.map(m => nm?.get(m.id) ?? null);
     const nonNull = vals.filter((v): v is number => v !== null);
     const total   = nonNull.reduce((s, v) => s + v, 0);
-    // Moyenne générale = calcul pondéré/normalisé du bulletin (et non somme brute).
-    const moy     = moyennes.get(i.eleve_id) ?? null;
+    // Moyenne générale = calcul pondéré/normalisé du bulletin (et non somme brute),
+    // puis rendue sur l'échelle du niveau comme le bulletin. NB : `vals` et `total`
+    // ne sont PAS re-scalés — ce sont les notes brutes, chacune sur SON barème
+    // (/10, /60…), pas des valeurs sur l'échelle de l'établissement.
+    const moy     = affichage.moyenne(moyennes.get(i.eleve_id) ?? null);
     return { eleve: i.eleve, vals, total: nonNull.length ? total : null, moy };
   });
 
@@ -1205,7 +1221,7 @@ th{background:#ccc;font-weight:bold;}
       <th class="lbl">Prénom &amp; Nom</th>
       ${matieres.map(m => `<th>${esc(m.code_court ?? m.nom_fr.substring(0, 5))}</th>`).join('')}
       <th>Total</th>
-      <th>Moy</th>
+      <th>Moy / ${affichage.base}</th>
       <th>Rang</th>
     </tr>
   </thead>
@@ -1260,6 +1276,9 @@ export async function rapportPropositionsFin(
   ]);
   if (!classeRaw) throw new NotFoundError('Classe introuvable');
 
+  const cfg = await prisma.configNotes.findUnique({ where: { etablissement_id }, select: { note_max: true } });
+  const baseNote = Number(cfg?.note_max ?? DEFAULT_NOTE_MAX);
+
   const [inscriptions, titulaireNom] = await Promise.all([
     fetchInscriptions(classe_id, annee_scolaire_id),
     getTitulaire(classe_id, annee_scolaire_id),
@@ -1285,8 +1304,10 @@ export async function rapportPropositionsFin(
   for (const p of [1, 2, 3]) {
     moyParPeriode.set(p, await calculerMoyennesClasse(etablissement_id, classe_id, annee_scolaire_id, [p], [filiereClasse]));
   }
+  // Rendu sur l'échelle du niveau, comme le bulletin (le calcul reste canonique).
+  const affichage = contexteAffichage(baseNote, await echelleNiveau(classeRaw.niveau_id));
   const getMoy = (eleveId: string, periode: number): number | null =>
-    moyParPeriode.get(periode)?.get(eleveId) ?? null;
+    affichage.moyenne(moyParPeriode.get(periode)?.get(eleveId) ?? null);
 
   const DECISION_LABELS: Record<string, string> = {
     admis:       'Admis(e)',
