@@ -712,6 +712,7 @@
     "stats_eleves": "Students",
     "stats_taux_reussite": "Pass rate",
     "stats_premier": "Top of class",
+    "stats_premier_exaequo": "{{count}} tied",
     "vue_cartes": "▦ Cards",
     "vue_tableau": "☰ Table",
     "col_rang": "Rank",

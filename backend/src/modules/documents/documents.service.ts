@@ -7,7 +7,7 @@ import { TypeDocument, GenererDocumentInput, GenererCartesLotInput, UpsertTempla
 import { getDefaultTemplate, TYPE_DOCUMENT_LABELS, getCardTemplate } from './templates/defaults';
 import { calculerMoyennesClasse, getBaremesClasse } from '../bulletins/bulletins.service';
 import { selectLiensClasse, selectLiensClasseObjet, classeIdParFiliere, classeParFiliere } from '../../utils/inscriptionClasse';
-import { DEFAULT_NOTE_MAX } from '../../utils/notes';
+import { DEFAULT_NOTE_MAX, classer } from '../../utils/notes';
 import { NotFoundError } from '../../utils/errors';
 
 function signQrPayload(payload: object): string {
@@ -547,14 +547,17 @@ async function buildTableauNotesClasse(
       totalNorm += (v / max) * baseNote * c;
       totalCoeff += c;
     }
-    const moy = totalCoeff > 0 ? totalNorm / totalCoeff : null;
+    // Arrondi au centième AVANT le classement : c'est la valeur affichée, et deux
+    // élèves montrés à la même moyenne doivent être ex aequo (cf. classer()).
+    const moy = totalCoeff > 0 ? Math.round((totalNorm / totalCoeff) * 100) / 100 : null;
     return { eleve: insc.eleve, vals, moy };
   });
 
-  const rowsSorted = vierge
-    ? rowsRaw
-    : [...rowsRaw].sort((a, b) => (b.moy ?? -1) - (a.moy ?? -1));
-  const rowsRanked = rowsSorted.map((r, idx) => ({ ...r, rang: r.moy !== null ? idx + 1 : '—' as const }));
+  // Relevé vierge : aucune note, donc aucun classement — on garde l'ordre
+  // d'origine (alphabétique). Sinon : tri + rang, ex aequo au même rang.
+  const rowsRanked = vierge
+    ? rowsRaw.map(r => ({ ...r, rang: null as number | null }))
+    : classer(rowsRaw, r => r.moy);
 
   const fmt = (v: number | null) => v === null ? '' : v.toFixed(2);
   const cellEmpty = '&nbsp;';
@@ -597,7 +600,7 @@ async function buildTableauNotesClasse(
   const htmlRows = rowsRanked.map((r, i) => {
     const cellNotes = r.vals.map(v => `<td>${vierge ? cellEmpty : fmt(v)}</td>`).join('');
     const cellMoy   = vierge ? `<td>${cellEmpty}</td>` : `<td>${r.moy === null ? '' : r.moy.toFixed(2)}</td>`;
-    const cellRang  = vierge ? `<td>${cellEmpty}</td>` : `<td>${r.rang}</td>`;
+    const cellRang  = vierge ? `<td>${cellEmpty}</td>` : `<td>${r.rang ?? '—'}</td>`;
     const cellObs   = vierge ? `<td>${cellEmpty}</td>` : '';
     return `<tr>
       <td>${i + 1}</td>
@@ -930,7 +933,10 @@ async function buildA4DocumentHtml(
           [classeIdParFiliere(inscription.classes, 'EN'), 'EN'] as const,
         ]) {
           if (!cid) continue;
-          for (const [k, v] of await getBaremesClasse(cid, periodes, [fil])) baremes.set(k, v);
+          // baseNote est OBLIGATOIRE : c'est le repli ultime de la chaîne de barèmes
+          // (période > classe > matière > échelle établissement). L'omettre laisserait
+          // le défaut /20 s'appliquer et diviserait les moyennes d'un établissement /10.
+          for (const [k, v] of await getBaremesClasse(cid, periodes, [fil], baseNote)) baremes.set(k, v);
         }
         const notesEnrichies = notes.map(n => {
           const b = baremes.get(`${n.matiere_id}|${n.periode}`);

@@ -714,6 +714,7 @@
     "stats_eleves": "التلاميذ",
     "stats_taux_reussite": "نسبة النجاح",
     "stats_premier": "الأول في القسم",
+    "stats_premier_exaequo": "{{count}} متساوون",
     "vue_cartes": "▦ بطاقات",
     "vue_tableau": "☰ جدول",
     "col_rang": "الترتيب",
