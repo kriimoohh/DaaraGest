@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mentionPour, MentionDef } from '../../utils/notes';
+import { mentionPour, MentionDef, classer } from '../../utils/notes';
 
 // ── Logique métier pure extraite pour tests sans DB ───────────────────────────
 
@@ -47,12 +47,9 @@ const MENTIONS_DEFAUT: MentionDef[] = [
 ];
 const appreciation = (m: number) => mentionPour(m, MENTIONS_DEFAUT);
 
-function calculerRang(
-  moyennes: Array<{ eleve_id: string; moyenne: number }>,
-): Array<{ eleve_id: string; rang: number }> {
-  const sorted = [...moyennes].sort((a, b) => b.moyenne - a.moyenne);
-  return sorted.map((e, i) => ({ eleve_id: e.eleve_id, rang: i + 1 }));
-}
+// classer = la vraie fonction de classement (convention compétition, ex aequo).
+const calculerRang = (moyennes: Array<{ eleve_id: string; moyenne: number }>) =>
+  classer(moyennes, m => m.moyenne);
 
 // === Absences ================================================================
 
@@ -73,13 +70,6 @@ function compterAbsencesNonJustifiees(
 
 function alerteSeuil(absencesNj: number, seuil: number): boolean {
   return absencesNj >= seuil;
-}
-
-// === Progression =============================================================
-
-function calcDecisionAuto(moyenne: number | null, seuil: number): 'admis' | 'redoublant' {
-  if (moyenne === null) return 'admis';
-  return moyenne >= seuil ? 'admis' : 'redoublant';
 }
 
 // === Emploi du temps =========================================================
@@ -233,34 +223,24 @@ describe('Métier — Bulletins : Appréciations', () => {
 });
 
 describe('Métier — Bulletins : Classement', () => {
-  it('tri décroissant correct', () => {
-    const moyennes = [
+  it('ex aequo : deux moyennes égales partagent le rang, le suivant saute', () => {
+    const classement = calculerRang([
       { eleve_id: 'e1', moyenne: 12 },
       { eleve_id: 'e2', moyenne: 15 },
       { eleve_id: 'e3', moyenne: 8 },
       { eleve_id: 'e4', moyenne: 15 },
-    ];
-    const classement = calculerRang(moyennes);
-    const e2 = classement.find(r => r.eleve_id === 'e2');
-    const e3 = classement.find(r => r.eleve_id === 'e3');
-    expect(e2!.rang).toBeLessThanOrEqual(2); // e2 ou e4 sont premiers ex-aequo
-    expect(e3!.rang).toBe(4);
+    ]);
+    const rang = (id: string) => classement.find(r => r.eleve_id === id)!.rang;
+    // e2 et e4 sont TOUS DEUX 1ers ; e1 est 3ème (pas 2ème) ; e3 est 4ème.
+    expect(rang('e2')).toBe(1);
+    expect(rang('e4')).toBe(1);
+    expect(rang('e1')).toBe(3);
+    expect(rang('e3')).toBe(4);
   });
 
   it('élève unique → rang 1', () => {
     const classement = calculerRang([{ eleve_id: 'e1', moyenne: 14 }]);
     expect(classement[0].rang).toBe(1);
-  });
-
-  it('20 élèves → rangs 1 à 20', () => {
-    const moyennes = Array.from({ length: 20 }, (_, i) => ({
-      eleve_id: `e${i}`,
-      moyenne: Math.random() * 20,
-    }));
-    const classement = calculerRang(moyennes);
-    const rangs = classement.map(r => r.rang).sort((a, b) => a - b);
-    expect(rangs[0]).toBe(1);
-    expect(rangs[rangs.length - 1]).toBe(20);
   });
 });
 
@@ -315,35 +295,9 @@ describe('Métier — Absences', () => {
   });
 });
 
-// ════════════════════════════════════════════════════════════════════════════
-// TESTS MÉTIER PROGRESSION
-// ════════════════════════════════════════════════════════════════════════════
-
-describe('Métier — Progression élève', () => {
-  it('élève avec moyenne >= 10 → admis', () => {
-    expect(calcDecisionAuto(10, 10)).toBe('admis');
-    expect(calcDecisionAuto(15, 10)).toBe('admis');
-    expect(calcDecisionAuto(20, 10)).toBe('admis');
-  });
-
-  it('élève avec moyenne < 10 → redoublant', () => {
-    expect(calcDecisionAuto(9.99, 10)).toBe('redoublant');
-    expect(calcDecisionAuto(5, 10)).toBe('redoublant');
-    expect(calcDecisionAuto(0, 10)).toBe('redoublant');
-  });
-
-  it('élève sans notes → admis par défaut', () => {
-    expect(calcDecisionAuto(null, 10)).toBe('admis');
-  });
-
-  it('seuil personnalisé 12 : moyenne 11 → redoublant', () => {
-    expect(calcDecisionAuto(11, 12)).toBe('redoublant');
-  });
-
-  it('seuil personnalisé 12 : moyenne 12 → admis', () => {
-    expect(calcDecisionAuto(12, 12)).toBe('admis');
-  });
-});
+// La décision de passage (admis / redoublant / a_examiner) est testée sur le vrai
+// code dans progression.itest.ts (genererProgressions, base réelle) : plus de copie
+// locale ici — l'ancienne encodait le fail-open « sans notes → admis » corrigé (#144).
 
 // ════════════════════════════════════════════════════════════════════════════
 // TESTS MÉTIER EMPLOI DU TEMPS

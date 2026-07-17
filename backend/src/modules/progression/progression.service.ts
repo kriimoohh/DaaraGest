@@ -2,7 +2,6 @@ import prisma from '../../config/database';
 import { ValiderProgressionInput } from './progression.schema';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 import { NotFoundError, ValidationError } from '../../utils/errors';
-import { selectLiensClasseObjet, classeParFiliere } from '../../utils/inscriptionClasse';
 import { logAction } from '../../utils/audit';
 
 /**
@@ -204,46 +203,3 @@ export async function validerProgression(
   return updated;
 }
 
-export async function historiqueEleve(eleve_id: string, etablissement_id: string) {
-  const eleve = await prisma.eleve.findFirst({ where: { id: eleve_id, etablissement_id } });
-  if (!eleve) throw new NotFoundError('Élève introuvable');
-
-  const [inscriptions, progressions, absencesParAnnee, paiementsParAnnee] = await Promise.all([
-    prisma.inscription.findMany({
-      where: { eleve_id },
-      include: {
-        annee_scolaire: true,
-        ...selectLiensClasseObjet,
-      },
-      orderBy: { annee_scolaire: { date_debut: 'desc' } },
-    }),
-    prisma.progressionEleve.findMany({
-      where: { eleve_id },
-      include: { annee_scolaire: { select: { libelle: true } } },
-      orderBy: { annee_scolaire: { date_debut: 'desc' } },
-    }),
-    prisma.absenceEleve.groupBy({
-      by:    ['annee_scolaire_id'],
-      where: { eleve_id },
-      _count: { id: true },
-    }),
-    prisma.paiementEleve.groupBy({
-      by:    ['annee'],
-      where: { eleve_id },
-      _sum:  { montant: true },
-    }),
-  ]);
-
-  return {
-    eleve,
-    // Rétro-compat d'affichage : classe_fr / classe_ar dérivés de la jointure.
-    inscriptions: inscriptions.map(i => ({
-      ...i,
-      classe_fr: classeParFiliere(i.classes, 'FR'),
-      classe_ar: classeParFiliere(i.classes, 'AR'),
-    })),
-    progressions,
-    absences_par_annee: absencesParAnnee,
-    paiements_par_annee: paiementsParAnnee,
-  };
-}
