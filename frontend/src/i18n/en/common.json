@@ -888,13 +888,18 @@
     "opt_redoublant": "Repeating (stays in the class)",
     "opt_transfere": "Transferred (to another school)",
     "opt_exclu": "Expelled",
+    "opt_choisir": "— Choose a decision —",
+    "a_examiner": "To review",
     "note_directeur_label": "Principal's note (optional)",
     "note_directeur_placeholder": "Comment or remark…",
+    "err_decision_requise": "Choose a decision before confirming.",
+    "err_justif_requise": "A justification is required when the decision differs from the automatic proposal.",
     "decisions": {
       "admis": "Promoted",
       "redoublant": "Repeating",
       "transfere": "Transferred",
-      "exclu": "Expelled"
+      "exclu": "Expelled",
+      "a_examiner": "To review"
     },
     "ok_decision": "Decision saved",
     "ok_generees": "{{genere}} proposal(s) generated out of {{total}} students"
@@ -1684,6 +1689,9 @@
     "arrondi_1": "1 decimal (e.g. 14.5)",
     "arrondi_2": "2 decimals (e.g. 14.50)",
     "nb_periodes": "Number of terms",
+    "filiere_decision_label": "Track deciding promotion",
+    "filiere_decision_combine": "Combined (all of the student's tracks)",
+    "filiere_decision_hint": "Annual average that decides promotion. \"Combined\" uses the weighted aggregate of all tracks; a single-track student is decided on their only report card.",
     "periode": "Term",
     "periodes": "terms",
     "mensualite": "Monthly fee amount",
