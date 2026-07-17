@@ -1007,6 +1007,9 @@
     "arrondi_1": "منزلة عشرية واحدة (مثال: 14,5)",
     "arrondi_2": "منزلتان عشريتان (مثال: 14,50)",
     "nb_periodes": "عدد الفصول",
+    "filiere_decision_label": "الشعبة المحدِّدة للانتقال",
+    "filiere_decision_combine": "مدمج (كل شعب التلميذ)",
+    "filiere_decision_hint": "المعدل السنوي الذي يحدد الانتقال. « مدمج » يستعمل المعدل المرجَّح لكل الشعب ؛ التلميذ ذو الشعبة الواحدة يُقرَّر انطلاقًا من كشفه الوحيد.",
     "periode": "الفترة",
     "periodes": "فصول",
     "mensualite": "القسط الشهري",
@@ -1845,13 +1848,18 @@
     "opt_redoublant": "معيد (البقاء في القسم)",
     "opt_transfere": "منقول (إلى مؤسسة أخرى)",
     "opt_exclu": "مفصول",
+    "opt_choisir": "— اختر قرارًا —",
+    "a_examiner": "قيد الدراسة",
     "note_directeur_label": "ملاحظة المدير (اختياري)",
     "note_directeur_placeholder": "تعليق أو ملاحظة…",
+    "err_decision_requise": "اختر قرارًا قبل الاعتماد.",
+    "err_justif_requise": "يجب تقديم تبرير عندما يختلف القرار عن الاقتراح التلقائي.",
     "decisions": {
       "admis": "ناجح",
       "redoublant": "معيد",
       "transfere": "منقول",
-      "exclu": "مفصول"
+      "exclu": "مفصول",
+      "a_examiner": "قيد الدراسة"
     },
     "ok_decision": "تم حفظ القرار",
     "ok_generees": "تم توليد {{genere}} اقتراح من أصل {{total}} تلميذ"

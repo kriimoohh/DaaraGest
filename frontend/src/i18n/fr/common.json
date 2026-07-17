@@ -1007,6 +1007,9 @@
     "arrondi_1": "1 décimale (ex : 14,5)",
     "arrondi_2": "2 décimales (ex : 14,50)",
     "nb_periodes": "Nombre de périodes",
+    "filiere_decision_label": "Filière décisionnaire du passage",
+    "filiere_decision_combine": "Combiné (toutes les filières de l'élève)",
+    "filiere_decision_hint": "Moyenne annuelle qui décide du passage. « Combiné » utilise l'agrégat pondéré de toutes les filières ; un élève mono-filière est décidé sur son unique bulletin.",
     "periode": "Période",
     "periodes": "périodes",
     "mensualite": "Montant mensualité",
@@ -1845,13 +1848,18 @@
     "opt_redoublant": "Redoublant (maintien en classe)",
     "opt_transfere": "Transféré (vers un autre établissement)",
     "opt_exclu": "Exclu",
+    "opt_choisir": "— Choisir une décision —",
+    "a_examiner": "À examiner",
     "note_directeur_label": "Note du directeur (optionnel)",
     "note_directeur_placeholder": "Commentaire ou observation…",
+    "err_decision_requise": "Choisissez une décision avant de valider.",
+    "err_justif_requise": "Une justification est requise lorsque la décision diffère de la proposition automatique.",
     "decisions": {
       "admis": "Admis",
       "redoublant": "Redoublant",
       "transfere": "Transféré",
-      "exclu": "Exclu"
+      "exclu": "Exclu",
+      "a_examiner": "À examiner"
     },
     "ok_decision": "Décision enregistrée",
     "ok_generees": "{{genere}} proposition(s) générée(s) sur {{total}} élèves"

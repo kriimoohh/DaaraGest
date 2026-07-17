@@ -47,6 +47,9 @@ export const configNotesSchema = z.object({
   bulletin_afficher_absences: z.boolean().optional(),
   bulletin_logo_echelle:      z.number().int().min(50).max(200).optional(),
   bulletin_police_echelle:    z.number().int().min(70).max(150).optional(),
+  // Filière décisionnaire du passage : 'COMBINE' ou un code de filière (FR, AR…).
+  // Valeur libre bornée : les codes de filière sont propres à l'établissement.
+  filiere_decision:           z.string().min(1).max(20).optional(),
 });
 
 export const configNotificationsSchema = z.object({

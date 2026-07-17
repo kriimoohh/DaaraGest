@@ -97,6 +97,8 @@ interface ConfigNotes {
   bulletin_afficher_absences: boolean;
   bulletin_logo_echelle: number;
   bulletin_police_echelle: number;
+  // Filière dont la moyenne annuelle décide du passage (module Progression).
+  filiere_decision: string;
 }
 
 type CouleurMention = 'success' | 'info' | 'warning' | 'error';
@@ -768,6 +770,7 @@ export function ParametresPage() {
             bulletin_afficher_absences: rawNotes.bulletin_afficher_absences !== undefined ? Boolean(rawNotes.bulletin_afficher_absences) : true,
             bulletin_logo_echelle:      Number(rawNotes.bulletin_logo_echelle   ?? 100),
             bulletin_police_echelle:    Number(rawNotes.bulletin_police_echelle ?? 100),
+            filiere_decision:           String(rawNotes.filiere_decision ?? 'COMBINE'),
           });
         }
         if (rawNotif) {
@@ -1384,6 +1387,21 @@ export function ParametresPage() {
                   <option value={4}>4 {t('parametre.periodes')}</option>
                   <option value={6}>6 {t('parametre.periodes')} — Bimestres</option>
                 </select>
+              </div>
+
+              <div className="field">
+                <label className="field-label">{t('parametre.filiere_decision_label')}</label>
+                <select
+                  className="select"
+                  value={config.filiere_decision}
+                  onChange={e => setConfig(p => p ? { ...p, filiere_decision: e.target.value } : p)}
+                >
+                  <option value="COMBINE">{t('parametre.filiere_decision_combine')}</option>
+                  {filieres.filter(f => f.actif).map(f => (
+                    <option key={f.code} value={f.code}>{f.nom_fr} ({f.code})</option>
+                  ))}
+                </select>
+                <div className="field-hint">{t('parametre.filiere_decision_hint')}</div>
               </div>
 
               <Toggle

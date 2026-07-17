@@ -30,6 +30,7 @@ interface Progression {
 
 const DECISION_VARIANTS: Record<string, 'success' | 'danger' | 'warning' | 'neutral'> = {
   admis: 'success', redoublant: 'danger', transfere: 'warning', exclu: 'neutral',
+  a_examiner: 'warning',
 };
 
 export function ProgressionPage() {
@@ -60,6 +61,7 @@ export function ProgressionPage() {
   const validees  = progressions.filter(p => p.validee).length;
   const admis     = progressions.filter(p => p.decision === 'admis').length;
   const redoublants = progressions.filter(p => p.decision === 'redoublant').length;
+  const aExaminer = progressions.filter(p => p.decision === 'a_examiner').length;
 
   useEffect(() => {
     api.get<AnneeScolaire[]>('/api/v1/annees-scolaires')
@@ -109,12 +111,18 @@ export function ProgressionPage() {
 
   const openValidation = (p: Progression) => {
     setEditTarget(p);
-    setFormDecision(p.decision);
+    // 'a_examiner' n'est pas une décision validable : forcer un choix explicite.
+    setFormDecision(p.decision === 'a_examiner' ? '' : p.decision);
     setFormNote(p.note_directeur ?? '');
   };
 
   const handleValider = async () => {
     if (!editTarget) return;
+    if (!formDecision) { toast.error(t('progression.err_decision_requise')); return; }
+    // Justification obligatoire quand on s'écarte de la proposition auto (le back
+    // le vérifie aussi ; ici c'est un retour immédiat).
+    const contreditAuto = editTarget.decision_auto != null && formDecision !== editTarget.decision_auto;
+    if (contreditAuto && !formNote.trim()) { toast.error(t('progression.err_justif_requise')); return; }
     setSaving(true);
     try {
       await api.put(`/api/v1/progression/${editTarget.id}/valider`, {
@@ -195,7 +203,11 @@ export function ProgressionPage() {
             { label: t('progression.total_eleves'), value: total, color: 'var(--ink)' },
             { label: t('progression.decisions_validees'), value: `${validees}/${total}`, color: validees === total ? 'var(--success)' : 'var(--warning)' },
             { label: t('progression.admis'), value: admis, color: 'var(--success)' },
-            { label: t('progression.redoublants'), value: redoublants, color: 'var(--danger)' },
+            // « À examiner » remplace « Redoublants » tant qu'il reste des cas non
+            // tranchés : c'est l'action prioritaire du conseil de classe.
+            aExaminer > 0
+              ? { label: t('progression.a_examiner'), value: aExaminer, color: 'var(--warning)' }
+              : { label: t('progression.redoublants'), value: redoublants, color: 'var(--danger)' },
           ].map(stat => (
             <div key={stat.label} className="card-pad" style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 28, fontWeight: 700, color: stat.color, fontFamily: 'var(--font-display)' }}>{stat.value}</div>
@@ -353,6 +365,7 @@ export function ProgressionPage() {
               value={formDecision}
               onChange={e => setFormDecision(e.target.value)}
               options={[
+                ...(formDecision ? [] : [{ value: '', label: t('progression.opt_choisir') }]),
                 { value: 'admis',      label: t('progression.opt_admis') },
                 { value: 'redoublant', label: t('progression.opt_redoublant') },
                 { value: 'transfere',  label: t('progression.opt_transfere') },
@@ -360,7 +373,12 @@ export function ProgressionPage() {
               ]}
             />
             <div className="field">
-              <label className="field-label">{t('progression.note_directeur_label')}</label>
+              <label className="field-label">
+                {t('progression.note_directeur_label')}
+                {editTarget.decision_auto != null && formDecision && formDecision !== editTarget.decision_auto && (
+                  <span style={{ color: 'var(--danger)', marginInlineStart: 4 }}>*</span>
+                )}
+              </label>
               <textarea
                 className="input"
                 rows={3}

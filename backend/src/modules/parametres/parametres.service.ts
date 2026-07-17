@@ -1,7 +1,7 @@
 import prisma from '../../config/database';
 import { EtablissementUpdateInput, ConfigNotesInput, ConfigNotificationsInput } from './parametres.schema';
 import { etablissementCache, configNotesCache, invalidateEtablissement } from '../../utils/cache';
-import { NotFoundError } from '../../utils/errors';
+import { NotFoundError, ValidationError } from '../../utils/errors';
 
 export async function getParametres(etablissement_id: string) {
   return etablissementCache.getOrLoad(etablissement_id, async () => {
@@ -47,6 +47,17 @@ export async function getConfigNotes(etablissement_id: string) {
 }
 
 export async function updateConfigNotes(etablissement_id: string, data: ConfigNotesInput) {
+  // La filière décisionnaire pilote le passage en classe supérieure : un code
+  // périmé ferait basculer tous les élèves multi-filières en « à examiner » sans
+  // le moindre signal. On le refuse à l'écriture. 'COMBINE' est toujours valide.
+  if (data.filiere_decision != null && data.filiere_decision !== 'COMBINE') {
+    const f = await prisma.filiere.findFirst({
+      where: { etablissement_id, code: data.filiere_decision, actif: true },
+      select: { id: true },
+    });
+    if (!f) throw new ValidationError(`Filière « ${data.filiere_decision} » introuvable ou désactivée.`);
+  }
+
   const updated = await prisma.configNotes.upsert({
     where: { etablissement_id },
     create: {

@@ -344,6 +344,11 @@ model ConfigNotes {
   bulletin_afficher_absences Boolean  @default(true)
   bulletin_logo_echelle      Int      @default(100)
   bulletin_police_echelle    Int      @default(100)
+  // Filière dont la moyenne annuelle décide du passage (module Progression).
+  // 'COMBINE' = l'agrégat pondéré de toutes les filières de l'élève (défaut) ;
+  // repli sur l'unique bulletin annuel si l'élève n'en a qu'un. Une valeur de
+  // code de filière ('FR', 'AR'…) force la décision sur cette filière.
+  filiere_decision           String   @default("COMBINE")
   updated_at                 DateTime @updatedAt
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
