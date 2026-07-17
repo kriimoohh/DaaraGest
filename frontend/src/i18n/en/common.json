@@ -2098,9 +2098,31 @@
     "acteur": "Actor",
     "details": "Details",
     "aucun": "No records",
-    "action_CREATE": "Created",
-    "action_UPDATE": "Updated",
-    "action_DELETE": "Deleted"
+    "actions": {
+      "CREATE": "Created",
+      "UPDATE": "Updated",
+      "DELETE": "Deleted",
+      "PASSWORD_RESET": "Password reset",
+      "USER_REACTIVATE": "Account reactivated",
+      "PROGRESSION_VALIDATE": "Promotion decision",
+      "PORTAIL_GENERATE": "Parent link generated",
+      "PORTAIL_REVOKE": "Parent link revoked",
+      "BULLETIN_DEVERROUILLAGE": "Term unlocked"
+    },
+    "entites": {
+      "Eleve": "Student",
+      "Inscription": "Enrolment",
+      "Utilisateur": "User",
+      "Filiere": "Track",
+      "PaiementEleve": "Student payment",
+      "PaiementPersonnel": "Staff payment",
+      "Note": "Grades",
+      "Bulletin": "Report card",
+      "ClasseMatiere": "Class programme",
+      "ClasseMatierePeriode": "Programme (per term)",
+      "ProgressionEleve": "Promotion",
+      "PortailParentToken": "Parent portal link"
+    }
   },
   "profil": {
     "titre": "My profile",

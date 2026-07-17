@@ -1,7 +1,9 @@
 import prisma from '../config/database';
 import { Prisma } from '@prisma/client';
+import { AuditAction, describeAuditFr } from './audit-actions';
 
-export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE';
+// Ré-export pour compat des appelants existants (`import { AuditAction } ...`).
+export type { AuditAction } from './audit-actions';
 
 export async function logAction(
   etablissement_id: string,
@@ -12,8 +14,9 @@ export async function logAction(
   details?: Record<string, unknown>
 ): Promise<void> {
   try {
+    const description = describeAuditFr(action, entite, entite_id, details);
     await prisma.auditLog.create({
-      data: { etablissement_id, utilisateur_id, action, entite, entite_id, details: (details ?? {}) as Prisma.InputJsonValue },
+      data: { etablissement_id, utilisateur_id, action, entite, entite_id, description, details: (details ?? {}) as Prisma.InputJsonValue },
     });
   } catch (err) {
     // Non-bloquant : un échec de log ne doit pas faire échouer l'opération métier,
