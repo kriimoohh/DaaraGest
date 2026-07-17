@@ -381,7 +381,8 @@ model Matiere {
   // ex: Coran /20, Dictée /10). Repli du barème effectif AVANT l'échelle établissement :
   // ClasseMatierePeriode.note_max > ClasseMatiere.note_max_override > Matiere.note_max >
   // ConfigNotes.note_max. null = pas de défaut matière → échelle établissement (rétro-compat).
-  // NB : distinct de l'ÉCHELLE d'affichage de la moyenne (Filiere.note_max, phase 3).
+  // NB : distinct de l'ÉCHELLE d'affichage de la moyenne, portée par Niveau.note_max
+  // (l'échelle dépend du niveau — primaire /10, secondaire /20 — pas de la filière).
   note_max         Decimal? @db.Decimal(5, 2)
   ordre_bulletin   Int     @default(0)
   active           Boolean @default(true)

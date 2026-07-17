@@ -5,9 +5,9 @@ import { getQrSecret } from '../../utils/qrSecret';
 import { escapeHtml } from '../../utils/escapeHtml';
 import { TypeDocument, GenererDocumentInput, GenererCartesLotInput, UpsertTemplateInput, TYPE_DOCUMENT_VALUES, CARD_TYPES } from './documents.schema';
 import { getDefaultTemplate, TYPE_DOCUMENT_LABELS, getCardTemplate } from './templates/defaults';
-import { calculerMoyennesClasse, getBaremesClasse } from '../bulletins/bulletins.service';
+import { calculerMoyennesClasse, getBaremesClasse, echelleNiveau, niveauPourBulletin } from '../bulletins/bulletins.service';
 import { selectLiensClasse, selectLiensClasseObjet, classeIdParFiliere, classeParFiliere } from '../../utils/inscriptionClasse';
-import { DEFAULT_NOTE_MAX, classer } from '../../utils/notes';
+import { DEFAULT_NOTE_MAX, classer, contexteAffichage } from '../../utils/notes';
 import { NotFoundError } from '../../utils/errors';
 
 function signQrPayload(payload: object): string {
@@ -944,11 +944,25 @@ async function buildA4DocumentHtml(
             periode: n.periode,
             matiere: { nom_fr: n.matiere.nom_fr },
             valeur: n.valeur,
+            // Repli du barème de SAISIE = échelle établissement (fin de chaîne),
+            // à ne pas confondre avec l'échelle d'AFFICHAGE ci-dessous.
             note_max_effectif: b?.note_max ?? baseNote,
             coeff_effectif: b?.coeff ?? 1,
           };
         });
-        vars.TABLEAU_NOTES = buildNotesTable(notesEnrichies, baseNote);
+        // Échelle d'affichage du relevé = celle du niveau de l'élève, comme son
+        // bulletin. buildNotesTable normalise via `(valeur / barème) * base * coeff` :
+        // lui passer l'échelle d'affichage fait la normalisation ET le rendu d'un
+        // coup — identique à calculer en canonique puis re-scaler (tout est
+        // proportionnel). Les notes elles-mêmes restent sur LEUR barème (/60…).
+        const affichage = contexteAffichage(
+          baseNote,
+          await echelleNiveau(await niveauPourBulletin(
+            classeIdParFiliere(inscription.classes, 'FR'),
+            classeIdParFiliere(inscription.classes, 'AR') ?? classeIdParFiliere(inscription.classes, 'EN'),
+          )),
+        );
+        vars.TABLEAU_NOTES = buildNotesTable(notesEnrichies, affichage.base);
         if (!vars.MOYENNE_ANNUELLE && notes.length > 0) {
           // Moyenne annuelle NORMALISÉE et pondérée (barèmes/coeff effectifs), comme
           // les bulletins — et non une moyenne brute des notes (barèmes variables).
@@ -963,7 +977,8 @@ async function buildA4DocumentHtml(
             const v = moys.get(destinataire_id);
             if (v != null) { somme += v; n++; }
           }
-          if (n > 0) vars.MOYENNE_ANNUELLE = (somme / n).toFixed(2);
+          // Re-scalée comme le reste du relevé (le calcul reste canonique).
+          if (n > 0) vars.MOYENNE_ANNUELLE = affichage.moyenne(somme / n)!.toFixed(2);
         }
       }
     }

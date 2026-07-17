@@ -29,6 +29,44 @@ export function mentionPourFiliere(m: number, mentions: MentionDef[], filiereCod
   return filiereCode === 'AR' ? (def.libelle_ar?.trim() || def.libelle_fr) : def.libelle_fr;
 }
 
+/**
+ * Contexte d'AFFICHAGE d'une moyenne. Le calcul reste toujours CANONIQUE (base
+ * établissement = ConfigNotes.note_max) ; seul le rendu est ramené sur l'échelle
+ * du NIVEAU (Niveau.note_max) quand elle est renseignée — au Sénégal l'échelle
+ * dépend du niveau (primaire /10, secondaire /20), pas de la filière.
+ *
+ * Miroir de `setRenderContext` du template bulletin, en version pure : les
+ * rapports et documents n'utilisent pas ce template et doivent pourtant afficher
+ * la MÊME échelle que le bulletin du même élève.
+ *
+ * ⚠️ Ne PAS appliquer aux grilles IEF (grille-performance, grille-ief) : ce sont
+ * des formulaires officiels dont les bandes sont figées sur /10 par l'inspection,
+ * indépendamment de l'échelle de l'établissement ou du niveau.
+ */
+export type ContexteAffichage = {
+  /** Le « / X » à afficher (échelle du niveau, sinon celle de l'établissement). */
+  base: number;
+  /** Vrai si un re-scale a lieu (échelle du niveau ≠ base établissement). */
+  reScale: boolean;
+  /** Moyenne canonique → moyenne affichée, arrondie au centième. */
+  moyenne(m: number | null): number | null;
+  /** Seuils de mention (stockés sur la base établissement) → échelle d'affichage. */
+  mentions(ms: MentionDef[]): MentionDef[];
+};
+
+export function contexteAffichage(etabBase: number, echelleNiveau?: number | null): ContexteAffichage {
+  const base = echelleNiveau ?? etabBase;
+  const facteur = etabBase > 0 ? base / etabBase : 1;
+  return {
+    base,
+    reScale: facteur !== 1,
+    moyenne: (m) => (m === null ? null : Math.round(m * facteur * 100) / 100),
+    mentions: (ms) =>
+      ms.map(m => ({ ...m, seuil_min: m.seuil_min * facteur }))
+        .sort((a, b) => b.seuil_min - a.seuil_min),
+  };
+}
+
 // Deux moyennes arrondies au centième sont « égales » à ce delta près. Même
 // tolérance que mentionDefPour : on ne veut pas qu'un artefact de virgule
 // flottante départage deux élèves ex aequo.
