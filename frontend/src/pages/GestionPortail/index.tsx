@@ -153,7 +153,7 @@ export function GestionPortailPage() {
         isOpen={!!confirmRevoke}
         onClose={() => setConfirmRevoke(null)}
         onConfirm={() => confirmRevoke && revoquer(confirmRevoke)}
-        loading={!!busyId}
+        loading={busyId === confirmRevoke?.id}
         title={t('gestion_portail.revoquer_titre', 'Révoquer le lien')}
         message={confirmRevoke
           ? t('gestion_portail.revoquer_message', {

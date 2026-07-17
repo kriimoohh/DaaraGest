@@ -155,8 +155,10 @@ export default function App() {
             <Route path="/audit" element={
               <ProtectedRoute roles={['admin', 'directeur']}><AuditPage /></ProtectedRoute>
             } />
+            {/* Rôles alignés sur le back (ROLE_GROUPS.GESTION) et la nav : PAS
+                d'agent de scolarité (ROLES.gestion l'inclut, à tort ici). */}
             <Route path="/liens-portail" element={
-              <ProtectedRoute roles={ROLES.gestion}><GestionPortailPage /></ProtectedRoute>
+              <ProtectedRoute roles={['admin', 'directeur', 'gestionnaire']}><GestionPortailPage /></ProtectedRoute>
             } />
             <Route path="/bibliotheque" element={
               <ProtectedRoute roles={ROLES.gestion}><BibliothequeePage /></ProtectedRoute>
