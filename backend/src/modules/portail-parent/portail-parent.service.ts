@@ -4,6 +4,7 @@ import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 import { NotFoundError } from '../../utils/errors';
 import { selectLiensClasse, classeIdParFiliere } from '../../utils/inscriptionClasse';
 import { codeFiliere } from '../../utils/filiere';
+import { logAction } from '../../utils/audit';
 
 // Fallback : si pas d'année scolaire active, expire dans 90 jours (au lieu de 365).
 const TOKEN_FALLBACK_DUREE_MS = 90 * 24 * 60 * 60 * 1000;
@@ -17,24 +18,41 @@ async function calculerExpiration(etablissement_id: string): Promise<Date> {
   return new Date(Date.now() + TOKEN_FALLBACK_DUREE_MS);
 }
 
-export async function genererToken(etablissement_id: string, eleve_id: string) {
+export async function genererToken(etablissement_id: string, eleve_id: string, acteurId?: string) {
   const eleve = await prisma.eleve.findFirst({ where: { id: eleve_id, etablissement_id } });
   if (!eleve) throw new NotFoundError('Élève introuvable');
 
   const expires_at = await calculerExpiration(etablissement_id);
 
-  return prisma.portailParentToken.upsert({
+  const rec = await prisma.portailParentToken.upsert({
     where: { etablissement_id_eleve_id: { etablissement_id, eleve_id } },
     create: { etablissement_id, eleve_id, actif: true, expires_at },
     update: { actif: true, expires_at },
     include: { eleve: { select: { nom_fr: true, prenom_fr: true, matricule: true } } },
   });
+  // Un lien portail donne accès aux notes/bulletins d'un élève sans compte :
+  // savoir qui l'a émis est une trace de sécurité.
+  if (acteurId) {
+    await logAction(etablissement_id, acteurId, 'PORTAIL_GENERATE', 'PortailParentToken', rec.id, {
+      nom: `${rec.eleve.prenom_fr} ${rec.eleve.nom_fr}`.trim(), matricule: rec.eleve.matricule,
+    });
+  }
+  return rec;
 }
 
-export async function revoquerToken(token: string, etablissement_id: string) {
-  const record = await prisma.portailParentToken.findFirst({ where: { token, etablissement_id } });
+export async function revoquerToken(token: string, etablissement_id: string, acteurId?: string) {
+  const record = await prisma.portailParentToken.findFirst({
+    where: { token, etablissement_id },
+    include: { eleve: { select: { nom_fr: true, prenom_fr: true, matricule: true } } },
+  });
   if (!record) throw new NotFoundError('Token introuvable');
-  return prisma.portailParentToken.update({ where: { id: record.id }, data: { actif: false } });
+  const updated = await prisma.portailParentToken.update({ where: { id: record.id }, data: { actif: false } });
+  if (acteurId) {
+    await logAction(etablissement_id, acteurId, 'PORTAIL_REVOKE', 'PortailParentToken', record.id, {
+      nom: `${record.eleve.prenom_fr} ${record.eleve.nom_fr}`.trim(), matricule: record.eleve.matricule,
+    });
+  }
+  return updated;
 }
 
 export async function getPortailData(token: string) {

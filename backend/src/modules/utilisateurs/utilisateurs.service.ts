@@ -172,8 +172,8 @@ export async function reactiverUtilisateur(id: string, etablissement_id: string,
     include: { role: true },
   });
 
-  await logAction(etablissement_id, acteurId, 'UPDATE', 'Utilisateur', id, {
-    action: 'reactivate', identifiant: identifiantRestaure,
+  await logAction(etablissement_id, acteurId, 'USER_REACTIVATE', 'Utilisateur', id, {
+    identifiant: identifiantRestaure,
   });
 
   const { mot_de_passe: _, ...result } = utilisateur;
@@ -262,7 +262,7 @@ export async function resetPassword(id: string, etablissement_id: string, data: 
     data: { mot_de_passe: hashedPassword, must_change_password: true },
   });
 
-  await logAction(etablissement_id, acteurId, 'UPDATE', 'Utilisateur', id, { action: 'reset_password' });
+  await logAction(etablissement_id, acteurId, 'PASSWORD_RESET', 'Utilisateur', id, { identifiant: existing.identifiant });
 
   return { message: 'Mot de passe réinitialisé avec succès' };
 }

@@ -3,6 +3,7 @@ import { ValiderProgressionInput } from './progression.schema';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
 import { NotFoundError, ValidationError } from '../../utils/errors';
 import { selectLiensClasseObjet, classeParFiliere } from '../../utils/inscriptionClasse';
+import { logAction } from '../../utils/audit';
 
 /**
  * Moyenne annuelle DÉCISIONNAIRE d'un élève parmi ses bulletins annuels (periode 0).
@@ -177,7 +178,7 @@ export async function validerProgression(
     throw new ValidationError('Une justification est requise lorsque la décision diffère de la proposition automatique.');
   }
 
-  return prisma.progressionEleve.update({
+  const updated = await prisma.progressionEleve.update({
     where: { id },
     data: {
       decision:       data.decision,
@@ -191,6 +192,16 @@ export async function validerProgression(
       annee_scolaire: { select: { libelle: true } },
     },
   });
+
+  // Décision de passage : qui a tranché quoi pour quel élève — événement
+  // forensique de premier ordre (engage l'année scolaire de l'enfant).
+  await logAction(etablissement_id, validee_par, 'PROGRESSION_VALIDATE', 'ProgressionEleve', updated.id, {
+    nom: `${updated.eleve.prenom_fr} ${updated.eleve.nom_fr}`.trim(),
+    matricule: updated.eleve.matricule,
+    code: data.decision,
+  });
+
+  return updated;
 }
 
 export async function historiqueEleve(eleve_id: string, etablissement_id: string) {

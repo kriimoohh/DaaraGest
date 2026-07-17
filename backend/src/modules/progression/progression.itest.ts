@@ -20,6 +20,7 @@ const inscA = `prog-insc-a-${RUN}`;
 const inscB = `prog-insc-b-${RUN}`;
 
 async function nettoyer() {
+  await prisma.auditLog.deleteMany({ where: { etablissement_id: etabId } });
   await prisma.progressionEleve.deleteMany({ where: { annee_scolaire_id: anneeId } });
   await prisma.bulletin.deleteMany({ where: { annee_scolaire_id: anneeId } });
   await prisma.inscription.deleteMany({ where: { annee_scolaire_id: anneeId } });
@@ -164,5 +165,18 @@ describe('Progression — validation et justification obligatoire', () => {
     ).rejects.toThrow(/avant de valider/i);
     const apres = await prisma.progressionEleve.findFirstOrThrow({ where: { id: progB.id } });
     expect(apres.validee).toBe(false);
+  });
+
+  // En dernier : consomme eleveB (le valide), donc après le test « à examiner »
+  // qui le suppose encore non validé.
+  it('valider écrit une ligne d’audit PROGRESSION_VALIDATE', async () => {
+    const prog = await prisma.progressionEleve.findFirstOrThrow({ where: { eleve_id: eleveB, annee_scolaire_id: anneeId } });
+    // eleveB est 'a_examiner' (sans annuel) → contredit l'auto → justification requise.
+    await validerProgression(prog.id, etabId, { decision: 'redoublant', note_directeur: 'Aucune note cette année.' }, directeurId);
+    const log = await prisma.auditLog.findFirst({
+      where: { etablissement_id: etabId, action: 'PROGRESSION_VALIDATE', entite_id: prog.id },
+    });
+    expect(log).not.toBeNull();
+    expect(log!.description).toContain('Décision de passage');
   });
 });
