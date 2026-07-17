@@ -98,6 +98,7 @@ describe('Progression — filiere_decision = FR', () => {
     const progA = await prisma.progressionEleve.findFirstOrThrow({ where: { eleve_id: eleveA, annee_scolaire_id: anneeId } });
     // FR = 14 ≥ 10 → admis (alors que COMBINE aurait donné redoublant).
     expect(progA.decision_auto).toBe('admis');
+    expect(progA.decision).toBe('admis');
   });
 });
 
@@ -115,6 +116,7 @@ describe('Progression — repli mono-filière', () => {
     await genererProgressions(etabId, anneeId);
     const progA = await prisma.progressionEleve.findFirstOrThrow({ where: { eleve_id: eleveA, annee_scolaire_id: anneeId } });
     expect(progA.decision_auto).toBe('admis'); // FR=14
+    expect(progA.decision).toBe('admis');
   });
 
   it('listerProgressions expose la même moyenne annuelle (pas le double comptage)', async () => {
@@ -136,13 +138,16 @@ describe('Progression — validation et justification obligatoire', () => {
   });
 
   it('contredire la proposition auto SANS justification est refusé', async () => {
-    await genererProgressions(etabId, anneeId); // remet decision_auto = redoublant, validee reste false ? non : validée → non touchée
+    // Le test précédent a validé (validee=true) ; on remet la progression à l'état
+    // « non validée, auto=redoublant » pour tester le refus de contradiction.
     const prog = await prisma.progressionEleve.findFirstOrThrow({ where: { eleve_id: eleveA, annee_scolaire_id: anneeId } });
-    // Déjà validée au test précédent → dé-valider pour re-tester le refus.
     await prisma.progressionEleve.update({ where: { id: prog.id }, data: { validee: false, decision_auto: 'redoublant' } });
     await expect(
       validerProgression(prog.id, etabId, { decision: 'admis' }, directeurId),
     ).rejects.toThrow(/justification/i);
+    // Le refus ne doit rien avoir modifié en base.
+    const apres = await prisma.progressionEleve.findFirstOrThrow({ where: { id: prog.id } });
+    expect(apres.validee).toBe(false);
   });
 
   it('contredire la proposition AVEC justification est accepté', async () => {
@@ -156,6 +161,8 @@ describe('Progression — validation et justification obligatoire', () => {
     const progB = await prisma.progressionEleve.findFirstOrThrow({ where: { eleve_id: eleveB, annee_scolaire_id: anneeId } });
     await expect(
       validerProgression(progB.id, etabId, { decision: 'a_examiner' }, directeurId),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/avant de valider/i);
+    const apres = await prisma.progressionEleve.findFirstOrThrow({ where: { id: progB.id } });
+    expect(apres.validee).toBe(false);
   });
 });
