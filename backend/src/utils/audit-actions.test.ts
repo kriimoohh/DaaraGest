@@ -93,4 +93,8 @@ describe('resumeDetails', () => {
     expect(resumeDetails('Autre', 'xyz', {})).toBe('xyz');
     expect(resumeDetails('Autre', 'bulk', {})).toBe('');
   });
+  it('periode 0 = « Annuel », pas « T0 » (déverrouillage d’une période annuelle)', () => {
+    expect(resumeDetails('Bulletin', 'deverrouillage_periode', { periode: 0, filiere: 'FR', count: 5 })).toBe('5 · Annuel · FR');
+    expect(resumeDetails('Bulletin', 'deverrouillage_periode', { periode: 2, filiere: 'FR', count: 5 })).toBe('5 · T2 · FR');
+  });
 });

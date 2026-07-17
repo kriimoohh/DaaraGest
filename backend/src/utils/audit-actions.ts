@@ -100,7 +100,8 @@ export function resumeDetails(entite: string, entite_id: string, details?: Detai
   if (typeof d.identifiant === 'string') parts.push(d.identifiant);
   if (typeof d.code === 'string') parts.push(d.code);
   if (typeof d.montant === 'number') parts.push(`${d.montant}`);
-  if (typeof d.periode === 'number') parts.push(`T${d.periode}`);
+  // Convention de toute l'app : periode 0 = bulletin annuel, pas « trimestre 0 ».
+  if (typeof d.periode === 'number') parts.push(d.periode === 0 ? 'Annuel' : `T${d.periode}`);
   if (typeof d.filiere === 'string') parts.push(d.filiere);
   if (parts.length === 0 && entite_id && entite_id !== 'bulk') parts.push(entite_id);
   return parts.join(' · ');
@@ -108,14 +109,15 @@ export function resumeDetails(entite: string, entite_id: string, details?: Detai
 
 /** Description FR complète, stockée en base pour l'export et l'inspection SQL. */
 export function describeAuditFr(action: string, entite: string, entite_id: string, details?: Details): string {
-  const sem = resolveAuditAction(action, entite_id, details) as AuditAction;
-  const actLabel = ACTION_LABEL_FR[sem] ?? action;
+  // resolveAuditAction renvoie un string : une action inconnue (jamais en pratique,
+  // mais pas garanti par le type) retombe sur son propre libellé brut.
+  const sem = resolveAuditAction(action, entite_id, details);
+  const actLabel = ACTION_LABEL_FR[sem as AuditAction] ?? action;
   const entLabel = ENTITE_LABEL_FR[entite] ?? entite;
   const resume = resumeDetails(entite, entite_id, details);
   // Les actions déjà auto-descriptives (portail, mot de passe…) ne répètent pas
   // l'entité ; les CRUD génériques la précisent.
-  const base = sem === 'CREATE' || sem === 'UPDATE' || sem === 'DELETE'
-    ? `${actLabel} · ${entLabel}`
-    : actLabel;
+  const estCrud = sem === 'CREATE' || sem === 'UPDATE' || sem === 'DELETE';
+  const base = estCrud ? `${actLabel} · ${entLabel}` : actLabel;
   return resume ? `${base} — ${resume}` : base;
 }
