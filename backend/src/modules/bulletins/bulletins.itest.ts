@@ -363,6 +363,54 @@ describe('Bulletins — intégration notes → moyenne (DB réelle)', () => {
     expect(baremes.get(`${ids.matBareme}|1`)?.note_max).toBe(50);
   });
 
+  it('ex aequo : deux moyennes égales partagent le rang 1, le suivant est 3ème', async () => {
+    // Écrit sur la période 2 (le seed n'utilise que la période 1) et nettoie
+    // derrière lui : le test annuel plus haut suppose « seule la période 1 est
+    // saisie », et les mentions FR du test suivant ne doivent pas être affectées.
+    const eleveC = `itest-eleve-c-${RUN}`;
+    const inscC  = `itest-insc-c-${RUN}`;
+    try {
+      await prisma.eleve.create({
+        data: { id: eleveC, etablissement_id: etabId, matricule: `ITEST-C-${RUN}`, nom_fr: 'Ceux', prenom_fr: 'Carla', sexe: 'F', date_naissance: new Date('2012-01-01') },
+      });
+      await prisma.inscription.create({
+        data: { id: inscC, eleve_id: eleveC, annee_scolaire_id: anneeId, statut: 'actif' },
+      });
+      await prisma.inscriptionClasse.create({
+        data: { inscription_id: inscC, classe_id: classeId, filiere_id: filiereFrId },
+      });
+
+      // Période 2, matière Math uniquement : A et B à 12, C à 8.
+      await prisma.note.createMany({
+        data: [
+          { eleve_id: ids.eleveA, matiere_id: ids.matMath, periode: 2, annee_scolaire_id: anneeId, valeur: 12 },
+          { eleve_id: ids.eleveB, matiere_id: ids.matMath, periode: 2, annee_scolaire_id: anneeId, valeur: 12 },
+          { eleve_id: eleveC,     matiere_id: ids.matMath, periode: 2, annee_scolaire_id: anneeId, valeur: 8 },
+        ],
+      });
+
+      await genererBulletins(etabId, { classe_id: classeId, annee_scolaire_id: anneeId, periode: 2, filiere: 'FR' });
+      const bulletins = await prisma.bulletin.findMany({
+        where: { annee_scolaire_id: anneeId, periode: 2, filiere: 'FR' },
+      });
+      const parEleve = Object.fromEntries(bulletins.map(b => [b.eleve_id, b]));
+
+      expect(Number(parEleve[ids.eleveA].moyenne)).toBeCloseTo(12, 2);
+      expect(Number(parEleve[ids.eleveB].moyenne)).toBeCloseTo(12, 2);
+
+      // A et B sont ex aequo → tous deux 1ers ; C est 3ème (le rang 2 est sauté).
+      expect(parEleve[ids.eleveA].rang).toBe(1);
+      expect(parEleve[ids.eleveB].rang).toBe(1);
+      expect(parEleve[eleveC].rang).toBe(3);
+    } finally {
+      await prisma.bulletin.deleteMany({ where: { annee_scolaire_id: anneeId, periode: 2 } });
+      await prisma.note.deleteMany({ where: { annee_scolaire_id: anneeId, periode: 2 } });
+      await prisma.inscriptionClasse.deleteMany({ where: { inscription_id: inscC } });
+      await prisma.inscription.deleteMany({ where: { id: inscC } });
+      await prisma.eleve.deleteMany({ where: { id: eleveC } });
+    }
+  });
+
   // ⚠️ Ce test doit rester le DERNIER : il ajoute des mentions spécifiques FR qui
   // changeraient l'appréciation des générations FR des tests précédents.
   it('mentions par filière : la génération FR utilise les mentions spécifiques FR (Phase 2)', async () => {

@@ -3,7 +3,7 @@ import type { PDFOptions } from 'puppeteer';
 import prisma from '../../config/database';
 import { renderPdfHtml as _renderPdfHtmlReal } from '../../utils/browserPool';
 import { calculerMoyennesClasse, getMentionsEtab, getBaremesClasseCohorte, filieresActivesCodes } from '../bulletins/bulletins.service';
-import { DEFAULT_NOTE_MAX, mentionPour } from '../../utils/notes';
+import { DEFAULT_NOTE_MAX, mentionPour, classer } from '../../utils/notes';
 import { codeFiliere, selectFiliereRef } from '../../utils/filiere';
 import { NotFoundError } from '../../utils/errors';
 
@@ -227,12 +227,15 @@ export async function rapportResultatsClasse(
   });
   const nbNotes = new Map(nbCnt.map(c => [c.eleve_id, c._count.id]));
 
-  const rows = inscriptions.map(i => ({
-    matricule: i.eleve.matricule,
-    nom: `${i.eleve.nom_fr} ${i.eleve.prenom_fr}`,
-    moyenne: moyennes.get(i.eleve_id) ?? null,
-    nb: nbNotes.get(i.eleve_id) ?? 0,
-  })).sort((a, b) => (b.moyenne ?? -1) - (a.moyenne ?? -1));
+  const rows = classer(
+    inscriptions.map(i => ({
+      matricule: i.eleve.matricule,
+      nom: `${i.eleve.nom_fr} ${i.eleve.prenom_fr}`,
+      moyenne: moyennes.get(i.eleve_id) ?? null,
+      nb: nbNotes.get(i.eleve_id) ?? 0,
+    })),
+    r => r.moyenne,
+  );
 
   if (format === 'csv') {
     const lines = [
@@ -257,12 +260,12 @@ export async function rapportResultatsClasse(
 <table>
 <thead><tr><th>#</th><th>Matricule</th><th>Nom</th><th>Moyenne</th><th>Appréciation</th></tr></thead>
 <tbody>
-${rows.map((r, i) => {
+${rows.map(r => {
   const m = r.moyenne;
   const cls = m === null ? '' : m >= baseNote / 2 ? 'ok' : 'nok';
   const app = m === null ? '—' : mentionPour(m, mentions);
   return `<tr>
-  <td class="rang">${i + 1}</td>
+  <td class="rang">${r.rang ?? '—'}</td>
   <td>${esc(r.matricule)}</td>
   <td>${esc(r.nom)}</td>
   <td class="${cls}">${m !== null ? m : '—'}</td>
@@ -953,12 +956,15 @@ export async function rapportPerformanceDomaine(
     });
     const nonNull = domAvgs.filter((v): v is number => v !== null);
     const total   = nonNull.reduce((s, v) => s + v, 0);
-    const moy     = nonNull.length ? total / nonNull.length : null;
+    // Arrondi au centième AVANT le classement : c'est la valeur affichée, et deux
+    // élèves montrés à la même moyenne doivent être ex aequo (cf. classer()).
+    const moy     = nonNull.length ? Math.round((total / nonNull.length) * 100) / 100 : null;
     return { eleve: i.eleve, domAvgs, total: nonNull.length ? total : null, moy };
-  }).sort((a, b) => (b.moy ?? -1) - (a.moy ?? -1));
+  });
 
-  // Rang
-  const rowsRanked = rows.map((r, idx) => ({ ...r, rang: r.moy !== null ? idx + 1 : '—' }));
+  // Tri + rang (ex aequo au même rang). `rows` reste non trié : les stats par
+  // colonne plus bas agrègent, l'ordre leur est indifférent.
+  const rowsRanked = classer(rows, r => r.moy);
 
   // Stats par colonne (sur les valeurs normalisées)
   const domStats = colKeys.map(ck => {
@@ -1032,7 +1038,7 @@ th{background:#d0d0d0;font-weight:bold;}
         ${r.domAvgs.map(v => `<td>${fmt(v)}</td>`).join('')}
         <td>${fmt(r.total)}</td>
         <td class="${cls}">${fmt(m)}</td>
-        <td>${r.rang}</td>
+        <td>${r.rang ?? '—'}</td>
       </tr>`;
     }).join('')}
     <tr class="stat-row">
@@ -1138,9 +1144,11 @@ export async function rapportReleveNotes(
     // Moyenne générale = calcul pondéré/normalisé du bulletin (et non somme brute).
     const moy     = moyennes.get(i.eleve_id) ?? null;
     return { eleve: i.eleve, vals, total: nonNull.length ? total : null, moy };
-  }).sort((a, b) => (b.moy ?? -1) - (a.moy ?? -1));
+  });
 
-  const rowsRanked = rows.map((r, idx) => ({ ...r, rang: r.moy !== null ? idx + 1 : '—' }));
+  // Tri + rang (ex aequo au même rang). `rows` reste non trié : les stats par
+  // matière plus bas agrègent, l'ordre leur est indifférent.
+  const rowsRanked = classer(rows, r => r.moy);
 
   // Statistiques par matière
   const matStats = matieres.map((m, mi) => {
@@ -1208,7 +1216,7 @@ th{background:#ccc;font-weight:bold;}
       ${r.vals.map(v => `<td>${fmtVal(v)}</td>`).join('')}
       <td>${fmtVal(r.total)}</td>
       <td>${fmtVal(r.moy)}</td>
-      <td>${r.rang}</td>
+      <td>${r.rang ?? '—'}</td>
     </tr>`).join('')}
     <tr class="stat-row"><td colspan="2" class="lbl">Effectif</td>${matStats.map(s => `<td>${s.eff}</td>`).join('')}<td colspan="3"></td></tr>
     <tr class="stat-row"><td colspan="2" class="lbl">Ont composé</td>${matStats.map(s => `<td>${s.comp}</td>`).join('')}<td colspan="3"></td></tr>

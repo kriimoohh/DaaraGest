@@ -102,13 +102,21 @@ function RangMedal({ rang }: { rang: number | null }) {
   return <span style={{ fontWeight: 600, color: 'var(--ink-2)' }}>{rang}ème</span>;
 }
 
-function ClasseStats({ bulletins, t, noteMax }: { bulletins: Bulletin[]; t: (k: string) => string; noteMax: number }) {
+function ClasseStats({ bulletins, t, noteMax }: { bulletins: Bulletin[]; t: (k: string, opts?: Record<string, unknown>) => string; noteMax: number }) {
   if (bulletins.length === 0) return null;
   const avecMoy = bulletins.filter(b => b.moyenne !== null);
   if (avecMoy.length === 0) return null;
   const moyennes = avecMoy.map(b => Number(b.moyenne!));
   const moyClasse = moyennes.reduce((a, b) => a + b, 0) / moyennes.length;
-  const meilleur = bulletins.reduce((best, b) => (b.rang === 1 ? b : best), null as Bulletin | null);
+  // Le rang 1 n'est PAS unique : des élèves ex aequo le partagent (classement
+  // « compétition » côté back). N'en afficher qu'un seul masquerait les autres.
+  const premiers = bulletins.filter(b => b.rang === 1);
+  const nomsPremiers = premiers.map(b => `${b.eleve.prenom_fr} ${b.eleve.nom_fr}`);
+  const libellePremier = nomsPremiers.length === 1
+    ? nomsPremiers[0]
+    : nomsPremiers.length > 1
+      ? t('bulletin.stats_premier_exaequo', { count: nomsPremiers.length })
+      : '—';
   const reussite = avecMoy.filter(b => Number(b.moyenne!) >= noteMax * 0.5).length;
 
   return (
@@ -130,8 +138,9 @@ function ClasseStats({ bulletins, t, noteMax }: { bulletins: Bulletin[]; t: (k: 
         <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>{t('bulletin.stats_taux_reussite')}</div>
       </div>
       <div className="card" style={{ padding: 16, textAlign: 'center' }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--warning)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {meilleur ? `${meilleur.eleve.prenom_fr} ${meilleur.eleve.nom_fr}` : '—'}
+        <div title={nomsPremiers.join(', ')}
+             style={{ fontSize: 13, fontWeight: 600, color: 'var(--warning)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {libellePremier}
         </div>
         <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>{t('bulletin.stats_premier')}</div>
       </div>
