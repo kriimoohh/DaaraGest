@@ -34,6 +34,7 @@
     "domaines": "Domaines",
     "utilisateurs": "Utilisateurs",
     "audit": "Journal d'audit",
+    "liens_portail": "Liens portail parent",
     "parametres": "Paramètres",
     "pointage": "Pointage",
     "absences": "Absences élèves",
@@ -2123,6 +2124,26 @@
       "ProgressionEleve": "Progression",
       "PortailParentToken": "Lien portail parent"
     }
+  },
+  "gestion_portail": {
+    "titre": "Liens portail parent",
+    "sous_titre": "Liens d'accès sans compte aux notes et bulletins. Régénérez un lien qui a fuité (l'ancien cesse aussitôt de fonctionner) ou révoquez-le.",
+    "rechercher": "Rechercher un élève…",
+    "eleve": "Élève",
+    "statut": "Statut",
+    "expire_le": "Expire le",
+    "cree_le": "Créé le",
+    "actions": "Actions",
+    "aucun": "Aucun lien portail",
+    "copier": "Copier",
+    "regenerer": "Régénérer",
+    "revoquer": "Révoquer",
+    "lien_copie": "Lien copié",
+    "regenere": "Nouveau lien généré — l'ancien ne fonctionne plus",
+    "revoque": "Lien révoqué",
+    "revoquer_titre": "Révoquer le lien",
+    "revoquer_message": "Le lien de {{nom}} cessera immédiatement de fonctionner. Cette action est irréversible.",
+    "statuts": { "actif": "Actif", "revoque": "Révoqué", "expire": "Expiré" }
   },
   "profil": {
     "titre": "Mon profil",
