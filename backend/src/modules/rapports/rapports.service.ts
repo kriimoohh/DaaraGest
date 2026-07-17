@@ -956,7 +956,9 @@ export async function rapportPerformanceDomaine(
     });
     const nonNull = domAvgs.filter((v): v is number => v !== null);
     const total   = nonNull.reduce((s, v) => s + v, 0);
-    const moy     = nonNull.length ? total / nonNull.length : null;
+    // Arrondi au centième AVANT le classement : c'est la valeur affichée, et deux
+    // élèves montrés à la même moyenne doivent être ex aequo (cf. classer()).
+    const moy     = nonNull.length ? Math.round((total / nonNull.length) * 100) / 100 : null;
     return { eleve: i.eleve, domAvgs, total: nonNull.length ? total : null, moy };
   });
 

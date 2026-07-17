@@ -714,6 +714,7 @@
     "stats_eleves": "Élèves",
     "stats_taux_reussite": "Taux de réussite",
     "stats_premier": "1er de classe",
+    "stats_premier_exaequo": "{{count}} ex aequo",
     "vue_cartes": "▦ Cartes",
     "vue_tableau": "☰ Tableau",
     "col_rang": "Rang",

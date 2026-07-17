@@ -41,7 +41,12 @@ const EPS_MOYENNE = 1e-9;
  *
  * La fonction possède le tri ET le classement : ne pas trier soi-même avant de
  * l'appeler, sinon deux appelants peuvent produire des rangs différents pour la
- * même classe (c'est ce qui avait divergé sur 7 sites).
+ * même classe (c'est ce qui avait divergé sur 6 sites).
+ *
+ * Précondition : les moyennes doivent être arrondies AVANT l'appel (comme partout
+ * ailleurs, `Math.round(m * 100) / 100`). Deux élèves affichés à « 12.33 » doivent
+ * partager le même rang ; sur des valeurs brutes, 12.334999 et 12.335001 seraient
+ * départagés alors que le PDF montre le même nombre.
  *
  * Une moyenne `null` (élève sans aucune note) est placée en fin de liste et ne
  * reçoit AUCUN rang (`rang: null`) : on ne classe pas un élève non évalué.

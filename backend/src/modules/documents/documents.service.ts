@@ -547,7 +547,9 @@ async function buildTableauNotesClasse(
       totalNorm += (v / max) * baseNote * c;
       totalCoeff += c;
     }
-    const moy = totalCoeff > 0 ? totalNorm / totalCoeff : null;
+    // Arrondi au centième AVANT le classement : c'est la valeur affichée, et deux
+    // élèves montrés à la même moyenne doivent être ex aequo (cf. classer()).
+    const moy = totalCoeff > 0 ? Math.round((totalNorm / totalCoeff) * 100) / 100 : null;
     return { eleve: insc.eleve, vals, moy };
   });
 
