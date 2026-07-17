@@ -19,3 +19,12 @@ export const ROLE_GROUPS = {
   TOUS:         [ROLES.ADMIN, ROLES.DIRECTEUR, ROLES.GESTIONNAIRE, ROLES.AGENT_SCOLARITE, ROLES.PROFESSEUR, ROLES.POINTEUR],
   ADMIN_ONLY:   [ROLES.ADMIN],
 } as const;
+
+/**
+ * Prédicat d'autorisation : `role` figure-t-il dans la liste `allowed` ?
+ * Source unique utilisée par requireRole (middleware) ET par les tests RBAC —
+ * pour que le test exerce la logique de production, pas une copie.
+ */
+export function hasRole(role: string | undefined | null, allowed: readonly string[]): boolean {
+  return !!role && allowed.includes(role);
+}

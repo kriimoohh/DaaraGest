@@ -2,7 +2,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
 import { genererProgressionsSchema, validerProgressionSchema } from './progression.schema';
 import {
-  listerProgressions, genererProgressions, validerProgression, historiqueEleve,
+  listerProgressions, genererProgressions, validerProgression,
 } from './progression.service';
 
 export async function listerHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -34,12 +34,3 @@ export async function validerHandler(request: FastifyRequest, reply: FastifyRepl
   }
 }
 
-export async function historiqueEleveHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { etablissement_id } = request.user as JwtPayload;
-  const { eleve_id } = request.params as { eleve_id: string };
-  try {
-    return reply.send(await historiqueEleve(eleve_id, etablissement_id));
-  } catch (err) {
-    return reply.status(400).send({ error: (err as Error).message });
-  }
-}
