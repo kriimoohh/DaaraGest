@@ -416,7 +416,7 @@ export async function deverrouillerPeriode(
     where: { id: { in: bulletins.map(b => b.id) } },
     data: { valide_par: null, valide_le: null },
   });
-  await logAction(etablissement_id, acteur_id, 'UPDATE', 'Bulletin', 'deverrouillage_periode', {
+  await logAction(etablissement_id, acteur_id, 'BULLETIN_DEVERROUILLAGE', 'Bulletin', 'deverrouillage_periode', {
     classe_id: data.classe_id, periode: data.periode, filiere: data.filiere, count: bulletins.length,
   });
   return { count: bulletins.length };

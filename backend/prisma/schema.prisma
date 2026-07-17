@@ -653,10 +653,15 @@ model AuditLog {
   id               String   @id @default(uuid())
   etablissement_id String
   utilisateur_id   String
-  action           String // 'CREATE' | 'UPDATE' | 'DELETE'
+  // Action sémantique (cf. utils/audit-actions.ts) : CRUD génériques + actions
+  // explicites (PASSWORD_RESET, PROGRESSION_VALIDATE, PORTAIL_REVOKE…).
+  action           String
   entite           String // 'PaiementEleve', 'Eleve', 'Utilisateur', 'Note', ...
   entite_id        String
   details          Json?
+  // Description FR lisible, calculée à l'écriture (describeAuditFr). Sert à
+  // l'export et à l'inspection SQL ; null pour les lignes écrites avant ce champ.
+  description      String?
   created_at       DateTime @default(now())
 
   @@index([etablissement_id, created_at])

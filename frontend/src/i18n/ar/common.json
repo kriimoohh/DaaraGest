@@ -2098,9 +2098,31 @@
     "acteur": "المستخدم",
     "details": "التفاصيل",
     "aucun": "لا توجد سجلات",
-    "action_CREATE": "إنشاء",
-    "action_UPDATE": "تعديل",
-    "action_DELETE": "حذف"
+    "actions": {
+      "CREATE": "إنشاء",
+      "UPDATE": "تعديل",
+      "DELETE": "حذف",
+      "PASSWORD_RESET": "إعادة تعيين كلمة المرور",
+      "USER_REACTIVATE": "إعادة تفعيل الحساب",
+      "PROGRESSION_VALIDATE": "قرار الانتقال",
+      "PORTAIL_GENERATE": "إنشاء رابط البوابة",
+      "PORTAIL_REVOKE": "إلغاء رابط البوابة",
+      "BULLETIN_DEVERROUILLAGE": "إلغاء قفل الفترة"
+    },
+    "entites": {
+      "Eleve": "تلميذ",
+      "Inscription": "تسجيل",
+      "Utilisateur": "مستخدم",
+      "Filiere": "شعبة",
+      "PaiementEleve": "دفعة تلميذ",
+      "PaiementPersonnel": "دفعة موظف",
+      "Note": "نقاط",
+      "Bulletin": "كشف النقاط",
+      "ClasseMatiere": "برنامج القسم",
+      "ClasseMatierePeriode": "برنامج (حسب الفترة)",
+      "ProgressionEleve": "الانتقال",
+      "PortailParentToken": "رابط بوابة الأولياء"
+    }
   },
   "profil": {
     "titre": "ملفي الشخصي",

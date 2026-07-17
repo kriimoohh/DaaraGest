@@ -1,4 +1,5 @@
 import prisma from '../../config/database';
+import { resolveAuditAction, describeAuditFr, resumeDetails } from '../../utils/audit-actions';
 
 export interface AuditFiltres {
   page?: number;
@@ -50,12 +51,22 @@ export async function listerAuditLogs(etablissement_id: string, f: AuditFiltres)
     total, page, limit,
     data: rows.map(r => {
       const u = userMap.get(r.utilisateur_id);
+      const details = r.details as Record<string, unknown> | null;
+      // Action NORMALISÉE : les anciennes lignes (action générique + details.action)
+      // remontent avec leur vraie action sémantique, comme les nouvelles.
+      const action = resolveAuditAction(r.action, r.entite_id, details);
       return {
         id: r.id,
         created_at: r.created_at,
-        action: r.action,
+        action,
         entite: r.entite,
         entite_id: r.entite_id,
+        // Résumé lisible des détails (données) : le front l'affiche à la place du
+        // JSON brut, sous les libellés localisés action + entité.
+        resume: resumeDetails(r.entite, r.entite_id, details),
+        // Description FR : stockée pour les nouvelles lignes, recalculée à la volée
+        // pour les anciennes (pas de backfill). Sert au repli et à l'export.
+        description: r.description ?? describeAuditFr(r.action, r.entite, r.entite_id, details),
         details: r.details,
         utilisateur_id: r.utilisateur_id,
         acteur: u ? `${u.prenom_fr} ${u.nom_fr}`.trim() : r.utilisateur_id,

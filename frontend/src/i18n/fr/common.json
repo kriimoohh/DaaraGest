@@ -2098,9 +2098,31 @@
     "acteur": "Acteur",
     "details": "Détails",
     "aucun": "Aucune entrée",
-    "action_CREATE": "Création",
-    "action_UPDATE": "Modification",
-    "action_DELETE": "Suppression"
+    "actions": {
+      "CREATE": "Création",
+      "UPDATE": "Modification",
+      "DELETE": "Suppression",
+      "PASSWORD_RESET": "Réinitialisation du mot de passe",
+      "USER_REACTIVATE": "Réactivation du compte",
+      "PROGRESSION_VALIDATE": "Décision de passage",
+      "PORTAIL_GENERATE": "Lien portail généré",
+      "PORTAIL_REVOKE": "Lien portail révoqué",
+      "BULLETIN_DEVERROUILLAGE": "Période déverrouillée"
+    },
+    "entites": {
+      "Eleve": "Élève",
+      "Inscription": "Inscription",
+      "Utilisateur": "Utilisateur",
+      "Filiere": "Filière",
+      "PaiementEleve": "Paiement élève",
+      "PaiementPersonnel": "Paiement personnel",
+      "Note": "Notes",
+      "Bulletin": "Bulletin",
+      "ClasseMatiere": "Programme de classe",
+      "ClasseMatierePeriode": "Programme (par période)",
+      "ProgressionEleve": "Progression",
+      "PortailParentToken": "Lien portail parent"
+    }
   },
   "profil": {
     "titre": "Mon profil",

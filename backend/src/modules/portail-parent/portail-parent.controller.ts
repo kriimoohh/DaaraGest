@@ -4,21 +4,21 @@ import { genererTokenSchema } from './portail-parent.schema';
 import { genererToken, revoquerToken, getPortailData, listerTokensEtablissement, getBulletinPdfViaToken } from './portail-parent.service';
 
 export async function genererHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { etablissement_id } = request.user as JwtPayload;
+  const { etablissement_id, id: acteurId } = request.user as JwtPayload;
   const parsed = genererTokenSchema.safeParse(request.body);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
   try {
-    return reply.status(201).send(await genererToken(etablissement_id, parsed.data.eleve_id));
+    return reply.status(201).send(await genererToken(etablissement_id, parsed.data.eleve_id, acteurId));
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
   }
 }
 
 export async function revoquerHandler(request: FastifyRequest, reply: FastifyReply) {
-  const { etablissement_id } = request.user as JwtPayload;
+  const { etablissement_id, id: acteurId } = request.user as JwtPayload;
   const { token } = request.params as { token: string };
   try {
-    await revoquerToken(token, etablissement_id);
+    await revoquerToken(token, etablissement_id, acteurId);
     return reply.send({ success: true });
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });

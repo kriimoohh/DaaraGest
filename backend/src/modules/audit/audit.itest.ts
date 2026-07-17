@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import prisma from '../../config/database';
 import { listerAuditLogs, listerEntitesAudit } from './audit.service';
+import { logAction } from '../../utils/audit';
 
 const RUN = randomUUID().slice(0, 8);
 const etabId = `audit-etab-${RUN}`;
@@ -47,5 +48,43 @@ describe('Journal d\'audit — lecture (P1)', () => {
   it('expose les entités distinctes', async () => {
     const entites = await listerEntitesAudit(etabId);
     expect(entites.sort()).toEqual(['Eleve', 'Filiere']);
+  });
+});
+
+describe('Journal d\'audit — description et normalisation', () => {
+  const etab2 = `audit2-etab-${RUN}`;
+  beforeAll(async () => {
+    await prisma.auditLog.deleteMany({ where: { etablissement_id: etab2 } });
+    await prisma.etablissement.deleteMany({ where: { id: etab2 } });
+    await prisma.etablissement.create({ data: { id: etab2, nom_fr: 'Audit2', code: `AU2${RUN.slice(0, 3).toUpperCase()}` } });
+  });
+  afterAll(async () => {
+    await prisma.auditLog.deleteMany({ where: { etablissement_id: etab2 } });
+    await prisma.etablissement.deleteMany({ where: { id: etab2 } });
+  });
+
+  it('logAction calcule et stocke une description FR lisible', async () => {
+    await logAction(etab2, 'u1', 'PASSWORD_RESET', 'Utilisateur', 'user-9', { identifiant: 'fdiop' });
+    const row = await prisma.auditLog.findFirstOrThrow({ where: { etablissement_id: etab2, entite_id: 'user-9' } });
+    expect(row.description).toBe('Réinitialisation du mot de passe — fdiop');
+  });
+
+  it('une action sémantique est filtrable telle quelle', async () => {
+    const res = await listerAuditLogs(etab2, { action: 'PASSWORD_RESET' });
+    expect(res.total).toBe(1);
+    expect(res.data[0].action).toBe('PASSWORD_RESET');
+    expect(res.data[0].resume).toBe('fdiop');
+  });
+
+  it('une ancienne ligne (UPDATE + details.action) est normalisée à la lecture', async () => {
+    // Ligne écrite « à l'ancienne », sans description et sans action sémantique.
+    await prisma.auditLog.create({
+      data: { etablissement_id: etab2, utilisateur_id: 'u1', action: 'UPDATE', entite: 'Utilisateur', entite_id: 'user-old', details: { action: 'reset_password', identifiant: 'ancien' } },
+    });
+    const res = await listerAuditLogs(etab2, {});
+    const ligne = res.data.find(d => d.entite_id === 'user-old')!;
+    // L'action remonte en PASSWORD_RESET et une description est recalculée à la volée.
+    expect(ligne.action).toBe('PASSWORD_RESET');
+    expect(ligne.description).toContain('Réinitialisation du mot de passe');
   });
 });

@@ -14,16 +14,27 @@ interface AuditLog {
   action: string;
   entite: string;
   entite_id: string;
+  resume: string;
+  description: string | null;
   details: unknown;
   acteur: string;
   acteur_role: string | null;
 }
 interface AuditResponse { total: number; page: number; limit: number; data: AuditLog[]; }
 
+// Couleur du badge par action. Les actions sémantiques héritent d'une teinte
+// selon leur nature (création/suppression/sécurité) ; défaut neutre sinon.
 const ACTION_VARIANT: Record<string, 'success' | 'info' | 'danger' | 'neutral'> = {
   CREATE: 'success', UPDATE: 'info', DELETE: 'danger',
+  PASSWORD_RESET: 'info', USER_REACTIVATE: 'success',
+  PROGRESSION_VALIDATE: 'info', PORTAIL_GENERATE: 'success', PORTAIL_REVOKE: 'danger',
+  BULLETIN_DEVERROUILLAGE: 'info',
 };
-const ACTION_LABEL: Record<string, string> = { CREATE: 'audit.action_CREATE', UPDATE: 'audit.action_UPDATE', DELETE: 'audit.action_DELETE' };
+// Actions proposées au filtre (miroir de AUDIT_ACTIONS côté back).
+const FILTER_ACTIONS = [
+  'CREATE', 'UPDATE', 'DELETE', 'PASSWORD_RESET', 'USER_REACTIVATE',
+  'PROGRESSION_VALIDATE', 'PORTAIL_GENERATE', 'PORTAIL_REVOKE', 'BULLETIN_DEVERROUILLAGE',
+];
 
 export function AuditPage() {
   const { t, i18n } = useTranslation();
@@ -75,11 +86,11 @@ export function AuditPage() {
       <div className="card card-pad" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 16 }}>
         <div style={{ minWidth: 160 }}>
           <Select label={t('audit.action', 'Action')} value={fAction} onChange={e => setFAction(e.target.value)}
-            options={[{ value: '', label: t('common.tous', 'Toutes') }, ...Object.keys(ACTION_LABEL).map(a => ({ value: a, label: t(ACTION_LABEL[a]) }))]} />
+            options={[{ value: '', label: t('common.tous', 'Toutes') }, ...FILTER_ACTIONS.map(a => ({ value: a, label: t(`audit.actions.${a}`, { defaultValue: a }) }))]} />
         </div>
         <div style={{ minWidth: 180 }}>
           <Select label={t('audit.entite', 'Type de donnée')} value={fEntite} onChange={e => setFEntite(e.target.value)}
-            options={[{ value: '', label: t('common.tous', 'Tous') }, ...entites.map(e => ({ value: e, label: e }))]} />
+            options={[{ value: '', label: t('common.tous', 'Tous') }, ...entites.map(e => ({ value: e, label: t(`audit.entites.${e}`, { defaultValue: e }) }))]} />
         </div>
         <Input label={t('audit.date_debut', 'Du')} type="date" value={fDebut} onChange={e => setFDebut(e.target.value)} />
         <Input label={t('audit.date_fin', 'Au')} type="date" value={fFin} onChange={e => setFFin(e.target.value)} />
@@ -115,11 +126,11 @@ export function AuditPage() {
                     <div style={{ fontWeight: 600 }}>{l.acteur}</div>
                     {l.acteur_role && <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>{l.acteur_role}</div>}
                   </td>
-                  <td><Badge label={ACTION_LABEL[l.action] ? t(ACTION_LABEL[l.action]) : l.action} variant={ACTION_VARIANT[l.action] ?? 'neutral'} /></td>
-                  <td style={{ fontSize: 13 }}>{l.entite}</td>
+                  <td><Badge label={t(`audit.actions.${l.action}`, { defaultValue: l.action })} variant={ACTION_VARIANT[l.action] ?? 'neutral'} /></td>
+                  <td style={{ fontSize: 13 }}>{t(`audit.entites.${l.entite}`, { defaultValue: l.entite })}</td>
                   <td style={{ fontSize: 12, color: 'var(--ink-3)', maxWidth: 340, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                      title={l.details ? JSON.stringify(l.details) : ''}>
-                    {l.details && Object.keys(l.details as object).length > 0 ? JSON.stringify(l.details) : '—'}
+                      title={l.description ?? l.resume}>
+                    {l.resume || '—'}
                   </td>
                 </tr>
               ))}
