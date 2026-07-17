@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
 import { genererTokenSchema } from './portail-parent.schema';
-import { genererToken, revoquerToken, getPortailData, listerTokensEtablissement, getBulletinPdfViaToken } from './portail-parent.service';
+import { genererToken, regenererToken, revoquerToken, getPortailData, listerTokensEtablissement, getBulletinPdfViaToken } from './portail-parent.service';
 
 export async function genererHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id, id: acteurId } = request.user as JwtPayload;
@@ -9,6 +9,17 @@ export async function genererHandler(request: FastifyRequest, reply: FastifyRepl
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
   try {
     return reply.status(201).send(await genererToken(etablissement_id, parsed.data.eleve_id, acteurId));
+  } catch (err) {
+    return reply.status(400).send({ error: (err as Error).message });
+  }
+}
+
+export async function regenererHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id, id: acteurId } = request.user as JwtPayload;
+  const parsed = genererTokenSchema.safeParse(request.body);
+  if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  try {
+    return reply.send(await regenererToken(etablissement_id, parsed.data.eleve_id, acteurId));
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
   }

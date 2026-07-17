@@ -60,6 +60,7 @@ const DocumentsPage      = lazyWithReload(() => import('./pages/Documents').then
 const PortailParentPage  = lazyWithReload(() => import('./pages/PortailParent').then(m => ({ default: m.PortailParentPage })));
 const RapportsPage       = lazyWithReload(() => import('./pages/Rapports').then(m => ({ default: m.RapportsPage })));
 const AuditPage          = lazyWithReload(() => import('./pages/Audit').then(m => ({ default: m.AuditPage })));
+const GestionPortailPage = lazyWithReload(() => import('./pages/GestionPortail').then(m => ({ default: m.GestionPortailPage })));
 const BibliothequeePage  = lazyWithReload(() => import('./pages/Bibliotheque').then(m => ({ default: m.BibliothequeePage })));
 const DemandesAbsencePersonnelPage = lazyWithReload(() => import('./pages/DemandesAbsencePersonnel').then(m => ({ default: m.DemandesAbsencePersonnelPage })));
 
@@ -153,6 +154,11 @@ export default function App() {
             } />
             <Route path="/audit" element={
               <ProtectedRoute roles={['admin', 'directeur']}><AuditPage /></ProtectedRoute>
+            } />
+            {/* Rôles alignés sur le back (ROLE_GROUPS.GESTION) et la nav : PAS
+                d'agent de scolarité (ROLES.gestion l'inclut, à tort ici). */}
+            <Route path="/liens-portail" element={
+              <ProtectedRoute roles={['admin', 'directeur', 'gestionnaire']}><GestionPortailPage /></ProtectedRoute>
             } />
             <Route path="/bibliotheque" element={
               <ProtectedRoute roles={ROLES.gestion}><BibliothequeePage /></ProtectedRoute>

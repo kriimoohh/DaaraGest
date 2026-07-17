@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import prisma from '../../config/database';
 import { getBaremesClasse } from '../bulletins/bulletins.service';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
@@ -35,6 +36,30 @@ export async function genererToken(etablissement_id: string, eleve_id: string, a
   if (acteurId) {
     await logAction(etablissement_id, acteurId, 'PORTAIL_GENERATE', 'PortailParentToken', rec.id, {
       nom: `${rec.eleve.prenom_fr} ${rec.eleve.nom_fr}`.trim(), matricule: rec.eleve.matricule,
+    });
+  }
+  return rec;
+}
+
+// Rotation : émet un NOUVEAU token pour l'élève, invalidant l'ancien lien (utile
+// si un lien a fuité). Distinct de genererToken, qui RÉUTILISE le token existant
+// pour ne pas casser un lien valide en le ré-affichant.
+export async function regenererToken(etablissement_id: string, eleve_id: string, acteurId?: string) {
+  const existing = await prisma.portailParentToken.findUnique({
+    where: { etablissement_id_eleve_id: { etablissement_id, eleve_id } },
+    include: { eleve: { select: { nom_fr: true, prenom_fr: true, matricule: true } } },
+  });
+  if (!existing) throw new NotFoundError('Aucun lien à régénérer pour cet élève');
+
+  const expires_at = await calculerExpiration(etablissement_id);
+  const rec = await prisma.portailParentToken.update({
+    where: { id: existing.id },
+    data: { token: randomUUID(), actif: true, expires_at },
+    include: { eleve: { select: { nom_fr: true, prenom_fr: true, matricule: true } } },
+  });
+  if (acteurId) {
+    await logAction(etablissement_id, acteurId, 'PORTAIL_GENERATE', 'PortailParentToken', rec.id, {
+      nom: `${rec.eleve.prenom_fr} ${rec.eleve.nom_fr}`.trim(), matricule: rec.eleve.matricule, code: 'rotation',
     });
   }
   return rec;

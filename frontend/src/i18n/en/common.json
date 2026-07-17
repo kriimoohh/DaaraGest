@@ -20,6 +20,7 @@
     "domaines": "Domains",
     "utilisateurs": "Users",
     "audit": "Audit log",
+    "liens_portail": "Parent portal links",
     "parametres": "Settings",
     "pointage": "Attendance",
     "absences": "Student absences",
@@ -2123,6 +2124,26 @@
       "ProgressionEleve": "Promotion",
       "PortailParentToken": "Parent portal link"
     }
+  },
+  "gestion_portail": {
+    "titre": "Parent portal links",
+    "sous_titre": "Account-free access links to grades and report cards. Regenerate a leaked link (the old one stops working at once) or revoke it.",
+    "rechercher": "Search a student…",
+    "eleve": "Student",
+    "statut": "Status",
+    "expire_le": "Expires on",
+    "cree_le": "Created on",
+    "actions": "Actions",
+    "aucun": "No portal link",
+    "copier": "Copy",
+    "regenerer": "Regenerate",
+    "revoquer": "Revoke",
+    "lien_copie": "Link copied",
+    "regenere": "New link generated — the old one no longer works",
+    "revoque": "Link revoked",
+    "revoquer_titre": "Revoke link",
+    "revoquer_message": "{{nom}}'s link will stop working immediately. This action is irreversible.",
+    "statuts": { "actif": "Active", "revoque": "Revoked", "expire": "Expired" }
   },
   "profil": {
     "titre": "My profile",
