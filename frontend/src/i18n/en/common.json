@@ -1399,7 +1399,15 @@
     "footer": "DaaraGest — School management system",
     "chargement": "Loading…",
     "note_th": "Grade",
-    "retard": "Late"
+    "retard": "Late",
+    "devoirs": "Homework",
+    "aucun_devoir": "No upcoming homework.",
+    "devoir_passe": "Past",
+    "devoir_aujourdhui": "Today",
+    "devoir_type_lecon": "Lesson",
+    "devoir_type_exercice": "Exercise",
+    "devoir_type_recitation": "Recitation",
+    "devoir_type_autre": "Other"
   },
   "calendrier": {
     "titre": "School calendar",
