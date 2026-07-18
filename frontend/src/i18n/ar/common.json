@@ -788,6 +788,8 @@
     "etat_perime": "غير محدَّثة — عُدِّلت النقاط أو البرنامج بعد الإصدار في {{date}}",
     "etat_partiel": "جزئية — {{generes}}/{{total}} شهادة مُنشأة",
     "etat_non_genere": "لم تُنشأ بعد",
+    "apercu": "معاينة",
+    "telecharger": "تحميل",
     "err_selection_filieres": "اختر شعبة واحدة على الأقل للدمج",
     "filieres_combiner": "الشعب المراد دمجها",
     "preflight_sans_note": "بدون درجة مدخلة",

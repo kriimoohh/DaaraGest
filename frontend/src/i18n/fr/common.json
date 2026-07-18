@@ -788,6 +788,8 @@
     "etat_perime": "Périmés — notes ou programme modifiés après la génération du {{date}}",
     "etat_partiel": "Partiels — {{generes}}/{{total}} bulletins générés",
     "etat_non_genere": "Pas encore générés",
+    "apercu": "Aperçu",
+    "telecharger": "Télécharger",
     "err_selection_filieres": "Sélectionnez au moins une filière à combiner",
     "filieres_combiner": "Filières à combiner",
     "preflight_sans_note": "Sans note saisie",

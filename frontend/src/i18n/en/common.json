@@ -786,6 +786,8 @@
     "etat_perime": "Outdated — grades or curriculum changed after generation on {{date}}",
     "etat_partiel": "Partial — {{generes}}/{{total}} report cards generated",
     "etat_non_genere": "Not generated yet",
+    "apercu": "Preview",
+    "telecharger": "Download",
     "err_selection_filieres": "Select at least one track to combine",
     "filieres_combiner": "Tracks to combine",
     "preflight_sans_note": "No grade entered",
