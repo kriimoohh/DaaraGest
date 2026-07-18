@@ -587,6 +587,116 @@ export async function preflightBulletins(etablissement_id: string, data: Preflig
   };
 }
 
+// ─── État des générations (détection de péremption) ──────────────────────────
+
+export type EtatGenerations = {
+  statut: 'non_genere' | 'perime' | 'partiel' | 'a_jour';
+  total_eleves: number;
+  eleves_avec_notes: number;
+  generes: number;
+  valides: number;
+  generated_at_min: Date | null;
+  generated_at_max: Date | null;
+  derniere_note_maj: Date | null;
+  dernier_prog_maj: Date | null;
+};
+
+/**
+ * État de la génération d'un (classe × période × filière) : absente, périmée,
+ * partielle ou à jour. Le rang étant RELATIF, une seule note modifiée après la
+ * génération invalide tous les bulletins du groupe — la comparaison se fait donc
+ * au niveau du groupe : plus ANCIENNE génération vs dernière modification de
+ * note (des filières du bulletin) et de programme (coeff/barème/évaluée ; l'AJOUT
+ * d'un override de période est couvert par created_at). Limites assumées : les
+ * changements de programme antérieurs au suivi (updated_at NULL) et les
+ * suppressions de notes ne laissent pas de trace datée — non détectés ici (la
+ * régénération auto à la saisie couvre les suppressions au fil de l'eau).
+ */
+export async function etatGenerations(etablissement_id: string, data: PreflightInput): Promise<EtatGenerations> {
+  const { classe_id, annee_scolaire_id, periode, filiere } = data;
+  const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
+  if (!classe) throw new NotFoundError('Classe introuvable');
+
+  const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
+  const nbPeriodes = config?.nb_periodes ?? 3;
+  const periodes = periode === 0 ? Array.from({ length: nbPeriodes }, (_, i) => i + 1) : [periode];
+  const filieres: ('FR' | 'AR' | 'EN')[] = filiere === 'COMBINE'
+    ? combineCodesChoisis(await filieresActivesCodes(etablissement_id), data.filieres_combine)
+    : [filiere as 'FR' | 'AR' | 'EN'];
+
+  const inscriptions = await getElevesClasse(classe_id, annee_scolaire_id);
+  const elevesIds = inscriptions.map(i => i.eleve_id);
+  const vide: EtatGenerations = {
+    statut: 'non_genere', total_eleves: 0, eleves_avec_notes: 0, generes: 0, valides: 0,
+    generated_at_min: null, generated_at_max: null, derniere_note_maj: null, dernier_prog_maj: null,
+  };
+  if (elevesIds.length === 0) return vide;
+
+  const notesWhere = {
+    eleve_id: { in: elevesIds }, annee_scolaire_id, periode: { in: periodes },
+    matiere: { filiere_ref: { code: { in: filieres } } },
+  };
+  const [bulletins, notesMax, elevesNotes, classesLiees] = await Promise.all([
+    prisma.bulletin.findMany({
+      where: { eleve_id: { in: elevesIds }, annee_scolaire_id, periode, filiere },
+      select: { generated_at: true, valide_le: true },
+    }),
+    prisma.note.aggregate({ _max: { updated_at: true }, where: notesWhere }),
+    prisma.note.findMany({ where: notesWhere, select: { eleve_id: true }, distinct: ['eleve_id'] }),
+    // Un bulletin COMBINE dépend du programme de TOUTES les classes de l'élève
+    // (FR + AR) — pas seulement de la classe sélectionnée.
+    prisma.inscriptionClasse.findMany({
+      where: {
+        inscription: { annee_scolaire_id, eleve_id: { in: elevesIds } },
+        filiere: { code: { in: filieres } },
+      },
+      select: { classe_id: true }, distinct: ['classe_id'],
+    }),
+  ]);
+
+  const classeIds = classesLiees.map(c => c.classe_id);
+  const [cmMax, cmpMax] = await Promise.all([
+    prisma.classeMatiere.aggregate({ _max: { updated_at: true }, where: { classe_id: { in: classeIds } } }),
+    prisma.classeMatierePeriode.aggregate({
+      _max: { created_at: true, updated_at: true },
+      where: { classe_id: { in: classeIds }, periode: { in: periodes } },
+    }),
+  ]);
+
+  const maxDate = (...dates: (Date | null | undefined)[]): Date | null =>
+    dates.reduce<Date | null>((acc, d) => (d && (!acc || d > acc) ? d : acc), null);
+
+  const derniere_note_maj = notesMax._max.updated_at ?? null;
+  const dernier_prog_maj = maxDate(cmMax._max.updated_at, cmpMax._max.created_at, cmpMax._max.updated_at);
+
+  const generes = bulletins.length;
+  const valides = bulletins.filter(b => b.valide_le !== null).length;
+  // Un bulletin sans generated_at (donnée ancienne) est réputé de fraîcheur
+  // inconnue → il tire generated_at_min à null et le groupe sera « périmé » dès
+  // qu'une modification datée existe.
+  const generatedDates = bulletins.map(b => b.generated_at);
+  const generated_at_min = generatedDates.some(d => d === null)
+    ? null
+    : generatedDates.reduce<Date | null>((acc, d) => (d && (!acc || d < acc) ? d : acc), null);
+  const generated_at_max = maxDate(...generatedDates);
+
+  const eleves_avec_notes = elevesNotes.length;
+
+  let statut: EtatGenerations['statut'];
+  const perime = (ref: Date | null) =>
+    (derniere_note_maj !== null && (ref === null || derniere_note_maj > ref)) ||
+    (dernier_prog_maj !== null && (ref === null || dernier_prog_maj > ref));
+  if (generes === 0) statut = 'non_genere';
+  else if (perime(generated_at_min)) statut = 'perime';
+  else if (generes < eleves_avec_notes) statut = 'partiel';
+  else statut = 'a_jour';
+
+  return {
+    statut, total_eleves: elevesIds.length, eleves_avec_notes, generes, valides,
+    generated_at_min, generated_at_max, derniere_note_maj, dernier_prog_maj,
+  };
+}
+
 // ─── Générer bulletins trimestriels (FR | AR | COMBINE) ──────────────────────
 
 export async function genererBulletins(etablissement_id: string, data: GenererBulletinInput) {

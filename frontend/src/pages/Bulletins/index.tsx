@@ -15,6 +15,12 @@ import { toast } from '../../store/toastStore';
 
 interface AnneeScolaire { id: string; libelle: string; }
 interface Classe { id: string; nom_fr: string; nom_ar?: string | null; filiere: string; }
+interface EtatGenerations {
+  statut: 'non_genere' | 'perime' | 'partiel' | 'a_jour';
+  total_eleves: number; eleves_avec_notes: number; generes: number; valides: number;
+  generated_at_min: string | null; generated_at_max: string | null;
+  derniere_note_maj: string | null; dernier_prog_maj: string | null;
+}
 interface Bulletin {
   id: string; periode: number; filiere: string;
   annee_scolaire_id?: string;
@@ -188,6 +194,11 @@ export function BulletinsPage() {
   const isAnnuel = type.startsWith('ANNUEL');
   const filiere = isAnnuel ? type.replace('ANNUEL_', '') : type;
 
+  // État de la génération du groupe sélectionné (classe × période × filière) :
+  // à jour / périmé (notes ou programme modifiés après génération) / partiel / absent.
+  const [etat, setEtat] = useState<EtatGenerations | null>(null);
+  const [etatRefresh, setEtatRefresh] = useState(0);
+
   // Combiné au choix : filières à fusionner (défaut = toutes les actives). Réinitialisé
   // quand l'ensemble des filières actives change.
   const activeCodesStr = filieresActives.map(f => f.code).join(',');
@@ -204,6 +215,20 @@ export function BulletinsPage() {
     if (!anneeId) return;
     api.get<Classe[]>(`/api/v1/classes?annee_scolaire_id=${anneeId}`).then(setClasses).catch(() => {});
   }, [anneeId]);
+
+  const combineStr = combineFilieres.join(',');
+  useEffect(() => {
+    if (!classeId || !anneeId) { setEtat(null); return; }
+    const filiereFetch = isAnnuel ? filiere : type;
+    const periodeFetch = isAnnuel ? 0 : parseInt(periode);
+    const params = new URLSearchParams({
+      classe_id: classeId, annee_scolaire_id: anneeId,
+      periode: String(periodeFetch), filiere: filiereFetch,
+    });
+    if (filiereFetch === 'COMBINE' && combineStr) params.set('filieres_combine', combineStr);
+    api.get<EtatGenerations>(`/api/v1/bulletins/etat?${params}`).then(setEtat).catch(() => setEtat(null));
+    // `api` volontairement hors dépendances (référence instable → boucle de requêtes).
+  }, [classeId, anneeId, periode, type, combineStr, etatRefresh]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const charger = async () => {
     if (!anneeId) return;
@@ -268,6 +293,7 @@ export function BulletinsPage() {
       }
       toast.success(t('bulletin.ok_generes'));
       setPreflight(null);
+      setEtatRefresh(n => n + 1);
       await charger();
     } catch (err) {
       toast.error((err as Error).message || t('bulletin.err_generation'));
@@ -397,6 +423,23 @@ export function BulletinsPage() {
           <Button onClick={generer} loading={preflightLoading || generating} disabled={!classeId}>
             {t('actions.generer')}
           </Button>
+          {etat && (() => {
+            const dateGen = etat.generated_at_max
+              ? new Date(etat.generated_at_max).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
+              : '—';
+            switch (etat.statut) {
+              case 'a_jour':
+                return <Badge variant="success" dot label={t('bulletin.etat_a_jour', { date: dateGen })} />;
+              case 'perime':
+                return <Badge variant="warning" dot label={t('bulletin.etat_perime', { date: dateGen })} />;
+              case 'partiel':
+                return <Badge variant="warning" dot label={t('bulletin.etat_partiel', { generes: etat.generes, total: etat.eleves_avec_notes })} />;
+              case 'non_genere':
+                return etat.eleves_avec_notes > 0
+                  ? <Badge variant="neutral" dot label={t('bulletin.etat_non_genere')} />
+                  : null; // pas de notes du tout : le badge n'apporterait rien
+            }
+          })()}
           {bulletins.length > 0 && (
             <Button variant="secondary" onClick={downloadAll} loading={downloadingClasse} disabled={!classeId}>
               ⬇ {t('bulletin.telecharger_tous')} ({bulletins.length})
