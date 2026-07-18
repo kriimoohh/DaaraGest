@@ -3,8 +3,9 @@ import prisma from '../../config/database';
 import { PersonnelInput, AffectationInput } from './personnel.schema';
 import { NotFoundError, ValidationError, ConflictError } from '../../utils/errors';
 import { genererMatricule } from '../../utils/matricule';
+import { sansMotDePasse, epurerPersonnelPourRole } from '../../utils/sanitize';
 
-export async function listerPersonnel(etablissement_id: string, page = 1, search?: string, fonction?: string, specialite?: string, annee_scolaire_id?: string, limit = 20) {
+export async function listerPersonnel(etablissement_id: string, role: string, page = 1, search?: string, fonction?: string, specialite?: string, annee_scolaire_id?: string, limit = 20) {
   const skip = (page - 1) * limit;
 
   // Filtres sur la relation Personnel (fonction exacte, spécialité « contient »).
@@ -51,6 +52,8 @@ export async function listerPersonnel(etablissement_id: string, page = 1, search
   ]);
 
   // Réduit matieres_classes (1 ligne/matière) en classes distinctes.
+  // Épuration systématique : jamais de hash de mot de passe ; salaire/CNI/QR
+  // réservés aux rôles de gestion (annuaire seulement pour prof/pointeur).
   const data = items.map((u) => {
     const liens = u.personnel?.matieres_classes ?? [];
     const parClasse = new Map<string, { id: string; nom_fr: string; filiere: string }>();
@@ -59,14 +62,14 @@ export async function listerPersonnel(etablissement_id: string, page = 1, search
     const classes_assignees = [...parClasse.values()]
       .sort((a, b) => a.nom_fr.localeCompare(b.nom_fr, 'fr'))
       .map((classe) => ({ classe }));
-    const personnel = u.personnel ? (() => { const { matieres_classes: _omit, ...rest } = u.personnel; return rest; })() : u.personnel;
-    return { ...u, personnel, classes_assignees };
+    const personnel = u.personnel ? (() => { const { matieres_classes: _omit, ...rest } = u.personnel; return epurerPersonnelPourRole(rest, role); })() : u.personnel;
+    return { ...sansMotDePasse(u), personnel, classes_assignees };
   });
 
   return { total, page, limit, data };
 }
 
-export async function getPersonnel(id: string, etablissement_id: string) {
+export async function getPersonnel(id: string, etablissement_id: string, role: string) {
   const professeur = await prisma.personnel.findFirst({
     where: {
       id,
@@ -78,7 +81,8 @@ export async function getPersonnel(id: string, etablissement_id: string) {
     },
   });
   if (!professeur) throw new NotFoundError('Personnel introuvable');
-  return professeur;
+  // Jamais de hash ; fiche RH (salaire/CNI/QR) réservée aux rôles de gestion.
+  return epurerPersonnelPourRole({ ...professeur, utilisateur: sansMotDePasse(professeur.utilisateur) }, role);
 }
 
 export async function creerPersonnel(etablissement_id: string, data: PersonnelInput) {
@@ -138,7 +142,7 @@ export async function creerPersonnel(etablissement_id: string, data: PersonnelIn
     include: { utilisateur: true },
   });
 
-  return professeur;
+  return { ...professeur, utilisateur: sansMotDePasse(professeur.utilisateur) };
 }
 
 export async function modifierPersonnel(id: string, etablissement_id: string, data: Partial<PersonnelInput>) {
@@ -202,7 +206,8 @@ export async function modifierPersonnel(id: string, etablissement_id: string, da
   );
 
   const results = await Promise.all(updateTasks);
-  return results[results.length - 1];
+  const dernier = results[results.length - 1] as { utilisateur?: Record<string, unknown> } & Record<string, unknown>;
+  return dernier.utilisateur ? { ...dernier, utilisateur: sansMotDePasse(dernier.utilisateur) } : dernier;
 }
 
 // ── Affectations par classe (PersonnelMatiereClasse) ────────────────────────
@@ -322,8 +327,9 @@ export async function supprimerPersonnel(id: string, etablissement_id: string) {
   // Utilisateurs) : sans ça, un personnel supprimé garde son identifiant occupé
   // et bloque toute recréation avec le même identifiant.
   const identifiantLibere = `${professeur.utilisateur.identifiant}_deleted_${Date.now()}`;
-  return prisma.utilisateur.update({
+  const maj = await prisma.utilisateur.update({
     where: { id: professeur.utilisateur_id },
     data: { actif: false, identifiant: identifiantLibere },
   });
+  return sansMotDePasse(maj);
 }

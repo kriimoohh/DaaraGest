@@ -70,12 +70,12 @@ const ENDPOINTS: Array<{
   { methode: 'POST',   path: '/pointage',              groupe: ROLE_GROUPS.PRESENCE, description: 'Pointer présence' },
 
   // FINANCES
-  { methode: 'GET',    path: '/finances/paiements-eleves',   groupe: ROLE_GROUPS.SCOLARITE,  description: 'Lister paiements élèves' },
-  { methode: 'POST',   path: '/finances/paiements-eleves',   groupe: ROLE_GROUPS.SCOLARITE,  description: 'Créer paiement élève' },
+  { methode: 'GET',    path: '/finances/paiements-eleves',   groupe: ROLE_GROUPS.FINANCES,   description: 'Lister paiements élèves' },
+  { methode: 'POST',   path: '/finances/paiements-eleves',   groupe: ROLE_GROUPS.FINANCES,   description: 'Créer paiement élève' },
   { methode: 'PUT',    path: '/finances/paiements-eleves/:id',groupe: ROLE_GROUPS.ADMIN_ONLY, description: 'Modifier paiement élève' },
   { methode: 'DELETE', path: '/finances/paiements-eleves/:id',groupe: ROLE_GROUPS.ADMIN_ONLY, description: 'Supprimer paiement élève' },
-  { methode: 'GET',    path: '/finances/paiements-personnel',  groupe: ROLE_GROUPS.GESTION,   description: 'Paiements personnel' },
-  { methode: 'POST',   path: '/finances/paiements-personnel',  groupe: ROLE_GROUPS.GESTION,   description: 'Créer paiement personnel' },
+  { methode: 'GET',    path: '/finances/paiements-personnel',  groupe: ROLE_GROUPS.FINANCES_GESTION, description: 'Paiements personnel' },
+  { methode: 'POST',   path: '/finances/paiements-personnel',  groupe: ROLE_GROUPS.FINANCES_GESTION, description: 'Créer paiement personnel' },
 
   // BULLETINS
   { methode: 'GET',    path: '/bulletins',             groupe: ROLE_GROUPS.ACADEMIQUE, description: 'Lister bulletins' },
@@ -180,6 +180,11 @@ describe('RBAC — Directeur', () => {
 
   it('peut accéder à la messagerie (TOUS)', () => {
     expect(hasAccess(role, ROLE_GROUPS.TOUS)).toBe(true);
+  });
+
+  it("N'a PAS accès aux finances (arbitrage établissement 2026-07-18)", () => {
+    expect(hasAccess(role, ROLE_GROUPS.FINANCES)).toBe(false);
+    expect(hasAccess(role, ROLE_GROUPS.FINANCES_GESTION)).toBe(false);
   });
 
   it('peut modifier les templates documents (DIRECTION)', () => {
