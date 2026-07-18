@@ -46,6 +46,8 @@ model Etablissement {
   config_notes          ConfigNotes?
   absences_eleves       AbsenceEleve[]
   creneaux              Creneau[]
+  cahier_seances        CahierSeance[]
+  devoirs               Devoir[]
   evenements_calendrier EvenementCalendrier[]
   notifications         Notification[]
   conversations         Conversation[]
@@ -187,6 +189,8 @@ model Personnel {
   paiements             PaiementPersonnel[]
   matieres_classes      PersonnelMatiereClasse[]
   creneaux              Creneau[]
+  cahier_seances        CahierSeance[]
+  devoirs               Devoir[]
   demandes_absence      DemandeAbsencePersonnel[]
   etablissements_dirige Etablissement[]           @relation("EtablissementDirecteur")
 }
@@ -279,6 +283,8 @@ model AnneeScolaire {
   notes                  Note[]
   absences_eleves        AbsenceEleve[]
   creneaux               Creneau[]
+  cahier_seances         CahierSeance[]
+  devoirs                Devoir[]
   evaluations            Evaluation[]
   progressions_eleves    ProgressionEleve[]
   inscriptions_activites InscriptionActivite[]
@@ -373,15 +379,15 @@ model Domaine {
 }
 
 model Matiere {
-  id               String  @id @default(uuid())
+  id               String   @id @default(uuid())
   etablissement_id String
   nom_fr           String
   nom_ar           String?
   // Phase 2d : la filière est portée par l'entité Filiere (la colonne string
   // historique `filiere` a été supprimée — migration filieres_drop_string).
   filiere_id       String
-  coeff_defaut     Decimal @default(1) @db.Decimal(4, 2)
-  note_min         Decimal @default(0) @db.Decimal(5, 2)
+  coeff_defaut     Decimal  @default(1) @db.Decimal(4, 2)
+  note_min         Decimal  @default(0) @db.Decimal(5, 2)
   // Barème de saisie PAR DÉFAUT de la matière (le max sur lequel une note est SAISIE,
   // ex: Coran /20, Dictée /10). Repli du barème effectif AVANT l'échelle établissement :
   // ClasseMatierePeriode.note_max > ClasseMatiere.note_max_override > Matiere.note_max >
@@ -389,13 +395,13 @@ model Matiere {
   // NB : distinct de l'ÉCHELLE d'affichage de la moyenne, portée par Niveau.note_max
   // (l'échelle dépend du niveau — primaire /10, secondaire /20 — pas de la filière).
   note_max         Decimal? @db.Decimal(5, 2)
-  ordre_bulletin   Int     @default(0)
-  active           Boolean @default(true)
+  ordre_bulletin   Int      @default(0)
+  active           Boolean  @default(true)
   // Rattachement au domaine pédagogique (optionnel pour compatibilité ascendante)
   domaine_id       String?
   // Pour les grilles CE1-CE2 / CM1-CM2 : indique si la matière alimente
   // la colonne Ressources ou Compétence du domaine ('SIMPLE' = pas de split)
-  type_note        String  @default("SIMPLE") // 'RESSOURCE' | 'COMPETENCE' | 'SIMPLE'
+  type_note        String   @default("SIMPLE") // 'RESSOURCE' | 'COMPETENCE' | 'SIMPLE'
   // Abréviation utilisée dans les entêtes du relevé de notes (ex: "Lect", "A.P")
   code_court       String?
 
@@ -406,6 +412,8 @@ model Matiere {
   notes           Note[]
   classe_matieres ClasseMatiere[]
   creneaux        Creneau[]
+  cahier_seances  CahierSeance[]
+  devoirs         Devoir[]
   evaluations     Evaluation[]
 
   @@index([etablissement_id])
@@ -415,10 +423,10 @@ model Matiere {
 }
 
 model Niveau {
-  id               String @id @default(uuid())
+  id               String   @id @default(uuid())
   etablissement_id String
   libelle          String
-  ordre            Int    @default(0)
+  ordre            Int      @default(0)
   // Échelle d'AFFICHAGE de la moyenne pour ce niveau (ex: primaire /10, secondaire
   // /20 dans un même établissement). null = repli sur ConfigNotes.note_max. Le calcul
   // reste canonique (base établissement) ; le rendu re-scale à cette échelle.
@@ -426,7 +434,7 @@ model Niveau {
   // Détermine le type de grille d'évaluation IEF applicable à ce niveau
   // CI_CP → seuils 7/10 & 8/10, pas de Ressources/Compétence
   // CE1_CE2 | CM1_CM2 → seuils 5/10 & 7/10, avec Ressources/Compétence
-  groupe_grille    String @default("AUTRE") // 'CI_CP' | 'CE1_CE2' | 'CM1_CM2' | 'AUTRE'
+  groupe_grille    String   @default("AUTRE") // 'CI_CP' | 'CE1_CE2' | 'CM1_CM2' | 'AUTRE'
 
   etablissement Etablissement @relation(fields: [etablissement_id], references: [id])
   classes       Classe[]
@@ -436,16 +444,16 @@ model Niveau {
 }
 
 model Classe {
-  id                String  @id @default(uuid())
-  etablissement_id  String
-  annee_scolaire_id String
-  nom_fr            String
-  nom_ar            String? // nom affiché en langue arabe (optionnel ; repli sur nom_fr)
+  id                    String  @id @default(uuid())
+  etablissement_id      String
+  annee_scolaire_id     String
+  nom_fr                String
+  nom_ar                String? // nom affiché en langue arabe (optionnel ; repli sur nom_fr)
   // Phase 2d : filière portée par l'entité Filiere (colonne string supprimée).
-  filiere_id        String
-  niveau_id         String?
-  capacite          Int     @default(30)
-  active            Boolean @default(true)
+  filiere_id            String
+  niveau_id             String?
+  capacite              Int     @default(30)
+  active                Boolean @default(true)
   // Mode du programme : false = identique toute l'année (barème ClasseMatiere) ;
   // true = par période (barème/coeff/évaluée pouvant varier par trimestre via
   // ClasseMatierePeriode). Pilote l'éditeur "Programme" ; le calcul applique les
@@ -456,7 +464,7 @@ model Classe {
   // classe d'une année sur l'autre (rapports de promotion/comparaison). Une classe
   // reste identifiée de façon unique par (année + filière + nom_fr) ; `code` ne
   // sert qu'au regroupement inter-années, il n'est donc pas unique en base.
-  code              String?
+  code                  String?
 
   etablissement        Etablissement            @relation(fields: [etablissement_id], references: [id])
   filiere_ref          Filiere                  @relation(fields: [filiere_id], references: [id])
@@ -467,6 +475,8 @@ model Classe {
   absences             AbsenceEleve[]
   classe_matieres      ClasseMatiere[]
   creneaux             Creneau[]
+  cahier_seances       CahierSeance[]
+  devoirs              Devoir[]
   evaluations          Evaluation[]
 
   @@index([etablissement_id])
@@ -476,20 +486,20 @@ model Classe {
 }
 
 model ClasseMatiere {
-  id                String   @id @default(uuid())
+  id                String    @id @default(uuid())
   classe_id         String
   matiere_id        String
-  coeff_override    Decimal? @db.Decimal(4, 2)
+  coeff_override    Decimal?  @db.Decimal(4, 2)
   ordre_override    Int?
   // Barème de la matière spécifique à cette classe (ex: RLC /60 en CE, /40 en CM).
   // Si null, on retombe sur l'échelle de l'établissement (ConfigNotes.note_max).
   // Sert à normaliser les notes brutes (saisies sur leur barème) avant le calcul
   // de la moyenne du bulletin.
-  note_max_override Decimal? @db.Decimal(5, 2)
+  note_max_override Decimal?  @db.Decimal(5, 2)
   // Matière enseignée mais non évaluée (n'entre pas dans la moyenne du bulletin).
   // Reste visible sur le bulletin avec la mention "Non évaluée".
   // Override possible par période via ClasseMatierePeriode.evaluee.
-  evaluee           Boolean  @default(true)
+  evaluee           Boolean   @default(true)
   // Date de dernière modification du programme (coeff/barème/évaluée) : permet de
   // détecter qu'un bulletin généré avant ce changement est périmé. Nullable :
   // NULL = jamais modifié depuis l'ajout du suivi (pas de faux « périmé » à la
@@ -507,16 +517,16 @@ model ClasseMatiere {
 // le T2 (ex: CLC arabe CE1/CE2 = coeff 2 au T1, 4 au T2). Le calcul du bulletin
 // d'une période lit ici en priorité ; sinon il retombe sur ClasseMatiere (= défaut).
 model ClasseMatierePeriode {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   classe_id  String
   matiere_id String
   periode    Int
-  coeff      Decimal  @db.Decimal(4, 2)
-  note_max   Decimal  @db.Decimal(5, 2)
+  coeff      Decimal   @db.Decimal(4, 2)
+  note_max   Decimal   @db.Decimal(5, 2)
   // Override "évaluée" pour cette période uniquement (ex: matière évaluée au T2
   // mais pas au T1/T3). null = on retombe sur ClasseMatiere.evaluee.
   evaluee    Boolean?
-  created_at DateTime @default(now())
+  created_at DateTime  @default(now())
   // Même rôle que ClasseMatiere.updated_at : détection des bulletins périmés
   // (l'AJOUT d'un override après génération est couvert par created_at).
   updated_at DateTime? @updatedAt
@@ -1193,4 +1203,64 @@ model MatriculeCounter {
   last_value       Int    @default(0)
 
   @@id([etablissement_id, type, annee])
+}
+
+// ─── Cahier de texte (Phase 1) ───────────────────────────────────────────────
+// Mémoire officielle de la classe : une séance = ce qui a été FAIT en classe
+// (classe × matière × date × créneau). Pré-remplie depuis l'emploi du temps
+// (creneau_id) ; creneau_id null = séance hors emploi du temps. Le visa de la
+// direction (verrouillage) arrive en Phase 2.
+model CahierSeance {
+  id                String   @id @default(uuid())
+  etablissement_id  String
+  annee_scolaire_id String
+  classe_id         String
+  matiere_id        String
+  // Enseignant qui a fait la séance (celui du créneau, ou l'auteur de la saisie).
+  personnel_id      String
+  date              DateTime @db.Date
+  creneau_id        String?
+  contenu           String
+  // Objectif d'apprentissage visé (optionnel — liaison progressions en Phase 4).
+  objectif          String?
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  etablissement  Etablissement @relation(fields: [etablissement_id], references: [id])
+  annee_scolaire AnneeScolaire @relation(fields: [annee_scolaire_id], references: [id])
+  classe         Classe        @relation(fields: [classe_id], references: [id])
+  matiere        Matiere       @relation(fields: [matiere_id], references: [id])
+  personnel      Personnel     @relation(fields: [personnel_id], references: [id])
+
+  // Une seule séance par créneau ; les séances hors EDT (creneau_id null)
+  // échappent à la contrainte (NULLs distincts en Postgres), assumé en Phase 1.
+  @@unique([classe_id, matiere_id, date, creneau_id])
+  @@index([classe_id, annee_scolaire_id, date])
+  @@index([personnel_id, date])
+}
+
+// Contrat de travail : un devoir donné le X À FAIRE POUR le Y. `pour_le`
+// alimentera le portail parent (Phase 3).
+model Devoir {
+  id                String   @id @default(uuid())
+  etablissement_id  String
+  annee_scolaire_id String
+  classe_id         String
+  matiere_id        String
+  personnel_id      String
+  donne_le          DateTime @db.Date
+  pour_le           DateTime @db.Date
+  consigne          String
+  type              String   @default("EXERCICE") // 'LECON' | 'EXERCICE' | 'RECITATION' | 'AUTRE'
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  etablissement  Etablissement @relation(fields: [etablissement_id], references: [id])
+  annee_scolaire AnneeScolaire @relation(fields: [annee_scolaire_id], references: [id])
+  classe         Classe        @relation(fields: [classe_id], references: [id])
+  matiere        Matiere       @relation(fields: [matiere_id], references: [id])
+  personnel      Personnel     @relation(fields: [personnel_id], references: [id])
+
+  @@index([classe_id, annee_scolaire_id, pour_le])
+  @@index([personnel_id, donne_le])
 }

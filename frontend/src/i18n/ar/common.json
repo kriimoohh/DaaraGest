@@ -50,7 +50,8 @@
     "groupe_principal": "الرئيسي",
     "groupe_pedagogie": "التعليم",
     "groupe_communication": "التواصل",
-    "groupe_administration": "الإدارة"
+    "groupe_administration": "الإدارة",
+    "cahier_texte": "دفتر النصوص"
   },
   "theme": {
     "light": "الوضع الفاتح",
@@ -2149,7 +2150,11 @@
     "revoque": "تم إلغاء الرابط",
     "revoquer_titre": "إلغاء الرابط",
     "revoquer_message": "سيتوقف رابط {{nom}} عن العمل فورًا. هذا الإجراء لا رجعة فيه.",
-    "statuts": { "actif": "نشط", "revoque": "ملغى", "expire": "منتهٍ" }
+    "statuts": {
+      "actif": "نشط",
+      "revoque": "ملغى",
+      "expire": "منتهٍ"
+    }
   },
   "profil": {
     "titre": "ملفي الشخصي",
@@ -2192,5 +2197,40 @@
   },
   "confirm": {
     "titre_suppression": "تأكيد الحذف"
+  },
+  "cahier": {
+    "eyebrow": "البيداغوجيا",
+    "titre": "دفتر النصوص",
+    "ma_journee": "يومي",
+    "consultation": "الاطلاع",
+    "date": "التاريخ",
+    "charger": "تحميل",
+    "du": "من",
+    "au": "إلى",
+    "aucun_creneau": "لا حصص في جدولك هذا اليوم.",
+    "sans_fiche_personnel": "هذا الحساب غير مرتبط بأي ملف موظف: استخدم تبويب الاطلاع لقراءة دفتر الأقسام.",
+    "renseignee": "مُدوَّنة",
+    "a_renseigner": "بانتظار التدوين",
+    "contenu_placeholder": "ما أُنجز في القسم (الدرس، الأنشطة، الصفحات…)",
+    "objectif_placeholder": "الهدف التعلمي (اختياري)",
+    "objectif": "الهدف",
+    "enregistrer": "حفظ",
+    "devoirs": "الواجبات المعطاة هذا اليوم",
+    "ajouter_devoir": "إعطاء واجب",
+    "consigne_placeholder": "التعليمة (مثال: مراجعة الدرس، التمارين من 1 إلى 3…)",
+    "pour_le": "ليوم",
+    "devoirs_a_faire": "الواجبات المطلوبة خلال الفترة",
+    "type_lecon": "درس",
+    "type_exercice": "تمرين",
+    "type_recitation": "استظهار",
+    "type_autre": "آخر",
+    "aucune_seance": "لا حصص ولا واجبات في هذا المجال.",
+    "ok_seance": "تم حفظ الحصة",
+    "ok_devoir": "تم حفظ الواجب",
+    "ok_supprime": "تم الحذف",
+    "err_chargement": "خطأ في التحميل",
+    "err_enregistrement": "خطأ في الحفظ",
+    "err_contenu_vide": "محتوى الحصة فارغ",
+    "err_devoir_incomplet": "أدخل التعليمة وتاريخ « ليوم »"
   }
 }

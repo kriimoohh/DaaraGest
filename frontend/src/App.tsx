@@ -41,6 +41,7 @@ const PersonnelPage      = lazyWithReload(() => import('./pages/Personnel').then
 const ClassesPage        = lazyWithReload(() => import('./pages/Classes').then(m => ({ default: m.ClassesPage })));
 const NotesPage          = lazyWithReload(() => import('./pages/Notes').then(m => ({ default: m.NotesPage })));
 const EvaluationsPage    = lazyWithReload(() => import('./pages/Evaluations').then(m => ({ default: m.EvaluationsPage })));
+const CahierTextePage    = lazyWithReload(() => import('./pages/CahierTexte').then(m => ({ default: m.CahierTextePage })));
 const ProgressionPage    = lazyWithReload(() => import('./pages/Progression').then(m => ({ default: m.ProgressionPage })));
 const BulletinsPage      = lazyWithReload(() => import('./pages/Bulletins').then(m => ({ default: m.BulletinsPage })));
 const FinancesPage       = lazyWithReload(() => import('./pages/Finances').then(m => ({ default: m.FinancesPage })));
@@ -115,6 +116,9 @@ export default function App() {
             } />
             <Route path="/notes" element={
               <ProtectedRoute roles={ROLES.academique}><NotesPage /></ProtectedRoute>
+            } />
+            <Route path="/cahier-texte" element={
+              <ProtectedRoute roles={ROLES.academique}><CahierTextePage /></ProtectedRoute>
             } />
             <Route path="/evaluations" element={
               <ProtectedRoute roles={ROLES.academique}><EvaluationsPage /></ProtectedRoute>

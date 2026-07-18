@@ -36,7 +36,8 @@
     "groupe_principal": "Main",
     "groupe_pedagogie": "Academics",
     "groupe_communication": "Communication",
-    "groupe_administration": "Administration"
+    "groupe_administration": "Administration",
+    "cahier_texte": "Class journal"
   },
   "common": {
     "actif": "Active",
@@ -2149,7 +2150,11 @@
     "revoque": "Link revoked",
     "revoquer_titre": "Revoke link",
     "revoquer_message": "{{nom}}'s link will stop working immediately. This action is irreversible.",
-    "statuts": { "actif": "Active", "revoque": "Revoked", "expire": "Expired" }
+    "statuts": {
+      "actif": "Active",
+      "revoque": "Revoked",
+      "expire": "Expired"
+    }
   },
   "profil": {
     "titre": "My profile",
@@ -2192,5 +2197,40 @@
   },
   "confirm": {
     "titre_suppression": "Confirm deletion"
+  },
+  "cahier": {
+    "eyebrow": "Pedagogy",
+    "titre": "Class journal",
+    "ma_journee": "My day",
+    "consultation": "Browse",
+    "date": "Date",
+    "charger": "Load",
+    "du": "From",
+    "au": "To",
+    "aucun_creneau": "No slot in your timetable on that day.",
+    "sans_fiche_personnel": "This account has no staff record: use the Browse tab to read class journals.",
+    "renseignee": "Filled in",
+    "a_renseigner": "To fill in",
+    "contenu_placeholder": "What was done in class (lesson, activities, pages…)",
+    "objectif_placeholder": "Learning objective (optional)",
+    "objectif": "Objective",
+    "enregistrer": "Save",
+    "devoirs": "Homework assigned today",
+    "ajouter_devoir": "Assign homework",
+    "consigne_placeholder": "Instructions (e.g. re-read the lesson, exercises 1–3…)",
+    "pour_le": "due",
+    "devoirs_a_faire": "Homework due over the period",
+    "type_lecon": "Lesson",
+    "type_exercice": "Exercise",
+    "type_recitation": "Recitation",
+    "type_autre": "Other",
+    "aucune_seance": "No sessions or homework in this range.",
+    "ok_seance": "Session saved",
+    "ok_devoir": "Homework saved",
+    "ok_supprime": "Deleted",
+    "err_chargement": "Loading error",
+    "err_enregistrement": "Save error",
+    "err_contenu_vide": "The session content is empty",
+    "err_devoir_incomplet": "Fill in the instructions and the due date"
   }
 }

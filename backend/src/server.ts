@@ -40,6 +40,7 @@ import { statsRoutes } from './modules/stats/stats.routes';
 import { auditRoutes } from './modules/audit/audit.routes';
 import { rapportsRoutes } from './modules/rapports/rapports.routes';
 import { bibliothequeRoutes } from './modules/bibliotheque/bibliotheque.routes';
+import { cahierRoutes } from './modules/cahier/cahier.routes';
 import { fonctionsRoutes } from './modules/fonctions/fonctions.routes';
 import { tarifsRoutes } from './modules/tarifs/tarifs.routes';
 import { mentionsRoutes } from './modules/mentions/mentions.routes';
@@ -211,6 +212,7 @@ async function build() {
       await api.register(auditRoutes,       { prefix: '/audit' });
       await api.register(rapportsRoutes,    { prefix: '/rapports' });
       await api.register(bibliothequeRoutes,{ prefix: '/bibliotheque' });
+      await api.register(cahierRoutes,      { prefix: '/cahier' });
     },
     { prefix: '/api/v1' }
   );
