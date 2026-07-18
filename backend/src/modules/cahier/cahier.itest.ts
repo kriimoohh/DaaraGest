@@ -4,6 +4,7 @@ import prisma from '../../config/database';
 import {
   journee, upsertSeance, modifierSeance, supprimerSeance, listerSeances,
   creerDevoir, listerDevoirs, jourDeLaDate,
+  viserPeriode, listerVisas, supprimerVisa, completude,
 } from './cahier.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -34,6 +35,7 @@ const acteurProfB = { id: userB, role: 'professeur' };
 const acteurDir = { id: userDir, role: 'directeur' };
 
 async function nettoyer() {
+  await prisma.cahierVisa.deleteMany({ where: { etablissement_id: etabId } });
   await prisma.devoir.deleteMany({ where: { etablissement_id: etabId } });
   await prisma.cahierSeance.deleteMany({ where: { etablissement_id: etabId } });
   await prisma.creneau.deleteMany({ where: { etablissement_id: etabId } });
@@ -200,5 +202,72 @@ describe('Cahier de texte — devoirs (DB réelle)', () => {
     expect(await listerDevoirs(etabId, {
       classe_id: classeId, annee_scolaire_id: anneeId, du: '2026-03-05', au: '2026-03-08',
     })).toHaveLength(0);
+  });
+});
+
+// ── Phase 2 : visa direction (verrouillage) + complétude ─────────────────────
+describe('Cahier de texte — visa & complétude (DB réelle)', () => {
+  it('le visa verrouille l\'intervalle pour tous, dé-viser rouvre', async () => {
+    const visa = await viserPeriode(etabId, { id: userDir }, {
+      annee_scolaire_id: anneeId, classe_id: classeId, du: '2026-03-01', au: '2026-03-07',
+      commentaire: 'Semaine contrôlée',
+    });
+
+    // Saisie du prof (créneau du lundi visé) → refus.
+    await expect(upsertSeance(etabId, acteurProfA, {
+      annee_scolaire_id: anneeId, classe_id: classeId, matiere_id: matiereId,
+      date: LUNDI, creneau_id: creneauId, contenu: 'Tentative sous visa',
+    })).rejects.toThrow(/vis/i);
+
+    // Même la direction ne modifie pas une séance visée (il faut dé-viser).
+    const seance = await prisma.cahierSeance.findFirstOrThrow({ where: { etablissement_id: etabId, date: new Date(`${LUNDI}T00:00:00Z`) } });
+    await expect(modifierSeance(seance.id, etabId, acteurDir, { contenu: 'Interdit' })).rejects.toThrow(/vis/i);
+    await expect(supprimerSeance(seance.id, etabId, acteurDir)).rejects.toThrow(/vis/i);
+
+    // Devoir donné un jour visé → refus.
+    await expect(creerDevoir(etabId, acteurProfA, {
+      annee_scolaire_id: anneeId, classe_id: classeId, matiere_id: matiereId,
+      donne_le: LUNDI, pour_le: '2026-03-10', consigne: 'Interdit', type: 'EXERCICE',
+    })).rejects.toThrow(/vis/i);
+
+    // Hors intervalle (lundi suivant) → autorisé.
+    const s2 = await upsertSeance(etabId, acteurProfA, {
+      annee_scolaire_id: anneeId, classe_id: classeId, matiere_id: matiereId,
+      date: '2026-03-09', creneau_id: creneauId, contenu: 'Semaine suivante, libre',
+    });
+    expect(s2.id).toBeTruthy();
+
+    // La journée expose la classe verrouillée au front.
+    const j = await journee(etabId, userA, { date: LUNDI, annee_scolaire_id: anneeId });
+    expect(j.classes_visees).toContain(classeId);
+
+    // Liste + dé-viser → la modification redevient possible.
+    const visas = await listerVisas(etabId, { classe_id: classeId, annee_scolaire_id: anneeId });
+    expect(visas).toHaveLength(1);
+    expect(visas[0].signataire.nom_fr).toBe('Directeur');
+    await supprimerVisa(visa.id, etabId, { id: userDir });
+    const maj = await modifierSeance(seance.id, etabId, acteurDir, { contenu: 'Corrigée après dé-visa' });
+    expect(maj.contenu).toContain('Corrigée');
+  });
+
+  it('complétude : prévus (EDT) vs renseignés, par jour et par matière', async () => {
+    // Semaine du 2026-03-02 : 1 créneau prévu (lundi), séance renseignée.
+    const sem1 = await completude(etabId, { classe_id: classeId, annee_scolaire_id: anneeId, du: '2026-03-02', au: '2026-03-08' });
+    expect(sem1.total_prevus).toBe(1);
+    expect(sem1.total_renseignes).toBe(1);
+    expect(sem1.taux).toBe(100);
+    expect(sem1.par_jour).toHaveLength(1);
+    expect(sem1.par_jour[0]).toMatchObject({ date: '2026-03-02', jour: 'lundi', prevus: 1, renseignes: 1 });
+    expect(sem1.par_matiere[0]).toMatchObject({ prevus: 1, renseignes: 1 });
+
+    // Semaine sans aucune saisie : prévu 1 (lundi), renseigné 0 → taux 0.
+    const semVide = await completude(etabId, { classe_id: classeId, annee_scolaire_id: anneeId, du: '2026-04-06', au: '2026-04-12' });
+    expect(semVide.total_prevus).toBe(1);
+    expect(semVide.total_renseignes).toBe(0);
+    expect(semVide.taux).toBe(0);
+
+    // Intervalle incohérent ou trop grand → refus.
+    await expect(completude(etabId, { classe_id: classeId, annee_scolaire_id: anneeId, du: '2026-04-12', au: '2026-04-06' })).rejects.toThrow();
+    await expect(completude(etabId, { classe_id: classeId, annee_scolaire_id: anneeId, du: '2025-01-01', au: '2026-12-31' })).rejects.toThrow();
   });
 });

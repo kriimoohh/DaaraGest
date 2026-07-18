@@ -2231,6 +2231,17 @@
     "err_chargement": "خطأ في التحميل",
     "err_enregistrement": "خطأ في الحفظ",
     "err_contenu_vide": "محتوى الحصة فارغ",
-    "err_devoir_incomplet": "أدخل التعليمة وتاريخ « ليوم »"
+    "err_devoir_incomplet": "أدخل التعليمة وتاريخ « ليوم »",
+    "verrouillee": "مقفلة (تأشيرة)",
+    "completude": "نسبة التدوين",
+    "seances_renseignees": "{{renseignes}}/{{prevus}} حصة مدوَّنة",
+    "hors_edt": "{{n}} خارج الجدول",
+    "viser": "التأشير على الفترة",
+    "visa": "تأشيرة",
+    "vise_par": "أشّر عليه {{nom}}",
+    "deviser": "إلغاء التأشير",
+    "commentaire_visa_placeholder": "ملاحظة التأشيرة (اختياري)",
+    "ok_visa": "تم التأشير — الدفتر مقفل",
+    "ok_devisa": "أُلغي التأشير — الفترة مفتوحة"
   }
 }

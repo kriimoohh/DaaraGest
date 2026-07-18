@@ -2231,6 +2231,17 @@
     "err_chargement": "Loading error",
     "err_enregistrement": "Save error",
     "err_contenu_vide": "The session content is empty",
-    "err_devoir_incomplet": "Fill in the instructions and the due date"
+    "err_devoir_incomplet": "Fill in the instructions and the due date",
+    "verrouillee": "Locked (signed off)",
+    "completude": "Completion",
+    "seances_renseignees": "{{renseignes}}/{{prevus}} sessions filled in",
+    "hors_edt": "{{n}} outside timetable",
+    "viser": "Sign off period",
+    "visa": "Sign-off",
+    "vise_par": "signed by {{nom}}",
+    "deviser": "Remove sign-off",
+    "commentaire_visa_placeholder": "Sign-off comment (optional)",
+    "ok_visa": "Period signed off — journal locked",
+    "ok_devisa": "Sign-off removed — period reopened"
   }
 }
