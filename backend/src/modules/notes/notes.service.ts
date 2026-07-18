@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { logAction } from '../../utils/audit';
+import { regenererBulletinsImpactes } from '../bulletins/bulletins.service';
 import { assertProfPeutSaisirNotes, getPolitiqueSaisieNotes } from '../../utils/teachingPolicy';
 import { NoteItem } from './notes.schema';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
@@ -40,7 +41,8 @@ export async function bulkUpsertNotes(
   classe_id?: string,
   role?: string,
 ) {
-  if (notes.length === 0) return [];
+  // Le schéma d'entrée impose min(1) ; forme homogène avec le retour nominal.
+  if (notes.length === 0) return { count: 0, created: 0, updated: 0, ignored: 0, groupes_regeneres: 0, groupes_signes_ignores: 0 };
 
   // Précharger toutes les matières concernées en une seule requête (élimine le N+1)
   const matiereIds = [...new Set(notes.map(n => n.matiere_id))];
@@ -179,7 +181,30 @@ export async function bulkUpsertNotes(
       count, created, updated, ignored, insertOnly, matiere_ids: matiereIds, politique: politiqueAppliquee,
     });
   }
-  return { count, created, updated, ignored };
+
+  // Les bulletins déjà générés qui dépendent de ces notes sont resynchronisés
+  // (moyenne/rang/mention) — les groupes signés sont laissés intacts. Ne doit
+  // jamais faire échouer la saisie : les notes SONT enregistrées à ce stade.
+  let regen = { groupes_regeneres: 0, groupes_signes_ignores: 0 };
+  if (count > 0 && etablissement_id) {
+    try {
+      const parAnnee = new Map<string, typeof notes>();
+      for (const n of notes) {
+        if (!parAnnee.has(n.annee_scolaire_id)) parAnnee.set(n.annee_scolaire_id, []);
+        parAnnee.get(n.annee_scolaire_id)!.push(n);
+      }
+      for (const [annee_scolaire_id, lot] of parAnnee) {
+        const r = await regenererBulletinsImpactes(etablissement_id, annee_scolaire_id, lot);
+        regen = {
+          groupes_regeneres: regen.groupes_regeneres + r.groupes_regeneres,
+          groupes_signes_ignores: regen.groupes_signes_ignores + r.groupes_signes_ignores,
+        };
+      }
+    } catch (err) {
+      console.error('Régénération auto des bulletins échouée (notes enregistrées) :', err);
+    }
+  }
+  return { count, created, updated, ignored, ...regen };
 }
 
 /**
@@ -215,6 +240,13 @@ export async function supprimerNotes(
     throw new Error('Fournir note_ids ou criteres');
   }
 
+  // Périmètre capturé AVANT la suppression (après, les notes n'existent plus) —
+  // il sert à resynchroniser les bulletins impactés.
+  const supprimees = await prisma.note.findMany({
+    where,
+    select: { eleve_id: true, matiere_id: true, periode: true, annee_scolaire_id: true },
+  });
+
   const { count } = await prisma.note.deleteMany({ where });
 
   if (count > 0) {
@@ -225,7 +257,28 @@ export async function supprimerNotes(
       criteres: input.criteres,
     });
   }
-  return { count };
+
+  // Même resynchronisation qu'à la saisie (groupes signés intacts, jamais bloquant).
+  let regen = { groupes_regeneres: 0, groupes_signes_ignores: 0 };
+  if (count > 0) {
+    try {
+      const parAnnee = new Map<string, typeof supprimees>();
+      for (const n of supprimees) {
+        if (!parAnnee.has(n.annee_scolaire_id)) parAnnee.set(n.annee_scolaire_id, []);
+        parAnnee.get(n.annee_scolaire_id)!.push(n);
+      }
+      for (const [annee_scolaire_id, lot] of parAnnee) {
+        const r = await regenererBulletinsImpactes(etablissement_id, annee_scolaire_id, lot);
+        regen = {
+          groupes_regeneres: regen.groupes_regeneres + r.groupes_regeneres,
+          groupes_signes_ignores: regen.groupes_signes_ignores + r.groupes_signes_ignores,
+        };
+      }
+    } catch (err) {
+      console.error('Régénération auto des bulletins échouée (notes supprimées) :', err);
+    }
+  }
+  return { count, ...regen };
 }
 
 export async function listerNotesEleve(eleve_id: string, etablissement_id: string, annee_scolaire_id?: string) {

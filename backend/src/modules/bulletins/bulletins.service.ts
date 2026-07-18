@@ -697,6 +697,115 @@ export async function etatGenerations(etablissement_id: string, data: PreflightI
   };
 }
 
+// ─── Régénération automatique après saisie/suppression de notes ──────────────
+
+/**
+ * Régénère les bulletins DÉJÀ GÉNÉRÉS impactés par des notes créées, modifiées
+ * ou supprimées — jamais de première génération (elle reste un acte explicite
+ * avec pré-vol). Une note impacte le bulletin de SA filière + le COMBINE + les
+ * annuels (période 0), pour toutes les classes des élèves touchés.
+ * Un groupe contenant AU MOINS UN bulletin signé (valide_le) n'est pas touché :
+ * il est compté dans `groupes_signes_ignores` (le badge « périmé » le signalera).
+ * Le COMBINE est régénéré avec les mêmes filières que sa génération d'origine
+ * (filieres_combine stocké). Limite : les options de génération (inclure non
+ * évaluées / manquantes = 0) ne sont pas persistées → la régénération applique
+ * les défauts stricts.
+ */
+export async function regenererBulletinsImpactes(
+  etablissement_id: string,
+  annee_scolaire_id: string,
+  touchees: { eleve_id: string; matiere_id: string; periode: number }[],
+): Promise<{ groupes_regeneres: number; groupes_signes_ignores: number }> {
+  if (touchees.length === 0) return { groupes_regeneres: 0, groupes_signes_ignores: 0 };
+
+  const matieres = await prisma.matiere.findMany({
+    where: { id: { in: [...new Set(touchees.map(t => t.matiere_id))] }, etablissement_id },
+    select: { id: true, filiere_ref: { select: { code: true } } },
+  });
+  const codeParMatiere = new Map(matieres.map(m => [m.id, m.filiere_ref.code]));
+  const codes = [...new Set(matieres.map(m => m.filiere_ref.code))];
+  const periodes = [...new Set(touchees.map(t => t.periode))];
+  const elevesIds = [...new Set(touchees.filter(t => codeParMatiere.has(t.matiere_id)).map(t => t.eleve_id))];
+  if (codes.length === 0 || elevesIds.length === 0) return { groupes_regeneres: 0, groupes_signes_ignores: 0 };
+
+  // Classes des élèves touchés, pour les filières touchées (une note FR impacte
+  // la classe FR de l'élève ; le COMBINE est rattaché à chacune de ses classes).
+  const classes = await prisma.inscriptionClasse.findMany({
+    where: {
+      inscription: { annee_scolaire_id, eleve_id: { in: elevesIds } },
+      classe: { etablissement_id },
+      filiere: { code: { in: codes } },
+    },
+    select: { classe_id: true },
+    distinct: ['classe_id'],
+  });
+
+  let groupes_regeneres = 0;
+  let groupes_signes_ignores = 0;
+  const filieresBulletins = [...codes, 'COMBINE'];
+
+  for (const { classe_id } of classes) {
+    const inscriptions = await getElevesClasse(classe_id, annee_scolaire_id);
+    const classeElevesIds = inscriptions.map(i => i.eleve_id);
+    if (classeElevesIds.length === 0) continue;
+    // Bulletins existants des périodes touchées (+ annuel 0, qui agrège tout).
+    const bulletins = await prisma.bulletin.findMany({
+      where: {
+        annee_scolaire_id,
+        eleve_id: { in: classeElevesIds },
+        periode: { in: [...periodes, 0] },
+        filiere: { in: filieresBulletins },
+      },
+      select: { periode: true, filiere: true, valide_le: true, filieres_combine: true },
+    });
+
+    const groupes = new Map<string, { periode: number; filiere: string; signe: boolean; filieres_combine: string | null }>();
+    for (const b of bulletins) {
+      const k = `${b.periode}|${b.filiere}`;
+      const g = groupes.get(k) ?? { periode: b.periode, filiere: b.filiere, signe: false, filieres_combine: b.filieres_combine };
+      if (b.valide_le !== null) g.signe = true;
+      groupes.set(k, g);
+    }
+
+    for (const g of groupes.values()) {
+      if (g.signe) { groupes_signes_ignores++; continue; }
+      const filiere = g.filiere as 'FR' | 'AR' | 'EN' | 'COMBINE';
+      const filieres_combine = filiere === 'COMBINE' && g.filieres_combine
+        ? (g.filieres_combine.split(',').filter(Boolean) as ('FR' | 'AR' | 'EN')[])
+        : undefined;
+      if (g.periode === 0) {
+        await genererBulletinsAnnuels(etablissement_id, { classe_id, annee_scolaire_id, filiere, filieres_combine });
+      } else {
+        await genererBulletins(etablissement_id, { classe_id, annee_scolaire_id, periode: g.periode, filiere, filieres_combine });
+      }
+      // Un élève qui n'a PLUS AUCUNE note sur le périmètre du groupe n'est pas
+      // réécrit par la génération (aucune moyenne calculable) : son bulletin
+      // resterait figé sur des notes disparues. On supprime ces orphelins (non
+      // signés) — c'est le scénario « bulletin fantôme » vu en prod (CI B T1).
+      const codesGroupe = filiere === 'COMBINE'
+        ? (filieres_combine ?? await filieresActivesCodes(etablissement_id))
+        : [filiere as 'FR' | 'AR' | 'EN'];
+      await prisma.bulletin.deleteMany({
+        where: {
+          annee_scolaire_id, periode: g.periode, filiere: g.filiere, valide_le: null,
+          eleve_id: { in: classeElevesIds },
+          eleve: {
+            notes: {
+              none: {
+                annee_scolaire_id,
+                ...(g.periode === 0 ? {} : { periode: g.periode }),
+                matiere: { filiere_ref: { code: { in: codesGroupe } } },
+              },
+            },
+          },
+        },
+      });
+      groupes_regeneres++;
+    }
+  }
+  return { groupes_regeneres, groupes_signes_ignores };
+}
+
 // ─── Générer bulletins trimestriels (FR | AR | COMBINE) ──────────────────────
 
 export async function genererBulletins(etablissement_id: string, data: GenererBulletinInput) {

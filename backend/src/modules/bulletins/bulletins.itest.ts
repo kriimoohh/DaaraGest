@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import prisma from '../../config/database';
 import { genererBulletins, genererBulletinsAnnuels, getBulletin, calculerMoyennesClasse, filieresActivesCodes, getBaremesClasse, preflightBulletins, etatGenerations } from './bulletins.service';
+import { bulkUpsertNotes, supprimerNotes } from '../notes/notes.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test d'INTÉGRATION (nécessite une vraie base PostgreSQL via DATABASE_URL).
@@ -523,5 +524,75 @@ describe('État des générations — détection de péremption (DB réelle)', (
     expect((await etatGenerations(etabId, ctx)).statut).toBe('a_jour');
     // COMBINE : dépend des deux filières → périmé.
     expect((await etatGenerations(etabId, { ...ctx, filiere: 'COMBINE' })).statut).toBe('perime');
+  });
+});
+
+// Période 3 dédiée : régénération automatique après saisie/suppression de notes
+// (PR 3/3 du cycle de vie des générations). Importe les VRAIS services notes.
+describe('Régénération automatique après saisie/suppression (DB réelle)', () => {
+  const p3 = { classe_id: classeId, annee_scolaire_id: anneeId, periode: 3, filiere: 'FR' as const };
+
+  it('ne crée jamais une première génération, mais resynchronise un groupe déjà généré', async () => {
+    // Saisie initiale P3 alors qu'aucun bulletin P3 n'existe → rien n'est créé.
+    await bulkUpsertNotes([
+      { eleve_id: ids.eleveA, matiere_id: ids.matMath, periode: 3, annee_scolaire_id: anneeId, valeur: 10 },
+      { eleve_id: ids.eleveB, matiere_id: ids.matMath, periode: 3, annee_scolaire_id: anneeId, valeur: 12 },
+    ], false, undefined, etabId, classeId);
+    expect(await prisma.bulletin.count({ where: { annee_scolaire_id: anneeId, periode: 3 } })).toBe(0);
+
+    // Génération explicite : A = 10/20 sur sa seule matière notée → moyenne 10.
+    await genererBulletins(etabId, p3);
+    const avant = await prisma.bulletin.findFirst({
+      where: { annee_scolaire_id: anneeId, periode: 3, filiere: 'FR', eleve_id: ids.eleveA },
+    });
+    expect(Number(avant?.moyenne)).toBe(10);
+
+    // Modification d'une note → le groupe est resynchronisé (moyenne + état à jour).
+    const res = await bulkUpsertNotes([
+      { eleve_id: ids.eleveA, matiere_id: ids.matMath, periode: 3, annee_scolaire_id: anneeId, valeur: 18 },
+    ], false, undefined, etabId, classeId);
+    expect(res.groupes_regeneres).toBeGreaterThanOrEqual(1);
+    const apres = await prisma.bulletin.findFirst({
+      where: { annee_scolaire_id: anneeId, periode: 3, filiere: 'FR', eleve_id: ids.eleveA },
+    });
+    expect(Number(apres?.moyenne)).toBe(18);
+    expect((await etatGenerations(etabId, p3)).statut).toBe('a_jour');
+  });
+
+  it('laisse intact un groupe contenant un bulletin signé', async () => {
+    await prisma.bulletin.updateMany({
+      where: { annee_scolaire_id: anneeId, periode: 3, filiere: 'FR' },
+      data: { valide_le: new Date(), valide_par: 'itest-signataire' },
+    });
+    const res = await bulkUpsertNotes([
+      { eleve_id: ids.eleveA, matiere_id: ids.matMath, periode: 3, annee_scolaire_id: anneeId, valeur: 6 },
+    ], false, undefined, etabId, classeId);
+    expect(res.groupes_signes_ignores).toBeGreaterThanOrEqual(1);
+    // La note a bien changé, mais le bulletin signé garde sa moyenne (18).
+    const b = await prisma.bulletin.findFirst({
+      where: { annee_scolaire_id: anneeId, periode: 3, filiere: 'FR', eleve_id: ids.eleveA },
+    });
+    expect(Number(b?.moyenne)).toBe(18);
+    await prisma.bulletin.updateMany({
+      where: { annee_scolaire_id: anneeId, periode: 3, filiere: 'FR' },
+      data: { valide_le: null, valide_par: null },
+    });
+  });
+
+  it("supprime le bulletin orphelin d'un élève dont toutes les notes du périmètre disparaissent", async () => {
+    await genererBulletins(etabId, p3); // repartir d'un groupe propre (A=6, B=12)
+    const notesA = await prisma.note.findMany({
+      where: { eleve_id: ids.eleveA, periode: 3, annee_scolaire_id: anneeId },
+    });
+    const res = await supprimerNotes({ note_ids: notesA.map(n => n.id) }, etabId, 'itest-acteur');
+    expect(res.count).toBe(notesA.length);
+    // A n'a plus aucune note P3 → son bulletin (scénario « fantôme ») est supprimé ;
+    // B est resynchronisé et conserve le sien.
+    expect(await prisma.bulletin.count({
+      where: { eleve_id: ids.eleveA, periode: 3, filiere: 'FR', annee_scolaire_id: anneeId },
+    })).toBe(0);
+    expect(await prisma.bulletin.count({
+      where: { eleve_id: ids.eleveB, periode: 3, filiere: 'FR', annee_scolaire_id: anneeId },
+    })).toBe(1);
   });
 });
