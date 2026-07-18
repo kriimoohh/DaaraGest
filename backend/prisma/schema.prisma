@@ -47,6 +47,7 @@ model Etablissement {
   absences_eleves       AbsenceEleve[]
   creneaux              Creneau[]
   cahier_seances        CahierSeance[]
+  cahier_visas          CahierVisa[]
   devoirs               Devoir[]
   evenements_calendrier EvenementCalendrier[]
   notifications         Notification[]
@@ -133,6 +134,7 @@ model Utilisateur {
   documents_generes         DocumentGenere[]          @relation("DocumentsGeneres")
   demandes_traitees         DemandeAbsencePersonnel[] @relation("DemandesTraitees")
   refresh_tokens            RefreshToken[]
+  cahier_visas_signes       CahierVisa[]              @relation("CahierVisas")
 
   @@index([etablissement_id])
   @@index([etablissement_id, actif])
@@ -284,6 +286,7 @@ model AnneeScolaire {
   absences_eleves        AbsenceEleve[]
   creneaux               Creneau[]
   cahier_seances         CahierSeance[]
+  cahier_visas           CahierVisa[]
   devoirs                Devoir[]
   evaluations            Evaluation[]
   progressions_eleves    ProgressionEleve[]
@@ -476,6 +479,7 @@ model Classe {
   classe_matieres      ClasseMatiere[]
   creneaux             Creneau[]
   cahier_seances       CahierSeance[]
+  cahier_visas         CahierVisa[]
   devoirs              Devoir[]
   evaluations          Evaluation[]
 
@@ -1263,4 +1267,27 @@ model Devoir {
 
   @@index([classe_id, annee_scolaire_id, pour_le])
   @@index([personnel_id, donne_le])
+}
+
+// Visa de la direction sur le cahier d'une classe pour un intervalle de dates.
+// Après visa, les séances et devoirs de l'intervalle sont VERROUILLÉS pour tout
+// le monde — corriger exige de dé-viser (suppression du visa, auditée), comme le
+// déverrouillage des bulletins. Un visa couvre toutes les matières de la classe.
+model CahierVisa {
+  id                String   @id @default(uuid())
+  etablissement_id  String
+  annee_scolaire_id String
+  classe_id         String
+  du                DateTime @db.Date
+  au                DateTime @db.Date
+  vise_par          String
+  vise_le           DateTime @default(now())
+  commentaire       String?
+
+  etablissement  Etablissement @relation(fields: [etablissement_id], references: [id])
+  annee_scolaire AnneeScolaire @relation(fields: [annee_scolaire_id], references: [id])
+  classe         Classe        @relation(fields: [classe_id], references: [id])
+  signataire     Utilisateur   @relation("CahierVisas", fields: [vise_par], references: [id])
+
+  @@index([classe_id, annee_scolaire_id, du, au])
 }

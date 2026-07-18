@@ -8,6 +8,7 @@ import { Badge } from '../../components/ui/Badge';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
 import { useAnneeScolaire } from '../../store/anneeStore';
+import { useAuthStore } from '../../store/authStore';
 import { nomClasse, nomMatiere } from '../../lib/noms';
 
 interface Classe  { id: string; nom_fr: string; nom_ar?: string | null; filiere: string; }
@@ -25,7 +26,16 @@ interface Devoir {
   consigne: string; type: string; classe?: RefCls; matiere: RefMat;
   personnel?: { utilisateur: { nom_fr: string; prenom_fr: string | null } };
 }
-interface Journee { date: string; jour: string; personnel_id: string | null; creneaux: Creneau[]; seances: Seance[]; devoirs: Devoir[]; }
+interface Journee { date: string; jour: string; personnel_id: string | null; creneaux: Creneau[]; seances: Seance[]; devoirs: Devoir[]; classes_visees: string[]; }
+interface Visa {
+  id: string; du: string; au: string; vise_le: string; commentaire: string | null;
+  signataire: { nom_fr: string; prenom_fr: string | null };
+}
+interface Completude {
+  total_prevus: number; total_renseignes: number; hors_edt: number; taux: number | null;
+  par_jour: { date: string; jour: string; prevus: number; renseignes: number }[];
+  par_matiere: { matiere: RefMat; prevus: number; renseignes: number }[];
+}
 
 const DEVOIR_TYPES = ['LECON', 'EXERCICE', 'RECITATION', 'AUTRE'] as const;
 
@@ -48,6 +58,8 @@ export function CahierTextePage() {
   const locale = i18n.language === 'ar' ? 'ar-SN' : 'fr-FR';
   const api = useApi();
   const [anneeId] = useAnneeScolaire();
+  const role = useAuthStore(s2 => s2.user?.role ?? '');
+  const estDirection = ['admin', 'directeur'].includes(role);
 
   const [onglet, setOnglet] = useState<'journee' | 'consultation'>('journee');
 
@@ -140,6 +152,10 @@ export function CahierTextePage() {
   const [au, setAu] = useState(plusJours(lundiDe(todayISO()), 6));
   const [seances, setSeances] = useState<Seance[]>([]);
   const [devoirs, setDevoirs] = useState<Devoir[]>([]);
+  const [comp, setComp] = useState<Completude | null>(null);
+  const [visas, setVisas] = useState<Visa[]>([]);
+  const [commentaireVisa, setCommentaireVisa] = useState('');
+  const [visaEnCours, setVisaEnCours] = useState(false);
   const [loadingConsult, setLoadingConsult] = useState(false);
 
   useEffect(() => {
@@ -153,11 +169,13 @@ export function CahierTextePage() {
     setLoadingConsult(true);
     try {
       const params = `classe_id=${classeId}&annee_scolaire_id=${anneeId}&du=${du}&au=${au}`;
-      const [s, d] = await Promise.all([
+      const [s, d, c, v] = await Promise.all([
         api.get<Seance[]>(`/api/v1/cahier/seances?${params}`),
         api.get<Devoir[]>(`/api/v1/cahier/devoirs?${params}`),
+        api.get<Completude>(`/api/v1/cahier/completude?${params}`),
+        api.get<Visa[]>(`/api/v1/cahier/visas?classe_id=${classeId}&annee_scolaire_id=${anneeId}`),
       ]);
-      setSeances(s); setDevoirs(d);
+      setSeances(s); setDevoirs(d); setComp(c); setVisas(v);
     } catch (err) {
       toast.error((err as Error).message || t('cahier.err_chargement'));
     } finally {
@@ -167,6 +185,34 @@ export function CahierTextePage() {
   }, [anneeId, classeId, du, au]);
 
   useEffect(() => { if (onglet === 'consultation') void chargerConsultation(); }, [onglet, chargerConsultation]);
+
+  const viser = async () => {
+    if (!classeId || !du || !au) return;
+    setVisaEnCours(true);
+    try {
+      await api.post('/api/v1/cahier/visas', {
+        annee_scolaire_id: anneeId, classe_id: classeId, du, au,
+        commentaire: commentaireVisa.trim() || null,
+      });
+      toast.success(t('cahier.ok_visa'));
+      setCommentaireVisa('');
+      await chargerConsultation();
+    } catch (err) {
+      toast.error((err as Error).message || t('cahier.err_enregistrement'));
+    } finally {
+      setVisaEnCours(false);
+    }
+  };
+
+  const deviser = async (id: string) => {
+    try {
+      await api.delete(`/api/v1/cahier/visas/${id}`);
+      toast.success(t('cahier.ok_devisa'));
+      await chargerConsultation();
+    } catch (err) {
+      toast.error((err as Error).message || t('cahier.err_enregistrement'));
+    }
+  };
 
   const fmtDate = (d: string) =>
     new Date(d.slice(0, 10)).toLocaleDateString(locale, { weekday: 'long', day: '2-digit', month: 'long' });
@@ -221,6 +267,7 @@ export function CahierTextePage() {
               const draft = drafts[c.id] ?? { contenu: '', objectif: '' };
               const devoirDraft = devoirDrafts[c.id] ?? { consigne: '', pour_le: '', type: 'EXERCICE' };
               const devoirsDuCreneau = journee.devoirs.filter(d => d.classe_id === c.classe_id && d.matiere_id === c.matiere_id);
+              const verrouille = journee.classes_visees.includes(c.classe_id);
               return (
                 <div key={c.id} className="card-pad">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
@@ -230,11 +277,13 @@ export function CahierTextePage() {
                     {seance
                       ? <Badge variant="success" dot label={t('cahier.renseignee')} />
                       : <Badge variant="neutral" dot label={t('cahier.a_renseigner')} />}
+                    {verrouille && <Badge variant="warning" dot label={t('cahier.verrouillee')} />}
                   </div>
 
                   <textarea
                     className="input"
                     rows={2}
+                    disabled={verrouille}
                     placeholder={t('cahier.contenu_placeholder')}
                     value={draft.contenu}
                     onChange={e => setDrafts(prev => ({ ...prev, [c.id]: { ...draft, contenu: e.target.value } }))}
@@ -243,12 +292,13 @@ export function CahierTextePage() {
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                     <input
                       className="input"
+                      disabled={verrouille}
                       placeholder={t('cahier.objectif_placeholder')}
                       value={draft.objectif}
                       onChange={e => setDrafts(prev => ({ ...prev, [c.id]: { ...draft, objectif: e.target.value } }))}
                       style={{ flex: 1, minWidth: 200 }}
                     />
-                    <Button size="sm" onClick={() => enregistrerSeance(c)} loading={saving === c.id}>
+                    <Button size="sm" onClick={() => enregistrerSeance(c)} loading={saving === c.id} disabled={verrouille}>
                       {t('cahier.enregistrer')}
                     </Button>
                   </div>
@@ -282,7 +332,7 @@ export function CahierTextePage() {
                       >
                         {DEVOIR_TYPES.map(ty => <option key={ty} value={ty}>{typeLabel(ty)}</option>)}
                       </select>
-                      <Button size="sm" variant="secondary" onClick={() => ajouterDevoir(c)} loading={savingDevoir === c.id}>
+                      <Button size="sm" variant="secondary" onClick={() => ajouterDevoir(c)} loading={savingDevoir === c.id} disabled={verrouille}>
                         + {t('cahier.ajouter_devoir')}
                       </Button>
                     </div>
@@ -308,6 +358,61 @@ export function CahierTextePage() {
               {t('cahier.charger')}
             </Button>
           </div>
+
+          {classeId && comp && (
+            <div className="card-pad" style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: comp.taux === null ? 'var(--ink-3)' : comp.taux >= 80 ? 'var(--success-text)' : comp.taux >= 50 ? 'var(--warning-text)' : 'var(--danger-text)' }}>
+                    {comp.taux === null ? '—' : `${comp.taux}%`}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>{t('cahier.completude')}</div>
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+                  {t('cahier.seances_renseignees', { renseignes: comp.total_renseignes, prevus: comp.total_prevus })}
+                  {comp.hors_edt > 0 && <span style={{ color: 'var(--ink-3)' }}> · {t('cahier.hors_edt', { n: comp.hors_edt })}</span>}
+                </div>
+                {estDirection && (
+                  <div style={{ marginInlineStart: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <input
+                      className="input"
+                      placeholder={t('cahier.commentaire_visa_placeholder')}
+                      value={commentaireVisa}
+                      onChange={e => setCommentaireVisa(e.target.value)}
+                      style={{ minWidth: 180 }}
+                    />
+                    <Button size="sm" onClick={viser} loading={visaEnCours}>{t('cahier.viser')}</Button>
+                  </div>
+                )}
+              </div>
+              {comp.par_jour.some(j => j.renseignes < j.prevus) && (
+                <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {comp.par_jour.filter(j => j.renseignes < j.prevus).map(j => (
+                    <Badge key={j.date} variant="warning" label={`${fmtDate(j.date)} : ${j.renseignes}/${j.prevus}`} />
+                  ))}
+                </div>
+              )}
+              {visas.length > 0 && (
+                <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px dashed var(--rule)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {visas.map(v => (
+                    <div key={v.id} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: 'var(--ink-2)', flexWrap: 'wrap' }}>
+                      <Badge variant="accent" dot label={t('cahier.visa')} />
+                      <span>{fmtDate(v.du)} → {fmtDate(v.au)}</span>
+                      <span style={{ color: 'var(--ink-3)' }}>
+                        {t('cahier.vise_par', { nom: `${v.signataire.prenom_fr ?? ''} ${v.signataire.nom_fr}`.trim() })}
+                      </span>
+                      {v.commentaire && <span style={{ fontStyle: 'italic', color: 'var(--ink-3)' }}>« {v.commentaire} »</span>}
+                      {estDirection && (
+                        <button onClick={() => deviser(v.id)} style={{ border: 'none', background: 'transparent', color: 'var(--danger-text)', cursor: 'pointer', fontSize: 12 }}>
+                          {t('cahier.deviser')}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {classeId && !loadingConsult && seances.length === 0 && devoirs.length === 0 && (
             <div className="card-pad" style={{ color: 'var(--ink-3)', fontSize: 13 }}>{t('cahier.aucune_seance')}</div>

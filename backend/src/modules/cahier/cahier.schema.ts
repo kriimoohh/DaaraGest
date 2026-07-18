@@ -60,7 +60,32 @@ export const devoirsQuerySchema = z.object({
   matiere_id: z.string().uuid().optional(),
 });
 
+// Visa direction : verrouille le cahier d'une classe sur [du, au].
+export const visaCreateSchema = z.object({
+  annee_scolaire_id: z.string().uuid(),
+  classe_id: z.string().uuid(),
+  du: dateISO,
+  au: dateISO,
+  commentaire: z.string().max(500).nullish(),
+});
+
+export const visasQuerySchema = z.object({
+  classe_id: z.string().uuid(),
+  annee_scolaire_id: z.string().uuid(),
+});
+
+// Complétude : séances prévues à l'emploi du temps vs renseignées sur [du, au].
+export const completudeQuerySchema = z.object({
+  classe_id: z.string().uuid(),
+  annee_scolaire_id: z.string().uuid(),
+  du: dateISO,
+  au: dateISO,
+});
+
 export type JourneeQuery = z.infer<typeof journeeQuerySchema>;
+export type VisaCreateInput = z.infer<typeof visaCreateSchema>;
+export type VisasQuery = z.infer<typeof visasQuerySchema>;
+export type CompletudeQuery = z.infer<typeof completudeQuerySchema>;
 export type SeanceUpsertInput = z.infer<typeof seanceUpsertSchema>;
 export type SeanceUpdateInput = z.infer<typeof seanceUpdateSchema>;
 export type SeancesQuery = z.infer<typeof seancesQuerySchema>;

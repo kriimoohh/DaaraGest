@@ -2231,6 +2231,17 @@
     "err_chargement": "Erreur de chargement",
     "err_enregistrement": "Erreur d'enregistrement",
     "err_contenu_vide": "Le contenu de la séance est vide",
-    "err_devoir_incomplet": "Renseignez la consigne et la date « pour le »"
+    "err_devoir_incomplet": "Renseignez la consigne et la date « pour le »",
+    "verrouillee": "Verrouillée (visa)",
+    "completude": "Complétude",
+    "seances_renseignees": "{{renseignes}}/{{prevus}} séances renseignées",
+    "hors_edt": "{{n}} hors emploi du temps",
+    "viser": "Viser la période",
+    "visa": "Visa",
+    "vise_par": "visé par {{nom}}",
+    "deviser": "Dé-viser",
+    "commentaire_visa_placeholder": "Commentaire du visa (optionnel)",
+    "ok_visa": "Période visée — cahier verrouillé",
+    "ok_devisa": "Visa retiré — période rouverte"
   }
 }
