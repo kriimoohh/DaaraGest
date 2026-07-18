@@ -6,6 +6,7 @@ import { Select } from '../../components/ui/Select';
 import { useApi } from '../../hooks/useApi';
 import { toast } from '../../store/toastStore';
 import { useAnneeScolaire } from '../../store/anneeStore';
+import { useAuthStore } from '../../store/authStore';
 import { API_BASE } from '../../lib/api';
 import { nomClasse } from '../../lib/noms';
 
@@ -35,6 +36,9 @@ interface RapportDef {
   icon: string;
   pdfOnly?: boolean;
   groupe: string;
+  // Rôles autorisés côté API quand la carte est plus restrictive que la page
+  // (rapports financiers = admin/gestionnaire ; propositions de fin = direction).
+  roles?: string[];
 }
 
 const RAPPORTS: RapportDef[] = [
@@ -101,6 +105,7 @@ const RAPPORTS: RapportDef[] = [
     icon: 'M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z',
     pdfOnly: true,
     groupe: 'fin_annee',
+    roles: ['admin', 'directeur'],
   },
   // ── RH ────────────────────────────────────────────────────────────────────
   {
@@ -109,6 +114,7 @@ const RAPPORTS: RapportDef[] = [
     descKey: 'rapport.charges_personnel_desc',
     icon: 'M12 20c4.41 0 8-3.59 8-8s-3.59-8-8-8-8 3.59-8 8 3.59 8 8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z',
     groupe: 'rh',
+    roles: ['admin', 'gestionnaire'],
   },
   // ── Finance ───────────────────────────────────────────────────────────────
   {
@@ -117,6 +123,7 @@ const RAPPORTS: RapportDef[] = [
     descKey: 'rapport.bilan_financier_desc',
     icon: 'M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z',
     groupe: 'finance',
+    roles: ['admin', 'gestionnaire'],
   },
 ];
 
@@ -125,6 +132,7 @@ const GROUPES = ['presences', 'academique', 'grilles_ief', 'fin_annee', 'finance
 export function RapportsPage() {
   const { t } = useTranslation();
   const api = useApi();
+  const role = useAuthStore(s => s.user?.role ?? '');
   const [selected, setSelected] = useState<TypeRapport>('presences-eleves');
   const [format, setFormat]     = useState<FormatRapport>('pdf');
   const [loading, setLoading]   = useState(false);
@@ -247,7 +255,7 @@ export function RapportsPage() {
         {/* Liste des rapports groupés */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {GROUPES.map(groupe => {
-            const groupeRapports = RAPPORTS.filter(r => r.groupe === groupe);
+            const groupeRapports = RAPPORTS.filter(r => r.groupe === groupe && (!r.roles || r.roles.includes(role)));
             if (!groupeRapports.length) return null;
             return (
               <div key={groupe}>

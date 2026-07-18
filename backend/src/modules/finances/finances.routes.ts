@@ -10,8 +10,10 @@ import {
   exportReliquatsExcelHandler, exportReliquatsPdfHandler,
 } from './finances.controller';
 
-const scolarite  = requireRole(...ROLE_GROUPS.SCOLARITE);
-const gestion    = requireRole(...ROLE_GROUPS.GESTION);
+// Finances SANS le directeur (arbitrage établissement) : opérations élèves =
+// FINANCES (admin/gestionnaire/agent), paiements du personnel = FINANCES_GESTION.
+const scolarite  = requireRole(...ROLE_GROUPS.FINANCES);
+const gestion    = requireRole(...ROLE_GROUPS.FINANCES_GESTION);
 const adminOnly  = requireRole(...ROLE_GROUPS.ADMIN_ONLY);
 
 export async function financesRoutes(fastify: FastifyInstance) {
