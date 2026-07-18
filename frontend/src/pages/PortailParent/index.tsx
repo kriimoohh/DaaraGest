@@ -23,7 +23,7 @@ interface PortailData {
   }>
   bulletins: Array<{
     id: string; filiere: string; periode: number;
-    moyenne: string | null; rang: number | null; appreciation: string | null; pdf_url: string | null
+    moyenne: string | null; rang: number | null; appreciation: string | null
   }>
   paiements: Array<{
     id: string; type: string; montant: string; mois: number | null; annee: number | null;
@@ -130,14 +130,6 @@ function NotesTab({ notes, bulletins, base, periodeLabels }: { notes: PortailDat
                 )}
                 {bulletin?.rang && (
                   <Badge label={t('portail_parent.rang_n', { n: bulletin.rang })} variant="info" />
-                )}
-                {bulletin?.pdf_url && (
-                  <a href={bulletin.pdf_url} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm">
-                    <svg width={12} height={12} viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-                    </svg>
-                    {t('portail_parent.bulletin_pdf')}
-                  </a>
                 )}
               </div>
             </div>
