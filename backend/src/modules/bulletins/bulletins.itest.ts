@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import prisma from '../../config/database';
-import { genererBulletins, genererBulletinsAnnuels, getBulletin, calculerMoyennesClasse, filieresActivesCodes, getBaremesClasse, preflightBulletins } from './bulletins.service';
+import { genererBulletins, genererBulletinsAnnuels, getBulletin, calculerMoyennesClasse, filieresActivesCodes, getBaremesClasse, preflightBulletins, etatGenerations } from './bulletins.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test d'INTÉGRATION (nécessite une vraie base PostgreSQL via DATABASE_URL).
@@ -47,6 +47,7 @@ async function nettoyer() {
   await prisma.inscriptionClasse.deleteMany({ where: { inscription: { annee_scolaire_id: anneeId } } });
   await prisma.inscription.deleteMany({ where: { annee_scolaire_id: anneeId } });
   await prisma.classeMatiere.deleteMany({ where: { classe_id: { in: [classeId, classeArId, classeEnId, classeBaremeId] } } });
+  await prisma.classeMatierePeriode.deleteMany({ where: { classe_id: { in: [classeId, classeArId, classeEnId, classeBaremeId] } } });
   await prisma.note.deleteMany({ where: { matiere: { etablissement_id: etabId } } });
   await prisma.classe.deleteMany({ where: { etablissement_id: etabId } });
   await prisma.niveau.deleteMany({ where: { etablissement_id: etabId } });
@@ -432,5 +433,95 @@ describe('Bulletins — intégration notes → moyenne (DB réelle)', () => {
     // A (15.25) → « Bien FR » (≥14) ; B (10.00) → « Passable FR » (≥10) — mentions FR, pas défaut.
     expect(parEleve[ids.eleveA].appreciation).toBe('Bien FR');
     expect(parEleve[ids.eleveB].appreciation).toBe('Passable FR');
+  });
+});
+
+// Période 2 dédiée (aucun autre test ne l'utilise) : cycle de vie complet de la
+// détection de péremption. Placé APRÈS le describe principal — il modifie le
+// programme (coeff, CMP) et le remet en l'état.
+describe('État des générations — détection de péremption (DB réelle)', () => {
+  const ctx = { classe_id: classeId, annee_scolaire_id: anneeId, periode: 2, filiere: 'FR' as const };
+  const attendre = () => new Promise(r => setTimeout(r, 15)); // updated_at strictement postérieur
+
+  it('non généré → à jour → périmé (note) → à jour → périmé (programme)', async () => {
+    // Aucune note ni bulletin en période 2.
+    let etat = await etatGenerations(etabId, ctx);
+    expect(etat.statut).toBe('non_genere');
+    expect(etat.eleves_avec_notes).toBe(0);
+    expect(etat.total_eleves).toBe(2);
+
+    // Des notes mais pas de bulletins → toujours non généré.
+    await prisma.note.createMany({
+      data: [
+        { eleve_id: ids.eleveA, matiere_id: ids.matMath, periode: 2, annee_scolaire_id: anneeId, valeur: 12 },
+        { eleve_id: ids.eleveB, matiere_id: ids.matMath, periode: 2, annee_scolaire_id: anneeId, valeur: 14 },
+      ],
+    });
+    etat = await etatGenerations(etabId, ctx);
+    expect(etat.statut).toBe('non_genere');
+    expect(etat.eleves_avec_notes).toBe(2);
+
+    // Génération → à jour.
+    await genererBulletins(etabId, ctx);
+    etat = await etatGenerations(etabId, ctx);
+    expect(etat.statut).toBe('a_jour');
+    expect(etat.generes).toBe(2);
+    expect(etat.generated_at_min).not.toBeNull();
+
+    // Note modifiée APRÈS génération → tout le groupe est périmé (le rang est relatif).
+    await attendre();
+    await prisma.note.updateMany({
+      where: { eleve_id: ids.eleveB, matiere_id: ids.matMath, periode: 2, annee_scolaire_id: anneeId },
+      data: { valeur: 17 },
+    });
+    etat = await etatGenerations(etabId, ctx);
+    expect(etat.statut).toBe('perime');
+    expect(etat.derniere_note_maj).not.toBeNull();
+
+    // Régénération → à jour.
+    await genererBulletins(etabId, ctx);
+    etat = await etatGenerations(etabId, ctx);
+    expect(etat.statut).toBe('a_jour');
+
+    // Changement de programme (coeff de classe) après génération → périmé.
+    await attendre();
+    await prisma.classeMatiere.update({
+      where: { classe_id_matiere_id: { classe_id: classeId, matiere_id: ids.matMath } },
+      data: { coeff_override: 3 },
+    });
+    etat = await etatGenerations(etabId, ctx);
+    expect(etat.statut).toBe('perime');
+    expect(etat.dernier_prog_maj).not.toBeNull();
+    await prisma.classeMatiere.update({
+      where: { classe_id_matiere_id: { classe_id: classeId, matiere_id: ids.matMath } },
+      data: { coeff_override: null },
+    });
+  });
+
+  it("l'AJOUT d'un override de période après génération périme le groupe (via created_at)", async () => {
+    await genererBulletins(etabId, ctx);
+    expect((await etatGenerations(etabId, ctx)).statut).toBe('a_jour');
+
+    await attendre();
+    await prisma.classeMatierePeriode.create({
+      data: { classe_id: classeId, matiere_id: ids.matMath, periode: 2, coeff: 2, note_max: 20 },
+    });
+    expect((await etatGenerations(etabId, ctx)).statut).toBe('perime');
+    await prisma.classeMatierePeriode.deleteMany({ where: { classe_id: classeId, periode: 2 } });
+  });
+
+  it('une note d\'une AUTRE filière ne périme pas le bulletin FR (mais périme le COMBINE)', async () => {
+    await genererBulletins(etabId, ctx);
+    await genererBulletins(etabId, { ...ctx, filiere: 'COMBINE' });
+    expect((await etatGenerations(etabId, ctx)).statut).toBe('a_jour');
+
+    await attendre();
+    await prisma.note.create({
+      data: { eleve_id: ids.eleveA, matiere_id: ids.matAr, periode: 2, annee_scolaire_id: anneeId, valeur: 11 },
+    });
+    // FR : insensible à une note AR.
+    expect((await etatGenerations(etabId, ctx)).statut).toBe('a_jour');
+    // COMBINE : dépend des deux filières → périmé.
+    expect((await etatGenerations(etabId, { ...ctx, filiere: 'COMBINE' })).statut).toBe('perime');
   });
 });

@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { authMiddleware } from '../../middlewares/auth.middleware';
 import { requireRole } from '../../middlewares/role.middleware';
 import { ROLE_GROUPS } from '../../config/roles';
-import { listerHandler, genererHandler, genererAnnuelHandler, getHandler, pdfHandler, pdfClasseHandler, observationHandler, preflightHandler, deverrouillerPeriodeHandler, getTemplateHandler, upsertTemplateHandler, resetTemplateHandler, apercuTemplateHandler } from './bulletins.controller';
+import { listerHandler, genererHandler, genererAnnuelHandler, getHandler, pdfHandler, pdfClasseHandler, observationHandler, preflightHandler, etatGenerationsHandler, deverrouillerPeriodeHandler, getTemplateHandler, upsertTemplateHandler, resetTemplateHandler, apercuTemplateHandler } from './bulletins.controller';
 
 const acces = requireRole(...ROLE_GROUPS.ACADEMIQUE);
 const direction = requireRole(...ROLE_GROUPS.DIRECTION);
@@ -10,6 +10,7 @@ const direction = requireRole(...ROLE_GROUPS.DIRECTION);
 export async function bulletinRoutes(fastify: FastifyInstance) {
   fastify.get('/',                  { preHandler: [authMiddleware, acces] }, listerHandler);
   fastify.post('/preflight',        { preHandler: [authMiddleware, acces] }, preflightHandler);
+  fastify.get('/etat',              { preHandler: [authMiddleware, acces] }, etatGenerationsHandler);
   fastify.post('/deverrouiller-periode', { preHandler: [authMiddleware, direction] }, deverrouillerPeriodeHandler);
   fastify.post('/generer',          { preHandler: [authMiddleware, acces] }, genererHandler);
   fastify.post('/generer-annuel',   { preHandler: [authMiddleware, acces] }, genererAnnuelHandler);
