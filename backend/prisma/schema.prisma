@@ -490,6 +490,11 @@ model ClasseMatiere {
   // Reste visible sur le bulletin avec la mention "Non évaluée".
   // Override possible par période via ClasseMatierePeriode.evaluee.
   evaluee           Boolean  @default(true)
+  // Date de dernière modification du programme (coeff/barème/évaluée) : permet de
+  // détecter qu'un bulletin généré avant ce changement est périmé. Nullable :
+  // NULL = jamais modifié depuis l'ajout du suivi (pas de faux « périmé » à la
+  // migration, les lignes existantes ne sont pas datées d'aujourd'hui).
+  updated_at        DateTime? @updatedAt
 
   classe  Classe  @relation(fields: [classe_id], references: [id])
   matiere Matiere @relation(fields: [matiere_id], references: [id])
@@ -512,6 +517,9 @@ model ClasseMatierePeriode {
   // mais pas au T1/T3). null = on retombe sur ClasseMatiere.evaluee.
   evaluee    Boolean?
   created_at DateTime @default(now())
+  // Même rôle que ClasseMatiere.updated_at : détection des bulletins périmés
+  // (l'AJOUT d'un override après génération est couvert par created_at).
+  updated_at DateTime? @updatedAt
 
   @@unique([classe_id, matiere_id, periode])
   @@index([classe_id, periode])
@@ -684,7 +692,6 @@ model Bulletin {
   observation_prof  String?
   valide_par        String?
   valide_le         DateTime?
-  pdf_url           String?
   generated_at      DateTime?
   created_at        DateTime  @default(now())
 
