@@ -2250,6 +2250,9 @@
     "deviser": "Remove sign-off",
     "commentaire_visa_placeholder": "Sign-off comment (optional)",
     "ok_visa": "Period signed off — journal locked",
-    "ok_devisa": "Sign-off removed — period reopened"
+    "ok_devisa": "Sign-off removed — period reopened",
+    "exporter_pdf": "Export PDF",
+    "ok_export": "Journal exported",
+    "err_export": "PDF export error"
   }
 }

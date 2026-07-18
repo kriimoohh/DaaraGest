@@ -2250,6 +2250,9 @@
     "deviser": "Dé-viser",
     "commentaire_visa_placeholder": "Commentaire du visa (optionnel)",
     "ok_visa": "Période visée — cahier verrouillé",
-    "ok_devisa": "Visa retiré — période rouverte"
+    "ok_devisa": "Visa retiré — période rouverte",
+    "exporter_pdf": "Exporter PDF",
+    "ok_export": "Cahier exporté",
+    "err_export": "Erreur d'export du PDF"
   }
 }

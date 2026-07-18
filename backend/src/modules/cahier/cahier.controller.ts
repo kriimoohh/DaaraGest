@@ -9,7 +9,7 @@ import {
 import {
   journee, upsertSeance, modifierSeance, supprimerSeance, listerSeances,
   creerDevoir, modifierDevoir, supprimerDevoir, listerDevoirs,
-  viserPeriode, listerVisas, supprimerVisa, completude,
+  viserPeriode, listerVisas, supprimerVisa, completude, exporterCahierPdf,
 } from './cahier.service';
 
 function envoyer(reply: FastifyReply, err: unknown) {
@@ -121,6 +121,19 @@ export async function supprimerVisaHandler(request: FastifyRequest, reply: Fasti
   const { id } = request.params as { id: string };
   try {
     return reply.send(await supprimerVisa(id, etablissement_id, { id: acteurId }));
+  } catch (err) { return envoyer(reply, err); }
+}
+
+export async function exporterPdfHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const parsed = completudeQuerySchema.safeParse(request.query);
+  if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  try {
+    const pdf = await exporterCahierPdf(etablissement_id, parsed.data);
+    return reply
+      .header('Content-Type', 'application/pdf')
+      .header('Content-Disposition', `attachment; filename="cahier-${parsed.data.du}-${parsed.data.au}.pdf"`)
+      .send(pdf);
   } catch (err) { return envoyer(reply, err); }
 }
 
