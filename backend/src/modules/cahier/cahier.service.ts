@@ -1,5 +1,7 @@
 import prisma from '../../config/database';
 import { logAction } from '../../utils/audit';
+import { escapeHtml } from '../../utils/escapeHtml';
+import { renderPdfHtml } from '../../utils/browserPool';
 import { assertProfPeutSaisirNotes } from '../../utils/teachingPolicy';
 import { NotFoundError, ForbiddenError, ValidationError } from '../../utils/errors';
 import {
@@ -380,6 +382,156 @@ export async function completude(etablissement_id: string, q: CompletudeQuery) {
     par_jour,
     par_matiere: [...parMatiere.values()],
   };
+}
+
+// ─── Export PDF du cahier (Phase 4) — document d'inspection ──────────────────
+
+export type CahierExportData = {
+  etablissement: { nom_fr: string; logo_url: string | null };
+  classe: { nom_fr: string; nom_ar: string | null };
+  annee: string;
+  du: string;
+  au: string;
+  jours: {
+    date: string;
+    seances: { matiere: string; enseignant: string; contenu: string; objectif: string | null }[];
+    devoirs: { matiere: string; type: string; consigne: string; pour_le: string }[];
+  }[];
+  visas: { du: string; au: string; signataire: string; vise_le: string; commentaire: string | null }[];
+};
+
+const JOURS_LONGS: Record<string, string> = {
+  lundi: 'Lundi', mardi: 'Mardi', mercredi: 'Mercredi', jeudi: 'Jeudi',
+  vendredi: 'Vendredi', samedi: 'Samedi', dimanche: 'Dimanche',
+};
+const fmtFr = (dISO: string) => {
+  const [y, m, d] = dISO.split('-');
+  return `${JOURS_LONGS[jourDeLaDate(dISO)]} ${d}/${m}/${y}`;
+};
+
+/** HTML imprimable du cahier — pur (testé unitairement), tout contenu échappé. */
+export function construireHtmlCahier(data: CahierExportData): string {
+  const jours = data.jours.map(j => `
+    <section class="jour">
+      <h2>${escapeHtml(fmtFr(j.date))}</h2>
+      ${j.seances.map(s => `
+        <div class="seance">
+          <div class="ligne"><strong>${escapeHtml(s.matiere)}</strong><span class="prof">${escapeHtml(s.enseignant)}</span></div>
+          <div class="contenu">${escapeHtml(s.contenu)}</div>
+          ${s.objectif ? `<div class="objectif">Objectif : ${escapeHtml(s.objectif)}</div>` : ''}
+        </div>`).join('')}
+      ${j.devoirs.length > 0 ? `
+        <div class="devoirs">
+          ${j.devoirs.map(d => `<div class="devoir">✎ <strong>${escapeHtml(d.matiere)}</strong> (${escapeHtml(d.type.toLowerCase())}) : ${escapeHtml(d.consigne)} — pour le ${escapeHtml(fmtFr(d.pour_le))}</div>`).join('')}
+        </div>` : ''}
+    </section>`).join('');
+
+  const visas = data.visas.length > 0 ? `
+    <section class="visas">
+      <h2>Visas de la direction</h2>
+      ${data.visas.map(v => `<div class="visa">Du ${escapeHtml(fmtFr(v.du))} au ${escapeHtml(fmtFr(v.au))} — visé par ${escapeHtml(v.signataire)} le ${escapeHtml(fmtFr(v.vise_le))}${v.commentaire ? ` · « ${escapeHtml(v.commentaire)} »` : ''}</div>`).join('')}
+    </section>` : '';
+
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; color: #1a1a1a; padding: 24px; }
+    header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #1a1a1a; padding-bottom: 8px; margin-bottom: 14px; }
+    header h1 { font-size: 16px; }
+    header .meta { font-size: 11px; text-align: right; }
+    .jour { margin-bottom: 12px; page-break-inside: avoid; }
+    .jour h2 { font-size: 12px; background: #f0f0f0; padding: 4px 8px; margin-bottom: 6px; border-inline-start: 3px solid #555; }
+    .seance { padding: 4px 8px 6px; border-bottom: 1px dotted #ccc; }
+    .ligne { display: flex; justify-content: space-between; }
+    .prof { color: #666; font-size: 10px; }
+    .contenu { margin-top: 2px; white-space: pre-wrap; }
+    .objectif { color: #555; font-style: italic; font-size: 10px; margin-top: 2px; }
+    .devoirs { padding: 4px 8px; background: #fafafa; }
+    .devoir { font-size: 10.5px; padding: 1px 0; }
+    .visas { margin-top: 18px; border-top: 1px solid #999; padding-top: 8px; }
+    .visas h2 { font-size: 12px; margin-bottom: 4px; }
+    .visa { font-size: 10.5px; padding: 1px 0; }
+    .vide { color: #888; font-style: italic; padding: 8px; }
+  </style></head><body>
+    <header>
+      <div>
+        <h1>${escapeHtml(data.etablissement.nom_fr)}</h1>
+        <div>Cahier de texte — ${escapeHtml(data.classe.nom_fr)}${data.classe.nom_ar ? ` / ${escapeHtml(data.classe.nom_ar)}` : ''}</div>
+      </div>
+      <div class="meta">Année ${escapeHtml(data.annee)}<br>Du ${escapeHtml(fmtFr(data.du))} au ${escapeHtml(fmtFr(data.au))}</div>
+    </header>
+    ${jours || '<div class="vide">Aucune séance renseignée sur cet intervalle.</div>'}
+    ${visas}
+  </body></html>`;
+}
+
+/** Assemble les données puis rend le PDF (A4 portrait) du cahier d'une classe. */
+export async function exporterCahierPdf(etablissement_id: string, q: CompletudeQuery): Promise<Buffer> {
+  const classe = await prisma.classe.findFirst({
+    where: { id: q.classe_id, etablissement_id },
+    include: { annee_scolaire: { select: { libelle: true } } },
+  });
+  if (!classe) throw new NotFoundError('Classe introuvable');
+  const etab = await prisma.etablissement.findUnique({
+    where: { id: etablissement_id }, select: { nom_fr: true, logo_url: true },
+  });
+
+  const [seances, devoirs, visas] = await Promise.all([
+    listerSeances(etablissement_id, q),
+    // Vue journal : les devoirs sont rattachés au jour où ils ont été DONNÉS.
+    prisma.devoir.findMany({
+      where: {
+        etablissement_id, classe_id: q.classe_id, annee_scolaire_id: q.annee_scolaire_id,
+        donne_le: { gte: dateDb(q.du), lte: dateDb(q.au) },
+      },
+      include: { matiere: { select: { nom_fr: true, nom_ar: true } } },
+      orderBy: { donne_le: 'asc' },
+    }),
+    prisma.cahierVisa.findMany({
+      where: {
+        etablissement_id, classe_id: q.classe_id, annee_scolaire_id: q.annee_scolaire_id,
+        du: { lte: dateDb(q.au) }, au: { gte: dateDb(q.du) },
+      },
+      include: { signataire: { select: { nom_fr: true, prenom_fr: true } } },
+      orderBy: { du: 'asc' },
+    }),
+  ]);
+
+  const jours = new Map<string, CahierExportData['jours'][number]>();
+  const jourDe = (d: Date) => {
+    const k = d.toISOString().slice(0, 10);
+    if (!jours.has(k)) jours.set(k, { date: k, seances: [], devoirs: [] });
+    return jours.get(k)!;
+  };
+  for (const s of seances) {
+    jourDe(s.date).seances.push({
+      matiere: s.matiere.nom_fr,
+      enseignant: `${s.personnel.utilisateur.prenom_fr ?? ''} ${s.personnel.utilisateur.nom_fr}`.trim(),
+      contenu: s.contenu, objectif: s.objectif,
+    });
+  }
+  for (const d of devoirs) {
+    jourDe(d.donne_le).devoirs.push({
+      matiere: d.matiere.nom_fr, type: d.type, consigne: d.consigne,
+      pour_le: d.pour_le.toISOString().slice(0, 10),
+    });
+  }
+
+  const html = construireHtmlCahier({
+    etablissement: etab ?? { nom_fr: '', logo_url: null },
+    classe: { nom_fr: classe.nom_fr, nom_ar: classe.nom_ar },
+    annee: classe.annee_scolaire.libelle,
+    du: q.du, au: q.au,
+    jours: [...jours.values()].sort((a, b) => a.date.localeCompare(b.date)),
+    visas: visas.map(v => ({
+      du: v.du.toISOString().slice(0, 10), au: v.au.toISOString().slice(0, 10),
+      signataire: `${v.signataire.prenom_fr ?? ''} ${v.signataire.nom_fr}`.trim(),
+      vise_le: v.vise_le.toISOString().slice(0, 10), commentaire: v.commentaire,
+    })),
+  });
+  return renderPdfHtml(html, {
+    format: 'A4', printBackground: true,
+    margin: { top: '10mm', bottom: '12mm', left: '10mm', right: '10mm' },
+  });
 }
 
 /** Devoirs d'une classe à faire dans l'intervalle [du, au] (fenêtre sur pour_le). */
