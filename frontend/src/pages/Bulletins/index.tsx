@@ -184,6 +184,9 @@ export function BulletinsPage() {
   const [downloading, setDownloading] = useState<string | null>(null);
   const [detail, setDetail] = useState<DetailBulletin | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  // Aperçu PDF : URL blob affichée dans une iframe (révoquée à la fermeture).
+  const [apercu, setApercu] = useState<{ url: string; bulletin: Bulletin } | null>(null);
+  const [loadingApercu, setLoadingApercu] = useState<string | null>(null);
   const [view, setView] = useState<'cards' | 'table'>('cards');
   // Pré-vol : modale de vérification avant génération
   const [preflight, setPreflight] = useState<PreflightResult | null>(null);
@@ -324,6 +327,30 @@ export function BulletinsPage() {
     } finally {
       setDownloading(null);
     }
+  };
+
+  // Aperçu PDF dans une modale (iframe sur blob) — le même PDF que le
+  // téléchargement, sans quitter la page. L'URL blob est révoquée à la fermeture.
+  const apercuPdf = async (b: Bulletin) => {
+    setLoadingApercu(b.id);
+    try {
+      const resp = await fetch(
+        `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/api/v1/bulletins/${b.id}/pdf`,
+        { credentials: 'include' }
+      );
+      if (!resp.ok) throw new Error(t('bulletin.err_pdf'));
+      const blob = new Blob([await resp.blob()], { type: 'application/pdf' });
+      setApercu({ url: URL.createObjectURL(blob), bulletin: b });
+    } catch (err) {
+      toast.error((err as Error).message || t('bulletin.err_pdf'));
+    } finally {
+      setLoadingApercu(null);
+    }
+  };
+
+  const fermerApercu = () => {
+    if (apercu) URL.revokeObjectURL(apercu.url);
+    setApercu(null);
   };
 
   const downloadAll = async () => {
@@ -535,6 +562,13 @@ export function BulletinsPage() {
                       Détail
                     </button>
                     <button
+                      onClick={() => apercuPdf(b)}
+                      disabled={loadingApercu === b.id}
+                      style={{ flex: 1, fontSize: 12, textAlign: 'center', padding: '6px 0', borderRadius: 'var(--r-md)', color: 'var(--ink-3)', background: 'transparent', border: '1px solid var(--rule)', cursor: 'pointer', opacity: loadingApercu === b.id ? 0.5 : 1 }}
+                    >
+                      {loadingApercu === b.id ? '…' : `👁 ${t('bulletin.apercu')}`}
+                    </button>
+                    <button
                       onClick={() => downloadPdf(b)}
                       disabled={downloading === b.id}
                       style={{ flex: 1, fontSize: 12, textAlign: 'center', padding: '6px 0', borderRadius: 'var(--r-md)', background: 'var(--ink)', color: 'var(--paper)', border: 'none', cursor: 'pointer', fontWeight: 500, opacity: downloading === b.id ? 0.5 : 1 }}
@@ -584,6 +618,7 @@ export function BulletinsPage() {
                     <td>
                       <div className="row">
                         <Button variant="ghost" size="sm" onClick={() => openDetail(b)}>{t('actions.voir')}</Button>
+                        <Button variant="ghost" size="sm" loading={loadingApercu === b.id} onClick={() => apercuPdf(b)}>{t('bulletin.apercu')}</Button>
                         <Button variant="secondary" size="sm" loading={downloading === b.id} onClick={() => downloadPdf(b)}>PDF</Button>
                       </div>
                     </td>
@@ -612,6 +647,30 @@ export function BulletinsPage() {
           <div style={{ padding: '64px 0', textAlign: 'center', color: 'var(--ink-4)', fontSize: 13 }}>{t('bulletin.chargement_progress')}</div>
         )}
         {detail && !loadingDetail && <BulletinDetailContent detail={detail} downloading={downloading} onDownload={downloadPdf} onClose={() => setDetail(null)} api={api} />}
+      </Modal>
+
+      {/* Aperçu PDF (iframe sur blob, même rendu que le téléchargement) */}
+      <Modal
+        isOpen={!!apercu}
+        onClose={fermerApercu}
+        title={apercu ? `${apercu.bulletin.eleve.prenom_fr} ${apercu.bulletin.eleve.nom_fr} — ${apercu.bulletin.periode === 0 ? t('bulletin.annuel') : `T${apercu.bulletin.periode}`} (${apercu.bulletin.filiere})` : ''}
+        size="xl"
+      >
+        {apercu && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <iframe
+              src={apercu.url}
+              title={t('bulletin.apercu')}
+              style={{ width: '100%', height: '72vh', border: '1px solid var(--rule)', borderRadius: 'var(--r-md)', background: 'var(--paper-2)' }}
+            />
+            <div className="row" style={{ justifyContent: 'flex-end', gap: 8 }}>
+              <Button variant="secondary" onClick={fermerApercu}>{t('bulletin.fermer')}</Button>
+              <Button loading={downloading === apercu.bulletin.id} onClick={() => downloadPdf(apercu.bulletin)}>
+                ⬇ {t('bulletin.telecharger')}
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* Modale de pré-vol avant génération */}
