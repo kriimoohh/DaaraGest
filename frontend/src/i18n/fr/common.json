@@ -50,7 +50,8 @@
     "groupe_principal": "Principal",
     "groupe_pedagogie": "Pédagogie",
     "groupe_communication": "Communication",
-    "groupe_administration": "Administration"
+    "groupe_administration": "Administration",
+    "cahier_texte": "Cahier de texte"
   },
   "theme": {
     "light": "Mode clair",
@@ -2149,7 +2150,11 @@
     "revoque": "Lien révoqué",
     "revoquer_titre": "Révoquer le lien",
     "revoquer_message": "Le lien de {{nom}} cessera immédiatement de fonctionner. Cette action est irréversible.",
-    "statuts": { "actif": "Actif", "revoque": "Révoqué", "expire": "Expiré" }
+    "statuts": {
+      "actif": "Actif",
+      "revoque": "Révoqué",
+      "expire": "Expiré"
+    }
   },
   "profil": {
     "titre": "Mon profil",
@@ -2192,5 +2197,40 @@
   },
   "confirm": {
     "titre_suppression": "Confirmer la suppression"
+  },
+  "cahier": {
+    "eyebrow": "Pédagogie",
+    "titre": "Cahier de texte",
+    "ma_journee": "Ma journée",
+    "consultation": "Consultation",
+    "date": "Date",
+    "charger": "Charger",
+    "du": "Du",
+    "au": "Au",
+    "aucun_creneau": "Aucun créneau dans votre emploi du temps ce jour-là.",
+    "sans_fiche_personnel": "Ce compte n'est lié à aucune fiche personnel : utilisez l'onglet Consultation pour lire le cahier des classes.",
+    "renseignee": "Renseignée",
+    "a_renseigner": "À renseigner",
+    "contenu_placeholder": "Ce qui a été fait en classe (leçon, activités, pages…)",
+    "objectif_placeholder": "Objectif d'apprentissage (optionnel)",
+    "objectif": "Objectif",
+    "enregistrer": "Enregistrer",
+    "devoirs": "Devoirs donnés ce jour",
+    "ajouter_devoir": "Donner un devoir",
+    "consigne_placeholder": "Consigne (ex. : relire la leçon, exercices 1 à 3…)",
+    "pour_le": "pour le",
+    "devoirs_a_faire": "Devoirs à faire sur la période",
+    "type_lecon": "Leçon",
+    "type_exercice": "Exercice",
+    "type_recitation": "Récitation",
+    "type_autre": "Autre",
+    "aucune_seance": "Aucune séance ni devoir sur cet intervalle.",
+    "ok_seance": "Séance enregistrée",
+    "ok_devoir": "Devoir enregistré",
+    "ok_supprime": "Supprimé",
+    "err_chargement": "Erreur de chargement",
+    "err_enregistrement": "Erreur d'enregistrement",
+    "err_contenu_vide": "Le contenu de la séance est vide",
+    "err_devoir_incomplet": "Renseignez la consigne et la date « pour le »"
   }
 }
