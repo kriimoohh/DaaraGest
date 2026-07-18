@@ -41,10 +41,12 @@ export async function listerPresences(
     prisma.presencePersonnel.count({ where }),
     prisma.presencePersonnel.findMany({
       where, skip, take: limit,
+      // Identité seulement — pas l'objet Personnel complet (salaire, CNI, qr_token).
       include: {
         personnel: {
-          include: {
-            utilisateur: { select: { nom_fr: true } },
+          select: {
+            id: true, fonction: true, matricule: true,
+            utilisateur: { select: { nom_fr: true, prenom_fr: true } },
           },
         },
       },
@@ -93,7 +95,7 @@ export async function upsertPresence(etablissement_id: string, data: PresenceInp
     where: { personnel_id_date: { personnel_id: data.personnel_id, date } },
     create: { personnel_id: data.personnel_id, date, ...payload },
     update: payload,
-    include: { personnel: { include: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } } } },
+    include: { personnel: { select: { id: true, fonction: true, matricule: true, utilisateur: { select: { nom_fr: true, prenom_fr: true } } } } },
   });
 
   if (data.statut === 'absent') {
@@ -251,7 +253,7 @@ export async function getScansDuJour(etablissement_id: string) {
       personnel: { utilisateur: { etablissement_id } },
     },
     include: {
-      personnel: { include: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } } },
+      personnel: { select: { id: true, fonction: true, matricule: true, utilisateur: { select: { nom_fr: true, prenom_fr: true } } } },
     },
     orderBy: { created_at: 'desc' },
     take: 20,

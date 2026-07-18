@@ -9,7 +9,7 @@ export async function listerDemandes(etablissement_id: string, statut?: string) 
       ...(statut ? { statut } : {}),
     },
     include: {
-      personnel: { include: { utilisateur: true } },
+      personnel: { select: { id: true, fonction: true, matricule: true, utilisateur: { select: { nom_fr: true, prenom_fr: true, email: true } } } },
       traiteur: true,
     },
     orderBy: { created_at: 'desc' },
@@ -36,7 +36,7 @@ export async function creerDemande(etablissement_id: string, data: CreerDemandeI
       type_absence:  data.type_absence,
     },
     include: {
-      personnel: { include: { utilisateur: true } },
+      personnel: { select: { id: true, fonction: true, matricule: true, utilisateur: { select: { nom_fr: true, prenom_fr: true, email: true } } } },
     },
   });
 }
@@ -63,7 +63,7 @@ export async function traiterDemande(
       traite_le:   new Date(),
     },
     include: {
-      personnel: { include: { utilisateur: true } },
+      personnel: { select: { id: true, fonction: true, matricule: true, utilisateur: { select: { nom_fr: true, prenom_fr: true, email: true } } } },
       traiteur: true,
     },
   });

@@ -7,10 +7,11 @@ import { useApi } from '../hooks/useApi';
 
 // Ce que chaque rôle voit sur le tableau de bord — source unique (évite les
 // `if (role === …)` éparpillés). Aligné sur les permissions API : les endpoints
-// finances sont gardés par SCOLARITE, les analytics par la DIRECTION.
+// finances sont gardés par FINANCES (SANS le directeur — arbitrage établissement),
+// les analytics par la DIRECTION.
 function dashboardCaps(role: string | undefined) {
   return {
-    finances:  ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'].includes(role ?? ''),
+    finances:  ['admin', 'gestionnaire', 'agent de scolarité'].includes(role ?? ''),
     analytics: ['admin', 'directeur'].includes(role ?? ''),
   };
 }
