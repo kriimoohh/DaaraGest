@@ -1614,7 +1614,15 @@
     "footer": "دارا جيست — نظام الإدارة المدرسية",
     "chargement": "جار التحميل…",
     "note_th": "الدرجة",
-    "retard": "تأخر"
+    "retard": "تأخر",
+    "devoirs": "الواجبات",
+    "aucun_devoir": "لا واجبات قادمة.",
+    "devoir_passe": "منقضٍ",
+    "devoir_aujourdhui": "اليوم",
+    "devoir_type_lecon": "درس",
+    "devoir_type_exercice": "تمرين",
+    "devoir_type_recitation": "استظهار",
+    "devoir_type_autre": "آخر"
   },
   "activite": {
     "titre": "الأنشطة اللاصفية",

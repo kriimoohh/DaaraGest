@@ -18,6 +18,16 @@ const acteur  = `pp-acteur-${RUN}`;
 async function nettoyer() {
   await prisma.auditLog.deleteMany({ where: { etablissement_id: etabId } });
   await prisma.portailParentToken.deleteMany({ where: { etablissement_id: etabId } });
+  await prisma.devoir.deleteMany({ where: { etablissement_id: etabId } });
+  await prisma.inscriptionClasse.deleteMany({ where: { classe: { etablissement_id: etabId } } });
+  await prisma.inscription.deleteMany({ where: { eleve: { etablissement_id: etabId } } });
+  await prisma.personnel.deleteMany({ where: { utilisateur: { etablissement_id: etabId } } });
+  await prisma.utilisateur.deleteMany({ where: { etablissement_id: etabId } });
+  await prisma.classe.deleteMany({ where: { etablissement_id: etabId } });
+  await prisma.matiere.deleteMany({ where: { etablissement_id: etabId } });
+  await prisma.filiere.deleteMany({ where: { etablissement_id: etabId } });
+  await prisma.configNotes.deleteMany({ where: { etablissement_id: etabId } });
+  await prisma.anneeScolaire.deleteMany({ where: { etablissement_id: etabId } });
   await prisma.eleve.deleteMany({ where: { etablissement_id: etabId } });
   await prisma.etablissement.deleteMany({ where: { id: etabId } });
 }
@@ -78,5 +88,45 @@ describe('Portail parent — audit', () => {
     // genererToken ×2 (dont 1 réutilisation, mais chaque appel audite) + regenererToken ×1.
     expect(gen).toBeGreaterThanOrEqual(3);
     expect(rev).toBeGreaterThanOrEqual(1);
+  });
+});
+
+// ── Cahier de texte Phase 3 : devoirs à venir sur le portail ─────────────────
+describe('Portail parent — devoirs (cahier de texte)', () => {
+  it("getPortailData expose les devoirs à venir des classes de l'élève, pas les anciens", async () => {
+    // Fixtures dédiées : année active + classe FR + inscription + devoirs.
+    const anneeId = `pp-annee-${RUN}`, filId = `pp-fil-${RUN}`, classeId = `pp-classe-${RUN}`;
+    const matId = `pp-mat-${RUN}`, inscId = `pp-insc-${RUN}`, userId = `pp-user-${RUN}`, persId = `pp-pers-${RUN}`;
+    await prisma.configNotes.create({ data: { etablissement_id: etabId } });
+    await prisma.anneeScolaire.create({
+      data: { id: anneeId, etablissement_id: etabId, libelle: '2025-2026', active: true, date_debut: new Date('2025-10-01'), date_fin: new Date('2026-07-31') },
+    });
+    await prisma.filiere.create({ data: { id: filId, etablissement_id: etabId, code: 'FR', nom_fr: 'Française', langue: 'fr', sens_ecriture: 'LTR' } });
+    await prisma.classe.create({ data: { id: classeId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM2 A', filiere_id: filId } });
+    await prisma.matiere.create({ data: { id: matId, etablissement_id: etabId, nom_fr: 'Grammaire', filiere_id: filId } });
+    await prisma.inscription.create({ data: { id: inscId, eleve_id: eleveId, annee_scolaire_id: anneeId, statut: 'actif' } });
+    await prisma.inscriptionClasse.create({ data: { inscription_id: inscId, filiere_id: filId, classe_id: classeId } });
+    const role = await prisma.role.upsert({ where: { libelle_fr: 'professeur' }, update: {}, create: { libelle_fr: 'professeur' } });
+    await prisma.utilisateur.create({ data: { id: userId, etablissement_id: etabId, role_id: role.id, nom_fr: 'Prof', identifiant: `pp-u-${RUN}`, mot_de_passe: 'x' } });
+    await prisma.personnel.create({ data: { id: persId, utilisateur_id: userId } });
+
+    const demain = new Date(Date.now() + 86_400_000);
+    const ilYAUnMois = new Date(Date.now() - 30 * 86_400_000);
+    await prisma.devoir.createMany({
+      data: [
+        { etablissement_id: etabId, annee_scolaire_id: anneeId, classe_id: classeId, matiere_id: matId, personnel_id: persId,
+          donne_le: new Date(), pour_le: demain, consigne: 'Conjuguer être et avoir', type: 'LECON' },
+        // Ancien devoir (échéance il y a un mois) → hors fenêtre du portail.
+        { etablissement_id: etabId, annee_scolaire_id: anneeId, classe_id: classeId, matiere_id: matId, personnel_id: persId,
+          donne_le: ilYAUnMois, pour_le: ilYAUnMois, consigne: 'Vieux devoir', type: 'EXERCICE' },
+      ],
+    });
+
+    const rec = await genererToken(etabId, eleveId, acteur);
+    const data = await getPortailData(rec.token);
+    expect(data.devoirs).toHaveLength(1);
+    expect(data.devoirs[0].consigne).toContain('Conjuguer');
+    expect(data.devoirs[0].matiere.nom_fr).toBe('Grammaire');
+    expect(data.devoirs[0].matiere.filiere).toBe('FR');
   });
 });

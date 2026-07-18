@@ -194,6 +194,24 @@ export async function getPortailData(token: string) {
     evaluation: { ...ne.evaluation, matiere: { ...ne.evaluation.matiere, filiere: codeFiliere(ne.evaluation.matiere) } },
   }));
 
+  // Devoirs à faire (cahier de texte, Phase 3) : toutes les classes de l'élève,
+  // fenêtre = 7 jours passés (contexte récent) + tout l'avenir, bornée.
+  const classeIdsEleve = (inscription?.classes ?? []).map(l => l.classe_id);
+  const devoirsRaw = inscription && classeIdsEleve.length > 0 ? await prisma.devoir.findMany({
+    where: {
+      classe_id: { in: classeIdsEleve },
+      annee_scolaire_id: inscription.annee_scolaire_id,
+      pour_le: { gte: new Date(Date.now() - 7 * 86_400_000) },
+    },
+    include: { matiere: { select: { nom_fr: true, nom_ar: true, filiere_ref: { select: { code: true } } } } },
+    orderBy: { pour_le: 'asc' },
+    take: 60,
+  }) : [];
+  const devoirs = devoirsRaw.map(d => ({
+    ...d,
+    matiere: { ...d.matiere, filiere: codeFiliere(d.matiere) },
+  }));
+
   // Get activités parascolaires (Phase 3.3)
   const activitesInscriptions = inscription ? await prisma.inscriptionActivite.findMany({
     where: { eleve_id: eleve.id, annee_scolaire_id: inscription.annee_scolaire_id },
@@ -221,6 +239,7 @@ export async function getPortailData(token: string) {
     absences,
     evaluations_formatives: evaluationsFormatives,
     activites: activitesInscriptions,
+    devoirs,
   };
 }
 

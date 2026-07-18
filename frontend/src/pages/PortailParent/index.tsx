@@ -40,6 +40,10 @@ interface PortailData {
       matiere: { nom_fr: string; nom_ar: string; filiere: string }
     }
   }>
+  devoirs: Array<{
+    id: string; donne_le: string; pour_le: string; consigne: string; type: string;
+    matiere: { nom_fr: string; nom_ar: string | null; filiere: string }
+  }>
   activites: Array<{
     id: string;
     activite: { nom_fr: string; description: string | null }
@@ -169,6 +173,45 @@ function NotesTab({ notes, bulletins, base, periodeLabels }: { notes: PortailDat
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function DevoirsTab({ devoirs }: { devoirs: PortailData['devoirs'] }) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'ar' ? 'ar-SN' : 'fr-FR';
+  if (devoirs.length === 0) {
+    return <div className="empty">{t('portail_parent.aucun_devoir')}</div>;
+  }
+  const fmt = (d: string) => new Date(d.slice(0, 10)).toLocaleDateString(locale, { weekday: 'long', day: '2-digit', month: 'long' });
+  const nomMat = (m: { nom_fr: string; nom_ar: string | null }) =>
+    i18n.language?.startsWith('ar') && m.nom_ar ? m.nom_ar : m.nom_fr;
+  const auj = new Date().toISOString().slice(0, 10);
+  // Groupés par échéance, les plus proches d'abord.
+  const parEcheance = new Map<string, PortailData['devoirs']>();
+  for (const d of devoirs) {
+    const k = d.pour_le.slice(0, 10);
+    if (!parEcheance.has(k)) parEcheance.set(k, []);
+    parEcheance.get(k)!.push(d);
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {[...parEcheance.entries()].map(([echeance, list]) => (
+        <div key={echeance} className="card card-pad">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <span style={{ fontWeight: 600, fontSize: 13, textTransform: 'capitalize' }}>{fmt(echeance)}</span>
+            {echeance < auj && <Badge label={t('portail_parent.devoir_passe')} variant="neutral" />}
+            {echeance === auj && <Badge label={t('portail_parent.devoir_aujourdhui')} variant="warning" />}
+          </div>
+          {list.map(d => (
+            <div key={d.id} style={{ display: 'flex', gap: 8, alignItems: 'baseline', padding: '6px 0', borderTop: '1px solid var(--rule)', flexWrap: 'wrap' }}>
+              <Badge label={t(`portail_parent.devoir_type_${d.type.toLowerCase()}`, d.type)} variant="info" />
+              <strong style={{ fontSize: 13 }}>{nomMat(d.matiere)}</strong>
+              <span style={{ fontSize: 13, flex: 1, minWidth: 160 }}>{d.consigne}</span>
+            </div>
+          ))}
+        </div>
+      ))}
     </div>
   );
 }
@@ -418,7 +461,7 @@ export function PortailParentPage() {
   const [data, setData] = useState<PortailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<'notes' | 'evaluations' | 'paiements' | 'absences' | 'activites' | 'infos'>('notes');
+  const [tab, setTab] = useState<'notes' | 'devoirs' | 'evaluations' | 'paiements' | 'absences' | 'activites' | 'infos'>('notes');
 
   useEffect(() => {
     if (!token) { setError('Token manquant'); setLoading(false); return; }
@@ -463,6 +506,7 @@ export function PortailParentPage() {
 
   const TABS: { key: typeof tab; label: string }[] = [
     { key: 'notes', label: t('portail_parent.notes') },
+    { key: 'devoirs', label: t('portail_parent.devoirs') },
     { key: 'evaluations', label: t('portail_parent.evaluations') },
     { key: 'paiements', label: t('portail_parent.paiements') },
     { key: 'absences', label: t('portail_parent.absences') },
@@ -527,6 +571,7 @@ export function PortailParentPage() {
 
         {/* Tab content */}
         {tab === 'notes' && <NotesTab notes={data.notes} bulletins={data.bulletins} base={data.note_max_base ?? 20} periodeLabels={data.periode_labels} />}
+        {tab === 'devoirs' && <DevoirsTab devoirs={data.devoirs} />}
         {tab === 'evaluations' && <EvaluationsFormativesTab evaluations={data.evaluations_formatives} periodeLabels={data.periode_labels} />}
         {tab === 'paiements' && <PaiementsTab paiements={data.paiements} />}
         {tab === 'absences' && <AbsencesTab absences={data.absences} />}

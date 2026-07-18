@@ -1614,7 +1614,15 @@
     "footer": "DaaraGest — Système de gestion scolaire",
     "chargement": "Chargement…",
     "note_th": "Note",
-    "retard": "Retard"
+    "retard": "Retard",
+    "devoirs": "Devoirs",
+    "aucun_devoir": "Aucun devoir à venir.",
+    "devoir_passe": "Passé",
+    "devoir_aujourdhui": "Aujourd'hui",
+    "devoir_type_lecon": "Leçon",
+    "devoir_type_exercice": "Exercice",
+    "devoir_type_recitation": "Récitation",
+    "devoir_type_autre": "Autre"
   },
   "activite": {
     "titre": "Activités parascolaires",
