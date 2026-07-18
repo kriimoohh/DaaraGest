@@ -38,6 +38,20 @@ export const preflightSchema = z.object({
   filieres_combine: z.array(z.enum(['FR', 'AR', 'EN'])).optional(),
 });
 
+// État des générations (GET → query string) : périmètre identique au préflight,
+// `periode` arrive en texte (coerce) et `filieres_combine` en CSV ("FR,AR").
+export const etatGenerationsQuerySchema = z.object({
+  classe_id: z.string().uuid(),
+  annee_scolaire_id: z.string().uuid(),
+  periode: z.coerce.number().int().min(0).max(6),
+  filiere: z.enum(['FR', 'AR', 'EN', 'COMBINE']),
+  filieres_combine: z
+    .string()
+    .transform(s => s.split(',').filter(Boolean))
+    .pipe(z.array(z.enum(['FR', 'AR', 'EN'])))
+    .optional(),
+});
+
 // Déverrouillage d'une période validée — phase 2 (action critique, admin/directeur).
 export const deverrouillerPeriodeSchema = z.object({
   classe_id: z.string().uuid(),
