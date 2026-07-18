@@ -204,6 +204,30 @@ export function CahierTextePage() {
     }
   };
 
+  const [exportEnCours, setExportEnCours] = useState(false);
+  const exporterPdf = async () => {
+    if (!classeId || !du || !au) return;
+    setExportEnCours(true);
+    try {
+      const resp = await fetch(
+        `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/api/v1/cahier/export-pdf?classe_id=${classeId}&annee_scolaire_id=${anneeId}&du=${du}&au=${au}`,
+        { credentials: 'include' }
+      );
+      if (!resp.ok) throw new Error(t('cahier.err_export'));
+      const url = URL.createObjectURL(await resp.blob());
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cahier-${du}-${au}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(t('cahier.ok_export'));
+    } catch (err) {
+      toast.error((err as Error).message || t('cahier.err_export'));
+    } finally {
+      setExportEnCours(false);
+    }
+  };
+
   const deviser = async (id: string) => {
     try {
       await api.delete(`/api/v1/cahier/visas/${id}`);
@@ -356,6 +380,9 @@ export function CahierTextePage() {
             <Input label={t('cahier.au')} type="date" value={au} onChange={e => setAu(e.target.value)} />
             <Button variant="secondary" onClick={chargerConsultation} loading={loadingConsult} disabled={!classeId}>
               {t('cahier.charger')}
+            </Button>
+            <Button variant="secondary" onClick={exporterPdf} loading={exportEnCours} disabled={!classeId}>
+              ⬇ {t('cahier.exporter_pdf')}
             </Button>
           </div>
 
