@@ -8,6 +8,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { NotificationBell } from '../ui/NotificationBell';
+import { HelpButton } from '../ui/HelpButton';
 import { LanguageSelect } from '../ui/LanguageSelect';
 import { CommandPalette } from '../CommandPalette';
 import { api } from '../../lib/api';
@@ -128,6 +129,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           )}
         </button>
 
+        <HelpButton />
         <NotificationBell />
 
         {/* Avatar / profil */}

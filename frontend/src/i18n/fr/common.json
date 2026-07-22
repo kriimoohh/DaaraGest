@@ -12,10 +12,10 @@
     "error": "Identifiant ou mot de passe incorrect"
   },
   "login": {
-    "tagline": "Gestion scolaire franco-arabe",
+    "tagline": "Gestion scolaire multi-filières",
     "connexion_loading": "Connexion…",
     "theme": "Thème",
-    "footer": "École franco-arabe · Sénégal"
+    "footer": "Gestion scolaire · Sénégal"
   },
   "nav": {
     "accueil": "Accueil",
@@ -2254,5 +2254,211 @@
     "exporter_pdf": "Exporter PDF",
     "ok_export": "Cahier exporté",
     "err_export": "Erreur d'export du PDF"
+  },
+  "aide": {
+    "titre": "Aide"
+  },
+  "help": {
+    "dashboard": {
+      "intro": "Vue d'ensemble de l'établissement : effectifs, présences, paiements et alertes en un coup d'œil.",
+      "tips": [
+        "Les chiffres reflètent l'année scolaire active sélectionnée en haut de l'écran.",
+        "Le graphique des encaissements couvre les 6 derniers mois.",
+        "Les alertes (absences, retards de paiement) renvoient directement vers le dossier concerné."
+      ]
+    },
+    "eleves": {
+      "intro": "Fiches élèves, inscriptions par classe et gestion du portail parent.",
+      "tips": [
+        "Le matricule est généré automatiquement au format CODE-E-AA-NNN.",
+        "L'import CSV permet d'ajouter jusqu'à 500 élèves en une fois.",
+        "L'icône portail génère ou renouvelle le lien à partager aux parents.",
+        "Un transfert de classe en cours d'année se fait depuis la fiche de l'élève."
+      ]
+    },
+    "personnel": {
+      "intro": "Comptes du personnel, contrats, qualifications et affectations aux classes.",
+      "tips": [
+        "Chaque personnel est lié à un compte utilisateur (identifiant + rôle).",
+        "Les affectations matière×classe déterminent l'accès aux classes en saisie de notes.",
+        "Le QR carte professeur sert au pointage — régénérable à tout moment."
+      ]
+    },
+    "classes": {
+      "intro": "Classes par filière et niveau, matières rattachées et effectifs.",
+      "tips": [
+        "Un override de coefficient ou de barème peut être défini par classe, et même par période.",
+        "La duplication permet de recréer rapidement une classe dans une autre filière.",
+        "Les listes de classe s'exportent en PDF, individuellement ou pour tout l'établissement."
+      ]
+    },
+    "annees_scolaires": {
+      "intro": "Années scolaires de l'établissement et année active.",
+      "tips": [
+        "Une seule année peut être active à la fois ; c'est elle qui est utilisée par défaut partout dans l'application.",
+        "Créez la nouvelle année avant d'y inscrire des classes ou des élèves."
+      ]
+    },
+    "matieres": {
+      "intro": "Matières enseignées, coefficients et barème de notation par défaut.",
+      "tips": [
+        "Le barème par défaut peut être ajusté au niveau de la classe ou de la période sans modifier la matière.",
+        "Rattacher une matière à un domaine pédagogique alimente les grilles IEF et les rapports par domaine."
+      ]
+    },
+    "domaines": {
+      "intro": "Domaines pédagogiques (langue, mathématiques, etc.) utilisés dans les grilles IEF officielles.",
+      "tips": [
+        "Les grilles sont regroupées par cycle : CI-CP, CE1-CE2, CM1-CM2.",
+        "Chaque matière peut être rattachée à un domaine depuis la page Matières."
+      ]
+    },
+    "notes": {
+      "intro": "Saisie des notes par classe, matière et période.",
+      "tips": [
+        "La saisie en masse valide chaque note contre le barème effectif de la classe/période.",
+        "La politique de saisie des professeurs (leurs classes, ou plus large) se configure dans Paramètres.",
+        "Toute modification de note régénère automatiquement les bulletins déjà générés pour les élèves concernés."
+      ]
+    },
+    "evaluations": {
+      "intro": "Évaluations formatives (devoirs, contrôles, examens) avec leur pondération.",
+      "tips": [
+        "Chaque évaluation a un poids qui entre dans le calcul de la moyenne pondérée de la période.",
+        "La saisie des notes d'une évaluation se fait en masse, par classe et matière."
+      ]
+    },
+    "cahier_texte": {
+      "intro": "Journal de classe quotidien : séances faites et devoirs donnés.",
+      "tips": [
+        "« Ma journée » propose la saisie directement depuis les créneaux de l'emploi du temps.",
+        "Un devoir a une date de remise (pour le) distincte de la date où il est donné.",
+        "Une fois qu'une période est visée par la direction, elle ne peut plus être modifiée.",
+        "L'indicateur de complétude signale les créneaux sans séance saisie."
+      ]
+    },
+    "bulletins": {
+      "intro": "Génération et suivi des bulletins par période, filière ou combiné.",
+      "tips": [
+        "Le badge d'état indique si le bulletin est à jour, périmé ou partiel.",
+        "Une saisie de notes régénère automatiquement les bulletins impactés — sauf s'ils sont déjà signés.",
+        "L'aperçu PDF affiche le rendu final avant tout téléchargement.",
+        "Le préflight signale les matières sans notes avant de lancer une génération."
+      ]
+    },
+    "progression": {
+      "intro": "Suivi académique pluriannuel des élèves d'une classe à l'autre.",
+      "tips": [
+        "La génération calcule une proposition à partir des résultats de l'année ; la direction valide ensuite.",
+        "L'historique d'un élève retrace tout son parcours dans l'établissement."
+      ]
+    },
+    "activites": {
+      "intro": "Activités parascolaires : inscriptions, séances et évaluation des élèves.",
+      "tips": [
+        "Chaque séance peut enregistrer les présences des élèves inscrits.",
+        "Une évaluation individuelle est possible pour chaque participant."
+      ]
+    },
+    "absences": {
+      "intro": "Suivi des absences des élèves, par classe ou individuellement.",
+      "tips": [
+        "La saisie groupée par classe déclenche automatiquement une alerte si le seuil configuré est dépassé.",
+        "Les statistiques par classe aident à repérer les décrocheurs."
+      ]
+    },
+    "pointage": {
+      "intro": "Présence quotidienne du personnel — saisie manuelle ou par scan QR.",
+      "tips": [
+        "Le QR de chaque personnel est régénérable à tout moment (l'ancien devient invalide).",
+        "La page /scanner (accessible sans connexion) sert de borne d'entrée pour le scan.",
+        "Les statistiques calculent un taux de présence par personnel sur la période choisie."
+      ]
+    },
+    "finances": {
+      "intro": "Paiements des élèves et du personnel, reliquats et reçus.",
+      "tips": [
+        "Le numéro de reçu est généré automatiquement à chaque paiement élève.",
+        "Les reliquats listent les élèves n'ayant pas réglé la mensualité de la période.",
+        "Les exports Excel et PDF reprennent les mêmes filtres que la liste affichée."
+      ]
+    },
+    "documents": {
+      "intro": "Génération de documents officiels (certificats, attestations, cartes…) en PDF.",
+      "tips": [
+        "L'aperçu permet de vérifier le rendu avant de générer réellement le document.",
+        "La génération par lot produit toutes les cartes élève ou professeur d'une classe en un seul PDF.",
+        "L'historique retrouve tout document déjà généré."
+      ]
+    },
+    "emploi_du_temps": {
+      "intro": "Créneaux horaires par classe, matière et professeur.",
+      "tips": [
+        "Seuls les jours actifs configurés dans Paramètres apparaissent dans la grille.",
+        "Un créneau en conflit avec un autre (même classe ou même professeur) est refusé."
+      ]
+    },
+    "calendrier": {
+      "intro": "Événements de l'année scolaire : vacances, examens, réunions.",
+      "tips": [
+        "La vue mensuelle et la vue liste montrent les mêmes événements sous deux formats."
+      ]
+    },
+    "messagerie": {
+      "intro": "Messages internes entre membres du personnel.",
+      "tips": [
+        "Un message peut être envoyé à une personne, plusieurs, ou en broadcast à un rôle entier.",
+        "Ctrl+Entrée envoie le message sans quitter le clavier."
+      ]
+    },
+    "rapports": {
+      "intro": "Rapports de synthèse : présences, résultats, finances, grilles IEF.",
+      "tips": [
+        "Chaque rapport a un aperçu HTML avant tout export.",
+        "Les cartes affichées dépendent du rôle connecté (ex. les rapports financiers ne s'affichent pas pour tous)."
+      ]
+    },
+    "bibliotheque": {
+      "intro": "Catalogue des livres, prêts et retours.",
+      "tips": [
+        "Un emprunt en retard apparaît dans la liste dédiée pour relance.",
+        "Le stock se met à jour automatiquement à chaque prêt et retour."
+      ]
+    },
+    "demandes_absence_personnel": {
+      "intro": "Demandes de congé ou d'absence déposées par le personnel.",
+      "tips": [
+        "Chaque demande est à traiter : approuver ou refuser, avec motif."
+      ]
+    },
+    "utilisateurs": {
+      "intro": "Comptes utilisateurs de l'établissement et leurs rôles.",
+      "tips": [
+        "Un compte désactivé peut être réactivé à tout moment ; la suppression définitive est irréversible.",
+        "La réinitialisation du mot de passe force un changement à la prochaine connexion."
+      ]
+    },
+    "audit": {
+      "intro": "Journal complet des actions effectuées dans l'application (qui a fait quoi, sur quelle donnée, quand).",
+      "tips": [
+        "Filtrez par type d'entité pour retrouver rapidement l'historique d'un dossier précis."
+      ]
+    },
+    "liens_portail": {
+      "intro": "Gestion des liens d'accès du portail parent, établissement par établissement.",
+      "tips": [
+        "Un lien expire automatiquement à la fin de l'année scolaire active.",
+        "La rotation crée un nouveau lien et invalide l'ancien immédiatement — utile en cas de doute sur un lien partagé par erreur.",
+        "Le statut (actif / révoqué / expiré) est visible directement dans la liste."
+      ]
+    },
+    "parametres": {
+      "intro": "Configuration de l'établissement : notes, niveaux, tarifs, fonctions, mentions, jours de cours.",
+      "tips": [
+        "L'échelle et les périodes de notation définies ici s'appliquent à toute l'application.",
+        "Les mentions et leurs seuils peuvent être affinés par filière et par niveau.",
+        "La politique de saisie des notes des professeurs se règle dans cette page."
+      ]
+    }
   }
 }

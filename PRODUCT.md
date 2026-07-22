@@ -6,11 +6,13 @@ product
 
 ## Users
 
-Personnel administratif et enseignant d'établissements scolaires franco-arabes au Sénégal (direction, gestionnaires, professeurs, surveillants), plus deux surfaces publiques : les parents d'élèves (portail sans compte via lien UUID, souvent sur mobile) et les visiteurs de la landing page. Les utilisateurs travaillent en français, en arabe (RTL) ou en anglais, souvent sur du matériel modeste et une connexion partagée (une seule IP publique pour toute l'école).
+Personnel administratif et enseignant d'établissements scolaires au Sénégal — **franco-arabes, bilingues ou classiques** : la notion de « filière » (FR/AR/EN, seule ou combinée) est configurable par établissement, pas imposée par le produit (direction, gestionnaires, professeurs, surveillants), plus deux surfaces publiques : les parents d'élèves (portail sans compte via lien UUID, souvent sur mobile) et les visiteurs de la landing page. Les utilisateurs travaillent en français, en arabe (RTL) ou en anglais, souvent sur du matériel modeste et une connexion partagée (une seule IP publique pour toute l'école).
 
 ## Product Purpose
 
-DaaraGest gère la vie complète d'un établissement : élèves, personnel, classes multi-filières (FR/AR/EN et combinaisons), notes et bulletins, finances, pointage QR, emploi du temps, messagerie, bibliothèque, documents officiels et rapports. Le succès, c'est qu'un gestionnaire saisisse et retrouve l'information vite, sans formation, et que les documents produits (bulletins, reçus, cartes) soient dignes d'un établissement sérieux.
+DaaraGest gère la vie complète d'un établissement : élèves, personnel, classes multi-filières (FR/AR/EN et combinaisons), notes, bulletins, cahier de texte, finances, pointage QR, emploi du temps, messagerie, bibliothèque, documents officiels et rapports. Le succès, c'est qu'un gestionnaire saisisse et retrouve l'information vite, sans formation, et que les documents produits (bulletins, reçus, cartes) soient dignes d'un établissement sérieux.
+
+Aujourd'hui, chaque établissement a son propre déploiement (mono-tenant). La trajectoire produit est de devenir une offre **SaaS multi-établissement** — un seul déploiement partagé, onboarding en self-service, facturation — sans changer l'expérience pour l'utilisateur final ; voir [`docs/SAAS-INFRA-PLAN.md`](docs/SAAS-INFRA-PLAN.md) pour le plan de bascule (déjà ~80 % du socle multi-tenant en place).
 
 ## Brand Personality
 

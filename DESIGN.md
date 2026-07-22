@@ -32,6 +32,7 @@ Règle : **aucun hex en dur dans les pages** (exception : templates d'impression
 - Tableaux : `.card > .tbl-wrap > .tbl` (th uppercase mono, zébrage au hover) → composant `Table` (tri, skeleton, empty).
 - Formulaires : `.field > .field-label + .input/.select` → composants `Input`, `Select` ; textarea = `textarea.input`.
 - Modales : `.modal-backdrop > .modal > .modal-hd/.modal-body/.modal-foot` → composants `Modal`, `ConfirmModal`.
+- Aperçu de document : `iframe` plein cadre sur URL `blob` dans un `Modal` large, révoquée à la fermeture — même rendu PDF que le téléchargement (introduit pour les bulletins, réutilisable pour tout autre PDF généré côté serveur).
 - Page : `PageHeader` (`.page-head`, `.page-eyebrow`, `.page-title`), `.card-hd`, `.stat`, `.tabs/.tab`, `.filter-row`, `.empty`, `.info-label/.info-value`, `.pagination`.
 - Pattern « segmented pills » (période, statut, format) : boutons inline arrondis, actif = fond `--terra` + texte blanc, inactif = `--paper-2` + `--ink`/`--ink-3`.
 

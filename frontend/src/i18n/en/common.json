@@ -112,10 +112,10 @@
     "error": "Incorrect username or password"
   },
   "login": {
-    "tagline": "Franco-Arabic school management",
+    "tagline": "Multi-track school management",
     "connexion_loading": "Signing in…",
     "theme": "Theme",
-    "footer": "Franco-Arabic school · Senegal"
+    "footer": "School management · Senegal"
   },
   "theme": {
     "light": "Light mode",
@@ -2254,5 +2254,211 @@
     "exporter_pdf": "Export PDF",
     "ok_export": "Journal exported",
     "err_export": "PDF export error"
+  },
+  "aide": {
+    "titre": "Help"
+  },
+  "help": {
+    "dashboard": {
+      "intro": "Overview of the school: enrollment, attendance, payments and alerts at a glance.",
+      "tips": [
+        "Figures reflect the active school year selected at the top of the screen.",
+        "The payments chart covers the last 6 months.",
+        "Alerts (absences, overdue payments) link directly to the record involved."
+      ]
+    },
+    "eleves": {
+      "intro": "Student records, class enrollment and parent portal management.",
+      "tips": [
+        "The student ID is generated automatically as CODE-E-YY-NNN.",
+        "CSV import lets you add up to 500 students at once.",
+        "The portal icon generates or renews the link to share with parents.",
+        "A mid-year class transfer is done from the student's record."
+      ]
+    },
+    "personnel": {
+      "intro": "Staff accounts, contracts, qualifications and class assignments.",
+      "tips": [
+        "Each staff member is linked to a user account (username + role).",
+        "Subject×class assignments determine access for grade entry.",
+        "The teacher QR card is used for attendance — can be regenerated at any time."
+      ]
+    },
+    "classes": {
+      "intro": "Classes by track and level, assigned subjects and headcount.",
+      "tips": [
+        "A coefficient or scale override can be set per class, even per term.",
+        "Duplication quickly recreates a class under a different track.",
+        "Class lists export to PDF, individually or for the whole school."
+      ]
+    },
+    "annees_scolaires": {
+      "intro": "The school's academic years and the active one.",
+      "tips": [
+        "Only one year can be active at a time — it's used by default everywhere in the app.",
+        "Create the new year before enrolling classes or students into it."
+      ]
+    },
+    "matieres": {
+      "intro": "Subjects taught, coefficients and default grading scale.",
+      "tips": [
+        "The default scale can be adjusted at the class or term level without changing the subject.",
+        "Linking a subject to a pedagogical domain feeds the IEF grids and domain reports."
+      ]
+    },
+    "domaines": {
+      "intro": "Pedagogical domains (language, math, etc.) used in the official IEF grids.",
+      "tips": [
+        "Grids are grouped by cycle: CI-CP, CE1-CE2, CM1-CM2.",
+        "Each subject can be linked to a domain from the Subjects page."
+      ]
+    },
+    "notes": {
+      "intro": "Grade entry by class, subject and term.",
+      "tips": [
+        "Bulk entry validates each grade against the class/term's effective scale.",
+        "Teachers' entry policy (their classes only, or broader) is configured in Settings.",
+        "Editing a grade automatically regenerates any report card already generated for the students involved."
+      ]
+    },
+    "evaluations": {
+      "intro": "Formative assessments (homework, tests, exams) with their weight.",
+      "tips": [
+        "Each assessment has a weight that feeds into the term's weighted average.",
+        "Grades for an assessment are entered in bulk, by class and subject."
+      ]
+    },
+    "cahier_texte": {
+      "intro": "Daily class journal: sessions taught and homework assigned.",
+      "tips": [
+        "“My day” lets you log sessions directly from the timetable slots.",
+        "A homework item has a due date separate from the date it was assigned.",
+        "Once a period is signed off by school leadership, it can no longer be edited.",
+        "The completeness indicator flags slots with no session logged."
+      ]
+    },
+    "bulletins": {
+      "intro": "Generate and track report cards by term, track or combined.",
+      "tips": [
+        "The status badge shows whether a report card is current, outdated or partial.",
+        "Entering grades automatically regenerates affected report cards — unless already signed.",
+        "The PDF preview shows the final render before any download.",
+        "Preflight checks flag subjects with no grades before generation."
+      ]
+    },
+    "progression": {
+      "intro": "Multi-year academic tracking of students from one class to the next.",
+      "tips": [
+        "Generation computes a proposal from the year's results; school leadership then validates it.",
+        "A student's history traces their entire path through the school."
+      ]
+    },
+    "activites": {
+      "intro": "Extracurricular activities: enrollment, sessions and student assessment.",
+      "tips": [
+        "Each session can record attendance for enrolled students.",
+        "Individual assessment is available for each participant."
+      ]
+    },
+    "absences": {
+      "intro": "Track student absences, by class or individually.",
+      "tips": [
+        "Bulk entry by class automatically triggers an alert if the configured threshold is exceeded.",
+        "Per-class statistics help spot at-risk students."
+      ]
+    },
+    "pointage": {
+      "intro": "Daily staff attendance — manual entry or QR scan.",
+      "tips": [
+        "Each staff member's QR can be regenerated at any time (the old one becomes invalid).",
+        "The /scanner page (no login required) acts as the entry kiosk for scanning.",
+        "Statistics compute an attendance rate per staff member over the chosen period."
+      ]
+    },
+    "finances": {
+      "intro": "Student and staff payments, outstanding balances and receipts.",
+      "tips": [
+        "A receipt number is generated automatically for each student payment.",
+        "Outstanding balances list students who haven't paid the period's fee.",
+        "Excel and PDF exports use the same filters as the list shown."
+      ]
+    },
+    "documents": {
+      "intro": "Generate official documents (certificates, attestations, cards…) as PDF.",
+      "tips": [
+        "Preview lets you check the render before actually generating the document.",
+        "Batch generation produces all student or teacher cards for a class in a single PDF.",
+        "History finds any document already generated."
+      ]
+    },
+    "emploi_du_temps": {
+      "intro": "Time slots by class, subject and teacher.",
+      "tips": [
+        "Only the active days configured in Settings appear on the grid.",
+        "A slot conflicting with another (same class or same teacher) is rejected."
+      ]
+    },
+    "calendrier": {
+      "intro": "School-year events: holidays, exams, meetings.",
+      "tips": [
+        "The month view and the list view show the same events in two formats."
+      ]
+    },
+    "messagerie": {
+      "intro": "Internal messages between staff members.",
+      "tips": [
+        "A message can be sent to one person, several, or broadcast to an entire role.",
+        "Ctrl+Enter sends the message without leaving the keyboard."
+      ]
+    },
+    "rapports": {
+      "intro": "Summary reports: attendance, results, finance, IEF grids.",
+      "tips": [
+        "Every report has an HTML preview before export.",
+        "The cards shown depend on the signed-in role (e.g. financial reports aren't shown to everyone)."
+      ]
+    },
+    "bibliotheque": {
+      "intro": "Book catalog, loans and returns.",
+      "tips": [
+        "An overdue loan appears in its own list for follow-up.",
+        "Stock updates automatically with every loan and return."
+      ]
+    },
+    "demandes_absence_personnel": {
+      "intro": "Leave or absence requests filed by staff.",
+      "tips": [
+        "Each request needs a decision: approve or reject, with a reason."
+      ]
+    },
+    "utilisateurs": {
+      "intro": "The school's user accounts and their roles.",
+      "tips": [
+        "A deactivated account can be reactivated at any time; permanent deletion cannot be undone.",
+        "Resetting a password forces a change at next login."
+      ]
+    },
+    "audit": {
+      "intro": "Full log of actions taken in the app (who did what, on which record, when).",
+      "tips": [
+        "Filter by entity type to quickly find the history of a specific record."
+      ]
+    },
+    "liens_portail": {
+      "intro": "Manage parent portal access links, across the whole school.",
+      "tips": [
+        "A link expires automatically at the end of the active school year.",
+        "Rotating a link creates a new one and invalidates the old one immediately — useful if a link may have been shared by mistake.",
+        "Status (active / revoked / expired) is visible right in the list."
+      ]
+    },
+    "parametres": {
+      "intro": "School configuration: grading, levels, fees, staff roles, honors, class days.",
+      "tips": [
+        "The grading scale and terms defined here apply across the whole app.",
+        "Honors and their thresholds can be refined by track and by level.",
+        "Teachers' grade-entry policy is set on this page."
+      ]
+    }
   }
 }

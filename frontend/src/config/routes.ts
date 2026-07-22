@@ -43,6 +43,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: '/domaines',                    key: 'domaines',           roles: DIRECTION_LIKE,                  inNav: true },
   { path: '/notes',                       key: 'notes',              roles: ['admin', 'directeur', 'gestionnaire', 'professeur'], inNav: true },
   { path: '/evaluations',                 key: 'evaluations',        roles: ['admin', 'directeur', 'gestionnaire', 'professeur'], inNav: true },
+  { path: '/cahier-texte',                key: 'cahier_texte',       roles: ['admin', 'directeur', 'gestionnaire', 'professeur'], inNav: true },
   { path: '/bulletins',                   key: 'bulletins',          roles: ['admin', 'directeur', 'gestionnaire', 'professeur'], inNav: true },
   { path: '/progression',                 key: 'progression',        roles: DIRECTION_LIKE,                  inNav: true },
   { path: '/activites',                   key: 'activites',          roles: ['admin', 'directeur', 'gestionnaire', 'professeur'], inNav: true },

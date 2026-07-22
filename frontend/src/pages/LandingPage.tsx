@@ -8,8 +8,8 @@ import { LogoMark } from '../components/ui/LogoMark';
 // ─── Translations ─────────────────────────────────────────────────────────────
 const T = {
   fr: {
-    hero_title: 'La plateforme de gestion scolaire franco-arabe',
-    hero_sub: 'DaaraGest centralise la gestion de votre école dans un outil simple, bilingue et adapté aux établissements franco-arabes du Sénégal.',
+    hero_title: 'La plateforme de gestion scolaire multi-filières',
+    hero_sub: 'DaaraGest centralise la gestion de votre école dans un outil simple et multilingue — adapté aux établissements franco-arabes, bilingues ou classiques du Sénégal.',
     hero_cta_login: 'Se connecter',
     hero_cta_guide: 'Voir les guides',
     hero_cta_dashboard: 'Aller au tableau de bord',
@@ -20,7 +20,7 @@ const T = {
     cta_title: 'Prêt à commencer ?',
     cta_sub: 'Connectez-vous à votre espace et prenez en main la gestion de votre école.',
     cta_btn: 'Accéder à la plateforme',
-    footer_tagline: 'Gestion scolaire franco-arabe · Sénégal',
+    footer_tagline: 'Gestion scolaire multi-filières · Sénégal',
     features: [
       {
         icon: (
@@ -49,6 +49,15 @@ const T = {
         ),
         title: 'Notes & Bulletins',
         desc: 'Saisie des notes par période, calcul automatique des moyennes et génération de bulletins PDF bilingues.',
+      },
+      {
+        icon: (
+          <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 6a2 2 0 012-2h6v16H4a2 2 0 01-2-2V6z" /><path d="M22 6a2 2 0 00-2-2h-6v16h6a2 2 0 002-2V6z" />
+          </svg>
+        ),
+        title: 'Cahier de texte',
+        desc: 'Séances faites, devoirs à faire et visa de la direction : le journal pédagogique quotidien de chaque classe, aligné sur l\'emploi du temps.',
       },
       {
         icon: (
@@ -125,6 +134,7 @@ const T = {
           { label: 'Professeurs', detail: 'Gestion complète des dossiers enseignants : spécialités, types de contrat, salaires et affectations aux classes.' },
           { label: 'Classes, Matières & Années', detail: 'Création et gestion des classes par filière (FR/AR), niveaux, matières, et configuration des années scolaires.' },
           { label: 'Notes & Évaluations', detail: 'Supervision de la saisie des notes, accès à toutes les évaluations par période et génération des bulletins PDF bilingues.' },
+          { label: 'Cahier de texte', detail: 'Consultation et supervision du cahier de texte de toutes les classes : séances faites, devoirs donnés, visa de verrouillage des périodes.' },
           { label: 'Finances', detail: 'Accès complet : paiements élèves, versements professeurs, retenues, reliquats et rapports financiers mensuels.' },
           { label: 'Documents officiels', detail: 'Génération de tous les documents officiels : certificats de scolarité, attestations et tout autre document en PDF.' },
           { label: 'Bibliothèque', detail: 'Gestion complète du fonds documentaire : catalogue des livres, gestion des prêts, suivi des retours et état du stock.' },
@@ -145,7 +155,7 @@ const T = {
           { label: 'Professeurs', detail: 'Gestion des dossiers enseignants, suivi des affectations, spécialités et informations contractuelles.' },
           { label: 'Classes, Matières & Années scolaires', detail: 'Configuration des classes, niveaux, filières, matières et gestion des années scolaires actives.' },
           { label: 'Notes, Évaluations & Bulletins', detail: 'Consultation des notes, accès à toutes les évaluations et génération des bulletins PDF par classe et période.' },
-          { label: 'Finances (consultation)', detail: 'Consultation des paiements élèves, versements professeurs et reliquats — sans modification des données financières.' },
+          { label: 'Cahier de texte', detail: 'Visa (verrouillage) du cahier de texte par période et suivi de la complétude des séances saisies par classe.' },
           { label: 'Emploi du temps', detail: 'Consultation et modification des emplois du temps de toutes les classes.' },
           { label: 'Pointage des professeurs', detail: 'Suivi quotidien de la présence, du retard ou de l\'absence des enseignants.' },
           { label: 'Absences des élèves', detail: 'Consultation et gestion du suivi des absences, taux de présence et alertes par classe.' },
@@ -170,6 +180,7 @@ const T = {
           { label: 'Documents officiels', detail: 'Génération de certificats de scolarité, attestations et tous les documents officiels en PDF.' },
           { label: 'Emploi du temps', detail: 'Consultation et mise à jour des emplois du temps de toutes les classes.' },
           { label: 'Évaluations formatives', detail: 'Consultation et saisie des évaluations formatives (devoirs, contrôles, examens) par classe et matière.' },
+          { label: 'Cahier de texte', detail: 'Consultation du cahier de texte : séances faites et devoirs donnés par classe.' },
           { label: 'Activités parascolaires', detail: 'Gestion des inscriptions, séances et présences aux activités parascolaires.' },
           { label: 'Rapports', detail: 'Rapports de présences et de résultats par classe. Bilan financier mensuel.' },
           { label: 'Absences des élèves', detail: 'Consultation du suivi des absences et des statistiques de présence par classe.' },
@@ -196,6 +207,7 @@ const T = {
         access: [
           { label: 'Mes classes', detail: 'Consultation de la liste des élèves dans chacune des classes assignées, réparties par filière et niveau.' },
           { label: 'Notes & Évaluations', detail: 'Saisie des notes par matière et par période (trimestre), création et gestion des évaluations pour ses classes.' },
+          { label: 'Cahier de texte', detail: 'Saisie quotidienne des séances faites et des devoirs donnés pour ses classes, alignée sur son emploi du temps.' },
           { label: 'Bulletins de notes', detail: 'Génération et consultation des bulletins de notes. Visualisation des moyennes par élève et par matière.' },
           { label: 'Activités pédagogiques', detail: 'Planification et suivi des activités scolaires et projets pour les classes assignées.' },
           { label: 'Progression des élèves', detail: 'Suivi de la progression académique des élèves au fil des périodes dans ses classes.' },
@@ -219,8 +231,8 @@ const T = {
   },
 
   ar: {
-    hero_title: 'منصة الإدارة المدرسية الفرنسية-العربية',
-    hero_sub: 'دارا جيست يجمع إدارة مدرستك في أداة بسيطة وثنائية اللغة، مصممة للمؤسسات الفرنسية-العربية في السنغال.',
+    hero_title: 'منصة الإدارة المدرسية متعددة الشعب',
+    hero_sub: 'دارا جيست يجمع إدارة مدرستك في أداة بسيطة ومتعددة اللغات، تناسب المؤسسات الفرنسية-العربية والثنائية اللغة والعادية في السنغال.',
     hero_cta_login: 'تسجيل الدخول',
     hero_cta_guide: 'عرض الأدلة',
     hero_cta_dashboard: 'الذهاب إلى لوحة التحكم',
@@ -231,7 +243,7 @@ const T = {
     cta_title: 'هل أنت مستعد للبدء؟',
     cta_sub: 'سجّل الدخول إلى مساحتك وتولّ إدارة مدرستك.',
     cta_btn: 'الوصول إلى المنصة',
-    footer_tagline: 'الإدارة المدرسية الفرنسية-العربية · السنغال',
+    footer_tagline: 'الإدارة المدرسية متعددة الشعب · السنغال',
     features: [
       {
         icon: (
@@ -260,6 +272,15 @@ const T = {
         ),
         title: 'الدرجات وشهادات النتائج',
         desc: 'إدخال الدرجات حسب الفصل، الحساب التلقائي للمعدلات وإنشاء شهادات النتائج PDF ثنائية اللغة.',
+      },
+      {
+        icon: (
+          <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 6a2 2 0 012-2h6v16H4a2 2 0 01-2-2V6z" /><path d="M22 6a2 2 0 00-2-2h-6v16h6a2 2 0 002-2V6z" />
+          </svg>
+        ),
+        title: 'دفتر النصوص',
+        desc: 'الحصص المنجزة، الواجبات المطلوبة وتأشير الإدارة — السجل التربوي اليومي لكل قسم، متوافق مع جدول الحصص.',
       },
       {
         icon: (
@@ -336,6 +357,7 @@ const T = {
           { label: 'الأساتذة', detail: 'الإدارة الكاملة لملفات الأساتذة: التخصصات، أنواع العقود، الرواتب والتعيينات في الأقسام.' },
           { label: 'الأقسام والمواد والسنوات', detail: 'إنشاء وإدارة الأقسام حسب الشعبة (فرنسي/عربي)، المستويات، المواد وإعداد السنوات الدراسية.' },
           { label: 'الدرجات والتقييمات', detail: 'الإشراف على إدخال الدرجات، الوصول لجميع التقييمات حسب الفصل وإنشاء شهادات النتائج ثنائية اللغة.' },
+          { label: 'دفتر النصوص', detail: 'الاطلاع على دفتر النصوص لجميع الأقسام والإشراف عليه: الحصص المنجزة، الواجبات المعطاة، والتأشير لقفل الفترات.' },
           { label: 'المالية', detail: 'وصول كامل: مدفوعات التلاميذ، مدفوعات الأساتذة، الاستقطاعات، المتأخرات والتقارير المالية الشهرية.' },
           { label: 'الوثائق الرسمية', detail: 'إنشاء جميع الوثائق الرسمية: شهادات التمدرس، الاعترافات وكل الوثائق الإدارية بصيغة PDF.' },
           { label: 'المكتبة', detail: 'الإدارة الكاملة للرصيد الوثائقي: فهرس الكتب، إدارة الإعارات، متابعة الإرجاع وحالة المخزون.' },
@@ -356,7 +378,7 @@ const T = {
           { label: 'الأساتذة', detail: 'إدارة ملفات الأساتذة، متابعة التعيينات، التخصصات والمعلومات التعاقدية.' },
           { label: 'الأقسام والمواد والسنوات', detail: 'إعداد الأقسام، المستويات، الشعب، المواد وإدارة السنوات الدراسية النشطة.' },
           { label: 'الدرجات وشهادات النتائج', detail: 'الاطلاع على الدرجات، الوصول لجميع التقييمات وإنشاء شهادات النتائج حسب القسم والفصل.' },
-          { label: 'المالية (قراءة)', detail: 'الاطلاع على مدفوعات التلاميذ والأساتذة والمتأخرات — دون تعديل البيانات المالية.' },
+          { label: 'دفتر النصوص', detail: 'التأشير على دفتر النصوص (قفل الفترة) ومتابعة نسبة إتمام الحصص المسجلة حسب القسم.' },
           { label: 'جدول الحصص', detail: 'الاطلاع على وتعديل جداول حصص جميع الأقسام.' },
           { label: 'سجل حضور الأساتذة', detail: 'المتابعة اليومية لحضور وغياب وتأخر الأساتذة.' },
           { label: 'غيابات التلاميذ', detail: 'الاطلاع وإدارة سجلات الغياب ونسب الحضور والتنبيهات حسب القسم.' },
@@ -381,6 +403,7 @@ const T = {
           { label: 'الوثائق الرسمية', detail: 'إنشاء شهادات التمدرس والاعترافات وسائر الوثائق الرسمية بصيغة PDF.' },
           { label: 'جدول الحصص', detail: 'الاطلاع على وتحديث جداول حصص الأقسام.' },
           { label: 'التقييمات التكوينية', detail: 'الاطلاع وإدخال التقييمات التكوينية (واجبات، اختبارات، امتحانات) حسب القسم والمادة.' },
+          { label: 'دفتر النصوص', detail: 'الاطلاع على دفتر النصوص: الحصص المنجزة والواجبات المعطاة حسب القسم.' },
           { label: 'الأنشطة اللاصفية', detail: 'إدارة التسجيلات والحصص والحضور في الأنشطة اللاصفية.' },
           { label: 'التقارير', detail: 'تقارير الحضور والنتائج حسب القسم. البيان المالي الشهري.' },
           { label: 'غيابات التلاميذ', detail: 'الاطلاع على سجلات الغياب وإحصاءات الحضور حسب القسم.' },
@@ -407,6 +430,7 @@ const T = {
         access: [
           { label: 'أقسامي', detail: 'الاطلاع على قائمة التلاميذ في كل قسم معيّن، مرتبة حسب الشعبة والمستوى.' },
           { label: 'الدرجات والتقييمات', detail: 'إدخال الدرجات حسب المادة والفصل الدراسي، إنشاء وإدارة التقييمات لأقسامه.' },
+          { label: 'دفتر النصوص', detail: 'التسجيل اليومي للحصص المنجزة والواجبات المعطاة لأقسامه، بالتوافق مع جدول حصصه.' },
           { label: 'شهادات النتائج', detail: 'إنشاء والاطلاع على شهادات النتائج. عرض المعدلات حسب التلميذ والمادة.' },
           { label: 'الأنشطة التربوية', detail: 'تخطيط ومتابعة الأنشطة المدرسية والمشاريع للأقسام المعيّنة.' },
           { label: 'التقدم الدراسي', detail: 'متابعة التقدم الأكاديمي للتلاميذ عبر الفصول الدراسية في أقسامه.' },
@@ -447,8 +471,8 @@ interface LandingContent {
 
 // Anglais : mêmes icônes que le FR (identiques), texte traduit.
 const EN: LandingContent = {
-  hero_title: 'The Franco-Arabic school management platform',
-  hero_sub: 'DaaraGest centralizes the running of your school in one simple, bilingual tool tailored to Franco-Arabic schools in Senegal.',
+  hero_title: 'The multi-track school management platform',
+  hero_sub: 'DaaraGest centralizes the running of your school in one simple, multilingual tool — suited to Franco-Arabic, bilingual or standard schools in Senegal.',
   hero_cta_login: 'Sign in',
   hero_cta_guide: 'View the guides',
   hero_cta_dashboard: 'Go to the dashboard',
@@ -459,17 +483,18 @@ const EN: LandingContent = {
   cta_title: 'Ready to get started?',
   cta_sub: 'Sign in to your workspace and take charge of running your school.',
   cta_btn: 'Access the platform',
-  footer_tagline: 'Franco-Arabic school management · Senegal',
+  footer_tagline: 'Multi-track school management · Senegal',
   features: [
     { icon: T.fr.features[0].icon, title: 'Students & Enrollment', desc: 'Complete student records, class enrollment management and guardian information, with an integrated parent portal.' },
     { icon: T.fr.features[1].icon, title: 'Teachers & Classes', desc: 'Teacher directory, assignment to classes and tracks, contract management and teaching-staff records.' },
     { icon: T.fr.features[2].icon, title: 'Grades & Report Cards', desc: 'Grade entry by term, automatic average calculation and generation of bilingual PDF report cards.' },
-    { icon: T.fr.features[3].icon, title: 'Finances', desc: 'Track student and teacher payments, manage outstanding balances, automatic receipts and monthly reports.' },
-    { icon: T.fr.features[4].icon, title: 'Timetable', desc: 'Weekly scheduling by class, French and Arabic tracks, with automatic conflict detection.' },
-    { icon: T.fr.features[5].icon, title: 'Messaging & Calendar', desc: 'Internal staff messaging, shared school calendar and a parent portal to follow up on results.' },
-    { icon: T.fr.features[6].icon, title: 'Attendance & Absences', desc: 'Daily tracking of teacher and student attendance, justifications and per-class statistics.' },
-    { icon: T.fr.features[7].icon, title: 'Official Documents', desc: 'Automatic generation of enrollment certificates, attestations, registrations and other official documents as print-ready PDFs.' },
-    { icon: T.fr.features[8].icon, title: 'Library', desc: "Manage the school's collection: book catalog, loans to students and teachers, return tracking and stock inventory." },
+    { icon: T.fr.features[3].icon, title: 'Class Journal', desc: "Sessions taught, homework assigned and the school's sign-off — the daily pedagogical log for every class, aligned with the timetable." },
+    { icon: T.fr.features[4].icon, title: 'Finances', desc: 'Track student and teacher payments, manage outstanding balances, automatic receipts and monthly reports.' },
+    { icon: T.fr.features[5].icon, title: 'Timetable', desc: 'Weekly scheduling by class, French and Arabic tracks, with automatic conflict detection.' },
+    { icon: T.fr.features[6].icon, title: 'Messaging & Calendar', desc: 'Internal staff messaging, shared school calendar and a parent portal to follow up on results.' },
+    { icon: T.fr.features[7].icon, title: 'Attendance & Absences', desc: 'Daily tracking of teacher and student attendance, justifications and per-class statistics.' },
+    { icon: T.fr.features[8].icon, title: 'Official Documents', desc: 'Automatic generation of enrollment certificates, attestations, registrations and other official documents as print-ready PDFs.' },
+    { icon: T.fr.features[9].icon, title: 'Library', desc: "Manage the school's collection: book catalog, loans to students and teachers, return tracking and stock inventory." },
   ],
   roles: [
     { id: 'admin', label: 'Administrator' },
@@ -491,6 +516,7 @@ const EN: LandingContent = {
         { label: 'Teachers', detail: 'Full management of teacher records: specialties, contract types, salaries and class assignments.' },
         { label: 'Classes, Subjects & Years', detail: 'Create and manage classes by track (FR/AR), levels, subjects and configure school years.' },
         { label: 'Grades & Assessments', detail: 'Oversee grade entry, access all assessments by term and generate bilingual PDF report cards.' },
+        { label: 'Class journal', detail: 'Review and oversee the class journal for every class: sessions taught, homework assigned and the sign-off that locks a period.' },
         { label: 'Finances', detail: 'Full access: student payments, teacher disbursements, deductions, outstanding balances and monthly financial reports.' },
         { label: 'Official documents', detail: 'Generate all official documents: enrollment certificates, attestations and any other document as PDF.' },
         { label: 'Library', detail: 'Full management of the collection: book catalog, loan management, return tracking and stock status.' },
@@ -511,7 +537,7 @@ const EN: LandingContent = {
         { label: 'Teachers', detail: 'Manage teacher records, track assignments, specialties and contractual details.' },
         { label: 'Classes, Subjects & School Years', detail: 'Configure classes, levels, tracks, subjects and manage active school years.' },
         { label: 'Grades, Assessments & Report Cards', detail: 'Review grades, access all assessments and generate PDF report cards by class and term.' },
-        { label: 'Finances (read-only)', detail: 'Review student payments, teacher disbursements and outstanding balances — without editing financial data.' },
+        { label: 'Class journal', detail: 'Sign off (lock) the class journal by period and track how completely sessions have been logged, per class.' },
         { label: 'Timetable', detail: 'Review and edit the timetables of every class.' },
         { label: 'Teacher attendance', detail: 'Daily tracking of teacher presence, lateness or absence.' },
         { label: 'Student absences', detail: 'Review and manage absence tracking, attendance rates and per-class alerts.' },
@@ -536,6 +562,7 @@ const EN: LandingContent = {
         { label: 'Official documents', detail: 'Generate enrollment certificates, attestations and all official documents as PDF.' },
         { label: 'Timetable', detail: 'Review and update the timetables of every class.' },
         { label: 'Formative assessments', detail: 'Review and enter formative assessments (homework, tests, exams) by class and subject.' },
+        { label: 'Class journal', detail: 'Review the class journal: sessions taught and homework assigned by class.' },
         { label: 'Extracurricular activities', detail: 'Manage enrollment, sessions and attendance for extracurricular activities.' },
         { label: 'Reports', detail: 'Attendance and results reports by class. Monthly financial summary.' },
         { label: 'Student absences', detail: 'Review absence tracking and per-class attendance statistics.' },
@@ -562,6 +589,7 @@ const EN: LandingContent = {
       access: [
         { label: 'My classes', detail: 'Review the list of students in each assigned class, split by track and level.' },
         { label: 'Grades & Assessments', detail: 'Enter grades by subject and term, create and manage assessments for their classes.' },
+        { label: 'Class journal', detail: 'Daily logging of sessions taught and homework assigned for their classes, aligned with their timetable.' },
         { label: 'Report cards', detail: 'Generate and review report cards. View averages by student and by subject.' },
         { label: 'Pedagogical activities', detail: 'Plan and track school activities and projects for assigned classes.' },
         { label: 'Student progress', detail: "Track students' academic progress across terms in their classes." },

@@ -1,6 +1,8 @@
 # DaaraGest
 
-Application web de gestion scolaire multi-filières (franco-arabe et au-delà : FR / AR / EN + combinaisons, configurables par établissement), conçue pour les établissements au Sénégal. Gestion complète des élèves, du personnel, des classes, notes, bulletins, finances, pointage (manuel et QR), emploi du temps, messagerie interne, bibliothèque et portail parents — interface **trilingue Français / Arabe / Anglais** (RTL pour l'arabe) et landing page publique.
+Application web de gestion scolaire multi-filières, conçue pour tout établissement au Sénégal — **franco-arabe, bilingue ou classique** — grâce à des filières entièrement configurables par établissement (FR / AR / EN et toute combinaison, sans hypothèse de bilinguisme imposée). Gestion complète des élèves, du personnel, des classes, notes, bulletins, cahier de texte, finances, pointage (manuel et QR), emploi du temps, messagerie interne, bibliothèque et portail parents — interface **trilingue Français / Arabe / Anglais** (RTL pour l'arabe) et landing page publique.
+
+> **Mono-établissement aujourd'hui, pensé pour devenir un SaaS multi-tenant.** Le socle multi-tenant (`etablissement_id` partout, JWT scopé) existe déjà à ~80 % ; chaque établissement est actuellement déployé séparément. La bascule vers une offre SaaS multi-établissement (isolation RLS, onboarding, facturation) est un plan documenté, pas encore implémenté — voir [`docs/SAAS-INFRA-PLAN.md`](docs/SAAS-INFRA-PLAN.md) et la section [Phase 4 — Multi-établissement](#phase-4--multi-établissement).
 
 ---
 
@@ -38,7 +40,8 @@ Application web de gestion scolaire multi-filières (franco-arabe et au-delà : 
 | **Domaines** | Domaines pédagogiques IEF (Langue & Communication, Mathématiques, ESVS, EPSA…), grilles par groupe de niveau (CI-CP / CE1-CE2 / CM1-CM2) |
 | **Notes** | Saisie en masse par classe/matière/période, validation sur le barème effectif, suppression en masse, **politique de saisie configurable pour les professeurs** (leurs matières/classes ou élargi) |
 | **Évaluations** | Évaluations formatives (devoir, contrôle, test d'entrée, examen…) avec pondération |
-| **Bulletins** | Par filière (FR/AR — EN en cours de généralisation) + **combiné au choix** (`filieres_combine`) + annuel ; moyennes pondérées, **mentions configurables** (par filière et/ou niveau), **échelle d'affichage par niveau** (`Niveau.note_max`), classement, **verrouillage de période** (préflight + déverrouillage direction), **templates HTML éditables** (FR/AR/COMBINE/ANNUEL), export PDF individuel ou classe entière |
+| **Cahier de texte** | Séances faites (contenu, objectif) et devoirs à faire (leçon/exercice/récitation/autre) par classe×matière×date, vue « Ma journée » alignée sur l'emploi du temps, **visa de la direction** avec verrouillage de la période visée, indicateur de **complétude** (prévu vs. renseigné), export PDF (inspection), devoirs visibles côté portail parent |
+| **Bulletins** | Par filière (FR/AR — EN en cours de généralisation) + **combiné au choix** (`filieres_combine`) + annuel ; moyennes pondérées, **mentions configurables** (par filière et/ou niveau), **échelle d'affichage par niveau** (`Niveau.note_max`), classement, **verrouillage de période** (préflight + déverrouillage direction), **templates HTML éditables** (FR/AR/COMBINE/ANNUEL), **aperçu PDF avant téléchargement**, export PDF individuel ou classe entière, **suivi de l'état de génération** (à jour / périmé / partiel — recalculé après toute saisie de notes) avec **régénération automatique** des bulletins impactés et **nettoyage des orphelins** |
 | **Mentions** | Table `Mention` configurable : libellés FR/AR, seuils, couleurs ; portée établissement / filière / niveau (résolution filière+niveau > filière > niveau > établissement) |
 | **Progression** | Suivi de la progression académique pluriannuelle des élèves |
 | **Activités** | Activités parascolaires : inscriptions, séances, présences, évaluation |
@@ -49,7 +52,7 @@ Application web de gestion scolaire multi-filières (franco-arabe et au-delà : 
 | **Calendrier scolaire** | Événements (vacances, examens, réunions, fermetures), navigation mensuelle, vue liste |
 | **Notifications in-app** | Cloche avec badge, alertes d'absence, absences professeurs, refresh auto |
 | **Messagerie interne** | Conversations filées, tout-à-tout + broadcast par rôle, raccourci Ctrl+Enter |
-| **Portail parents** | Page publique sans compte (lien UUID) : notes, paiements, absences, informations de l'élève, **téléchargement des bulletins PDF** |
+| **Portail parents** | Page publique sans compte (lien UUID, **expiration automatique à la fin de l'année scolaire active**) : notes, paiements, absences, devoirs (cahier de texte), informations de l'élève, **téléchargement des bulletins PDF** ; **rotation** du lien et **écran dédié de gestion** (liste, statut actif/révoqué/expiré, recherche, révocation) |
 | **Bibliothèque** | Catalogue des livres, gestion des prêts/retours, suivi du stock et des retards |
 | **Finances** | Paiements élèves (mensualités, inscriptions, saisie en masse), reliquats, paiements du personnel, numéros de reçu auto, **exports Excel/PDF**, **catalogue de tarifs configurable** |
 | **Documents officiels** | 25 types de documents (certificats, attestations, cartes élève/professeur avec QR, fiches de paie, convocations…) générés en PDF à partir de templates personnalisables, aperçu et génération par lot |
@@ -98,19 +101,21 @@ DaaraGest/
 ├── .github/workflows/ci.yml     # CI : type-check, lint, tests, build, intégration Postgres
 ├── backend/
 │   ├── prisma/
-│   │   ├── schema.prisma        # 54 modèles, multi-tenant etablissement_id
+│   │   ├── schema.prisma        # 57 modèles, multi-tenant etablissement_id
 │   │   ├── migrations/          # migrations rejouables depuis zéro (testé en CI)
 │   │   ├── seed.ts              # seed de développement (admin + comptes de test)
 │   │   └── seed-prod.cjs        # seed idempotent exécuté au boot en production
 │   └── src/
 │       ├── config/
 │       │   ├── env.ts           # validation Zod des variables d'env (fail-fast)
-│       │   ├── roles.ts         # ROLE_GROUPS (DIRECTION, GESTION, ACADEMIQUE…)
+│       │   ├── roles.ts         # ROLE_GROUPS (DIRECTION, GESTION, ACADEMIQUE,
+│       │   │                    #   FINANCES/FINANCES_GESTION — directeur exclu…)
 │       │   └── sentry.ts        # Sentry (no-op si SENTRY_DSN absent)
 │       ├── middlewares/         # authMiddleware (return sur 401)
 │       ├── utils/               # csrf, browserPool (Puppeteer), microTemplate,
-│       │                        #   photoUrl, teachingPolicy…
-│       ├── modules/             # 33 modules API
+│       │                        #   photoUrl, teachingPolicy, sanitize (payloads
+│       │                        #   Personnel/Utilisateur curés par rôle)…
+│       ├── modules/             # 39 modules API
 │       │   ├── auth/            # login, refresh, logout, me, change-password, profil
 │       │   ├── annees-scolaires/
 │       │   ├── filieres/        # entité Filiere (FR/AR/EN…, N par établissement)
@@ -123,27 +128,34 @@ DaaraGest/
 │       │   ├── fonctions/       # fonctions du personnel configurables
 │       │   ├── eleves/          # + import CSV, export Excel, bulk, QR, transfert
 │       │   ├── personnel/       # + affectations matière×classe
-│       │   ├── notes/           # bulk upsert + bulk suppression
+│       │   ├── notes/           # bulk upsert + bulk suppression + régénération
+│       │   │                    #   auto des bulletins impactés
 │       │   ├── evaluations/     # évaluations formatives, notes, moyennes
+│       │   ├── cahier/          # cahier de texte : séances, devoirs, visa direction
 │       │   ├── bulletins/       # FR/AR (+EN en cours) + combiné au choix + annuel,
-│       │   │                    #   verrouillage de période, templates éditables, PDF
+│       │   │                    #   verrouillage de période, templates éditables, PDF,
+│       │   │                    #   état de génération + régénération + orphelins
 │       │   ├── absences/        # absences élèves + stats + alertes
 │       │   ├── progression/     # suivi pluriannuel
 │       │   ├── activites/       # activités parascolaires, séances, présences
 │       │   ├── finances/        # paiements, reliquats, exports Excel/PDF, stats
 │       │   ├── parametres/      # établissement + configNotes + politique de saisie
-│       │   ├── pointage/        # présences manuelles + QR (scan public signé HMAC)
+│       │   ├── pointage/        # présences manuelles + QR (scan public signé HMAC,
+│       │   │                    #   payload minimal — jamais salaire/CNI/qr_token)
 │       │   ├── demandes-absence-personnel/
 │       │   ├── utilisateurs/    # + réactivation, suppression définitive, GET /roles
 │       │   ├── emploi-du-temps/ # créneaux, conflits, jours actifs
 │       │   ├── calendrier/      # événements scolaires
 │       │   ├── notifications/   # in-app, marquer lue(s)
 │       │   ├── messagerie/      # conversations, messages, broadcast
-│       │   ├── portail-parent/  # tokens UUID, accès public, bulletins PDF
+│       │   ├── portail-parent/  # tokens UUID, expiration auto, rotation, audit,
+│       │   │                    #   accès public, bulletins PDF, devoirs
 │       │   ├── documents/       # templates, génération PDF, aperçu, lots, historique
 │       │   ├── stats/           # tableau de bord analytique direction
 │       │   ├── rapports/        # présences, résultats, bilan financier, grilles IEF…
 │       │   ├── audit/           # journal d'audit (direction)
+│       │   ├── rbac/            # tests transverses : matrice de rôles + anti-fuite
+│       │   │                    #   de payloads (payloads.itest.ts)
 │       │   └── bibliotheque/    # catalogue livres, emprunts, retours
 │       └── server.ts            # Fastify 5 + CORS + CSRF Origin + CSP + rate-limit
 │                                #   par utilisateur + gestionnaire d'erreurs + Sentry
@@ -157,13 +169,14 @@ DaaraGest/
         │                        #   ProtectedRoute, NotificationBell
         ├── hooks/               # useApi, useAuth, useTheme
         ├── i18n/fr|ar|en/       # common.json (~1 800 lignes chacun ; AR en cours)
-        ├── pages/               # 25 dossiers de pages + Dashboard, Login, Landing,
-        │                        #   Scanner (public), PortailParent (public)
+        ├── pages/               # 27 dossiers de pages (dont CahierTexte, GestionPortail)
+        │                        #   + Dashboard, Login, LandingPage ; Scanner (public,
+        │                        #   sous Pointage/) et PortailParent (public)
         ├── lib/api.ts           # fetch wrapper
         └── store/               # authStore (Zustand + persist)
 ```
 
-### Modèles Prisma (54)
+### Modèles Prisma (57)
 
 **Établissement & référentiels**
 `Etablissement` · `Filiere` · `Role` · `Utilisateur` · `Fonction` · `Niveau` · `Domaine` · `Tarif` · `ConfigNotes` · `Mention` · `MatriculeCounter`
@@ -173,6 +186,9 @@ DaaraGest/
 
 **Académique**
 `AnneeScolaire` · `Matiere` · `Classe` · `ClasseMatiere` · `ClasseMatierePeriode`
+
+**Cahier de texte**
+`CahierSeance` · `Devoir` · `CahierVisa`
 
 **Élèves**
 `Eleve` · `Parent` · `Inscription` · `InscriptionClasse` · `PaiementEleve` · `Note` · `Bulletin` · `BulletinTemplate` · `AbsenceEleve`
@@ -210,8 +226,10 @@ Chaque requête authentifiée extrait `etablissement_id` du JWT. Tous les servic
 | `directeur` | Toutes sauf Finances, Utilisateurs et Paramètres |
 | `gestionnaire` | Toutes sauf Utilisateurs, Paramètres et Audit |
 | `agent de scolarité` | Dashboard, Élèves, Emploi du temps, Calendrier, Messagerie, Bibliothèque, Absences, Finances |
-| `professeur` | Dashboard, Classes, Notes, Évaluations, Bulletins, Activités, Emploi du temps, Calendrier, Messagerie, Absences |
+| `professeur` | Dashboard, Classes, Notes, Évaluations, Cahier de texte, Bulletins, Activités, Emploi du temps, Calendrier, Messagerie, Absences |
 | `pointeur` | Dashboard, Emploi du temps, Calendrier, Messagerie, Absences, Pointage |
+
+> Le module **Cahier de texte** est accessible à `admin`, `directeur`, `gestionnaire` et `professeur` (groupe `ACADEMIQUE`) ; le visa (verrouillage d'une période) est réservé à la direction (`admin`, `directeur`).
 
 > Le journal d'audit (`/audit`) est réservé à la direction (admin, directeur) côté API.
 
@@ -231,6 +249,15 @@ Points clés du calcul et du rendu :
 - **Coefficients par période** : `ClasseMatierePeriode` permet de changer coefficient/barème/évaluée d'une matière entre le T1 et le T2 (fréquent en filière arabe).
 - **Verrouillage de période** : un préflight contrôle l'état avant génération ; la direction peut déverrouiller une période.
 - **Templates éditables** : un template HTML par type (FR/AR/COMBINE/ANNUEL), personnalisable par établissement, rendu par le moteur interne `microTemplate`.
+- **Aperçu PDF** : le même PDF que le téléchargement s'affiche d'abord dans une modale (`iframe` sur blob) avant l'enregistrement — l'utilisateur vérifie le rendu sans quitter l'application.
+
+### Cycle de vie des générations
+
+Aucun fichier n'est stocké : chaque PDF est rendu à la volée (Puppeteer) à partir des données courantes ; seul `Bulletin.generated_at` trace la dernière génération. En conséquence, un bulletin peut devenir **périmé** si des notes ou le programme (coefficient/barème par période) changent après sa génération :
+
+- **`GET /bulletins/etat`** calcule pour une classe/période/filière un statut `a_jour` · `perime` · `partiel` · `non_genere` (badge affiché sur la page Bulletins).
+- **Régénération automatique** : toute saisie de notes (`POST /notes/bulk`) déclenche `regenererBulletinsImpactes()`, qui régénère uniquement les bulletins des élèves/matières/périodes touchés — **sauf les bulletins déjà signés/validés**, qui ne sont jamais écrasés silencieusement.
+- **Nettoyage des orphelins** : un bulletin qui ne correspond plus à aucune note existante (élève désinscrit, matière retirée) est supprimé automatiquement lors de la régénération plutôt que de rester figé sur des données disparues.
 
 ### Jours de cours flexibles
 
@@ -559,6 +586,7 @@ Préfixe : `/api/v1`. Toutes les routes requièrent `Authorization: Bearer <toke
 |---------|-------|-------------|
 | `GET` | `/bulletins?annee_scolaire_id&periode&filiere&eleve_id` | Liste |
 | `POST` | `/bulletins/preflight` | Contrôles avant génération (matières sans notes, période verrouillée…) |
+| `GET` | `/bulletins/etat?classe_id&periode&annee_scolaire_id&filiere` | État de génération de la classe/période : `a_jour` · `perime` · `partiel` · `non_genere` |
 | `POST` | `/bulletins/generer` | Générer les bulletins d'une période (FR · AR · EN · COMBINE, `filieres_combine` au choix) |
 | `POST` | `/bulletins/generer-annuel` | Générer l'annuel (periode=0) |
 | `POST` | `/bulletins/deverrouiller-periode` | Déverrouiller une période (direction) |
@@ -622,11 +650,11 @@ Préfixe : `/api/v1`. Toutes les routes requièrent `Authorization: Bearer <toke
 
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
-| `GET` | `/portail-parent/acces/:token` | **Public** (30 req/min) | Données complètes de l'élève (notes, paiements, absences) |
+| `GET` | `/portail-parent/acces/:token` | **Public** (30 req/min) | Données complètes de l'élève (notes, paiements, absences, devoirs) — refusé si le lien a expiré |
 | `GET` | `/portail-parent/acces/:token/bulletin/:bulletin_id/pdf` | **Public** (10 req/min) | Bulletin PDF de l'élève |
-| `POST` | `/portail-parent/generer` | JWT | Générer/renouveler le lien de portail d'un élève |
-| `DELETE` | `/portail-parent/:token/revoquer` | JWT | Révoquer un lien |
-| `GET` | `/portail-parent` | JWT | Lister les tokens actifs de l'établissement |
+| `POST` | `/portail-parent/generer` | JWT | Générer ou **faire tourner** (rotation, nouveau token) le lien de portail d'un élève — expiration auto à la fin de l'année scolaire active ; tracé dans l'audit (`PORTAIL_GENERATE`) |
+| `DELETE` | `/portail-parent/:token/revoquer` | JWT | Révoquer un lien (tracé dans l'audit, `PORTAIL_REVOKE`) |
+| `GET` | `/portail-parent` | JWT | Lister tous les tokens de l'établissement (actif/révoqué/expiré) — alimente l'écran dédié « Gestion du portail » |
 
 ### Finances
 
@@ -679,6 +707,25 @@ Préfixe : `/api/v1`. Toutes les routes requièrent `Authorization: Bearer <toke
 | `GET` | `/evaluations/moyenne?classe_id&matiere_id&periode` | Moyenne pondérée |
 | `GET` | `/evaluations/:id/notes` | Notes d'une évaluation |
 | `POST` | `/evaluations/:id/notes/bulk` | Saisie en masse des notes |
+
+### Cahier de texte
+
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| `GET` | `/cahier/journee?date&annee_scolaire_id` | Séances et créneaux du jour (vue « Ma journée ») |
+| `GET` | `/cahier/seances?classe_id&annee_scolaire_id&du&au` | Séances faites sur un intervalle |
+| `POST` | `/cahier/seances` | Créer/mettre à jour une séance (contenu, objectif) — depuis un créneau ou libre |
+| `PATCH` | `/cahier/seances/:id` | Modifier une séance |
+| `DELETE` | `/cahier/seances/:id` | Supprimer une séance |
+| `GET` | `/cahier/devoirs?classe_id&annee_scolaire_id&du&au` | Devoirs à faire sur un intervalle (`pour_le`) |
+| `POST` | `/cahier/devoirs` | Créer un devoir (leçon/exercice/récitation/autre) |
+| `PATCH` | `/cahier/devoirs/:id` | Modifier |
+| `DELETE` | `/cahier/devoirs/:id` | Supprimer |
+| `GET` | `/cahier/completude` | Indicateur prévu vs. renseigné (créneaux avec/sans séance saisie) |
+| `GET` | `/cahier/export-pdf` | Export PDF du cahier (inspection) |
+| `GET` | `/cahier/visas` | Liste des visas (périodes verrouillées par la direction) |
+| `POST` | `/cahier/visas` | Viser un intervalle `[du, au]` d'une classe — verrouille la saisie (direction) |
+| `DELETE` | `/cahier/visas/:id` | Retirer un visa (direction) |
 
 ### Activités parascolaires
 
@@ -828,15 +875,26 @@ DIALLO,Fatou,ديالو,فاتو,2011-09-20,F,DIALLO Ibrahima,père,775678901
 4. Un QR peut être **régénéré** à tout moment (l'ancien est invalidé)
 5. Le pointage manuel reste disponible pour les correctifs et les statuts congé/retard
 
+### Cahier de texte
+
+Journal de classe quotidien, pensé pour rester au plus près du geste du professeur en salle :
+
+1. **Ma journée** — vue du jour alignée sur l'emploi du temps : chaque créneau de la classe/matière propose de saisir directement la séance faite (contenu, objectif) ; une séance peut aussi être créée hors créneau
+2. **Devoirs à faire** — leçon, exercice, récitation ou autre, avec date de remise (`pour_le`) distincte de la date de saisie (`donne_le`) ; visibles par le parent dans l'onglet Devoirs du portail
+3. **Complétude** — indicateur « prévu vs renseigné » : nombre de créneaux de la période effectivement couverts par une séance saisie
+4. **Visa de la direction** — la direction vise un intervalle `[du, au]` d'une classe, ce qui **verrouille la saisie** sur cette période (comme le verrouillage de période des bulletins)
+5. **Export PDF** — cahier imprimable pour l'inspection académique
+
 ### Portail parents
 
 Le portail parent est accessible via un lien unique sans création de compte :
 
-1. Page **Élèves** → cliquer l'icône portail sur la ligne de l'élève
-2. Cliquer **Générer le lien** → un UUID est créé (ou renouvelé)
+1. Page **Élèves** → cliquer l'icône portail sur la ligne de l'élève, ou l'écran dédié **Gestion du portail** (liste de tous les liens de l'établissement, recherche, statut actif/révoqué/expiré)
+2. Cliquer **Générer le lien** → un UUID est créé, ou **tourné** (rotation : nouveau token, l'ancien devient invalide) s'il en existait déjà un
 3. Copier et partager le lien via WhatsApp ou SMS
-4. Le parent voit les **notes par période**, **paiements**, **absences**, **informations de l'élève** et peut **télécharger les bulletins PDF**
-5. L'admin peut révoquer un lien à tout moment
+4. Le parent voit les **notes par période**, **paiements**, **absences**, **devoirs (cahier de texte)**, **informations de l'élève** et peut **télécharger** ou **prévisualiser les bulletins PDF**
+5. Le lien **expire automatiquement** à la fin de l'année scolaire active (repli sur une durée fixe si aucune année active) ; l'admin/direction/gestionnaire peut aussi le révoquer à tout moment
+6. Chaque génération et révocation est tracée dans le journal d'audit (`PORTAIL_GENERATE` / `PORTAIL_REVOKE`)
 
 ### Messagerie interne
 
@@ -873,9 +931,12 @@ Le portail parent est accessible via un lien unique sans création de compte :
 | Logs | Redaction automatique des mots de passe, cookies et en-têtes `Authorization` |
 | Multi-tenant | Chaque requête filtre par `etablissement_id` extrait du JWT |
 | Validation | Zod sur tous les body POST/PUT · `z.coerce.number()` pour les Decimal Prisma |
+| RBAC — routes | Groupes de rôles (`ROLE_GROUPS`) par route, y compris `FINANCES`/`FINANCES_GESTION` (le directeur n'a **aucun** accès finances, arbitrage établissement) — verrouillé par `rbac.test.ts` |
+| RBAC — payloads | `utils/sanitize.ts` cure les réponses par rôle : le hash `mot_de_passe` ne sort jamais, et `salaire_base`/`cni`/`qr_token` (Personnel) sont réservés aux rôles de gestion — même quand un `include` Prisma récupère l'objet complet. Verrouillé par `rbac/payloads.itest.ts` (vérifie le contenu réel des réponses, pas seulement qui a le droit d'appeler la route) |
 | PDF | `escapeHtml()` sur toutes les données utilisateur avant insertion dans les templates |
-| QR codes | Signés HMAC-SHA256 (`QR_SECRET`) — un QR forgé est rejeté au scan |
-| Portail parent | Token UUID en base, révocable, sans création de compte utilisateur |
+| QR codes | Signés HMAC-SHA256 (`QR_SECRET`) — un QR forgé est rejeté au scan ; régénérables individuellement à tout moment (l'ancien est invalidé) |
+| Portail parent | Token UUID en base, révocable, **expiration automatique** (fin de l'année scolaire active), rotation, sans création de compte utilisateur, actions tracées dans l'audit |
+| Endpoints publics | `/pointage/scans-jour` (kiosque) ne renvoie qu'identité + heures — jamais salaire/CNI/qr_token, même si l'établissement est devinable dans l'URL |
 | Erreurs | Gestionnaire global : 4xx explicites, 5xx anonymisés + capture Sentry |
 | Proxy | `trustProxy` activé (Railway) pour que le rate-limit voie la vraie IP cliente |
 
@@ -911,11 +972,13 @@ Trois familles de tests :
 
 | Famille | Volume | Commande | DB requise |
 |---------|--------|----------|------------|
-| Unitaires backend | ~550 cas · 20 fichiers `*.test.ts` | `npm test` (backend) | Non |
-| Intégration backend | 3 fichiers `*.itest.ts` (audit, bulletins, suppression élève) | `npm run test:integration` | **Oui (Postgres)** |
+| Unitaires backend | ~610 cas · 24 fichiers `*.test.ts` | `npm test` (backend) | Non |
+| Intégration backend | ~70 cas · 10 fichiers `*.itest.ts` (audit, bulletins, cahier, documents, suppression élève, paramètres, portail parent, progression, rapports, **payloads anti-fuite**) | `npm run test:integration` | **Oui (Postgres)** |
 | UI frontend | Composants (Button, Badge, Pagination) — Testing Library | `npm test` (frontend) | Non |
 
-Principaux domaines couverts côté unitaire : calculs de bulletins (moyennes pondérées, mentions, classement, template), pointage (`calcHeures`), matricules, reçus, validation des notes et barèmes, alertes d'absence, auth (hash, payload JWT, lockout), CSRF, documents/templates, RBAC de tous les groupes, sécurité (injection, escapeHtml), politique de saisie des notes, filières, micro-templating.
+Principaux domaines couverts côté unitaire : calculs de bulletins (moyennes pondérées, mentions, classement, template), cycle de vie des générations (état à jour/périmé/partiel, régénération, orphelins), cahier de texte (génération HTML, complétude), pointage (`calcHeures`), matricules, reçus, validation des notes et barèmes, alertes d'absence, auth (hash, payload JWT, lockout), CSRF, documents/templates, RBAC de tous les groupes (routes **et** payloads), sécurité (injection, escapeHtml), politique de saisie des notes, filières, micro-templating.
+
+> Convention de ce projet : chaque nouveau test de garde (RBAC, sécurité, règle métier) doit être prouvé par **injection de régression** — casser temporairement le code protégé, confirmer que le test échoue, puis restaurer — sinon le test peut être un faux positif qui teste une copie de la logique plutôt que le code de production.
 
 ### CI (GitHub Actions)
 
@@ -931,11 +994,11 @@ Principaux domaines couverts côté unitaire : calculs de bulletins (moyennes po
 
 ## Roadmap — chantiers en cours
 
-> **Modules déjà implémentés** : Filières génériques (entité `Filiere`, inscriptions N-filières, **colonnes string supprimées — refonte soldée**), Bulletins FR/AR/EN + combiné au choix, Mentions configurables (seule source des seuils, libellé arabe sur les bulletins AR), Échelle d'affichage par niveau, Domaines & grilles IEF, Tarifs, Fonctions configurables, Pointage QR, Audit log, Demandes d'absence personnel, Évaluations formatives, Progression pluriannuelle, Activités parascolaires, Bibliothèque, Portail parents (+ bulletins PDF), Documents officiels (25 types), Rapports (11 types + aperçus), Tableau de bord analytique, Refresh tokens, Verrouillage de période des bulletins, Templates de bulletins éditables, i18n FR/AR/EN synchronisée, Sentry, CI complète.
+> **Modules déjà implémentés** : Filières génériques (entité `Filiere`, inscriptions N-filières, **colonnes string supprimées — refonte soldée**), Bulletins FR/AR/EN + combiné au choix, **cycle de vie des générations** (état à jour/périmé/partiel, régénération automatique après saisie de notes, nettoyage des orphelins) + **aperçu PDF**, Mentions configurables (seule source des seuils, libellé arabe sur les bulletins AR), Échelle d'affichage par niveau, Domaines & grilles IEF, Tarifs, Fonctions configurables, **Cahier de texte** (séances, devoirs, visa/verrouillage, complétude, export PDF, intégration portail parent), Pointage QR, Audit log, Demandes d'absence personnel, Évaluations formatives, Progression pluriannuelle, Activités parascolaires, Bibliothèque, Portail parents (bulletins PDF, **expiration auto, rotation, écran de gestion dédié**), Documents officiels (25 types), Rapports (11 types + aperçus), Tableau de bord analytique, Refresh tokens, Verrouillage de période des bulletins, Templates de bulletins éditables, **RBAC route + payload** (finances hors périmètre direction, payloads Personnel/Utilisateur curés par rôle), i18n FR/AR/EN synchronisée, Sentry, CI complète.
 
 ### Phase 4 — Multi-établissement
 
-Le socle multi-tenant existe (`etablissement_id` partout, JWT scopé). Reste l'onboarding : module `etablissements`, super-admin plateforme, branding par école. À planifier quand une deuxième école arrivera.
+Le socle multi-tenant existe (`etablissement_id` partout, JWT scopé). Reste l'onboarding : module `etablissements`, super-admin plateforme, branding par école. C'est la trajectoire produit visée (passage d'un déploiement mono-établissement à un **SaaS multi-tenant**) ; le plan détaillé — isolation RLS, provisioning/facturation, infra cible, coûts — est dans [`docs/SAAS-INFRA-PLAN.md`](docs/SAAS-INFRA-PLAN.md). À déclencher quand une deuxième école arrivera (la Phase A « isolation » de ce plan doit être terminée avant).
 
 ### Pointage NFC
 
@@ -957,7 +1020,7 @@ Expo + partage des types TypeScript, mode hors-ligne pour la saisie de notes et 
 
 ## Dette technique
 
-L'audit de cohérence de juillet 2026 (PR #126–#136) a soldé la dette précédemment listée ici : transition filières (colonnes string supprimées), consolidation des mentions (seuils fixes retirés), lien de navigation Audit, champs directeur legacy et stockage du token (cookie httpOnly seul). Restent connus :
+L'audit de cohérence de juillet 2026 (PR #126–#136) a soldé la dette précédemment listée ici : transition filières (colonnes string supprimées), consolidation des mentions (seuils fixes retirés), lien de navigation Audit, champs directeur legacy et stockage du token (cookie httpOnly seul). L'audit RBAC du 18 juillet 2026 (PR #157) a fermé le trou méthodologique restant : la matrice de rôles (`rbac.test.ts`) verrouillait **qui** appelle chaque route mais pas **ce que** la route renvoie — des `include` Prisma sans `select` laissaient fuiter le hash de mot de passe et la fiche RH (salaire, CNI, QR) à des rôles non autorisés, y compris sur un endpoint public. Corrigé via `utils/sanitize.ts` + `rbac/payloads.itest.ts`, avec au passage l'arbitrage établissement retirant tout accès finances au directeur. Restent connus :
 
 ### 1. Modèles NFC sans API *(priorité basse — décision : conservés)*
 
