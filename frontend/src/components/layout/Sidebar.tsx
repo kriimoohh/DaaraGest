@@ -23,9 +23,6 @@ const NAV_SECTIONS = [
   {
     groupKey: 'groupe_pedagogie',
     items: [
-      { key: 'annees_scolaires',  path: '/annees-scolaires',  roles: ['admin', 'directeur', 'gestionnaire'] },
-      { key: 'matieres',          path: '/matieres',           roles: ['admin', 'directeur', 'gestionnaire'] },
-      { key: 'domaines',          path: '/domaines',           roles: ['admin', 'directeur', 'gestionnaire'] },
       { key: 'notes',             path: '/notes',              roles: ['admin', 'directeur', 'gestionnaire', 'professeur'] },
       { key: 'evaluations',       path: '/evaluations',        roles: ['admin', 'directeur', 'gestionnaire', 'professeur'] },
       { key: 'cahier_texte',      path: '/cahier-texte',       roles: ['admin', 'directeur', 'gestionnaire', 'professeur'] },
@@ -36,6 +33,15 @@ const NAV_SECTIONS = [
     ],
   },
   {
+    groupKey: 'groupe_vie_scolaire',
+    items: [
+      { key: 'absences',     path: '/absences',     roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité', 'professeur', 'pointeur'] },
+      { key: 'pointage',     path: '/pointage',     roles: ['admin', 'directeur', 'gestionnaire', 'pointeur'] },
+      { key: 'demandes_absence_personnel', path: '/demandes-absence-personnel', roles: ['admin', 'directeur', 'gestionnaire'] },
+      { key: 'bibliotheque', path: '/bibliotheque', roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'] },
+    ],
+  },
+  {
     groupKey: 'groupe_communication',
     items: [
       { key: 'calendrier',  path: '/calendrier',  roles: ['admin', 'directeur', 'gestionnaire', 'professeur', 'agent de scolarité', 'pointeur'] },
@@ -43,14 +49,18 @@ const NAV_SECTIONS = [
     ],
   },
   {
+    groupKey: 'groupe_referentiels',
+    items: [
+      { key: 'annees_scolaires',  path: '/annees-scolaires',  roles: ['admin', 'directeur', 'gestionnaire'] },
+      { key: 'matieres',          path: '/matieres',           roles: ['admin', 'directeur', 'gestionnaire'] },
+      { key: 'domaines',          path: '/domaines',           roles: ['admin', 'directeur', 'gestionnaire'] },
+    ],
+  },
+  {
     groupKey: 'groupe_administration',
     items: [
       { key: 'documents',    path: '/documents',    roles: ['admin', 'directeur', 'gestionnaire'] },
       { key: 'rapports',     path: '/rapports',     roles: ['admin', 'directeur', 'gestionnaire'] },
-      { key: 'bibliotheque', path: '/bibliotheque', roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'] },
-      { key: 'absences',     path: '/absences',     roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité', 'professeur', 'pointeur'] },
-      { key: 'demandes_absence_personnel', path: '/demandes-absence-personnel', roles: ['admin', 'directeur', 'gestionnaire'] },
-      { key: 'pointage',     path: '/pointage',     roles: ['admin', 'directeur', 'gestionnaire', 'pointeur'] },
       { key: 'finances',     path: '/finances',     roles: ['admin', 'gestionnaire', 'agent de scolarité'] },
       { key: 'liens_portail', path: '/liens-portail', roles: ['admin', 'directeur', 'gestionnaire'] },
       { key: 'audit',        path: '/audit',        roles: ['admin', 'directeur'] },
@@ -99,6 +109,8 @@ function NavIcon({ path, size = 16 }: { path: string; size?: number }) {
   );
 }
 
+const COLLAPSE_STORAGE_KEY = 'daaragest-sb-collapsed';
+
 export function Sidebar() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
@@ -106,6 +118,18 @@ export function Sidebar() {
   const role = user?.role ?? '';
 
   const [counts, setCounts] = useState<Record<string, number>>({});
+  // Sections repliées par l'utilisateur, mémorisées entre les sessions.
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
+    try { return JSON.parse(localStorage.getItem(COLLAPSE_STORAGE_KEY) ?? '{}'); } catch { return {}; }
+  });
+
+  const toggleSection = (groupKey: string) => {
+    setCollapsed(prev => {
+      const next = { ...prev, [groupKey]: !prev[groupKey] };
+      try { localStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify(next)); } catch { /* stockage plein/privé */ }
+      return next;
+    });
+  };
 
   useEffect(() => {
     Promise.allSettled([
@@ -139,12 +163,32 @@ export function Sidebar() {
         {NAV_SECTIONS.map((section) => {
           const visible = section.items.filter(item => item.roles.includes(role));
           if (visible.length === 0) return null;
+          const estActif = (path: string) =>
+            path === '/' ? location.pathname === '/' : location.pathname === path || location.pathname.startsWith(path + '/');
+          // La section contenant la page courante reste toujours dépliée : on ne
+          // « perd » jamais visuellement l'endroit où l'on se trouve.
+          const contientActif = visible.some(item => estActif(item.path));
+          const estRepliee = !!collapsed[section.groupKey] && !contientActif;
+          // Le groupe Accueil n'a qu'une entrée homonyme : pas d'en-tête au-dessus.
+          const sansEntete = section.groupKey === 'groupe_accueil';
           return (
-            <div key={section.groupKey} className="sb-section">
-              <div className="sb-section-label">{t(`nav.${section.groupKey}`)}</div>
-              <div>
+            <div key={section.groupKey} className={`sb-section${estRepliee ? ' collapsed' : ''}`}>
+              {!sansEntete && (
+                <button
+                  type="button"
+                  className="sb-section-hd"
+                  onClick={() => toggleSection(section.groupKey)}
+                  aria-expanded={!estRepliee}
+                >
+                  <span className="sb-section-label">{t(`nav.${section.groupKey}`)}</span>
+                  <svg className="sb-chevron" width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+              )}
+              <div className="sb-items">
                 {visible.map(item => {
-                  const isActive = item.path === '/' ? location.pathname === '/' : location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+                  const isActive = estActif(item.path);
                   return (
                     <NavLink
                       key={item.key}

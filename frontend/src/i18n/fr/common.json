@@ -51,7 +51,9 @@
     "groupe_pedagogie": "Pédagogie",
     "groupe_communication": "Communication",
     "groupe_administration": "Administration",
-    "cahier_texte": "Cahier de texte"
+    "cahier_texte": "Cahier de texte",
+    "groupe_referentiels": "Référentiels",
+    "groupe_vie_scolaire": "Vie scolaire"
   },
   "theme": {
     "light": "Mode clair",

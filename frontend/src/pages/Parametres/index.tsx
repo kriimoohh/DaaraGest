@@ -404,7 +404,7 @@ function BulletinTemplateEditor() {
         {loading ? (
           <div style={{ padding: 30, textAlign: 'center', color: 'var(--ink-3)', fontSize: 14 }}>{t('parametre.chargement_modele')}</div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 250px', gap: 12, alignItems: 'start' }}>
+          <div className="grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 250px', gap: 12, alignItems: 'start' }}>
             <textarea
               ref={textareaRef}
               value={html}
@@ -1188,7 +1188,7 @@ export function ParametresPage() {
     <>
       <PageHeader eyebrow={t('parametre.eyebrow')} title={t('parametre.titre')} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 24, alignItems: 'start' }}>
+      <div className="grid-stack" style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 24, alignItems: 'start' }}>
         {/* Sidebar navigation */}
         <div className="card" style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {([
@@ -1236,7 +1236,7 @@ export function ParametresPage() {
             <Button onClick={saveEtab} loading={saving === 'etab'}>{t('actions.enregistrer')}</Button>
           </div>
           <div className="card-pad">
-            <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 24, alignItems: 'start' }}>
+            <div className="grid-stack" style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 24, alignItems: 'start' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <LogoUploader
                   value={etab.logo_url ?? undefined}
@@ -2461,7 +2461,7 @@ export function ParametresPage() {
                 <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--ink-3)' }}>{t('parametre.notif_seuils_desc')}</p>
               </div>
             </div>
-            <div className="card-pad" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="card-pad grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <Input
                 label={t('parametre.seuil_absences')}
                 type="number"

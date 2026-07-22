@@ -127,7 +127,7 @@ function EventForm({
           onChange={e => setForm(f => ({ ...f, titre_fr: e.target.value }))}
           placeholder={t('calendrier.titre_placeholder')}
         />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <Input
             label={t('calendrier.date_debut')}
             type="date"
@@ -414,10 +414,11 @@ export function CalendrierPage() {
       {loading ? (
         <div className="card empty">{t('calendrier.chargement')}</div>
       ) : (
-        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+        <div className="cal-layout" style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
           {/* Calendar grid */}
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
             <div
+              className="cal-grid-scroll"
               style={{
                 border: '1px solid var(--rule)',
                 borderRadius: 10,
@@ -426,6 +427,7 @@ export function CalendrierPage() {
             >
               {/* Day headers */}
               <div
+                className="cal-grid-row"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(7, 1fr)',
@@ -451,6 +453,7 @@ export function CalendrierPage() {
 
               {/* Calendar cells */}
               <div
+                className="cal-grid-row"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(7, 1fr)',
@@ -536,6 +539,7 @@ export function CalendrierPage() {
           {/* Day detail panel */}
           {selectedDay && selectedDayEvents.length > 0 && (
             <div
+              className="cal-day-panel"
               style={{
                 width: 240,
                 flexShrink: 0,

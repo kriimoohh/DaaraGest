@@ -678,7 +678,7 @@ export function BulletinsPage() {
         {preflight && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Synthèse */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+            <div className="grid-stack" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
               <div style={{ padding: 12, background: 'var(--success-soft)', borderRadius: 'var(--r-md)', textAlign: 'center' }}>
                 <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--success-text)' }}>{preflight.matieres_evaluees.length}</div>
                 <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>{t('bulletin.preflight_evaluees')}</div>

@@ -51,7 +51,9 @@
     "groupe_pedagogie": "التعليم",
     "groupe_communication": "التواصل",
     "groupe_administration": "الإدارة",
-    "cahier_texte": "دفتر النصوص"
+    "cahier_texte": "دفتر النصوص",
+    "groupe_referentiels": "المرجعيات",
+    "groupe_vie_scolaire": "الحياة المدرسية"
   },
   "theme": {
     "light": "الوضع الفاتح",

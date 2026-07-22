@@ -41,7 +41,7 @@ export function HelpButton() {
   const title = t(`nav.${key}`, key);
 
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
+    <div className="tb-help-btn" style={{ position: 'relative', display: 'inline-block' }}>
       <button
         ref={buttonRef}
         className="tb-btn"

@@ -243,24 +243,42 @@ html[dir="rtl"] .app { direction: rtl; }
 .sb-name { font-family: var(--font-display); font-weight: 600; font-size: 16px; letter-spacing: -0.01em; line-height: 1; }
 .sb-tag { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
 
-.sb-nav { flex: 1; overflow-y: auto; padding: 14px 10px; }
-.sb-section { margin-bottom: 18px; }
+.sb-nav { flex: 1; overflow-y: auto; padding: 14px 10px 18px; }
+.sb-section { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid color-mix(in srgb, var(--rule) 55%, transparent); }
+.sb-section:last-child { border-bottom: none; margin-bottom: 0; }
+/* En-tête de section : cliquable pour replier/déplier le groupe. */
+.sb-section-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 4px 10px;
+  margin-bottom: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: var(--r-sm);
+  color: var(--ink-3);
+  transition: color 0.12s, background 0.12s;
+}
+.sb-section-hd:hover { color: var(--ink-2); background: var(--paper-2); }
 .sb-section-label {
   font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--ink-3);
   font-weight: 600;
-  padding: 0 10px;
-  margin-bottom: 6px;
   font-family: var(--font-mono);
 }
+.sb-chevron { flex-shrink: 0; opacity: 0.55; transition: transform 0.15s ease; }
+.sb-section.collapsed .sb-chevron { transform: rotate(-90deg); }
+html[dir="rtl"] .sb-section.collapsed .sb-chevron { transform: rotate(90deg); }
+.sb-section.collapsed .sb-items { display: none; }
 .sb-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 7px 10px;
-  border-radius: var(--r-sm);
+  padding: 8px 10px;
+  border-radius: var(--r-md);
   color: var(--ink-2);
   font-size: 13.5px;
   font-weight: 500;
@@ -278,6 +296,17 @@ html[dir="rtl"] .app { direction: rtl; }
   background: var(--terra-soft);
   color: var(--terra-ink);
   font-weight: 600;
+}
+/* Trait d'accent au bord de l'item actif — repère immédiat dans une liste longue. */
+.sb-item.active::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 7px;
+  bottom: 7px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--terra);
 }
 .sb-item svg { color: var(--ink-3); flex-shrink: 0; }
 .sb-item.active svg { color: var(--terra); }
@@ -903,6 +932,10 @@ html[dir="rtl"] .app { direction: rtl; }
   :root { --sidebar-w: 72px; }
   .sidebar { padding-inline: 6px; }
   .sb-name, .sb-tag, .sb-section-label, .sb-item-label, .sb-user-name, .sb-user-role { display: none !important; }
+  /* Mode icônes : plus d'en-têtes de groupe, et le repli n'a plus de sens
+     (il cacherait des icônes sans aucun indice visuel) → sections forcées ouvertes. */
+  .sb-section-hd { display: none; }
+  .sb-section.collapsed .sb-items { display: block !important; }
   .sb-item { justify-content: center; padding: 10px 6px; }
   .sb-brand { justify-content: center; padding: 10px 0; }
   .sb-user { justify-content: center; padding: 8px 0; }
@@ -928,6 +961,9 @@ html[dir="rtl"] .app { direction: rtl; }
   html[dir="rtl"] .sidebar { transform: translateX(100%); }
   .sidebar.is-open { transform: translateX(0); }
   .sb-name, .sb-tag, .sb-section-label, .sb-item-label, .sb-user-name, .sb-user-role { display: inline !important; }
+  /* Drawer : la sidebar complète revient, avec ses en-têtes et son repli. */
+  .sb-section-hd { display: flex; }
+  .sb-section.collapsed .sb-items { display: none !important; }
   .sb-item { justify-content: flex-start; padding: 10px 12px; }
   .badge-num { display: inline-flex !important; }
   .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr !important; }
@@ -937,6 +973,10 @@ html[dir="rtl"] .app { direction: rtl; }
   .page-title { font-size: 22px !important; }
   .topbar { padding-inline: 10px !important; gap: 6px; }
   .tb-search { display: none; }
+  /* L'aide contextuelle est un « nice to have » : sur un topbar déjà tendu à
+     390px, on la masque plutôt que de sacrifier un élément essentiel (langue,
+     thème, notifications, profil). */
+  .tb-help-btn { display: none; }
   /* La topbar ne tient pas à 390px avec tout son contenu : on masque le fil
      d'Ariane (le titre de page est juste dessous) et le nom d'utilisateur
      (l'avatar suffit), et on compacte les deux sélecteurs. !important requis :
@@ -958,6 +998,32 @@ html[dir="rtl"] .app { direction: rtl; }
     background: rgba(27,24,18,0.4); z-index: 49;
   }
   .sb-backdrop.is-open { display: block; }
+
+  /* Grilles à 2 colonnes (ou plus) codées en style inline avec un ratio propre
+     à l'écran (ex. 220px 1fr, 1.2fr 1fr) : on préserve ce ratio jusqu'à 640px,
+     puis on empile en 1 colonne plutôt que de laisser les colonnes s'écraser. */
+  .grid-stack { grid-template-columns: 1fr !important; }
+
+  /* Calendrier : grille à 7 colonnes fixes (dim.-sam.) — on ne l'effondre pas
+     (elle perdrait son sens), on la fait défiler horizontalement à largeur
+     minimale plutôt que d'écraser chaque case du mois. Le panneau du jour
+     sélectionné passe sous la grille au lieu de rester collé à droite. */
+  .cal-grid-scroll { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  .cal-grid-row { min-width: 560px; }
+  .cal-layout { flex-direction: column !important; }
+  .cal-day-panel { width: 100% !important; }
+
+  /* Emploi du temps : grille à N colonnes (jours actifs configurables, 5 à 7).
+     Chaque colonne contient des cartes de créneau (texte riche) qui ne peuvent
+     pas s'écraser sans devenir illisibles → défilement horizontal à largeur
+     de colonne minimale, comme pour les tableaux (.tbl-wrap). */
+  .edt-grid {
+    grid-template-columns: none !important;
+    grid-auto-flow: column !important;
+    grid-auto-columns: minmax(150px, 1fr) !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 .sb-backdrop { position: fixed; }
