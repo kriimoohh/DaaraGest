@@ -251,7 +251,7 @@ export function RapportsPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 20, alignItems: 'start' }}>
+      <div className="grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 20, alignItems: 'start' }}>
         {/* Liste des rapports groupés */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {GROUPES.map(groupe => {
@@ -328,7 +328,7 @@ export function RapportsPage() {
             )}
 
             {needsMois && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div className="grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <Select
                   label={t('rapport.mois_label')}
                   value={mois}

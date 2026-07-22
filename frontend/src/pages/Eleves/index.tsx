@@ -1261,7 +1261,7 @@ export function ElevesPage() {
               <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--ink-4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
                 Informations personnelles
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 24, rowGap: 12 }}>
+              <div className="grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 24, rowGap: 12 }}>
                 <FicheRow label="Nom" value={ficheModal.nom_fr} />
                 <FicheRow label="Prénom" value={ficheModal.prenom_fr} />
                 <FicheRow label={t('eleve.date_naissance')} value={formatDate(ficheModal.date_naissance, locale)} />
@@ -1284,7 +1284,7 @@ export function ElevesPage() {
                         <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{p.nom_fr}</span>
                         <span style={{ padding: '1px 8px', borderRadius: 999, fontSize: 12, fontWeight: 500, background: 'var(--success-soft)', color: 'var(--success-text)', textTransform: 'capitalize' }}>{p.lien}</span>
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 24, rowGap: 8 }}>
+                      <div className="grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 24, rowGap: 8 }}>
                         <FicheRow label="Téléphone" value={p.telephone || '—'} />
                         <FicheRow label={t('eleve.email')} value={p.email || '—'} />
                         {p.adresse && <FicheRow label={t('eleve.adresse')} value={p.adresse} />}

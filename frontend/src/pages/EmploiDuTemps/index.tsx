@@ -319,6 +319,7 @@ export function EmploiDuTempsPage() {
         <div className="card empty">{t('emploi_du_temps.chargement')}</div>
       ) : (
         <div
+          className="edt-grid"
           style={{
             display: 'grid',
             gridTemplateColumns: `repeat(${JOURS.length}, 1fr)`,
@@ -395,7 +396,7 @@ export function EmploiDuTempsPage() {
             options={JOURS}
             placeholder={t('emploi_du_temps.jour_placeholder')}
           />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Input
               label={t('emploi_du_temps.heure_debut')}
               type="time"

@@ -247,7 +247,7 @@ export function Dashboard() {
           ) : tdb && (
             <>
               {/* Présences */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div className="grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
                 <TauxCard
                   label={t('dashboard.presence_eleves')}
                   data={tdb.presence_eleves}
@@ -261,7 +261,7 @@ export function Dashboard() {
               </div>
 
               {/* Moyennes classes + Top/Bottom */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 16, marginBottom: 16 }}>
+              <div className="grid-stack" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 16, marginBottom: 16 }}>
                 {/* Moyennes par classe */}
                 <div className="card">
                   <div className="card-hd">
@@ -371,7 +371,7 @@ export function Dashboard() {
 
       {/* Charts row — Finances (rôles autorisés uniquement) */}
       {caps.finances && (
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }} className="mb-4">
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }} className="mb-4 grid-stack">
         <div className="card">
           <div className="card-hd">
             <div>
@@ -429,7 +429,7 @@ export function Dashboard() {
                   </div>
                 </div>
                 <div className="divider" style={{ margin: '0' }} />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 12 }}>
+                <div className="grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 12 }}>
                   <div>
                     <div className="info-label">{t('dashboard.paiements')}</div>
                     <div style={{ fontWeight: 600, fontSize: 18, fontFamily: 'var(--font-mono)' }}>{fmtNum(statsMois.nb_paiements_eleves)}</div>

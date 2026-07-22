@@ -405,11 +405,11 @@ export function BibliothequeePage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <Input label={t('bibliotheque.titre_label')} value={livreForm.titre} onChange={e => setLivreForm(f => ({ ...f, titre: e.target.value }))} />
             <Input label={t('bibliotheque.auteur_label')} value={livreForm.auteur} onChange={e => setLivreForm(f => ({ ...f, auteur: e.target.value }))} />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div className="grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <Input label="ISBN" value={livreForm.isbn} onChange={e => setLivreForm(f => ({ ...f, isbn: e.target.value }))} />
               <Input label={t('bibliotheque.categorie_label')} value={livreForm.categorie} onChange={e => setLivreForm(f => ({ ...f, categorie: e.target.value }))} />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div className="grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <Input label={t('bibliotheque.editeur_label')} value={livreForm.editeur} onChange={e => setLivreForm(f => ({ ...f, editeur: e.target.value }))} />
               <Input label={t('bibliotheque.annee_edition_label')} type="number" value={livreForm.annee_edition} onChange={e => setLivreForm(f => ({ ...f, annee_edition: e.target.value }))} />
             </div>

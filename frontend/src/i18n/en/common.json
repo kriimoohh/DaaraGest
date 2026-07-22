@@ -37,7 +37,9 @@
     "groupe_pedagogie": "Academics",
     "groupe_communication": "Communication",
     "groupe_administration": "Administration",
-    "cahier_texte": "Class journal"
+    "cahier_texte": "Class journal",
+    "groupe_referentiels": "Reference data",
+    "groupe_vie_scolaire": "School life"
   },
   "common": {
     "actif": "Active",

@@ -438,7 +438,7 @@ function TemplateEditor({ type, templates, onSaved }: {
       </div>
 
       {/* Editor body */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', flex: 1, minHeight: 0 }}>
+      <div className="grid-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 260px', flex: 1, minHeight: 0 }}>
         {/* HTML textarea */}
         <div style={{ borderRight: '1px solid var(--rule)', position: 'relative' }}>
           <textarea
@@ -672,7 +672,7 @@ export function DocumentsPage() {
 
       {/* ── Onglet Générer ── */}
       {tab === 'generer' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 20, alignItems: 'start' }}>
+        <div className="grid-stack" style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 20, alignItems: 'start' }}>
           <TypeList selected={selectedType} onSelect={selectType} templates={templates} />
           <div className="card card-pad">
             {!selectedType ? (
@@ -883,7 +883,7 @@ export function DocumentsPage() {
 
       {/* ── Onglet Modèles ── */}
       {tab === 'modeles' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 20, alignItems: 'start' }}>
+        <div className="grid-stack" style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 20, alignItems: 'start' }}>
           <TypeList selected={editType} onSelect={setEditType} templates={templates} activeColor />
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             {!editType ? (
