@@ -13,7 +13,7 @@ Le socle multi-tenant existe déjà à ~80 %. Ce n'est **pas une réécriture**,
 
 | Aspect | État actuel | Verdict |
 |---|---|---|
-| Modèle de données | 54 modèles Prisma, **96 références `etablissement_id`** — tout est clé par tenant | ✅ Prêt |
+| Modèle de données | 57 modèles Prisma, **100+ références `etablissement_id`** — tout est clé par tenant | ✅ Prêt |
 | Résolution du tenant | `etablissement_id` **dans le JWT** → `request.user.etablissement_id` → passé aux services | ✅ Prêt |
 | Hardcoding mono-tenant | **0** `etablissement-default` dans `src/` (uniquement seed/tests) | ✅ Prêt |
 | Scoping des requêtes | `where: { id, etablissement_id }` **manuel, à chaque requête** | ⚠️ Fragile |

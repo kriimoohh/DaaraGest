@@ -60,7 +60,7 @@ export function Login() {
           <LogoMark size={64} />
           <div style={{ textAlign: 'center' }}>
             <div className="sb-name" style={{ fontSize: 22 }}>Daara<span style={{ color: 'var(--terra)' }}>Gest</span></div>
-            <div className="sb-tag">{t('login.tagline', 'Gestion scolaire franco-arabe')}</div>
+            <div className="sb-tag">{t('login.tagline', 'Gestion scolaire multi-filières')}</div>
           </div>
         </div>
 
@@ -120,7 +120,7 @@ export function Login() {
 
         <div className="divider" style={{ marginTop: 24 }} />
         <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--ink-4)' }}>
-          {t('login.footer', 'École franco-arabe · Sénégal')}
+          {t('login.footer', 'Gestion scolaire · Sénégal')}
         </p>
       </div>
 
