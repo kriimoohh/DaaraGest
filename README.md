@@ -41,7 +41,7 @@ Application web de gestion scolaire multi-filières, conçue pour tout établiss
 | **Notes** | Saisie en masse par classe/matière/période, validation sur le barème effectif, suppression en masse, **politique de saisie configurable pour les professeurs** (leurs matières/classes ou élargi) |
 | **Évaluations** | Évaluations formatives (devoir, contrôle, test d'entrée, examen…) avec pondération |
 | **Cahier de texte** | Séances faites (contenu, objectif) et devoirs à faire (leçon/exercice/récitation/autre) par classe×matière×date, vue « Ma journée » alignée sur l'emploi du temps, **visa de la direction** avec verrouillage de la période visée, indicateur de **complétude** (prévu vs. renseigné), export PDF (inspection), devoirs visibles côté portail parent |
-| **Bulletins** | Par filière (FR/AR — EN en cours de généralisation) + **combiné au choix** (`filieres_combine`) + annuel ; moyennes pondérées, **mentions configurables** (par filière et/ou niveau), **échelle d'affichage par niveau** (`Niveau.note_max`), classement, **verrouillage de période** (préflight + déverrouillage direction), **templates HTML éditables** (FR/AR/COMBINE/ANNUEL), **aperçu PDF avant téléchargement**, export PDF individuel ou classe entière, **suivi de l'état de génération** (à jour / périmé / partiel — recalculé après toute saisie de notes) avec **régénération automatique** des bulletins impactés et **nettoyage des orphelins** |
+| **Bulletins** | Par filière (**FR / AR / EN** — options construites dynamiquement selon les filières actives de l'établissement) + **combiné au choix** (`filieres_combine`) + annuel ; moyennes pondérées, **mentions configurables** (par filière et/ou niveau), **échelle d'affichage par niveau** (`Niveau.note_max`), classement, **verrouillage de période** (préflight + déverrouillage direction), **templates HTML éditables** (FR/AR/COMBINE/ANNUEL), **aperçu PDF avant téléchargement**, export PDF individuel ou classe entière, **suivi de l'état de génération** (à jour / périmé / partiel — recalculé après toute saisie de notes) avec **régénération automatique** des bulletins impactés et **nettoyage des orphelins** |
 | **Mentions** | Table `Mention` configurable : libellés FR/AR, seuils, couleurs ; portée établissement / filière / niveau (résolution filière+niveau > filière > niveau > établissement) |
 | **Progression** | Suivi de la progression académique pluriannuelle des élèves |
 | **Activités** | Activités parascolaires : inscriptions, séances, présences, évaluation |
@@ -62,6 +62,7 @@ Application web de gestion scolaire multi-filières, conçue pour tout établiss
 | **Paramètres** | Établissement (code matricule, devise, en-têtes de bulletin FR/AR, logo/signature/cachet), config des notes (échelle, **périodes configurables** : nombre + noms FR/AR trimestres/semestres), niveaux, tarifs, fonctions, mentions, jours de cours, préférences de notifications, rendu des bulletins, politique de saisie des notes |
 | **Dashboard** | Statistiques clés, graphique des encaissements (Recharts) + tableau de bord analytique direction |
 | **i18n FR/AR/EN** | Interface trilingue (français, arabe, anglais — fallback FR) avec sélecteur de langue et bascule RTL instantanée pour l'arabe |
+| **Aide contextuelle** | Bouton « ? » dans la barre du haut : rappel de l'objectif de la page courante et astuces d'utilisation, traduits FR/AR/EN, sur chaque écran de l'application |
 | **Dark mode** | Persistant par utilisateur, actif dès la page de connexion |
 | **Observabilité** | Sentry (backend + frontend) — capture des erreurs 5xx uniquement ; health check `/health` (DB + moteur PDF) |
 
@@ -132,7 +133,7 @@ DaaraGest/
 │       │   │                    #   auto des bulletins impactés
 │       │   ├── evaluations/     # évaluations formatives, notes, moyennes
 │       │   ├── cahier/          # cahier de texte : séances, devoirs, visa direction
-│       │   ├── bulletins/       # FR/AR (+EN en cours) + combiné au choix + annuel,
+│       │   ├── bulletins/       # FR/AR/EN + combiné au choix + annuel,
 │       │   │                    #   verrouillage de période, templates éditables, PDF,
 │       │   │                    #   état de génération + régénération + orphelins
 │       │   ├── absences/        # absences élèves + stats + alertes
@@ -238,7 +239,7 @@ Chaque requête authentifiée extrait `etablissement_id` du JWT. Tous les servic
 | Type | Description |
 |------|-------------|
 | `FR` / `AR` | Bulletin d'une filière (français / arabe) |
-| `EN` | Accepté par l'API (schémas) — la généralisation du service et des templates est en cours (Phase 3) |
+| `EN` | Filière anglaise pleinement prise en charge (service, moteur de calcul, templates `EN`/`ANNUEL_EN`) ; le sélecteur du front l'affiche automatiquement dès qu'une filière EN est active. Seul le rapport socle IEF ne la ventile pas (grille officielle à colonnes fixes — *par conception*, cf. Dette technique) |
 | `COMBINE` | **Combiné au choix** : fusionne les filières choisies à la génération (`filieres_combine`, ex. FR+AR, FR+EN) ; repli sur les filières actives de l'élève |
 | `ANNUEL` | Récapitulatif annuel des périodes (trimestres/semestres selon l'établissement) |
 
@@ -994,7 +995,7 @@ Principaux domaines couverts côté unitaire : calculs de bulletins (moyennes po
 
 ## Roadmap — chantiers en cours
 
-> **Modules déjà implémentés** : Filières génériques (entité `Filiere`, inscriptions N-filières, **colonnes string supprimées — refonte soldée**), Bulletins FR/AR/EN + combiné au choix, **cycle de vie des générations** (état à jour/périmé/partiel, régénération automatique après saisie de notes, nettoyage des orphelins) + **aperçu PDF**, Mentions configurables (seule source des seuils, libellé arabe sur les bulletins AR), Échelle d'affichage par niveau, Domaines & grilles IEF, Tarifs, Fonctions configurables, **Cahier de texte** (séances, devoirs, visa/verrouillage, complétude, export PDF, intégration portail parent), Pointage QR, Audit log, Demandes d'absence personnel, Évaluations formatives, Progression pluriannuelle, Activités parascolaires, Bibliothèque, Portail parents (bulletins PDF, **expiration auto, rotation, écran de gestion dédié**), Documents officiels (25 types), Rapports (11 types + aperçus), Tableau de bord analytique, Refresh tokens, Verrouillage de période des bulletins, Templates de bulletins éditables, **RBAC route + payload** (finances hors périmètre direction, payloads Personnel/Utilisateur curés par rôle), i18n FR/AR/EN synchronisée, Sentry, CI complète.
+> **Modules déjà implémentés** : Filières génériques (entité `Filiere`, inscriptions N-filières, **colonnes string supprimées — refonte soldée**), Bulletins FR/AR/EN + combiné au choix, **cycle de vie des générations** (état à jour/périmé/partiel, régénération automatique après saisie de notes, nettoyage des orphelins) + **aperçu PDF**, Mentions configurables (seule source des seuils, libellé arabe sur les bulletins AR), Échelle d'affichage par niveau, Domaines & grilles IEF, Tarifs, Fonctions configurables, **Cahier de texte** (séances, devoirs, visa/verrouillage, complétude, export PDF, intégration portail parent), Pointage QR, Audit log, Demandes d'absence personnel, Évaluations formatives, Progression pluriannuelle, Activités parascolaires, Bibliothèque, Portail parents (bulletins PDF, **expiration auto, rotation, écran de gestion dédié**), Documents officiels (25 types), Rapports (11 types + aperçus), Tableau de bord analytique, Refresh tokens, Verrouillage de période des bulletins, Templates de bulletins éditables, **RBAC route + payload** (finances hors périmètre direction, payloads Personnel/Utilisateur curés par rôle), i18n FR/AR/EN synchronisée, **aide contextuelle in-app** (bouton « ? » par page), Sentry, CI complète.
 
 ### Phase 4 — Multi-établissement
 
