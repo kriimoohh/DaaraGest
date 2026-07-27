@@ -152,10 +152,14 @@ export interface BulletinAnnuelData extends BulletinBaseData {
 
 // Nom d'une période (COMPLET, plus de « T1/T2/T3 ») selon le découpage de
 // l'établissement : 2 = semestres, 6 = bimestres, sinon trimestres. Un nom FR
-// personnalisé (ConfigNotes.noms_periodes.fr) est prioritaire. L'arabe utilise
-// « الاختبار » + l'ordinal (traductions fournies par l'établissement).
+// personnalisé (ConfigNotes.noms_periodes.fr) est prioritaire. Terminologie arabe
+// validée par l'établissement (maquettes 2026-07) : « الفترة » + ordinal dans le
+// titre du document, « التقييم » + ordinal pour les colonnes du tableau annuel
+// (remplace l'ancien « الاختبار »).
 const ORDINAL_FR = ['1er', '2ème', '3ème', '4ème', '5ème', '6ème'];
+// Masculin (التقييم الأول…) / féminin (الفترة الأولى…) — l'accord suit le nom.
 const ORDINAL_AR = ['الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس'];
+const ORDINAL_AR_F = ['الأولى', 'الثانية', 'الثالثة', 'الرابعة', 'الخامسة', 'السادسة'];
 const motPeriode = (nbPeriodes: number) =>
   nbPeriodes === 2 ? 'Semestre' : nbPeriodes === 6 ? 'Bimestre' : 'Trimestre';
 
@@ -164,8 +168,13 @@ function periodeNomFr(p: number, nbPeriodes: number, noms?: string[]): string {
   if (custom && custom.trim()) return custom;
   return `${ORDINAL_FR[p - 1] ?? `${p}ème`} ${motPeriode(nbPeriodes)}`;
 }
-function periodeNomAr(p: number): string {
-  return ORDINAL_AR[p - 1] ? `الاختبار ${ORDINAL_AR[p - 1]}` : `الفترة ${p}`;
+// Titre du document trimestriel : « كشف الدرجات - الفترة الثالثة ».
+function titreTrimestreAr(p: number): string {
+  return `كشف الدرجات - الفترة ${ORDINAL_AR_F[p - 1] ?? p}`;
+}
+// Colonne du tableau annuel : « التقييم الأول » (apparié au « 1er Trimestre » FR).
+function periodeColonneAr(p: number): string {
+  return `التقييم ${ORDINAL_AR[p - 1] ?? p}`;
 }
 
 // Appréciation par matière = mentions configurées de l'établissement (mêmes bandes
@@ -223,6 +232,11 @@ body { font-family:Arial,'Noto Naskh Arabic',sans-serif;font-size:12.5px;color:#
 /* ── Titre principal ── */
 .doc-title-wrap { border:2px solid #0F172A;border-radius:4px;margin-bottom:8px;overflow:hidden }
 .doc-title-main { background:#0F172A;color:#fff;text-align:center;padding:4px 10px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.4px }
+/* Variante bilingue (maquettes établissement) : FR au bord gauche, AR au bord droit.
+   L'arabe en graisse normale (le gras casse le chaînage des glyphes) et un peu
+   plus grand pour équilibrer visuellement avec les capitales latines. */
+.doc-title-split { display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:start }
+.doc-title-ar { direction:rtl;font-weight:400;font-size:14px;letter-spacing:0 }
 
 /* ── Bandeau contact école ── */
 .school-band { display:flex;justify-content:center;flex-wrap:wrap;gap:3px 18px;font-size:10px;color:#374151;margin-bottom:7px;padding:3px 8px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px }
@@ -237,6 +251,8 @@ body { font-family:Arial,'Noto Naskh Arabic',sans-serif;font-size:12.5px;color:#
 /* ── Tableau d'évaluation ── */
 .eval-section { margin-bottom:9px }
 .eval-header { background:#0F172A;color:#fff;text-align:center;padding:3px 8px;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;border-radius:4px 4px 0 0 }
+.eval-header-split { display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:start }
+.eval-header-ar { direction:rtl;font-weight:400;font-size:13px;letter-spacing:0;text-transform:none }
 table { width:100%;border-collapse:collapse }
 thead { background:#f0fdf4 }
 th { padding:4px 8px;text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:#374151;border-bottom:2px solid #10B981;border-right:1px solid #d1d5db }
@@ -339,15 +355,26 @@ function headerHtml(data: BulletinBaseData, filiere: 'FR' | 'AR' | 'COMBINE'): s
 }
 
 // L'année scolaire n'est PAS répétée ici : elle figure dans l'encadré identité
-// de l'élève (studentInfoHtml).
-function titleHtml(periode: string): string {
+// de l'élève (studentInfoHtml). Avec un titre arabe (bulletins comportant la
+// filière AR) : FR au bord gauche, AR au bord droit (maquettes établissement).
+function titleHtml(periode: string, titreAr?: string): string {
+  const contenu = titreAr
+    ? `<span>Tableau récapitulatif des notes &mdash; ${periode}</span><span class="doc-title-ar" dir="rtl">${titreAr}</span>`
+    : `Tableau récapitulatif des notes &mdash; ${periode}`;
   return `
   <div class="doc-title-wrap">
-    <div class="doc-title-main">Tableau récapitulatif des notes &mdash; ${periode}</div>
+    <div class="doc-title-main${titreAr ? ' doc-title-split' : ''}">${contenu}</div>
   </div>`;
 }
 
-function titleAnnuelHtml(nbPeriodes = 3): string {
+function titleAnnuelHtml(nbPeriodes = 3, avecAr = false): string {
+  // Avec filière arabe : « Bulletin annuel » + « الكشف السنوي للنتائج » (maquette).
+  if (avecAr) {
+    return `
+  <div class="doc-title-wrap">
+    <div class="doc-title-main doc-title-split"><span>Bulletin annuel</span><span class="doc-title-ar" dir="rtl">الكشف السنوي للنتائج</span></div>
+  </div>`;
+  }
   // Libellé adapté au découpage de l'établissement (2 = semestres, 6 = bimestres…).
   const motPeriode = nbPeriodes === 2 ? 'semestres' : nbPeriodes === 6 ? 'bimestres' : 'trimestres';
   return `
@@ -459,6 +486,13 @@ function ctxTableauTrim(notes: NoteRow[], bilingue: boolean) {
     }
     const isFail = n.valeur !== null && n.valeur < nmax / 2;
     const cls = n.valeur !== null ? apprClass(n.valeur, nmax) : '';
+    // Tableau arabe : appréciation bilingue — FR à gauche, équivalent arabe de la
+    // mention (Mention.libelle_ar) collé au bord droit (maquettes établissement).
+    const apprFr = getApprNom(n.valeur, nmax);
+    const apprAr = bilingue && apprFr ? appreciationArFor(apprFr) : '';
+    const apprCell = apprAr
+      ? `<span style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><span>${apprFr}</span><span dir="rtl" style="font-size:13px;color:#1f2937">${escapeHtml(apprAr)}</span></span>`
+      : apprFr;
     return `
     <tr>
       <td style="font-weight:500">${matiereLabel(n.nom_fr, n.nom_ar, bilingue)}</td>
@@ -466,7 +500,7 @@ function ctxTableauTrim(notes: NoteRow[], bilingue: boolean) {
         ${n.valeur !== null ? Number(n.valeur).toFixed(2) : '—'}
       </td>
       <td class="center" style="font-size:10px;color:#6b7280">/${nmax}</td>
-      <td class="${cls}">${getApprNom(n.valeur, nmax)}</td>
+      <td class="${cls}">${apprCell}</td>
     </tr>`;
   }).join('');
 
@@ -523,11 +557,11 @@ function ctxTableauAnnuel(matieres: TrimestreRow[], bilingue: boolean, nbPeriode
 
   return {
     bilingue,
-    // label = nom FR (colonnes FR/EN) ; label_ar = nom AR (colonnes du tableau arabe,
-    // qui n'affichait que le nom FR du trimestre — le reste de l'en-tête AR est bilingue).
+    // label = nom FR (colonnes FR/EN) ; label_ar = nom AR de la MÊME période
+    // (« التقييم الأول » sous « 1er Trimestre » — chaque cellule doit se suffire).
     periodes: Array.from({ length: nbPeriodes }, (_, i) => ({
       label: periodeNomFr(i + 1, nbPeriodes, nomsFr),
-      label_ar: periodeNomAr(i + 1),
+      label_ar: periodeColonneAr(i + 1),
     })),
     lignes: rows,
     // Valeurs de la ligne « Moyennes » : une par période + la moyenne annuelle.
@@ -581,7 +615,7 @@ function observationHtml(appr: string | null): string {
   const ar = appr ? appreciationArFor(appr) : '';
   return `
   <div class="appreciation-box">
-    <div class="appreciation-label" style="display:flex;justify-content:space-between;gap:10px;align-items:center"><span>Observation / Appréciation du conseil de classe</span><span dir="rtl" style="font-size:12px;color:#1f2937;text-transform:none">ملاحظات مجلس القسم</span></div>
+    <div class="appreciation-label" style="display:flex;justify-content:space-between;gap:10px;align-items:center"><span>Observation</span><span dir="rtl" style="font-size:12px;color:#1f2937;text-transform:none">ملاحظات</span></div>
     <div style="display:flex;justify-content:space-between;gap:10px;margin-top:3px;min-height:16px">
       <span style="font-size:11.5px;font-style:italic;color:#374151">${fr}</span>
       ${ar ? `<span dir="rtl" style="font-size:13px;color:#1f2937">${escapeHtml(ar)}</span>` : ''}
@@ -640,7 +674,7 @@ const FRAG_TABLE_FR = `{{#tableau_fr}}
 
 const FRAG_TABLE_AR = `{{#tableau_ar}}
 <div class="eval-section">
-  <div class="eval-header">Évaluation des acquis — Filière Arabe <span dir="rtl" style="font-weight:400">— تقييم أداء التلاميذ في القسم العربي</span></div>
+  <div class="eval-header eval-header-split"><span>Évaluation des acquis — Filière Arabe</span><span class="eval-header-ar" dir="rtl">تقويم أداء التلاميذ - الشعبة العربية</span></div>
   <table>
     <thead><tr>
       <th style="width:50%">Domaines<br><span class="th-ar" dir="rtl">المجال</span></th>
@@ -716,7 +750,7 @@ const FRAG_TABLE_ANNUEL_AR = `{{#tableau_annuel_ar}}
     <thead><tr>
       <th style="width:33%">Domaines<br><span class="th-ar" dir="rtl">المجال</span></th>
       {{#periodes}}<th class="center">{{label}}<br><span class="th-ar" dir="rtl">{{label_ar}}</span></th>{{/periodes}}
-      <th class="center" style="background:#f0fdf4;color:#059669">Moy. Ann.</th>
+      <th class="center" style="background:#f0fdf4;color:#059669">Moy. Ann.<br><span class="th-ar" dir="rtl" style="color:#374151">المعدل السنوي</span></th>
       <th class="center" style="width:8%">Note max<br><span class="th-ar" dir="rtl">على</span></th>
       <th style="width:20%">Appréciation<br><span class="th-ar" dir="rtl">التقدير</span></th>
     </tr></thead>
@@ -938,8 +972,8 @@ export function generateBulletinHtml(data: BulletinTrimestreData): string {
     tableau_fr = ctxTableauTrim(notesFR, false);
   } else if (data.type === 'AR') {
     filiere = 'AR';
-    // Titre bilingue (FR + AR), cohérent avec les libellés arabes du tableau AR.
-    titre = titleHtml(`${periodeStr} — <span dir="rtl">${periodeNomAr(data.periode)}</span>`);
+    // Titre bilingue : FR à gauche, « كشف الدرجات - الفترة X » au bord droit.
+    titre = titleHtml(periodeStr, titreTrimestreAr(data.periode));
     tableau_ar = ctxTableauTrim(notesAR, true);
   } else if (data.type === 'EN') {
     filiere = 'FR';
@@ -960,9 +994,13 @@ export function generateBulletinHtml(data: BulletinTrimestreData): string {
       const m = moyenneNorm(notesByCode[c] ?? []);
       return { code: c, label: SOUS_MOY_LABEL[c] ?? `Moy. ${c}`, valeur: m !== null ? Number(m).toFixed(2) : '—' };
     });
-    // Terme arabe du trimestre seulement si la filière AR fait partie du combiné.
-    const termeAr = codes.includes('AR') ? ` — <span dir="rtl">${periodeNomAr(data.periode)}</span>` : '';
-    titre = titleHtml(`${periodeStr}${termeAr} · Filières ${codes.join(' &amp; ')}`);
+    // FR+AR classique : titre épuré conforme aux maquettes (FR à gauche, titre
+    // arabe au bord droit, sans suffixe « · Filières »). Autres combinés : le
+    // suffixe reste nécessaire pour identifier les filières fusionnées.
+    const isClassicFrAr = codes.length === 2 && codes[0] === 'FR' && codes[1] === 'AR';
+    const suffixe = isClassicFrAr ? '' : ` · Filières ${codes.join(' &amp; ')}`;
+    const titreAr = codes.includes('AR') ? titreTrimestreAr(data.periode) : undefined;
+    titre = titleHtml(`${periodeStr}${suffixe}`, titreAr);
     defaultTpl = buildCombineTemplate(codes, false);
   }
 
@@ -1032,10 +1070,12 @@ export function generateBulletinAnnuelHtml(data: BulletinAnnuelData): string {
 
   // EN (LTR) réutilise le bloc d'en-tête FR ; combiné → en-tête FR+AR.
   const filiere = isAR ? 'AR' : isCombine ? 'COMBINE' : 'FR';
+  // Titre bilingue (« الكشف السنوي للنتائج ») dès que la filière arabe est présente.
+  const avecAr = isAR || (isCombine && codes.includes('AR'));
   // Combiné : modèle assemblé pour les filières présentes (FR+AR = historique).
   const defaultTpl = isCombine ? buildCombineTemplate(codes, true) : DEFAULT_BULLETIN_TEMPLATES.ANNUEL;
   return renderBulletinDoc(data.template_html, defaultTpl, {
-    ...chromeCtx(data, filiere, titleAnnuelHtml(nbPeriodes)),
+    ...chromeCtx(data, filiere, titleAnnuelHtml(nbPeriodes, avecAr)),
     ...resumeCtx(data, isCombine, frMoy, arMoy),
     tableau_annuel_fr,
     tableau_annuel_ar,
