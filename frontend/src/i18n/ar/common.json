@@ -498,7 +498,7 @@
     "evaluee_oui": "نعم",
     "evaluee_non": "لا",
     "override_periode": "إعداد لكل فترة",
-    "override_periode_hint": "اترك \"افتراضي\" لاستخدام إعداد الفصل.",
+    "override_periode_hint": "اترك \"افتراضي\" لاستخدام إعداد القسم.",
     "programme_mode": "البرنامج",
     "programme_mode_annuel": "موحّد طوال السنة",
     "programme_mode_periode": "حسب الفترة",
@@ -1338,7 +1338,7 @@
   "emploi_du_temps": {
     "titre": "جدول الحصص",
     "ajouter_creneau": "إضافة حصة",
-    "selectionner_classe": "اختر فصلاً لعرض الجدول",
+    "selectionner_classe": "اختر قسماً لعرض الجدول",
     "salle": "القاعة (اختياري)",
     "salle_label": "القاعة",
     "heure_debut": "وقت البداية",
