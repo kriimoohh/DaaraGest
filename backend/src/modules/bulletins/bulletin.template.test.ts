@@ -183,10 +183,10 @@ describe('noms de périodes (trimestre/semestre, complets, AR)', () => {
     expect(html).not.toContain('1er Trimestre');
   });
 
-  it('arabe : « الاختبار الأول » (traduction établissement)', () => {
+  it('arabe : titre « كشف الدرجات - الفترة الأولى » (maquettes établissement 2026-07)', () => {
     const html = generateBulletinHtml({ ...base, type: 'AR', periode: 1, nb_periodes: 3, notes_ar: [noteAR] });
-    expect(html).toContain('الاختبار الأول');
-    expect(html).not.toContain('الفصل الأول');
+    expect(html).toContain('كشف الدرجات - الفترة الأولى');
+    expect(html).not.toContain('الاختبار'); // ancienne terminologie remplacée
   });
 
   it('nom de période personnalisé prioritaire', () => {
@@ -200,6 +200,68 @@ describe('noms de périodes (trimestre/semestre, complets, AR)', () => {
     expect(html).toContain('1er Trimestre');
     expect(html).toContain('3ème Trimestre');
     expect(html).not.toMatch(/>T1</);
+  });
+});
+
+describe('maquettes établissement 2026-07 — format bilingue des bulletins AR', () => {
+  it('trimestriel AR : en-tête de section « تقويم أداء التلاميذ - الشعبة العربية » (split FR/AR)', () => {
+    const html = generateBulletinHtml({ ...base, type: 'AR', periode: 3, notes_ar: [noteAR] });
+    expect(html).toContain('تقويم أداء التلاميذ - الشعبة العربية');
+    expect(html).toContain('eval-header-split');
+    expect(html).toContain('كشف الدرجات - الفترة الثالثة'); // titre du document
+  });
+
+  it("trimestriel AR : appréciation bilingue par ligne (FR + libellé arabe de la mention)", () => {
+    // Note 5/10 → « Passable » (مقبول) : mention distincte du résumé/observation
+    // (« Bien »/جيد), donc مقبول ne peut venir QUE de l'appréciation de la ligne.
+    const html = generateBulletinHtml({
+      ...base, type: 'AR', periode: 1,
+      notes_ar: [{ ...noteAR, valeur: 5 }],
+    });
+    expect(html).toContain('مقبول');
+  });
+
+  it("trimestriel FR : PAS d'appréciation arabe dans les lignes", () => {
+    const html = generateBulletinHtml({ ...base, type: 'FR', periode: 1, notes_fr: [noteFR] });
+    // noteFR = 8/10 → « Très bien » (ممتاز en AR) : le libellé arabe ne doit pas fuir côté FR.
+    expect(html).not.toContain('ممتاز');
+  });
+
+  it('COMBINE FR+AR : titre épuré (sans « · Filières FR & AR ») + titre arabe', () => {
+    const html = generateBulletinHtml({ ...base, type: 'COMBINE', periode: 3, notes_fr: [noteFR], notes_ar: [noteAR] });
+    expect(html).toContain('كشف الدرجات - الفترة الثالثة');
+    expect(html).not.toContain('· Filières');
+  });
+
+  it('COMBINE non-FR+AR : le suffixe « · Filières » reste (identification nécessaire)', () => {
+    const html = generateBulletinHtml({
+      ...base, type: 'COMBINE', periode: 1,
+      filieres_combine: ['FR', 'EN'], notes_fr: [noteFR], notes_en: [noteEN],
+    });
+    expect(html).toContain('· Filières FR &amp; EN');
+  });
+
+  it('annuel avec AR : titre « الكشف السنوي للنتائج » + colonnes « التقييم » appariées + المعدل السنوي', () => {
+    const matAR = { nom_fr: 'Coran', nom_ar: 'القرآن', coeff: 3, note_max: 10, valeurs: [8, 8, 8], moyenne_annuelle: 8, evaluee: true };
+    const html = generateBulletinAnnuelHtml({ ...base, type: 'ANNUEL_AR', nb_periodes: 3, matieres_ar: [matAR] });
+    expect(html).toContain('الكشف السنوي للنتائج');
+    expect(html).toContain('المعدل السنوي');
+    // Appariement correct : « 1er Trimestre » ↔ « التقييم الأول » dans la MÊME cellule.
+    expect(html).toMatch(/1er Trimestre<br><span[^>]*>التقييم الأول<\/span>/);
+  });
+
+  it("annuel sans AR : titre inchangé (« Bulletin annuel — 3 trimestres »)", () => {
+    const matFR = { nom_fr: 'Maths', nom_ar: 'Maths', coeff: 2, note_max: 10, valeurs: [8, 7, 9], moyenne_annuelle: 8, evaluee: true };
+    const html = generateBulletinAnnuelHtml({ ...base, type: 'ANNUEL_FR', nb_periodes: 3, matieres_fr: [matFR] });
+    expect(html).toContain('Bulletin annuel &mdash; 3 trimestres');
+    expect(html).not.toContain('الكشف السنوي');
+  });
+
+  it('observation : libellés simplifiés « Observation » / « ملاحظات »', () => {
+    const html = generateBulletinHtml({ ...base, type: 'AR', periode: 1, notes_ar: [noteAR] });
+    expect(html).toContain('>Observation<');
+    expect(html).toContain('ملاحظات');
+    expect(html).not.toContain('Appréciation du conseil de classe');
   });
 });
 
