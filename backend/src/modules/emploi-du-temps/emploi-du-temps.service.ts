@@ -1,4 +1,5 @@
 import prisma from '../../config/database';
+import { filtreClasseId, type Portee } from '../../utils/portee';
 import { CreneauInput } from './emploi-du-temps.schema';
 import { NotFoundError } from '../../utils/errors';
 
@@ -32,9 +33,11 @@ export async function listerCreneaux(
   annee_scolaire_id: string,
   classe_id?: string,
   personnel_id?: string,
+  portee: Portee = null,
 ) {
   const where: Record<string, unknown> = { etablissement_id, annee_scolaire_id };
-  if (classe_id) where.classe_id = classe_id;
+  const cid = filtreClasseId(portee, classe_id); // professeur : créneaux de ses classes seulement
+  if (cid) where.classe_id = cid;
   if (personnel_id) where.personnel_id = personnel_id;
 
   const rows = await prisma.creneau.findMany({

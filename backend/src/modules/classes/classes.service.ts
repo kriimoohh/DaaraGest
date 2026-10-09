@@ -8,6 +8,7 @@ import { NotFoundError, ValidationError } from '../../utils/errors';
 import { classeCode } from '../../utils/classeCode';
 import { getFiliereActiveId, getFiliereId, codeFiliere, selectFiliereRef } from '../../utils/filiere';
 import { selectLiensClasseObjet, classeParFiliere } from '../../utils/inscriptionClasse';
+import { type Portee } from '../../utils/portee';
 
 // Erreur typée pour exposer le détail de l'impact (front affiche les options).
 function bulletinsImpactError(payload: unknown): Error {
@@ -46,11 +47,13 @@ const LISTE_CSS = `
   @page { size: A4; margin: 0; }
 `;
 
-export async function listerClasses(etablissement_id: string, annee_scolaire_id?: string, filiere?: string) {
+export async function listerClasses(etablissement_id: string, annee_scolaire_id?: string, filiere?: string, portee: Portee = null) {
   const classes = await prisma.classe.findMany({
     where: {
       etablissement_id,
       active: true,
+      // Professeur : uniquement les classes où il est affecté (cf. utils/portee.ts).
+      ...(portee ? { id: { in: portee.classe_ids } } : {}),
       ...(annee_scolaire_id ? { annee_scolaire_id } : {}),
       // Filtre générique par code de filière (FR, AR, EN… selon l'établissement).
       ...(filiere ? { filiere_ref: { code: filiere } } : {}),
@@ -634,12 +637,13 @@ export async function genererPdfListeClasse(
 
 export async function genererPdfToutesClasses(
   etablissement_id: string,
-  annee_scolaire_id?: string
+  annee_scolaire_id?: string,
+  portee: Portee = null,
 ): Promise<Buffer> {
   const etab = await prisma.etablissement.findUnique({ where: { id: etablissement_id }, select: { nom_fr: true } });
   const etablissementNom = etab?.nom_fr ?? '';
 
-  const classes = await listerClasses(etablissement_id, annee_scolaire_id);
+  const classes = await listerClasses(etablissement_id, annee_scolaire_id, undefined, portee);
   if (classes.length === 0) throw new Error('Aucune classe trouvée');
 
   const dataList: ListeData[] = [];

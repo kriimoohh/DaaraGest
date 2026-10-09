@@ -2,6 +2,7 @@ import prisma from '../../config/database';
 import { AbsenceInput, BulkAbsenceInput } from './absences.schema';
 import { notifierRoles } from '../notifications/notifications.service';
 import { assertProfPeutAccederClasse } from '../../utils/teachingPolicy';
+import { filtreClasseId, type Portee } from '../../utils/portee';
 import { assertDateNonVacances } from '../../utils/calendrier';
 import { NotFoundError } from '../../utils/errors';
 
@@ -48,12 +49,14 @@ export async function listerAbsences(
   annee?: number,
   statut?: string,
   page = 1,
+  portee: Portee = null,
 ) {
   const limit = 30;
   const skip = (page - 1) * limit;
   const where: Record<string, unknown> = { etablissement_id };
 
-  if (classe_id) where.classe_id = classe_id;
+  const cid = filtreClasseId(portee, classe_id); // professeur : ses classes seulement
+  if (cid) where.classe_id = cid;
   if (eleve_id) where.eleve_id = eleve_id;
   if (annee_scolaire_id) where.annee_scolaire_id = annee_scolaire_id;
   if (statut) where.statut = statut;
@@ -199,9 +202,11 @@ export async function getStatsAbsences(
   classe_id?: string,
   mois?: number,
   annee?: number,
+  portee: Portee = null,
 ) {
   const where: Record<string, unknown> = { etablissement_id, annee_scolaire_id };
-  if (classe_id) where.classe_id = classe_id;
+  const cid = filtreClasseId(portee, classe_id); // professeur : ses classes seulement
+  if (cid) where.classe_id = cid;
   if (mois && annee) {
     const debut = new Date(annee, mois - 1, 1);
     const fin = new Date(annee, mois, 0, 23, 59, 59);
