@@ -9,6 +9,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { ConfirmModal } from '../../components/ui/ConfirmModal';
+import { ReconduireClassesModal } from './ReconduireClassesModal';
 
 interface AnneeScolaire {
   id: string;
@@ -35,6 +36,7 @@ export function AnneeScolairesPage() {
   const [confirm, setConfirm] = useState<AnneeScolaire | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [activating, setActivating] = useState<string | null>(null);
+  const [reconduire, setReconduire] = useState<AnneeScolaire | null>(null);
 
   const charger = async () => {
     setLoading(true);
@@ -168,6 +170,7 @@ export function AnneeScolairesPage() {
                             {t('actions.activer')}
                           </Button>
                         )}
+                        <Button size="sm" variant="secondary" onClick={() => setReconduire(a)}>{t('annee_scolaire.reconduire_btn')}</Button>
                         <Button size="sm" variant="ghost" onClick={() => openEdit(a)}>{t('actions.modifier')}</Button>
                         {isAdmin && <Button size="sm" variant="danger" onClick={() => setConfirm(a)}>{t('actions.supprimer')}</Button>}
                       </div>
@@ -208,6 +211,8 @@ export function AnneeScolairesPage() {
           </div>
         </div>
       </Modal>
+
+      <ReconduireClassesModal isOpen={!!reconduire} onClose={() => setReconduire(null)} cible={reconduire} annees={annees} />
 
       <ConfirmModal
         isOpen={!!confirm}

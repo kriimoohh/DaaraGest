@@ -1,6 +1,8 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
-import { classeSchema, classeMatiereSchema, classeMatiereUpdateSchema, classeMatierePeriodeSchema, programmeModeSchema, dupliquerClasseSchema } from './classes.schema';
+import { classeSchema, classeMatiereSchema, classeMatiereUpdateSchema, classeMatierePeriodeSchema, programmeModeSchema, dupliquerClasseSchema, reconduireClassesSchema } from './classes.schema';
+import { reconduireClasses } from './classes.reconduction';
+import { NotFoundError } from '../../utils/errors';
 import { listerClasses, getClasse, creerClasse, modifierClasse, setProgrammeMode, supprimerClasse, listerElevesDeClasse, genererPdfListeClasse, genererPdfToutesClasses, listerMatieresDeclasse, ajouterMatiereClasse, modifierMatiereClasse, supprimerMatiereClasse, dupliquerClasse, upsertOverridePeriode, supprimerOverridePeriode } from './classes.service';
 
 export async function listerHandler(
@@ -247,5 +249,18 @@ export async function supprimerOverridePeriodeHandler(
     const e = err as { statusCode?: number; message: string; payload?: unknown };
     if (e.statusCode === 409) return reply.status(409).send({ error: e.message, ...((e.payload as object) ?? {}) });
     return reply.status(404).send({ error: e.message });
+  }
+}
+
+export async function reconduireHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id, id: acteurId } = request.user as JwtPayload;
+  const parsed = reconduireClassesSchema.safeParse(request.body ?? {});
+  if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  try {
+    const result = await reconduireClasses(etablissement_id, parsed.data, acteurId);
+    return reply.status(parsed.data.apercu ? 200 : 201).send(result);
+  } catch (err) {
+    if (err instanceof NotFoundError) return reply.status(404).send({ error: err.message });
+    return reply.status(400).send({ error: (err as Error).message });
   }
 }
