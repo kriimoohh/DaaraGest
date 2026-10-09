@@ -96,7 +96,6 @@ export async function scanQRHandler(request: FastifyRequest, reply: FastifyReply
 }
 
 export async function scansDuJourHandler(request: FastifyRequest, reply: FastifyReply) {
-  const etablissement_id = (request.query as Record<string, string>).etablissement_id;
-  if (!etablissement_id) return reply.status(400).send({ error: 'etablissement_id requis' });
+  const { etablissement_id } = request.user as JwtPayload;
   return reply.send(await getScansDuJour(etablissement_id));
 }
