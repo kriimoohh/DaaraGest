@@ -129,6 +129,91 @@ type ReliquatExportFiltres = { annee_scolaire_id?: string; mois?: number; annee?
 const MOIS_LONG = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 const MOIS_C = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
 
+// Libellés lisibles des types de paiement ('inscription', 'mensualite'…) ; repli = code brut.
+const TYPE_LABELS_RECU: Record<string, string> = {
+  inscription: 'Frais d\'inscription', mensualite: 'Mensualité', scolarite: 'Scolarité',
+  examen: 'Frais d\'examen', uniforme: 'Uniforme', transport: 'Transport', cantine: 'Cantine', autre: 'Autre',
+};
+
+/** Données du reçu d'un paiement : élève, classes (via l'inscription ou l'année active), établissement. */
+export async function getDonneesRecu(id: string, etablissement_id: string) {
+  const paiement = await prisma.paiementEleve.findFirst({
+    where: { id, eleve: { etablissement_id } },
+    include: {
+      eleve: { select: { nom_fr: true, prenom_fr: true, matricule: true } },
+      inscription: { include: { annee_scolaire: { select: { libelle: true } }, classes: { include: { classe: { select: { nom_fr: true } } } } } },
+    },
+  });
+  if (!paiement) throw new NotFoundError('Paiement introuvable');
+
+  // Paiement non rattaché à une inscription (ex. mensualité) : on retombe sur l'inscription
+  // de l'année active pour afficher la classe.
+  let inscription = paiement.inscription;
+  if (!inscription) {
+    inscription = await prisma.inscription.findFirst({
+      where: { eleve_id: paiement.eleve_id, annee_scolaire: { etablissement_id, active: true } },
+      include: { annee_scolaire: { select: { libelle: true } }, classes: { include: { classe: { select: { nom_fr: true } } } } },
+    });
+  }
+  const etab = await prisma.etablissement.findUnique({
+    where: { id: etablissement_id },
+    select: { nom_fr: true, adresse: true, telephone: true, devise: true, logo_url: true, cachet_url: true },
+  });
+  return { paiement, inscription, etab };
+}
+
+// Reçu individuel (A5 portrait) à remettre au parent.
+export async function genererPdfRecu(id: string, etablissement_id: string): Promise<Buffer> {
+  const { paiement: p, inscription, etab } = await getDonneesRecu(id, etablissement_id);
+  const { renderPdfHtml } = await import('../../utils/browserPool');
+  const { escapeHtml: esc } = await import('../../utils/escapeHtml');
+  const devise = etab?.devise ?? 'FCFA';
+  const montant = Number(p.montant).toLocaleString('fr-FR');
+  const classes = (inscription?.classes ?? []).map(c => c.classe.nom_fr).join(' · ');
+  const periode = p.mois && p.annee ? `${MOIS_LONG[p.mois - 1]} ${p.annee}` : null;
+  const date = new Date(p.created_at).toLocaleDateString('fr-FR');
+  const ligne = (k: string, v: string | null | undefined) => (v ? `<tr><th>${k}</th><td>${esc(v)}</td></tr>` : '');
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:12mm 12mm}
+    .head{display:flex;align-items:center;gap:10px;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:12px}
+    .head img{width:54px;height:54px;object-fit:contain}
+    .head .nom{font-size:15px;font-weight:bold}.head .sub{font-size:10px;color:#444;margin-top:2px}
+    h1{text-align:center;font-size:17px;letter-spacing:1px;margin:6px 0 2px}
+    .num{text-align:center;font-family:monospace;font-size:13px;margin-bottom:14px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:6px 4px;border-bottom:1px solid #ccc;text-align:left;vertical-align:top}
+    th{width:32%;font-weight:normal;color:#444}
+    .montant{margin:16px 0;padding:10px;border:2px solid #111;text-align:center;font-size:20px;font-weight:bold}
+    .statut{text-align:center;font-size:11px;margin-bottom:6px}
+    .sign{display:flex;justify-content:space-between;margin-top:26px;font-size:10px;color:#444}
+    .sign div{width:45%;text-align:center}.sign .zone{height:60px}
+    .sign img{max-height:60px;max-width:100%;object-fit:contain}
+  </style></head><body>
+    <div class="head">
+      ${etab?.logo_url ? `<img src="${esc(etab.logo_url)}" alt=""/>` : ''}
+      <div><div class="nom">${esc(etab?.nom_fr ?? '')}</div>
+      <div class="sub">${esc([etab?.adresse, etab?.telephone].filter(Boolean).join(' · '))}</div></div>
+    </div>
+    <h1>REÇU DE PAIEMENT</h1>
+    <div class="num">${esc(p.recu_numero ?? '')}</div>
+    <table>
+      ${ligne('Élève', `${p.eleve.prenom_fr} ${p.eleve.nom_fr}`)}
+      ${ligne('Matricule', p.eleve.matricule)}
+      ${ligne('Classe', classes)}
+      ${ligne('Année scolaire', inscription?.annee_scolaire.libelle)}
+      ${ligne('Motif', TYPE_LABELS_RECU[p.type] ?? p.type)}
+      ${ligne('Période', periode)}
+      ${ligne('Date', date)}
+    </table>
+    <div class="montant">${montant} ${esc(devise)}</div>
+    ${p.statut === 'impaye' ? '<div class="statut">⚠ Paiement enregistré comme NON PAYÉ</div>' : ''}
+    <div class="sign"><div>Le parent / payeur<div class="zone"></div></div><div>Cachet et signature<div class="zone">${etab?.cachet_url ? `<img src="${esc(etab.cachet_url)}" alt=""/>` : ''}</div></div></div>
+  </body></html>`;
+  return renderPdfHtml(html, { format: 'A5', printBackground: true, margin: { top: '0', bottom: '0', left: '0', right: '0' } });
+}
+
+
 export async function genererExcelReliquats(etablissement_id: string, f: ReliquatExportFiltres): Promise<Buffer> {
   const [etab, reliquats] = await Promise.all([
     prisma.etablissement.findUnique({ where: { id: etablissement_id }, select: { nom_fr: true } }),

@@ -1117,6 +1117,8 @@
     "aucun_paiement": "No payment found",
     "aucun_paiement_periode": "No payment for this period",
     "recu_auto": "The receipt number will be generated automatically.",
+    "recu_imprimer": "Receipt",
+    "err_recu": "Unable to generate the receipt",
     "selectionner_eleve": "Select a student…",
     "motif_retenue": "Reason for deduction",
     "totaux": "Totals",

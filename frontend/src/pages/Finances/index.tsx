@@ -336,6 +336,22 @@ export function FinancesPage() {
   const [mois, setMois] = useState('');
   const [annee, setAnnee] = useState(String(now.getFullYear()));
   const [exporting, setExporting] = useState<'excel' | 'pdf' | null>(null);
+
+  // Reçu individuel (A5) d'un paiement : récupéré en PDF puis ouvert dans un nouvel onglet.
+  const ouvrirRecu = async (id: string) => {
+    try {
+      const resp = await fetch(
+        `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/api/v1/finances/paiements-eleves/${id}/recu`,
+        { credentials: 'include' },
+      );
+      if (!resp.ok) throw new Error(t('finance.err_recu'));
+      const url = URL.createObjectURL(await resp.blob());
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (e) {
+      toast.error((e as Error).message || t('finance.err_recu'));
+    }
+  };
   const [loading, setLoading] = useState(false);
 
   // Modal création (multi-élèves)
@@ -761,7 +777,7 @@ export function FinancesPage() {
                 <table className="tbl">
                   <thead>
                     <tr>
-                      {[t('finance.col_eleve'), t('finance.col_matricule'), t('finance.col_type'), t('finance.col_montant'), t('finance.col_periode'), t('finance.col_recu', 'N° Reçu'), t('finance.col_statut'), ...(isAdmin ? [t('finance.col_actions')] : [])].map(h => (
+                      {[t('finance.col_eleve'), t('finance.col_matricule'), t('finance.col_type'), t('finance.col_montant'), t('finance.col_periode'), t('finance.col_recu', 'N° Reçu'), t('finance.col_statut'), t('finance.col_actions')].map(h => (
                         <th key={h}>{h}</th>
                       ))}
                     </tr>
@@ -776,14 +792,13 @@ export function FinancesPage() {
                         <td>{p.mois ? `${MOIS[p.mois-1]} ${p.annee}` : '—'}</td>
                         <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{p.recu_numero ?? '—'}</td>
                         <td><Badge label={STATUT_LABELS[p.statut] ?? p.statut} variant={p.statut === 'paye' ? 'success' : 'warning'} /></td>
-                        {isAdmin && (
-                          <td>
-                            <div className="row" style={{ gap: 4 }}>
-                              <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>{t('actions.modifier')}</Button>
-                              <Button size="sm" variant="danger" onClick={() => setDeleteTarget(p)}>{t('actions.supprimer')}</Button>
-                            </div>
-                          </td>
-                        )}
+                        <td>
+                          <div className="row" style={{ gap: 4 }}>
+                            <Button size="sm" variant="ghost" onClick={() => ouvrirRecu(p.id)}>{t('finance.recu_imprimer')}</Button>
+                            {isAdmin && <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>{t('actions.modifier')}</Button>}
+                            {isAdmin && <Button size="sm" variant="danger" onClick={() => setDeleteTarget(p)}>{t('actions.supprimer')}</Button>}
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
