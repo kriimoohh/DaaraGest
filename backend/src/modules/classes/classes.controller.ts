@@ -3,6 +3,7 @@ import { JwtPayload } from '../../utils/jwt';
 import { classeSchema, classeMatiereSchema, classeMatiereUpdateSchema, classeMatierePeriodeSchema, programmeModeSchema, dupliquerClasseSchema, reconduireClassesSchema } from './classes.schema';
 import { reconduireClasses } from './classes.reconduction';
 import { NotFoundError } from '../../utils/errors';
+import { porteeDe, classeVisible } from '../../utils/portee';
 import { listerClasses, getClasse, creerClasse, modifierClasse, setProgrammeMode, supprimerClasse, listerElevesDeClasse, genererPdfListeClasse, genererPdfToutesClasses, listerMatieresDeclasse, ajouterMatiereClasse, modifierMatiereClasse, supprimerMatiereClasse, dupliquerClasse, upsertOverridePeriode, supprimerOverridePeriode } from './classes.service';
 
 export async function listerHandler(
@@ -10,7 +11,8 @@ export async function listerHandler(
 ) {
   const { etablissement_id } = request.user as JwtPayload;
   const { annee_scolaire_id, filiere } = request.query as Record<string, string | undefined>;
-  const data = await listerClasses(etablissement_id, annee_scolaire_id, filiere);
+  const portee = await porteeDe(request.user as JwtPayload);
+  const data = await listerClasses(etablissement_id, annee_scolaire_id, filiere, portee);
   return reply.send(data);
 }
 
@@ -19,6 +21,7 @@ export async function getHandler(
 ) {
   const { etablissement_id } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
+  if (!classeVisible(await porteeDe(request.user as JwtPayload), id)) return reply.status(404).send({ error: 'Classe introuvable' });
   try {
     const data = await getClasse(id, etablissement_id);
     return reply.send(data);
@@ -94,6 +97,7 @@ export async function listerElevesHandler(
   const { etablissement_id } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
   const { annee_scolaire_id } = request.query as Record<string, string | undefined>;
+  if (!classeVisible(await porteeDe(request.user as JwtPayload), id)) return reply.status(404).send({ error: 'Classe introuvable' });
   try {
     const data = await listerElevesDeClasse(id, etablissement_id, annee_scolaire_id);
     return reply.send(data);
@@ -108,6 +112,7 @@ export async function pdfListeClasseHandler(
   const { etablissement_id } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
   const { annee_scolaire_id } = request.query as Record<string, string | undefined>;
+  if (!classeVisible(await porteeDe(request.user as JwtPayload), id)) return reply.status(404).send({ error: 'Classe introuvable' });
   try {
     const pdf = await genererPdfListeClasse(id, etablissement_id, annee_scolaire_id);
     reply.header('Content-Type', 'application/pdf');
@@ -124,7 +129,7 @@ export async function pdfToutesClassesHandler(
   const { etablissement_id } = request.user as JwtPayload;
   const { annee_scolaire_id } = request.query as Record<string, string | undefined>;
   try {
-    const pdf = await genererPdfToutesClasses(etablissement_id, annee_scolaire_id);
+    const pdf = await genererPdfToutesClasses(etablissement_id, annee_scolaire_id, await porteeDe(request.user as JwtPayload));
     reply.header('Content-Type', 'application/pdf');
     reply.header('Content-Disposition', 'attachment; filename="toutes-les-classes.pdf"');
     return reply.send(pdf);
@@ -159,6 +164,7 @@ export async function listerMatieresClasseHandler(
 ) {
   const { etablissement_id } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
+  if (!classeVisible(await porteeDe(request.user as JwtPayload), id)) return reply.status(404).send({ error: 'Classe introuvable' });
   try {
     const data = await listerMatieresDeclasse(id, etablissement_id);
     return reply.send(data);

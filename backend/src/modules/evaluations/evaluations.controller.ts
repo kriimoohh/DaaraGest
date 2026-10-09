@@ -1,5 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
+import { porteeDe, classeVisible } from '../../utils/portee';
+import prisma from '../../config/database';
 import { evaluationSchema, bulkNotesEvaluationSchema } from './evaluations.schema';
 import {
   listerEvaluations, creerEvaluation, modifierEvaluation,
@@ -10,10 +12,13 @@ import {
 export async function listerHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
   const { classe_id, matiere_id, periode, annee_scolaire_id } = request.query as Record<string, string>;
+  const portee = await porteeDe(request.user as JwtPayload);
+  if (classe_id && !classeVisible(portee, classe_id)) return reply.status(404).send({ error: 'Classe introuvable' });
   return reply.send(await listerEvaluations(
     etablissement_id, classe_id, matiere_id,
     periode ? parseInt(periode) : undefined,
     annee_scolaire_id,
+    portee,
   ));
 }
 
@@ -56,6 +61,12 @@ export async function supprimerHandler(request: FastifyRequest, reply: FastifyRe
 export async function listerNotesHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
+  // Professeur : seulement les évaluations de ses classes.
+  const portee = await porteeDe(request.user as JwtPayload);
+  if (portee) {
+    const ev = await prisma.evaluation.findFirst({ where: { id, etablissement_id }, select: { classe_id: true } });
+    if (ev && !classeVisible(portee, ev.classe_id)) return reply.status(404).send({ error: 'Évaluation introuvable' });
+  }
   try {
     return reply.send(await listerNotesEvaluation(id, etablissement_id));
   } catch (err) {
@@ -82,6 +93,7 @@ export async function moyenneHandler(request: FastifyRequest, reply: FastifyRepl
   if (!eleve_id || !classe_id || !matiere_id || !periode || !annee_scolaire_id) {
     return reply.status(400).send({ error: 'eleve_id, classe_id, matiere_id, periode et annee_scolaire_id sont requis' });
   }
+  if (!classeVisible(await porteeDe(request.user as JwtPayload), classe_id)) return reply.status(404).send({ error: 'Classe introuvable' });
   return reply.send(await calculerMoyenneEvaluation(
     eleve_id, classe_id, matiere_id, parseInt(periode), annee_scolaire_id, etablissement_id,
   ));

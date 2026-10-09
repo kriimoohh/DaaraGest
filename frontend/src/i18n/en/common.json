@@ -1801,7 +1801,7 @@
     "autoriser_toutes_matieres": "Allow cross-subject entry",
     "autoriser_toutes_matieres_desc": "A teacher can enter grades for all subjects, not only those they teach",
     "autoriser_toutes_classes": "Allow cross-class entry",
-    "autoriser_toutes_classes_desc": "A teacher can enter grades in all classes of the school, not only those they teach",
+    "autoriser_toutes_classes_desc": "No longer has any effect now that teachers are limited to their own classes: a teacher only sees and enters grades for the classes they are assigned to.",
     "politique_saisie_notes_modif_active": "Editing enabled: teachers can also change existing grades (anti-edit lock lifted)",
     "periode_fr": "{{label}} {{n}} — French",
     "periode_ar": "الفترة {{n}} — عربي",
