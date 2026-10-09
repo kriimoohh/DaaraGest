@@ -20,11 +20,19 @@ function MustChangePasswordModal() {
   const [nouveau, setNouveau] = useState('');
   const [confirmer, setConfirmer] = useState('');
   const [saving, setSaving] = useState(false);
+  const [erreur, setErreur] = useState('');
+
+  // Mêmes règles que le serveur (passwordPolicy) : on les vérifie ici pour dire CLAIREMENT
+  // ce qui manque, au lieu d'un simple champ en couleur.
+  const regleManquante = (m: string) =>
+    m.length < 8 || !/[A-Z]/.test(m) || !/[a-z]/.test(m) || !/[0-9]/.test(m) || !/[^A-Za-z0-9]/.test(m);
 
   const handleSave = async () => {
-    if (!ancien || !nouveau) { toast.error(t('profil.err_champs_requis')); return; }
-    if (nouveau !== confirmer) { toast.error(t('profil.err_mdp_differents')); return; }
-    if (nouveau.length < 8) { toast.error(t('profil.err_mdp_court')); return; }
+    setErreur('');
+    if (!ancien || !nouveau) { setErreur(t('profil.err_champs_requis')); return; }
+    if (nouveau !== confirmer) { setErreur(t('profil.err_mdp_differents')); return; }
+    if (nouveau === ancien) { setErreur(t('profil.err_mdp_identique')); return; }
+    if (regleManquante(nouveau)) { setErreur(t('profil.err_mdp_faible')); return; }
     setSaving(true);
     try {
       await api.put<{ message: string }>('/api/v1/auth/change-password', {
@@ -36,7 +44,7 @@ function MustChangePasswordModal() {
         login({ ...user, must_change_password: false });
       }
     } catch (err) {
-      toast.error((err as Error).message || t('common.erreur_generique'));
+      setErreur((err as Error).message || t('common.erreur_generique'));
     } finally { setSaving(false); }
   };
 
@@ -55,6 +63,12 @@ function MustChangePasswordModal() {
             <Input label={t('profil.nouveau_mdp')} type="password" value={nouveau} onChange={e => setNouveau(e.target.value)} placeholder={t('profil.mdp_min')} />
             <Input label={t('profil.confirmer_mdp')} type="password" value={confirmer} onChange={e => setConfirmer(e.target.value)} />
           </div>
+          <p style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 10, lineHeight: 1.5 }}>{t('profil.regles_mdp')}</p>
+          {erreur && (
+            <div role="alert" style={{ marginTop: 10, padding: '10px 12px', background: 'var(--danger-soft)', color: 'var(--danger-text)', borderRadius: 'var(--r-md)', fontSize: 13 }}>
+              {erreur}
+            </div>
+          )}
         </div>
         <div className="modal-foot">
           <Button onClick={handleSave} loading={saving}>{t('profil.changer_mdp')}</Button>
@@ -82,7 +96,9 @@ export function Layout() {
   useEffect(() => {
     api.get<AuthUser>('/api/v1/auth/me')
       .then((freshUser) => {
-        if (freshUser) login(freshUser);
+        // /auth/me expose l'obligation de changer le mot de passe ; on la conserve pour que le
+        // modal reste affiché (sans cela, ce rafraîchissement l'effaçait juste après la connexion).
+        if (freshUser) login({ ...freshUser, must_change_password: freshUser.must_change_password ?? false });
       })
       .catch(() => {
         logout();
