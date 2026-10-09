@@ -52,3 +52,15 @@ export type ClasseMatiereUpdateInput = z.infer<typeof classeMatiereUpdateSchema>
 export type ClasseMatierePeriodeInput = z.infer<typeof classeMatierePeriodeSchema>;
 export type ProgrammeModeInput = z.infer<typeof programmeModeSchema>;
 export type DupliquerClasseInput = z.infer<typeof dupliquerClasseSchema>;
+
+// Reconduction des classes d'une année vers une autre (rentrée) : toutes les classes
+// ou une sélection, avec ou sans le programme de matières (coeff/barèmes/évaluée,
+// y compris les overrides par période). `apercu` = simulation sans écriture.
+export const reconduireClassesSchema = z.object({
+  annee_source_id: z.string().uuid(),
+  annee_cible_id: z.string().uuid(),
+  classe_ids: z.array(z.string().uuid()).optional(), // absent = toutes les classes actives
+  matieres: z.enum(['copier', 'aucune']).default('copier'),
+  apercu: z.boolean().default(false),
+});
+export type ReconduireClassesInput = z.infer<typeof reconduireClassesSchema>;
