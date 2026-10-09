@@ -173,42 +173,65 @@ export async function genererPdfRecu(id: string, etablissement_id: string): Prom
   const periode = p.mois && p.annee ? `${MOIS_LONG[p.mois - 1]} ${p.annee}` : null;
   const date = new Date(p.created_at).toLocaleDateString('fr-FR');
   const ligne = (k: string, v: string | null | undefined) => (v ? `<tr><th>${k}</th><td>${esc(v)}</td></tr>` : '');
+  const { logoMarkSvg } = await import('../bulletins/bulletin.template');
+  // Identité visuelle du site (cf. DESIGN.md : tokens clairs, Fraunces / Instrument Sans /
+  // JetBrains Mono). Hex en dur assumés : template d'impression ouvert hors app.
   const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap');
+    @page{size:A5;margin:0}
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:12mm 12mm}
-    .head{display:flex;align-items:center;gap:10px;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:12px}
-    .head img{width:54px;height:54px;object-fit:contain}
-    .head .nom{font-size:15px;font-weight:bold}.head .sub{font-size:10px;color:#444;margin-top:2px}
-    h1{text-align:center;font-size:17px;letter-spacing:1px;margin:6px 0 2px}
-    .num{text-align:center;font-family:monospace;font-size:13px;margin-bottom:14px}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:6px 4px;border-bottom:1px solid #ccc;text-align:left;vertical-align:top}
-    th{width:32%;font-weight:normal;color:#444}
-    .montant{margin:16px 0;padding:10px;border:2px solid #111;text-align:center;font-size:20px;font-weight:bold}
-    .statut{text-align:center;font-size:11px;margin-bottom:6px}
-    .sign{display:flex;justify-content:space-between;margin-top:26px;font-size:10px;color:#444}
-    .sign div{width:45%;text-align:center}.sign .zone{height:60px}
-    .sign img{max-height:60px;max-width:100%;object-fit:contain}
+    html,body{width:148mm;height:210mm;overflow:hidden}
+    body{font-family:'Instrument Sans',Arial,sans-serif;font-size:12px;color:#1B1812;background:#FAF6EE;-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative}
+    .band{height:8mm;background:#B85433;border-bottom:1.2mm solid #C8932B}
+    
+    .wrap{padding:9mm 12mm 0}
+    .head{display:flex;align-items:center;gap:12px;padding-bottom:10px;border-bottom:1px solid #C9BB9D}
+    .head img{width:56px;height:56px;object-fit:contain}
+    .head .nom{font-family:'Fraunces',Georgia,serif;font-size:17px;font-weight:700;line-height:1.15}
+    .head .sub{font-size:10px;color:#6A604F;margin-top:3px}
+    .titre{display:flex;justify-content:space-between;align-items:flex-end;margin:14px 0 10px}
+    h1{font-family:'Fraunces',Georgia,serif;font-size:24px;font-weight:600;letter-spacing:.2px}
+    .num{font-family:'JetBrains Mono',monospace;font-size:11px;color:#8C3E25;background:#F4DACD;border-radius:6px;padding:4px 8px}
+    table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #E0D5BD;border-radius:8px}
+    th,td{padding:7px 10px;border-bottom:1px solid #E0D5BD;text-align:left;vertical-align:top}
+    tr:last-child th,tr:last-child td{border-bottom:0}
+    th{width:34%;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:500;text-transform:uppercase;letter-spacing:.6px;color:#6A604F;background:#F3ECDD}
+    td{font-weight:500}
+    .montant{margin:14px 0 6px;padding:12px;background:#F4DACD;border:1px solid #B85433;border-radius:12px;text-align:center}
+    .montant .lbl{font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:#6B2E1B}
+    .montant .val{font-family:'Fraunces',Georgia,serif;font-size:28px;font-weight:700;color:#6B2E1B;margin-top:2px}
+    .statut{text-align:center;font-size:10.5px;color:#8A5A12;margin-top:4px}
+    .sign{display:flex;justify-content:space-between;gap:14mm;margin-top:10px}
+    .sign div{flex:1;text-align:center;font-size:10px;color:#6A604F}
+    .sign .zone{height:17mm;border-bottom:1px solid #C9BB9D;display:flex;align-items:center;justify-content:center}
+    .sign img{max-height:16mm;max-width:100%;object-fit:contain}
+    .foot{position:absolute;left:12mm;right:12mm;bottom:7mm;text-align:center;font-size:9px;color:#8C7E66;border-top:1px solid #E0D5BD;padding-top:5px}
   </style></head><body>
-    <div class="head">
-      ${etab?.logo_url ? `<img src="${esc(etab.logo_url)}" alt=""/>` : ''}
-      <div><div class="nom">${esc(etab?.nom_fr ?? '')}</div>
-      <div class="sub">${esc([etab?.adresse, etab?.telephone].filter(Boolean).join(' · '))}</div></div>
+    <div class="band"></div>
+    <div class="wrap">
+      <div class="head">
+        ${etab?.logo_url ? `<img src="${esc(etab.logo_url)}" alt=""/>` : logoMarkSvg(56)}
+        <div><div class="nom">${esc(etab?.nom_fr ?? '')}</div>
+        <div class="sub">${esc([etab?.adresse, etab?.telephone].filter(Boolean).join(' · '))}</div></div>
+      </div>
+      <div class="titre"><h1>Reçu de paiement</h1><div class="num">${esc(p.recu_numero ?? '')}</div></div>
+      <table>
+        ${ligne('Élève', `${p.eleve.prenom_fr} ${p.eleve.nom_fr}`)}
+        ${ligne('Matricule', p.eleve.matricule)}
+        ${ligne('Classe', classes)}
+        ${ligne('Année scolaire', inscription?.annee_scolaire.libelle)}
+        ${ligne('Motif', TYPE_LABELS_RECU[p.type] ?? p.type)}
+        ${ligne('Période', periode)}
+        ${ligne('Date', date)}
+      </table>
+      <div class="montant"><div class="lbl">Montant reçu</div><div class="val">${montant} ${esc(devise)}</div></div>
+      ${p.statut === 'impaye' ? '<div class="statut">Paiement enregistré comme NON PAYÉ</div>' : ''}
+      <div class="sign">
+        <div><div class="zone"></div>Le parent / payeur</div>
+        <div><div class="zone">${etab?.cachet_url ? `<img src="${esc(etab.cachet_url)}" alt=""/>` : ''}</div>Cachet et signature</div>
+      </div>
     </div>
-    <h1>REÇU DE PAIEMENT</h1>
-    <div class="num">${esc(p.recu_numero ?? '')}</div>
-    <table>
-      ${ligne('Élève', `${p.eleve.prenom_fr} ${p.eleve.nom_fr}`)}
-      ${ligne('Matricule', p.eleve.matricule)}
-      ${ligne('Classe', classes)}
-      ${ligne('Année scolaire', inscription?.annee_scolaire.libelle)}
-      ${ligne('Motif', TYPE_LABELS_RECU[p.type] ?? p.type)}
-      ${ligne('Période', periode)}
-      ${ligne('Date', date)}
-    </table>
-    <div class="montant">${montant} ${esc(devise)}</div>
-    ${p.statut === 'impaye' ? '<div class="statut">⚠ Paiement enregistré comme NON PAYÉ</div>' : ''}
-    <div class="sign"><div>Le parent / payeur<div class="zone"></div></div><div>Cachet et signature<div class="zone">${etab?.cachet_url ? `<img src="${esc(etab.cachet_url)}" alt=""/>` : ''}</div></div></div>
+    <div class="foot">Merci de conserver ce reçu — document généré par DaaraGest</div>
   </body></html>`;
   return renderPdfHtml(html, { format: 'A5', printBackground: true, margin: { top: '0', bottom: '0', left: '0', right: '0' } });
 }
