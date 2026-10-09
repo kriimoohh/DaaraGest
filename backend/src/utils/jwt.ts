@@ -7,6 +7,8 @@ export const jwtPayloadSchema = z.object({
   langue: z.string().min(1),
   theme: z.string().min(1),
   doit_changer_mdp: z.boolean(),
+  // Version de session (Utilisateur.token_version). Absente des jetons émis avant son introduction : lue comme 0.
+  tv: z.number().int().optional(),
 });
 
 export type JwtPayload = z.infer<typeof jwtPayloadSchema>;
