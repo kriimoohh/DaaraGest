@@ -887,6 +887,8 @@
     "aucun_paiement": "Aucun paiement trouvé",
     "aucun_paiement_periode": "Aucun paiement pour cette période",
     "recu_auto": "Le numéro de reçu sera généré automatiquement.",
+    "recu_imprimer": "Reçu",
+    "err_recu": "Impossible de générer le reçu",
     "selectionner_eleve": "Sélectionner un élève…",
     "motif_retenue": "Motif de la retenue",
     "totaux": "Totaux",

@@ -7,7 +7,7 @@ import {
   bulkCreerPaiementEleveHandler, modifierPaiementEleveHandler, supprimerPaiementEleveHandler,
   listerPaiementsPersonnelHandler, creerPaiementPersonnelHandler,
   statsHandler, reliquatsHandler, statsMensuelsHandler, exportExcelHandler, exportPdfHandler,
-  exportReliquatsExcelHandler, exportReliquatsPdfHandler,
+  exportReliquatsExcelHandler, exportReliquatsPdfHandler, recuPaiementHandler,
 } from './finances.controller';
 
 // Finances SANS le directeur (arbitrage établissement) : opérations élèves =
@@ -20,6 +20,7 @@ export async function financesRoutes(fastify: FastifyInstance) {
   fastify.get('/paiements-eleves',        { preHandler: [authMiddleware, scolarite] }, listerPaiementsElevesHandler);
   fastify.post('/paiements-eleves',       { preHandler: [authMiddleware, scolarite] }, creerPaiementEleveHandler);
   fastify.post('/paiements-eleves/bulk',  { preHandler: [authMiddleware, scolarite] }, bulkCreerPaiementEleveHandler);
+  fastify.get('/paiements-eleves/:id/recu', { preHandler: [authMiddleware, scolarite] }, recuPaiementHandler);
   fastify.put('/paiements-eleves/:id',    { preHandler: [authMiddleware, adminOnly] },  modifierPaiementEleveHandler);
   fastify.delete('/paiements-eleves/:id', { preHandler: [authMiddleware, adminOnly] },  supprimerPaiementEleveHandler);
 
