@@ -8,7 +8,7 @@ import { NotFoundError, ValidationError } from '../../utils/errors';
 import { genererMatricule } from '../../utils/matricule';
 import { syncInscriptionClasse, selectLiensClasse, selectLiensClasseObjet, classeIdParFiliere, classeParFiliere } from '../../utils/inscriptionClasse';
 import { codeFiliere, selectFiliereRef } from '../../utils/filiere';
-
+import { filtreEleve, type Portee } from '../../utils/portee';
 const VALID_SORT_FIELDS = ['nom_fr', 'prenom_fr', 'matricule', 'sexe', 'date_naissance'];
 
 export async function listerEleves(
@@ -20,11 +20,14 @@ export async function listerEleves(
   actif?: boolean,
   sexe?: string,
   sortBy = 'nom_fr',
-  sortDir: 'asc' | 'desc' = 'asc'
+  sortDir: 'asc' | 'desc' = 'asc',
+  portee: Portee = null,
 ) {
   const skip = (page - 1) * limit;
 
   const where: Record<string, unknown> = { etablissement_id };
+  // Professeur : seulement les élèves de ses classes (AND : ne doit pas écraser le filtre classe_id).
+  if (portee) where.AND = [filtreEleve(portee)];
 
   if (actif !== undefined) where.actif = actif;
   if (sexe) where.sexe = sexe;

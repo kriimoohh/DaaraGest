@@ -4,27 +4,32 @@ import { regenererBulletinsImpactes } from '../bulletins/bulletins.service';
 import { assertProfPeutSaisirNotes, getPolitiqueSaisieNotes } from '../../utils/teachingPolicy';
 import { NoteItem } from './notes.schema';
 import { DEFAULT_NOTE_MAX } from '../../utils/notes';
-import { NotFoundError } from '../../utils/errors';
+import { NotFoundError, ForbiddenError } from '../../utils/errors';
+import { porteeDe, classeVisible, filtreEleve, type Portee } from '../../utils/portee';
 
 export async function listerNotes(
   etablissement_id: string,
   classe_id?: string,
   matiere_id?: string,
   periode?: number,
-  annee_scolaire_id?: string
+  annee_scolaire_id?: string,
+  portee: Portee = null,
 ) {
   if (classe_id) {
     const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
-    if (!classe) throw new NotFoundError('Classe introuvable');
+    if (!classe || !classeVisible(portee, classe_id)) throw new NotFoundError('Classe introuvable');
   }
 
   const where: Record<string, unknown> = {};
   if (matiere_id) where.matiere_id = matiere_id;
   if (periode !== undefined) where.periode = periode;
   if (annee_scolaire_id) where.annee_scolaire_id = annee_scolaire_id;
-  if (classe_id) {
-    where.eleve = { inscriptions: { some: { classes: { some: { classe_id } } } } };
-  }
+  // Toujours borné à l'établissement (sans classe_id, la liste couvrait TOUS les établissements) et,
+  // pour un professeur, aux élèves de ses classes.
+  const eleveWhere: Record<string, unknown> = { etablissement_id };
+  if (classe_id) eleveWhere.inscriptions = { some: { classes: { some: { classe_id } } } };
+  if (portee) eleveWhere.AND = [filtreEleve(portee)];
+  where.eleve = eleveWhere;
 
   return prisma.note.findMany({
     where,
@@ -46,6 +51,53 @@ export async function bulkUpsertNotes(
 
   // Précharger toutes les matières concernées en une seule requête (élimine le N+1)
   const matiereIds = [...new Set(notes.map(n => n.matiere_id))];
+
+  // Garde-fous d'établissement : élèves, matières et années cités doivent appartenir à l'établissement
+  // de l'appelant (sans cela, on pouvait écrire des notes pour l'élève d'un autre établissement).
+  if (etablissement_id) {
+    const eleveIds = [...new Set(notes.map(n => n.eleve_id))];
+    const anneeIds = [...new Set(notes.map(n => n.annee_scolaire_id))];
+    const [nEleves, nMatieres, nAnnees] = await Promise.all([
+      prisma.eleve.count({ where: { id: { in: eleveIds }, etablissement_id } }),
+      prisma.matiere.count({ where: { id: { in: matiereIds }, etablissement_id } }),
+      prisma.anneeScolaire.count({ where: { id: { in: anneeIds }, etablissement_id } }),
+    ]);
+    if (nEleves !== eleveIds.length) throw new NotFoundError('Élève introuvable');
+    if (nMatieres !== matiereIds.length) throw new NotFoundError('Matière introuvable');
+    if (nAnnees !== anneeIds.length) throw new NotFoundError('Année scolaire introuvable');
+  }
+
+  // Professeur : chaque élève doit appartenir à une classe où il enseigne — que `classe_id` soit
+  // fourni ou non (avant, l'absence de `classe_id` désactivait toute vérification d'affectation).
+  if (role && acteurId && etablissement_id && role === 'professeur') {
+    const portee = await porteeDe({ id: acteurId, role });
+    const eleveIds = [...new Set(notes.map(n => n.eleve_id))];
+    if (classe_id) {
+      if (!classeVisible(portee, classe_id)) throw new ForbiddenError('Vous n\'enseignez pas dans cette classe');
+      const dansClasse = await prisma.inscriptionClasse.findMany({
+        where: { classe_id, inscription: { eleve_id: { in: eleveIds } } },
+        select: { inscription: { select: { eleve_id: true } } },
+      });
+      const ok = new Set(dansClasse.map(l => l.inscription.eleve_id));
+      if (eleveIds.some(id => !ok.has(id))) throw new ForbiddenError('Un élève n\'appartient pas à cette classe');
+    } else {
+      const liens = await prisma.inscriptionClasse.findMany({
+        where: { classe_id: { in: portee?.classe_ids ?? [] }, inscription: { eleve_id: { in: eleveIds } } },
+        select: { classe_id: true, inscription: { select: { eleve_id: true } } },
+      });
+      const classeParEleve = new Map<string, string>();
+      for (const l of liens) if (!classeParEleve.has(l.inscription.eleve_id)) classeParEleve.set(l.inscription.eleve_id, l.classe_id);
+      if (eleveIds.some(id => !classeParEleve.has(id))) throw new ForbiddenError('Vous n\'enseignez pas dans la classe de cet élève');
+      // Politique matières/classes appliquée classe par classe.
+      const matieresParClasse = new Map<string, Set<string>>();
+      for (const n of notes) {
+        const c = classeParEleve.get(n.eleve_id)!;
+        if (!matieresParClasse.has(c)) matieresParClasse.set(c, new Set());
+        matieresParClasse.get(c)!.add(n.matiere_id);
+      }
+      for (const [c, ms] of matieresParClasse) await assertProfPeutSaisirNotes(role, acteurId, c, [...ms], etablissement_id);
+    }
+  }
 
   // Politique de saisie : strict (chacun ses matières/classes) ou variantes
   // libérées définies par ConfigNotes.autoriser_toutes_matieres/_classes.

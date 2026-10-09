@@ -90,16 +90,12 @@ export async function assertProfPeutAccederClasse(
 }
 
 /**
- * Politique de saisie des notes : applique la branche correspondante
- * aux deux booléens ConfigNotes.autoriser_toutes_matieres/_classes.
+ * Politique de saisie des notes d'un PROFESSEUR.
  *
- *                       autoriser_toutes_matieres
- *                          false                 true
- * toutes_classes false | strict (actuel)    | classe-libre
- * toutes_classes true  | matiere-libre      | total
- *
- * Le garde-fou universel reste : etablissement_id du prof = celui de la
- * classe/matière (déjà appliqué via les filtres en amont).
+ * Un professeur ne travaille que dans les classes où il est affecté (cf. utils/portee.ts) : le
+ * réglage `autoriser_toutes_classes` n'ouvre donc plus l'accès aux autres classes. Il reste :
+ *   - autoriser_toutes_matieres = false (strict) : uniquement SES matières dans SES classes ;
+ *   - autoriser_toutes_matieres = true : n'importe quelle matière, mais dans SES classes.
  */
 export async function assertProfPeutSaisirNotes(
   role: string,
@@ -115,43 +111,15 @@ export async function assertProfPeutSaisirNotes(
   const politique = await getPolitiqueSaisieNotes(etablissement_id);
 
   // Strict (défaut) : chacun ses matières dans ses classes.
-  if (!politique.autoriser_toutes_matieres && !politique.autoriser_toutes_classes) {
+  if (!politique.autoriser_toutes_matieres) {
     return assertProfPeutModifierNotes(role, utilisateur_id, classe_id, matiere_ids);
   }
 
+  // Toutes matières : il suffit d'enseigner (≥ 1 matière) dans cette classe.
   const personnel_id = await getProfesseurId(utilisateur_id);
-
-  // Total : il suffit d'être prof de l'établissement (vérifié via une
-  // affectation quelconque pour confirmer son rattachement).
-  if (politique.autoriser_toutes_matieres && politique.autoriser_toutes_classes) {
-    const lien = await prisma.personnelMatiereClasse.findFirst({
-      where: { personnel_id },
-      select: { id: true },
-    });
-    if (!lien) throw new ForbiddenError('Vous n\'avez aucune affectation dans cet établissement');
-    return;
-  }
-
-  // Cross-matieres uniquement : prof peut noter toutes matières,
-  // mais seulement dans une classe où il enseigne déjà ≥ 1 matière.
-  if (politique.autoriser_toutes_matieres && !politique.autoriser_toutes_classes) {
-    const lien = await prisma.personnelMatiereClasse.findFirst({
-      where: { personnel_id, classe_id },
-      select: { id: true },
-    });
-    if (!lien) throw new ForbiddenError('Vous n\'enseignez pas dans cette classe');
-    return;
-  }
-
-  // Cross-classes uniquement : prof peut noter ses matières partout,
-  // mais doit enseigner CHAQUE matière concernée (dans n'importe quelle classe).
-  const affectations = await prisma.personnelMatiereClasse.findMany({
-    where: { personnel_id, matiere_id: { in: matiere_ids } },
-    select: { matiere_id: true },
+  const lien = await prisma.personnelMatiereClasse.findFirst({
+    where: { personnel_id, classe_id },
+    select: { id: true },
   });
-  const matieresEnseignees = new Set(affectations.map(a => a.matiere_id));
-  const manquantes = matiere_ids.filter(id => !matieresEnseignees.has(id));
-  if (manquantes.length > 0) {
-    throw new ForbiddenError('Vous n\'enseignez pas toutes les matières concernées');
-  }
+  if (!lien) throw new ForbiddenError('Vous n\'enseignez pas dans cette classe');
 }

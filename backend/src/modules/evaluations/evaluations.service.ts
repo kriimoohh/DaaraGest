@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { assertProfPeutModifierNotes } from '../../utils/teachingPolicy';
+import { filtreClasseId, type Portee } from '../../utils/portee';
 import { EvaluationInput, NoteEvaluationItem } from './evaluations.schema';
 import { NotFoundError } from '../../utils/errors';
 
@@ -9,9 +10,11 @@ export async function listerEvaluations(
   matiere_id?: string,
   periode?: number,
   annee_scolaire_id?: string,
+  portee: Portee = null,
 ) {
   const where: Record<string, unknown> = { etablissement_id };
-  if (classe_id)          where.classe_id         = classe_id;
+  const cid = filtreClasseId(portee, classe_id); // professeur : ses classes seulement
+  if (cid)                where.classe_id         = cid;
   if (matiere_id)         where.matiere_id         = matiere_id;
   if (periode !== undefined) where.periode         = periode;
   if (annee_scolaire_id)  where.annee_scolaire_id  = annee_scolaire_id;

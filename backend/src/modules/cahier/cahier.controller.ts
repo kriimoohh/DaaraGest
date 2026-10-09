@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
+import { porteeDe, classeVisible } from '../../utils/portee';
 import { HttpError } from '../../utils/errors';
 import {
   journeeQuerySchema, seanceUpsertSchema, seanceUpdateSchema, seancesQuerySchema,
@@ -57,6 +58,7 @@ export async function listerSeancesHandler(request: FastifyRequest, reply: Fasti
   const { etablissement_id } = request.user as JwtPayload;
   const parsed = seancesQuerySchema.safeParse(request.query);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  if (!classeVisible(await porteeDe(request.user as JwtPayload), parsed.data.classe_id)) return reply.status(404).send({ error: 'Classe introuvable' });
   try {
     return reply.send(await listerSeances(etablissement_id, parsed.data));
   } catch (err) { return envoyer(reply, err); }
@@ -93,6 +95,7 @@ export async function listerDevoirsHandler(request: FastifyRequest, reply: Fasti
   const { etablissement_id } = request.user as JwtPayload;
   const parsed = devoirsQuerySchema.safeParse(request.query);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  if (!classeVisible(await porteeDe(request.user as JwtPayload), parsed.data.classe_id)) return reply.status(404).send({ error: 'Classe introuvable' });
   try {
     return reply.send(await listerDevoirs(etablissement_id, parsed.data));
   } catch (err) { return envoyer(reply, err); }
@@ -111,6 +114,7 @@ export async function listerVisasHandler(request: FastifyRequest, reply: Fastify
   const { etablissement_id } = request.user as JwtPayload;
   const parsed = visasQuerySchema.safeParse(request.query);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  if (!classeVisible(await porteeDe(request.user as JwtPayload), parsed.data.classe_id)) return reply.status(404).send({ error: 'Classe introuvable' });
   try {
     return reply.send(await listerVisas(etablissement_id, parsed.data));
   } catch (err) { return envoyer(reply, err); }
@@ -128,6 +132,7 @@ export async function exporterPdfHandler(request: FastifyRequest, reply: Fastify
   const { etablissement_id } = request.user as JwtPayload;
   const parsed = completudeQuerySchema.safeParse(request.query);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  if (!classeVisible(await porteeDe(request.user as JwtPayload), parsed.data.classe_id)) return reply.status(404).send({ error: 'Classe introuvable' });
   try {
     const pdf = await exporterCahierPdf(etablissement_id, parsed.data);
     return reply
@@ -141,6 +146,7 @@ export async function completudeHandler(request: FastifyRequest, reply: FastifyR
   const { etablissement_id } = request.user as JwtPayload;
   const parsed = completudeQuerySchema.safeParse(request.query);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  if (!classeVisible(await porteeDe(request.user as JwtPayload), parsed.data.classe_id)) return reply.status(404).send({ error: 'Classe introuvable' });
   try {
     return reply.send(await completude(etablissement_id, parsed.data));
   } catch (err) { return envoyer(reply, err); }

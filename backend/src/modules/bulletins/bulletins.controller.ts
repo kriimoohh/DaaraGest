@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
+import { porteeDe, classeVisible, bulletinVisible } from '../../utils/portee';
 import { genererBulletinSchema, genererBulletinAnnuelSchema, observationSchema, preflightSchema, etatGenerationsQuerySchema, deverrouillerPeriodeSchema, bulletinTemplateSchema, bulletinTemplateTypeSchema } from './bulletins.schema';
 import {
   listerBulletins, genererBulletins, genererBulletinsAnnuels,
@@ -11,9 +12,11 @@ import {
 export async function listerHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
   const { annee_scolaire_id, periode, eleve_id, filiere, classe_id } = request.query as Record<string, string | undefined>;
+  const portee = await porteeDe(request.user as JwtPayload);
+  if (classe_id && !classeVisible(portee, classe_id)) return reply.status(404).send({ error: 'Classe introuvable' });
   const data = await listerBulletins(
     etablissement_id, annee_scolaire_id,
-    periode ? parseInt(periode) : undefined, eleve_id, filiere, classe_id
+    periode ? parseInt(periode) : undefined, eleve_id, filiere, classe_id, portee
   );
   return reply.send(data);
 }
@@ -22,6 +25,7 @@ export async function genererHandler(request: FastifyRequest, reply: FastifyRepl
   const { etablissement_id } = request.user as JwtPayload;
   const parsed = genererBulletinSchema.safeParse(request.body);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  if (!classeVisible(await porteeDe(request.user as JwtPayload), parsed.data.classe_id)) return reply.status(404).send({ error: 'Classe introuvable' });
   try {
     const data = await genererBulletins(etablissement_id, parsed.data);
     return reply.send(data);
@@ -34,6 +38,7 @@ export async function genererAnnuelHandler(request: FastifyRequest, reply: Fasti
   const { etablissement_id } = request.user as JwtPayload;
   const parsed = genererBulletinAnnuelSchema.safeParse(request.body);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  if (!classeVisible(await porteeDe(request.user as JwtPayload), parsed.data.classe_id)) return reply.status(404).send({ error: 'Classe introuvable' });
   try {
     const data = await genererBulletinsAnnuels(etablissement_id, parsed.data);
     return reply.send(data);
@@ -45,6 +50,7 @@ export async function genererAnnuelHandler(request: FastifyRequest, reply: Fasti
 export async function getHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
+  if (!(await bulletinVisible(await porteeDe(request.user as JwtPayload), id))) return reply.status(404).send({ error: 'Bulletin introuvable' });
   try {
     return reply.send(await getBulletin(id, etablissement_id));
   } catch (err) {
@@ -55,6 +61,7 @@ export async function getHandler(request: FastifyRequest, reply: FastifyReply) {
 export async function pdfHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
+  if (!(await bulletinVisible(await porteeDe(request.user as JwtPayload), id))) return reply.status(404).send({ error: 'Bulletin introuvable' });
   try {
     const pdf = await genererPdfBulletin(id, etablissement_id);
     reply.header('Content-Type', 'application/pdf')
@@ -82,6 +89,7 @@ export async function preflightHandler(request: FastifyRequest, reply: FastifyRe
   const { etablissement_id } = request.user as JwtPayload;
   const parsed = preflightSchema.safeParse(request.body);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  if (!classeVisible(await porteeDe(request.user as JwtPayload), parsed.data.classe_id)) return reply.status(404).send({ error: 'Classe introuvable' });
   try {
     return reply.send(await preflightBulletins(etablissement_id, parsed.data));
   } catch (err) {
@@ -93,6 +101,7 @@ export async function etatGenerationsHandler(request: FastifyRequest, reply: Fas
   const { etablissement_id } = request.user as JwtPayload;
   const parsed = etatGenerationsQuerySchema.safeParse(request.query);
   if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  if (!classeVisible(await porteeDe(request.user as JwtPayload), parsed.data.classe_id)) return reply.status(404).send({ error: 'Classe introuvable' });
   try {
     return reply.send(await etatGenerations(etablissement_id, parsed.data));
   } catch (err) {
@@ -157,6 +166,7 @@ export async function pdfClasseHandler(request: FastifyRequest, reply: FastifyRe
   if (!classe_id || !annee_scolaire_id || !periode || !filiere) {
     return reply.status(400).send({ error: 'classe_id, annee_scolaire_id, periode et filiere sont requis' });
   }
+  if (!classeVisible(await porteeDe(request.user as JwtPayload), classe_id)) return reply.status(404).send({ error: 'Classe introuvable' });
   try {
     const pdf = await genererPdfClasse(classe_id, annee_scolaire_id, parseInt(periode), filiere, etablissement_id);
     reply.header('Content-Type', 'application/pdf')

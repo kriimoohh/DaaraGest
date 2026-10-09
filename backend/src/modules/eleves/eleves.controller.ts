@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
+import { porteeDe, eleveVisible } from '../../utils/portee';
 import { eleveSchema, inscriptionSchema, transfertSchema } from './eleves.schema';
 import {
   listerEleves,
@@ -27,13 +28,15 @@ export async function listerHandler(
   const data = await listerEleves(
     etablissement_id,
     page ? parseInt(page) : 1,
-    limit ? parseInt(limit) : 20,
+    // Plafond : sans lui, `limit=100000` forçait une requête et une réponse énormes.
+    limit ? Math.min(200, Math.max(1, parseInt(limit) || 20)) : 20,
     search,
     classe_id,
     actif !== undefined ? actif === 'true' : undefined,
     sexe,
     sortBy,
-    sortDir as 'asc' | 'desc' | undefined
+    sortDir as 'asc' | 'desc' | undefined,
+    await porteeDe(request.user as JwtPayload),
   );
   return reply.send(data);
 }
@@ -43,6 +46,7 @@ export async function getHandler(
 ) {
   const { etablissement_id } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
+  if (!(await eleveVisible(await porteeDe(request.user as JwtPayload), id))) return reply.status(404).send({ error: 'Élève introuvable' });
   try {
     const data = await getEleve(id, etablissement_id);
     return reply.send(data);
@@ -59,6 +63,7 @@ export async function exportExcelHandler(request: FastifyRequest, reply: Fastify
       etablissement_id, 1, 10000, search, classe_id,
       actif !== undefined ? actif === 'true' : undefined,
       sexe, 'nom_fr', 'asc',
+      await porteeDe(request.user as JwtPayload),
     );
     const { exportElevesExcel } = await import('../../utils/excel');
     const buffer = await exportElevesExcel(data);
@@ -74,6 +79,7 @@ export async function exportExcelHandler(request: FastifyRequest, reply: Fastify
 export async function progressionHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
+  if (!(await eleveVisible(await porteeDe(request.user as JwtPayload), id))) return reply.status(404).send({ error: 'Élève introuvable' });
   try {
     return reply.send(await getProgressionEleve(id, etablissement_id));
   } catch (err) {
@@ -239,6 +245,7 @@ export async function importHandler(request: FastifyRequest, reply: FastifyReply
 export async function getQRHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
   const { id } = request.params as { id: string };
+  if (!(await eleveVisible(await porteeDe(request.user as JwtPayload), id))) return reply.status(404).send({ error: 'Élève introuvable' });
   try {
     return reply.send(await getEleveQR(etablissement_id, id));
   } catch (err: unknown) {

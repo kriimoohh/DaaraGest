@@ -3,6 +3,7 @@ import type { TypeModeleBulletin } from './bulletin.template';
 import { GenererBulletinInput, GenererBulletinAnnuelInput, ObservationInput, PreflightInput } from './bulletins.schema';
 import { renderPdfHtml } from '../../utils/browserPool';
 import { assertProfPeutAccederClasse } from '../../utils/teachingPolicy';
+import { filtreEleve, type Portee } from '../../utils/portee';
 import { logAction } from '../../utils/audit';
 import { DEFAULT_NOTE_MAX, MentionDef, mentionPourFiliere, classer } from '../../utils/notes';
 import { NotFoundError } from '../../utils/errors';
@@ -325,12 +326,13 @@ async function baremesParElevePeriode(
 
 export async function listerBulletins(
   etablissement_id: string, annee_scolaire_id?: string, periode?: number,
-  eleve_id?: string, filiere?: string, classe_id?: string,
+  eleve_id?: string, filiere?: string, classe_id?: string, portee: Portee = null,
 ) {
   // Le Bulletin n'a pas de classe_id : on filtre via les inscriptions de l'élève
   // pour l'année scolaire considérée (un élève bilingue peut être dans une classe
   // FR et une classe AR distinctes — d'où le OR sur les deux colonnes).
   const eleveWhere: Record<string, unknown> = { etablissement_id };
+  if (portee) eleveWhere.AND = [filtreEleve(portee)]; // professeur : élèves de ses classes
   if (classe_id) {
     eleveWhere.inscriptions = {
       some: {

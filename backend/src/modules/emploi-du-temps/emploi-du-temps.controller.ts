@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
+import { porteeDe, classeVisible } from '../../utils/portee';
 import { creneauSchema } from './emploi-du-temps.schema';
 import { listerCreneaux, creerCreneau, modifierCreneau, supprimerCreneau } from './emploi-du-temps.service';
 
@@ -7,7 +8,9 @@ export async function listerHandler(request: FastifyRequest, reply: FastifyReply
   const { etablissement_id } = request.user as JwtPayload;
   const { annee_scolaire_id, classe_id, personnel_id } = request.query as Record<string, string>;
   if (!annee_scolaire_id) return reply.status(400).send({ error: 'annee_scolaire_id est requis' });
-  return reply.send(await listerCreneaux(etablissement_id, annee_scolaire_id, classe_id, personnel_id));
+  const portee = await porteeDe(request.user as JwtPayload);
+  if (classe_id && !classeVisible(portee, classe_id)) return reply.status(404).send({ error: 'Classe introuvable' });
+  return reply.send(await listerCreneaux(etablissement_id, annee_scolaire_id, classe_id, personnel_id, portee));
 }
 
 export async function creerHandler(request: FastifyRequest, reply: FastifyReply) {
