@@ -21,18 +21,40 @@ async function generateQrDataUrl(payload: object): Promise<string> {
   return QRCode.toDataURL(signed, { width: 300, margin: 1, errorCorrectionLevel: 'M' });
 }
 
-async function ensureEleveQrToken(eleveId: string): Promise<string> {
-  const eleve = await prisma.eleve.findUniqueOrThrow({ where: { id: eleveId } });
+// Garde-fou d'établissement (audit SenInit DG-TENANT-001) : un document ne se génère que pour une
+// personne / une classe de l'établissement de l'appelant. Toute autre cible → « introuvable ».
+async function assertDestinataireDeEtablissement(
+  etablissement_id: string,
+  destinataire_type: 'eleve' | 'professeur' | 'classe',
+  id: string,
+): Promise<void> {
+  let n = 0;
+  if (destinataire_type === 'eleve') {
+    n = await prisma.eleve.count({ where: { id, etablissement_id } });
+    if (!n) throw new NotFoundError('Élève introuvable');
+  } else if (destinataire_type === 'professeur') {
+    n = await prisma.personnel.count({ where: { OR: [{ id }, { utilisateur_id: id }], utilisateur: { etablissement_id } } });
+    if (!n) throw new NotFoundError('Personnel introuvable');
+  } else {
+    n = await prisma.classe.count({ where: { id, etablissement_id } });
+    if (!n) throw new NotFoundError('Classe introuvable');
+  }
+}
+
+async function ensureEleveQrToken(eleveId: string, etablissement_id: string): Promise<string> {
+  const eleve = await prisma.eleve.findFirst({ where: { id: eleveId, etablissement_id } });
+  if (!eleve) throw new NotFoundError('Élève introuvable');
   if (eleve.qr_token) return eleve.qr_token;
   const token = crypto.randomUUID();
   await prisma.eleve.update({ where: { id: eleveId }, data: { qr_token: token } });
   return token;
 }
 
-async function ensureProfQrToken(profId: string): Promise<string> {
-  const prof = await prisma.personnel.findFirstOrThrow({
-    where: { OR: [{ id: profId }, { utilisateur_id: profId }] },
+async function ensureProfQrToken(profId: string, etablissement_id: string): Promise<string> {
+  const prof = await prisma.personnel.findFirst({
+    where: { OR: [{ id: profId }, { utilisateur_id: profId }], utilisateur: { etablissement_id } },
   });
+  if (!prof) throw new NotFoundError('Personnel introuvable');
   if (prof.qr_token) return prof.qr_token;
   const token = crypto.randomUUID();
   await prisma.personnel.update({ where: { id: prof.id }, data: { qr_token: token } });
@@ -128,9 +150,9 @@ async function buildCommonVars(etablissement_id: string): Promise<Record<string,
 
 // ─── Build eleve vars ─────────────────────────────────────────────────────────
 
-async function buildEleveVars(eleve_id: string, _etablissement_id: string): Promise<Record<string, string>> {
-  const eleve = await prisma.eleve.findUniqueOrThrow({
-    where: { id: eleve_id },
+async function buildEleveVars(eleve_id: string, etablissement_id: string): Promise<Record<string, string>> {
+  const eleve = await prisma.eleve.findFirst({
+    where: { id: eleve_id, etablissement_id },
     include: {
       parents: true,
       inscriptions: {
@@ -144,6 +166,7 @@ async function buildEleveVars(eleve_id: string, _etablissement_id: string): Prom
       },
     },
   });
+  if (!eleve) throw new NotFoundError('Élève introuvable');
 
   const inscription = eleve.inscriptions[0];
   const classe_fr = classeParFiliere(inscription?.classes, 'FR')?.nom_fr ?? '';
@@ -201,11 +224,12 @@ async function buildEleveVars(eleve_id: string, _etablissement_id: string): Prom
 
 // ─── Build prof vars ──────────────────────────────────────────────────────────
 
-async function buildProfVars(prof_id: string, _etablissement_id: string): Promise<Record<string, string>> {
-  const prof = await prisma.personnel.findFirstOrThrow({
-    where: { OR: [{ id: prof_id }, { utilisateur_id: prof_id }] },
+async function buildProfVars(prof_id: string, etablissement_id: string): Promise<Record<string, string>> {
+  const prof = await prisma.personnel.findFirst({
+    where: { OR: [{ id: prof_id }, { utilisateur_id: prof_id }], utilisateur: { etablissement_id } },
     include: { utilisateur: true },
   });
+  if (!prof) throw new NotFoundError('Personnel introuvable');
 
   return {
     NOM_PRENOM_PROF: `${prof.utilisateur.nom_fr} ${prof.utilisateur.prenom_fr ?? ''}`.trim(),
@@ -792,8 +816,8 @@ async function genererCarteEleve(
   etablissement_id: string,
   previewMode = false,
 ): Promise<{ html: string; eleve: { nom_fr: string; prenom_fr: string; photo_url: string | null } }> {
-  const eleve = await prisma.eleve.findUniqueOrThrow({
-    where: { id: eleveId },
+  const eleve = await prisma.eleve.findFirst({
+    where: { id: eleveId, etablissement_id },
     include: {
       inscriptions: {
         where: { statut: 'actif' },
@@ -803,12 +827,13 @@ async function genererCarteEleve(
       },
     },
   });
+  if (!eleve) throw new NotFoundError('Élève introuvable');
 
   if (!eleve.photo_url && !previewMode) {
     throw Object.assign(new Error(`Photo manquante pour ${eleve.nom_fr} ${eleve.prenom_fr}`), { statusCode: 400 });
   }
 
-  const token = await ensureEleveQrToken(eleveId);
+  const token = await ensureEleveQrToken(eleveId, etablissement_id);
   const etab = await prisma.etablissement.findUniqueOrThrow({ where: { id: etablissement_id } });
   const qrPayload = { type: 'eleve', id: eleveId, matricule: eleve.matricule, ets: etablissement_id };
   const qrDataUrl = await generateQrDataUrl(qrPayload);
@@ -852,7 +877,7 @@ async function genererCarteProfesseur(
     throw Object.assign(new Error(`Photo manquante pour ${nom}`), { statusCode: 400 });
   }
 
-  const token = await ensureProfQrToken(profId);
+  const token = await ensureProfQrToken(profId, etablissement_id);
   const etab = await prisma.etablissement.findUniqueOrThrow({ where: { id: etablissement_id } });
   const qrPayload = { type: 'professeur', id: profId, token, ets: etablissement_id };
   const qrDataUrl = await generateQrDataUrl(qrPayload);
@@ -892,6 +917,13 @@ async function buildA4DocumentHtml(
   body: GenererDocumentInput,
 ): Promise<{ html: string; customTplId: string | null }> {
   const { type, destinataire_type, destinataire_id, parametres } = body;
+
+  await assertDestinataireDeEtablissement(etablissement_id, destinataire_type, destinataire_id);
+  // L'année passée en paramètre doit elle aussi appartenir à l'établissement.
+  if (parametres?.annee_scolaire_id) {
+    const n = await prisma.anneeScolaire.count({ where: { id: parametres.annee_scolaire_id, etablissement_id } });
+    if (!n) throw new NotFoundError('Année scolaire introuvable');
+  }
 
   const customTpl = await prisma.documentTemplate.findUnique({
     where: { etablissement_id_type: { etablissement_id, type } },

@@ -42,25 +42,12 @@ export function ScannerPage() {
   const processingRef = useRef(false);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Charge l'etablissement_id depuis le localStorage (authStore zustand persist)
-  const getEtablissementId = (): string | null => {
-    try {
-      const raw = localStorage.getItem('daaragest-auth');
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      return parsed?.state?.user?.etablissement_id ?? null;
-    } catch {
-      return null;
-    }
-  };
-
+  // Liste des scans du jour : route authentifiée, l'établissement est celui de la session.
   const chargerScansDuJour = async () => {
-    const etabId = getEtablissementId();
-    if (!etabId) return;
     setLoadingScans(true);
     try {
       const res = await fetch(
-        `${API_BASE}/api/v1/pointage/scans-jour?etablissement_id=${etabId}`,
+        `${API_BASE}/api/v1/pointage/scans-jour`,
         { credentials: 'include' }
       );
       if (res.ok) {
