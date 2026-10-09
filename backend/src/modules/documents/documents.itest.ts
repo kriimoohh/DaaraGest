@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import prisma from '../../config/database';
-import { apercuDocumentHtml } from './documents.service';
+import { apercuDocumentHtml, genererDocument } from './documents.service';
+import { getScansDuJour } from '../pointage/pointage.service';
 
 // Régression : le relevé de notes appelait getBaremesClasse() SANS son 4e argument
 // `baseNote`. Ce paramètre ayant un défaut à DEFAULT_NOTE_MAX (20), l'oubli
@@ -117,5 +118,77 @@ describe('Documents — relevé de notes sur un établissement en /10', () => {
     // Avec le bug, Maths valait (8/20)*10*1 = 4 → moyenne (4+5)/2 = 4.50 : faux.
     expect(html).toContain('6.50 / 10');
     expect(html).not.toContain('4.50 / 10');
+  });
+});
+
+// ── Isolation entre établissements (audit SenInit DG-TENANT-001) ──────────────
+// Un compte de gestion de l'établissement A obtenait certificats, relevés de notes, fiches avec
+// parents, cartes (et modifiait le qr_token) d'une personne de l'établissement B en connaissant
+// son identifiant. Toute cible hors établissement doit être « introuvable ».
+describe('Documents — isolation entre établissements', () => {
+  const etabB = `doc-etabB-${RUN}`;
+  const anneeB = `doc-anneeB-${RUN}`, filB = `doc-filB-${RUN}`, classeB = `doc-classeB-${RUN}`;
+  const eleveB = `doc-eleveB-${RUN}`, userB = `doc-userB-${RUN}`, persB = `doc-persB-${RUN}`;
+
+  beforeAll(async () => {
+    await prisma.etablissement.create({ data: { id: etabB, nom_fr: 'École B', code: `DOB${RUN.slice(0, 3).toUpperCase()}` } });
+    await prisma.anneeScolaire.create({ data: { id: anneeB, etablissement_id: etabB, libelle: 'N', active: true, date_debut: new Date(Date.now() - 90 * 86_400_000), date_fin: new Date(Date.now() + 200 * 86_400_000) } });
+    await prisma.filiere.create({ data: { id: filB, etablissement_id: etabB, code: 'FR', nom_fr: 'FR', langue: 'fr', sens_ecriture: 'LTR' } });
+    await prisma.classe.create({ data: { id: classeB, etablissement_id: etabB, annee_scolaire_id: anneeB, nom_fr: 'Classe B', filiere_id: filB } });
+    await prisma.eleve.create({ data: { id: eleveB, etablissement_id: etabB, matricule: `DOB-${RUN}`, nom_fr: 'SecretB', prenom_fr: 'Zed', sexe: 'M', date_naissance: new Date('2014-01-01') } });
+    const role = await prisma.role.upsert({ where: { libelle_fr: 'professeur' }, update: {}, create: { libelle_fr: 'professeur' } });
+    await prisma.utilisateur.create({ data: { id: userB, etablissement_id: etabB, role_id: role.id, nom_fr: 'ProfSecretB', identifiant: userB, mot_de_passe: 'x' } });
+    await prisma.personnel.create({ data: { id: persB, utilisateur_id: userB } });
+  });
+  afterAll(async () => {
+    await prisma.personnel.deleteMany({ where: { id: persB } });
+    await prisma.utilisateur.deleteMany({ where: { id: userB } });
+    await prisma.eleve.deleteMany({ where: { id: eleveB } });
+    await prisma.classe.deleteMany({ where: { id: classeB } });
+    await prisma.filiere.deleteMany({ where: { id: filB } });
+    await prisma.anneeScolaire.deleteMany({ where: { id: anneeB } });
+    await prisma.etablissement.deleteMany({ where: { id: etabB } });
+  });
+
+  it('aperçu d\'un document d\'élève d\'un autre établissement : introuvable', async () => {
+    for (const type of ['CERTIFICAT_SCOLARITE', 'RELEVE_NOTES', 'FICHE_RENSEIGNEMENTS', 'ATTESTATION_INSCRIPTION'] as const) {
+      await expect(apercuDocumentHtml(etabId, { type, destinataire_type: 'eleve', destinataire_id: eleveB }))
+        .rejects.toThrow('introuvable');
+    }
+  });
+
+  it('carte élève : introuvable, et le qr_token de l\'élève B n\'est pas créé', async () => {
+    await expect(apercuDocumentHtml(etabId, { type: 'CARTE_ELEVE', destinataire_type: 'eleve', destinataire_id: eleveB }))
+      .rejects.toThrow('introuvable');
+    await expect(genererDocument(etabId, 'u', { type: 'CARTE_ELEVE', destinataire_type: 'eleve', destinataire_id: eleveB }))
+      .rejects.toThrow('introuvable');
+    expect((await prisma.eleve.findUnique({ where: { id: eleveB }, select: { qr_token: true } }))?.qr_token).toBeNull();
+  });
+
+  it('documents du personnel d\'un autre établissement : introuvable', async () => {
+    await expect(apercuDocumentHtml(etabId, { type: 'ATTESTATION_TRAVAIL', destinataire_type: 'professeur', destinataire_id: persB }))
+      .rejects.toThrow('introuvable');
+    await expect(apercuDocumentHtml(etabId, { type: 'CARTE_PROFESSEUR', destinataire_type: 'professeur', destinataire_id: persB }))
+      .rejects.toThrow();
+  });
+
+  it('liste / relevé d\'une classe d\'un autre établissement : introuvable', async () => {
+    await expect(apercuDocumentHtml(etabId, { type: 'LISTE_CLASSE', destinataire_type: 'classe', destinataire_id: classeB }))
+      .rejects.toThrow('introuvable');
+  });
+
+  it('une année scolaire d\'un autre établissement passée en paramètre est refusée', async () => {
+    await expect(apercuDocumentHtml(etabId, { type: 'LISTE_CLASSE', destinataire_type: 'classe', destinataire_id: classeId, parametres: { annee_scolaire_id: anneeB } }))
+      .rejects.toThrow('introuvable');
+  });
+
+  it('contrôle : l\'établissement lui-même obtient ses documents', async () => {
+    const r = await apercuDocumentHtml(etabId, { type: 'CERTIFICAT_SCOLARITE', destinataire_type: 'eleve', destinataire_id: eleveId });
+    expect(r.html).toContain('Diop');
+  });
+
+  it('scans du jour : uniquement son établissement, nom et prénom seulement (aucun matricule ni id personnel)', async () => {
+    const scans = await getScansDuJour(etabId);
+    for (const s of scans) expect(Object.keys(s.personnel)).toEqual(['utilisateur']);
   });
 });

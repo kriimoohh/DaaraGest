@@ -253,7 +253,8 @@ export async function getScansDuJour(etablissement_id: string) {
       personnel: { utilisateur: { etablissement_id } },
     },
     include: {
-      personnel: { select: { id: true, fonction: true, matricule: true, utilisateur: { select: { nom_fr: true, prenom_fr: true } } } },
+      // Minimum nécessaire à l'affichage : nom et prénom seulement (plus d'id personnel, fonction ni matricule).
+      personnel: { select: { utilisateur: { select: { nom_fr: true, prenom_fr: true } } } },
     },
     orderBy: { created_at: 'desc' },
     take: 20,

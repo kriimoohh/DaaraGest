@@ -24,6 +24,7 @@ export async function pointageRoutes(fastify: FastifyInstance) {
   // Scan — endpoint public (token UUID = entropie suffisante)
   fastify.post('/scan', scanQRHandler);
 
-  // Liste des scans du jour — public (requiert etablissement_id en query)
-  fastify.get('/scans-jour', scansDuJourHandler);
+  // Liste des scans du jour — authentifiée : l'établissement vient du jeton (avant : public, à partir
+  // d'un simple etablissement_id en query, donc lisible par n'importe qui connaissant l'identifiant).
+  fastify.get('/scans-jour', { preHandler: [authMiddleware, acces] }, scansDuJourHandler);
 }
