@@ -1,12 +1,13 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
+import { NotFoundError } from '../../utils/errors';
 import { paiementEleveSchema, bulkPaiementEleveSchema, updatePaiementEleveSchema, paiementPersonnelSchema } from './finances.schema';
 import {
   listerPaiementsEleves, listerTousPaiementsElevesFiltres, genererPdfPaiementsEleves,
   creerPaiementEleve, bulkCreerPaiementEleve, modifierPaiementEleve, supprimerPaiementEleve,
   listerPaiementsPersonnel, creerPaiementPersonnel,
   getStatsFinances, getReliquats, getStatsMensuels,
-  genererExcelReliquats, genererPdfReliquats,
+  genererExcelReliquats, genererPdfReliquats, genererPdfRecu,
 } from './finances.service';
 
 export async function statsMensuelsHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -181,6 +182,21 @@ export async function exportReliquatsPdfHandler(request: FastifyRequest, reply: 
       .header('Content-Disposition', 'attachment; filename="reliquats.pdf"')
       .send(buffer);
   } catch (err) {
+    return reply.status(500).send({ error: (err as Error).message });
+  }
+}
+
+export async function recuPaiementHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const { id } = request.params as { id: string };
+  try {
+    const buffer = await genererPdfRecu(id, etablissement_id);
+    reply
+      .header('Content-Type', 'application/pdf')
+      .header('Content-Disposition', 'inline; filename="recu.pdf"')
+      .send(buffer);
+  } catch (err) {
+    if (err instanceof NotFoundError) return reply.status(404).send({ error: err.message });
     return reply.status(500).send({ error: (err as Error).message });
   }
 }
