@@ -99,7 +99,9 @@ describe('Portail parent — devoirs (cahier de texte)', () => {
     const matId = `pp-mat-${RUN}`, inscId = `pp-insc-${RUN}`, userId = `pp-user-${RUN}`, persId = `pp-pers-${RUN}`;
     await prisma.configNotes.create({ data: { etablissement_id: etabId } });
     await prisma.anneeScolaire.create({
-      data: { id: anneeId, etablissement_id: etabId, libelle: '2025-2026', active: true, date_debut: new Date('2025-10-01'), date_fin: new Date('2026-07-31') },
+      // Dates RELATIVES : le lien du portail expire à la fin de l'année active, une date
+      // fixe (2026-07-31) fait échouer ce test dès qu'elle est dépassée.
+      data: { id: anneeId, etablissement_id: etabId, libelle: 'Année courante', active: true, date_debut: new Date(Date.now() - 90 * 86_400_000), date_fin: new Date(Date.now() + 200 * 86_400_000) },
     });
     await prisma.filiere.create({ data: { id: filId, etablissement_id: etabId, code: 'FR', nom_fr: 'Française', langue: 'fr', sens_ecriture: 'LTR' } });
     await prisma.classe.create({ data: { id: classeId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM2 A', filiere_id: filId } });
