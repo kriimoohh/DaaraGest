@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
-import { listerAuditLogs, listerEntitesAudit } from './audit.service';
+import { listerAuditLogs, listerEntitesAudit, listerActeursAudit } from './audit.service';
 
 export async function listerAuditHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
@@ -20,4 +20,9 @@ export async function listerAuditHandler(request: FastifyRequest, reply: Fastify
 export async function listerEntitesAuditHandler(request: FastifyRequest, reply: FastifyReply) {
   const { etablissement_id } = request.user as JwtPayload;
   return reply.send(await listerEntitesAudit(etablissement_id));
+}
+
+export async function listerActeursAuditHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  return reply.send(await listerActeursAudit(etablissement_id));
 }

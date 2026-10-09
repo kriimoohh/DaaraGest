@@ -31,6 +31,7 @@ export const AUDIT_ENTITES = [
   'Eleve', 'Inscription', 'Utilisateur', 'Filiere', 'PaiementEleve',
   'PaiementPersonnel', 'Note', 'Bulletin', 'ClasseMatiere', 'ClasseMatierePeriode',
   'ProgressionEleve', 'PortailParentToken',
+  'Classe', 'CahierSeance', 'Devoir', 'CahierVisa',
 ] as const;
 
 // Libellés FR — servent UNIQUEMENT à composer la description stockée en base
@@ -61,6 +62,10 @@ const ENTITE_LABEL_FR: Record<string, string> = {
   ClasseMatierePeriode: 'Programme (par période)',
   ProgressionEleve: 'Progression',
   PortailParentToken: 'Lien portail parent',
+  Classe: 'Classe',
+  CahierSeance: 'Cahier de texte (séance)',
+  Devoir: 'Devoir',
+  CahierVisa: 'Cahier de texte (visa)',
 };
 
 type Details = Record<string, unknown> | null | undefined;
