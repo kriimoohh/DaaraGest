@@ -27,6 +27,14 @@ vi.mock('../../config/database', () => ({
   },
 }));
 
+// État de session (actif + version) : lu en base par le middleware. Ici : compte actif, version 0 par défaut ;
+// les tests de révocation le surchargent ponctuellement. (Le comportement réel en base est couvert par auth.itest.ts.)
+vi.mock('../../utils/sessions', () => ({
+  etatSession: vi.fn().mockResolvedValue({ actif: true, tv: 0 }),
+  invaliderEtatSession: vi.fn(),
+  revoquerSessions: vi.fn().mockResolvedValue(1),
+}));
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 const JWT_SECRET = 'test-secret-min-32-chars-for-hmac-256';
@@ -388,3 +396,36 @@ describe('Intégration — Login body invalide', () => {
     await app.close();
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+// SESSIONS RÉVOQUÉES (DG-AUTH-001)
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('Intégration — Sessions révoquées', () => {
+  const appel = async (etat: { actif: boolean; tv: number } | null, payload: object) => {
+    const { etatSession } = await import('../../utils/sessions');
+    vi.mocked(etatSession).mockResolvedValueOnce(etat);
+    const app = await buildApp();
+    const token = await signToken(app, payload);
+    const res = await app.inject({ method: 'GET', url: '/api/v1/utilisateurs/roles', cookies: { daaragest_token: token } });
+    await app.close();
+    return res.statusCode;
+  };
+
+  it('jeton valide, compte actif, même version → 200', async () => {
+    expect(await appel({ actif: true, tv: 3 }, makePayload('professeur', { tv: 3 }))).toBe(200);
+  });
+  it('version de session dépassée (mot de passe/rôle changé) → 401', async () => {
+    expect(await appel({ actif: true, tv: 4 }, makePayload('professeur', { tv: 3 }))).toBe(401);
+  });
+  it('jeton sans version alors que le compte a été révoqué → 401', async () => {
+    expect(await appel({ actif: true, tv: 1 }, makePayload('professeur'))).toBe(401);
+  });
+  it('compte désactivé → 401', async () => {
+    expect(await appel({ actif: false, tv: 0 }, makePayload('professeur'))).toBe(401);
+  });
+  it('compte supprimé → 401', async () => {
+    expect(await appel(null, makePayload('professeur'))).toBe(401);
+  });
+});
+

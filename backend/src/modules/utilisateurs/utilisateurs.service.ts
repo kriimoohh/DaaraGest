@@ -4,6 +4,7 @@ import { logAction } from '../../utils/audit';
 import { UtilisateurInput, ResetPasswordInput } from './utilisateurs.schema';
 import { ROLES } from '../../config/roles';
 import { NotFoundError } from '../../utils/errors';
+import { revoquerSessions, invaliderEtatSession } from '../../utils/sessions';
 
 export async function listerRoles() {
   return prisma.role.findMany({ orderBy: { libelle_fr: 'asc' } });
@@ -109,6 +110,10 @@ export async function modifierUtilisateur(
     include: { role: true },
   });
 
+  // Changement de rôle : les jetons déjà émis portent l'ancien rôle — on les révoque pour qu'ils soient
+  // renouvelés avec les droits actuels (le front rafraîchit automatiquement).
+  if (data.role_id && data.role_id !== existing.role_id) await revoquerSessions(id);
+
   await logAction(etablissement_id, acteurId, 'UPDATE', 'Utilisateur', id, { changes: updateData });
 
   const { mot_de_passe: _, ...result } = utilisateur;
@@ -148,7 +153,10 @@ export async function supprimerUtilisateur(id: string, etablissement_id: string,
   // Suffixer l'identifiant pour libérer le slot unique et permettre sa réutilisation
   const identifiantLibere = `${existing.identifiant}_deleted_${Date.now()}`;
   await logAction(etablissement_id, acteurId, 'DELETE', 'Utilisateur', id, { identifiant: existing.identifiant });
-  return prisma.utilisateur.update({ where: { id }, data: { actif: false, identifiant: identifiantLibere } });
+  const desactive = await prisma.utilisateur.update({ where: { id }, data: { actif: false, identifiant: identifiantLibere } });
+  // Un compte désactivé perd ses sessions tout de suite (jeton d'accès ET de rafraîchissement).
+  await revoquerSessions(id);
+  return desactive;
 }
 
 // Réactive un compte désactivé (soft delete) et restaure son identifiant d'origine
@@ -247,6 +255,7 @@ export async function supprimerDefinitivement(id: string, etablissement_id: stri
     prisma.conversationParticipant.deleteMany({ where: { utilisateur_id: id } }),
     prisma.utilisateur.delete({ where: { id } }),
   ]);
+  invaliderEtatSession(id); // compte absent → tout jeton déjà émis est refusé
 
   return { message: 'Utilisateur supprimé définitivement' };
 }
@@ -261,6 +270,9 @@ export async function resetPassword(id: string, etablissement_id: string, data: 
     where: { id },
     data: { mot_de_passe: hashedPassword, must_change_password: true },
   });
+
+  // Mot de passe réinitialisé (souvent après un doute de compromission) : plus aucune ancienne session.
+  await revoquerSessions(id);
 
   await logAction(etablissement_id, acteurId, 'PASSWORD_RESET', 'Utilisateur', id, { identifiant: existing.identifiant });
 

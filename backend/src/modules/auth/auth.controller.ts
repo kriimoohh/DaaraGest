@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { login, getMe, changePassword, updateProfil, creerRefreshToken, validerRefreshToken, revoquerRefreshToken, revoquerTousTokens, CompteVerrouilleError } from './auth.service';
+import { login, getMe, changePassword, updateProfil, creerRefreshToken, validerRefreshToken, revoquerRefreshToken, CompteVerrouilleError } from './auth.service';
+import { revoquerSessions } from '../../utils/sessions';
 import { loginSchema } from './auth.schema';
 import { JwtPayload } from '../../utils/jwt';
 import { env, isProd } from '../../config/env';
@@ -68,6 +69,7 @@ export async function refreshHandler(request: FastifyRequest, reply: FastifyRepl
     langue: utilisateur.langue,
     theme: utilisateur.theme,
     doit_changer_mdp: utilisateur.must_change_password,
+    tv: utilisateur.token_version,
   };
 
   const newToken        = await reply.jwtSign(payload, { expiresIn: TOKEN_EXPIRY });
@@ -96,9 +98,14 @@ export async function changePasswordHandler(request: FastifyRequest, reply: Fast
     return reply.status(400).send({ error: 'Les deux champs mot de passe sont requis' });
   }
   try {
+    // Appareil de la session courante, lu AVANT la révocation (le token en cours va être annulé).
+    const courant = request.cookies['daaragest_refresh'] ? await validerRefreshToken(request.cookies['daaragest_refresh']) : null;
     const { payload } = await changePassword(id, ancien_mot_de_passe, nouveau_mot_de_passe);
     const token = await reply.jwtSign(payload, { expiresIn: TOKEN_EXPIRY });
+    // Toutes les sessions ont été révoquées : on rouvre celle de cet appareil (jeton d'accès + refresh).
+    const refreshToken = await creerRefreshToken(id, courant?.device_id ?? null);
     reply.setCookie('daaragest_token', token, cookieOptions(reply));
+    reply.setCookie('daaragest_refresh', refreshToken, { ...cookieOptions(reply), maxAge: 30 * 24 * 60 * 60 });
     return reply.send({ message: 'Mot de passe modifié avec succès' });
   } catch (err) {
     return reply.status(400).send({ error: (err as Error).message });
@@ -128,7 +135,7 @@ export async function updateProfilHandler(request: FastifyRequest, reply: Fastif
 
 export async function revoquerSessionsHandler(request: FastifyRequest, reply: FastifyReply) {
   const { id } = request.user as JwtPayload;
-  await revoquerTousTokens(id);
+  await revoquerSessions(id);
   reply.clearCookie('daaragest_token', { path: '/' });
   reply.clearCookie('daaragest_refresh', { path: '/' });
   return reply.send({ message: 'Toutes les sessions ont été révoquées' });

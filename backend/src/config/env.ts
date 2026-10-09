@@ -3,7 +3,9 @@ import { z } from 'zod';
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL est requis'),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET doit faire au moins 32 caractères'),
-  JWT_EXPIRES_IN: z.string().default('24h'),
+  // Court par défaut : la session se prolonge via le jeton de rafraîchissement (30 j), donc un jeton
+  // d'accès volé ne vaut que quelques dizaines de minutes.
+  JWT_EXPIRES_IN: z.string().default('1h'),
   QR_SECRET: z.string().min(32, 'QR_SECRET doit faire au moins 32 caractères'),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
   COOKIE_DOMAIN: z.string().optional(),
@@ -35,7 +37,7 @@ export const env: Env = isTestRun
   ? ({
       DATABASE_URL: process.env.DATABASE_URL ?? '',
       JWT_SECRET: process.env.JWT_SECRET ?? 'test-secret-min-32-chars-padding-string',
-      JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN ?? '24h',
+      JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN ?? '1h',
       QR_SECRET: process.env.QR_SECRET ?? 'test-qr-secret-min-32-chars-padding-x',
       CORS_ORIGIN: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
       COOKIE_DOMAIN: process.env.COOKIE_DOMAIN,

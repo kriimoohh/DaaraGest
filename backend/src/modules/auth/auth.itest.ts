@@ -2,7 +2,11 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import prisma from '../../config/database';
-import { getMe, changePassword } from './auth.service';
+import type { FastifyRequest } from 'fastify';
+import { getMe, changePassword, login, creerRefreshToken, validerRefreshToken } from './auth.service';
+import { authMiddleware } from '../../middlewares/auth.middleware';
+import { revoquerSessions } from '../../utils/sessions';
+import { modifierUtilisateur, resetPassword, supprimerUtilisateur } from '../utilisateurs/utilisateurs.service';
 
 // Test d'INTÉGRATION (DB réelle) du changement de mot de passe obligatoire.
 // Régression : /auth/me n'exposait pas `must_change_password` → le front effaçait l'obligation
@@ -56,3 +60,105 @@ describe('Changement de mot de passe obligatoire', () => {
     expect(me.doit_changer_mdp).toBe(false);
   });
 });
+
+// ── Révocation des sessions (audit SenInit DG-AUTH-001) ───────────────────────
+// Avant : désactiver un compte, réinitialiser son mot de passe ou changer son rôle ne coupait pas les
+// jetons déjà émis (7 jours en production). Le jeton porte maintenant une version de session.
+describe('Révocation des sessions', () => {
+  const ADMIN = `auth-admin-${RUN}`;
+  const cible = (n: string) => `auth-${n}-${RUN}`;
+  let roleProf = '', rolePoint = '';
+
+  beforeAll(async () => {
+    roleProf = (await prisma.role.upsert({ where: { libelle_fr: 'professeur' }, update: {}, create: { libelle_fr: 'professeur' } })).id;
+    rolePoint = (await prisma.role.upsert({ where: { libelle_fr: 'pointeur' }, update: {}, create: { libelle_fr: 'pointeur' } })).id;
+    const roleAdmin = (await prisma.role.upsert({ where: { libelle_fr: 'admin' }, update: {}, create: { libelle_fr: 'admin' } })).id;
+    await prisma.utilisateur.create({ data: { id: ADMIN, etablissement_id: etabId, role_id: roleAdmin, nom_fr: 'Adm', identifiant: `adm-${RUN}`, mot_de_passe: 'x' } });
+    for (const n of ['a', 'b', 'c', 'd', 'e']) {
+      await prisma.utilisateur.create({
+        data: { id: cible(n), etablissement_id: etabId, role_id: roleProf, nom_fr: n, identifiant: `id-${n}-${RUN}`, mot_de_passe: await bcrypt.hash(MDP_INITIAL, 10) },
+      });
+    }
+  });
+
+  // Jeton « émis par login » : on rejoue login() pour obtenir un payload réel.
+  const jeton = async (n: string) => (await login(`id-${n}-${RUN}`, MDP_INITIAL)).payload;
+  const passe = async (payload: unknown, url = '/api/v1/eleves') => {
+    let code = 0;
+    const reply = { status(c: number) { code = c; return this; }, send() { return this; } };
+    await authMiddleware({ jwtVerify: async () => undefined, user: payload, url } as unknown as FastifyRequest, reply as never);
+    return code; // 0 = accepté
+  };
+
+  it('un jeton valide passe ; un jeton émis avant l\'introduction de la version (sans `tv`) passe aussi', async () => {
+    const p = await jeton('a');
+    expect(await passe(p)).toBe(0);
+    const { tv: _tv, ...ancien } = p;
+    expect(await passe(ancien)).toBe(0);
+  });
+
+  it('après révocation des sessions, l\'ancien jeton est refusé (401) — même sans `tv`', async () => {
+    const p = await jeton('a');
+    await revoquerSessions(cible('a'));
+    expect(await passe(p)).toBe(401);
+    const { tv: _tv, ...ancien } = p;
+    expect(await passe(ancien)).toBe(401);
+    // une nouvelle connexion repart sur la nouvelle version
+    expect(await passe(await jeton('a'))).toBe(0);
+  });
+
+  it('compte désactivé : jeton refusé tout de suite et refresh token inutilisable', async () => {
+    const p = await jeton('b');
+    const rt = await creerRefreshToken(cible('b'), null);
+    expect(await validerRefreshToken(rt)).not.toBeNull();
+    await supprimerUtilisateur(cible('b'), etabId, ADMIN);
+    expect(await passe(p)).toBe(401);
+    expect(await validerRefreshToken(rt)).toBeNull();
+  });
+
+  it('mot de passe réinitialisé par l\'admin : ancien jeton et refresh refusés', async () => {
+    const p = await jeton('c');
+    const rt = await creerRefreshToken(cible('c'), null);
+    await resetPassword(cible('c'), etabId, { nouveau_mot_de_passe: 'Reset-Pass-2026!c' }, ADMIN);
+    expect(await passe(p)).toBe(401);
+    expect(await validerRefreshToken(rt)).toBeNull();
+  });
+
+  it('changement de rôle : ancien jeton refusé (il portait l\'ancien rôle) ; un simple changement de nom ne coupe rien', async () => {
+    const p = await jeton('d');
+    await modifierUtilisateur(cible('d'), etabId, { nom_fr: 'Autre nom' }, ADMIN);
+    expect(await passe(p)).toBe(0);
+    await modifierUtilisateur(cible('d'), etabId, { role_id: rolePoint }, ADMIN);
+    expect(await passe(p)).toBe(401);
+  });
+
+  it('changement de mot de passe par l\'utilisateur : autres sessions coupées, nouvelle session valide', async () => {
+    const ancien = await jeton('e');
+    const rt = await creerRefreshToken(cible('e'), null);
+    const { payload } = await changePassword(cible('e'), MDP_INITIAL, 'Nouveau-Pass-2026!e');
+    expect(await passe(ancien)).toBe(401);
+    expect(await validerRefreshToken(rt)).toBeNull();
+    expect(await passe(payload)).toBe(0);
+  });
+});
+
+describe('Renouvellement de session — délai de grâce (deux onglets)', () => {
+  const U = `auth-grace-${RUN}`;
+  beforeAll(async () => {
+    const role = (await prisma.role.upsert({ where: { libelle_fr: 'professeur' }, update: {}, create: { libelle_fr: 'professeur' } })).id;
+    await prisma.utilisateur.create({ data: { id: U, etablissement_id: etabId, role_id: role, nom_fr: 'G', identifiant: `g-${RUN}`, mot_de_passe: 'x' } });
+  });
+
+  it('l\'ancien refresh token reste utilisable ~60 s après une rotation, puis expire', async () => {
+    const ancien = await creerRefreshToken(U, null);
+    const nouveau = await creerRefreshToken(U, null); // rotation faite par l'onglet 1
+    // l'onglet 2 présente encore l'ancien token : il ne doit pas être refusé
+    expect(await validerRefreshToken(ancien)).not.toBeNull();
+    expect(await validerRefreshToken(nouveau)).not.toBeNull();
+    const rt = await prisma.refreshToken.findUniqueOrThrow({ where: { token: ancien } });
+    const reste = rt.expires_at.getTime() - Date.now();
+    expect(reste).toBeGreaterThan(0);
+    expect(reste).toBeLessThanOrEqual(61_000);
+  });
+});
+
