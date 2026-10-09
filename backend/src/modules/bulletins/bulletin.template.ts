@@ -306,7 +306,7 @@ tr:nth-child(even) { background:#f9fafb }
 // ─── Header commun ─────────────────────────────────────────────────────────
 
 // Mark générique « lawh + Dg ». Dimensionné dynamiquement (viewBox 56×64).
-function logoMarkSvg(hauteurPx: number): string {
+export function logoMarkSvg(hauteurPx: number): string {
   const w = Math.round((hauteurPx * 56) / 64);
   return `<svg width="${w}" height="${hauteurPx}" viewBox="0 0 56 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
   <rect x="20" y="0" width="16" height="8" rx="4" fill="#B85433"/>
