@@ -120,6 +120,8 @@ model Utilisateur {
   last_login           DateTime?
   tentatives_connexion Int       @default(0)
   verrouille_jusqu     DateTime?
+  // Version de session portée par le JWT : l'incrémenter révoque aussitôt tous les jetons d'accès émis.
+  token_version        Int       @default(0)
   created_at           DateTime  @default(now())
   updated_at           DateTime  @updatedAt
 

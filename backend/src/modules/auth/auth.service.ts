@@ -3,6 +3,7 @@ import prisma from '../../config/database';
 import { JwtPayload } from '../../utils/jwt';
 import { assertMotDePasseValide } from '../../utils/passwordPolicy';
 import { NotFoundError } from '../../utils/errors';
+import { revoquerSessions } from '../../utils/sessions';
 
 // ─── Verrouillage anti brute-force ──────────────────────────────────────────────
 // Persisté en base (et non en mémoire process) pour rester efficace même quand
@@ -72,6 +73,7 @@ export async function login(identifiant: string, mot_de_passe: string) {
     langue: utilisateur.langue,
     theme: utilisateur.theme,
     doit_changer_mdp: utilisateur.must_change_password,
+    tv: utilisateur.token_version,
   };
 
   return {
@@ -109,6 +111,9 @@ export async function changePassword(id: string, ancien: string, nouveau: string
     where: { id },
     data: { mot_de_passe: hash, must_change_password: false },
   });
+  // Les sessions ouvertes avec l'ancien mot de passe (autres appareils, jeton volé) sont coupées ;
+  // l'appelant reçoit une session neuve portant la nouvelle version.
+  const tv = await revoquerSessions(id);
 
   const payload: JwtPayload = {
     id: utilisateur.id,
@@ -117,6 +122,7 @@ export async function changePassword(id: string, ancien: string, nouveau: string
     langue: utilisateur.langue,
     theme: utilisateur.theme,
     doit_changer_mdp: false,
+    tv,
   };
 
   return { payload };
@@ -143,10 +149,14 @@ export async function creerRefreshToken(
   utilisateur_id: string,
   device_id?: string | null,
 ): Promise<string> {
-  // Rotation : ne révoquer que les tokens actifs du MÊME appareil (multi-device).
+  // Rotation : les anciens tokens du MÊME appareil (multi-device) ne sont plus révoqués d'un coup mais
+  // n'ont plus que 60 s à vivre. Deux onglets qui rafraîchissent en même temps présentent le même
+  // ancien token : le second ne doit pas être refusé (sinon la session était effacée et l'utilisateur
+  // déconnecté). Une vraie révocation (logout, révocation de sessions) reste immédiate.
+  const GRACE_MS = 60_000;
   await prisma.refreshToken.updateMany({
-    where: { utilisateur_id, device_id: device_id ?? null, revoked: false },
-    data: { revoked: true },
+    where: { utilisateur_id, device_id: device_id ?? null, revoked: false, expires_at: { gt: new Date(Date.now() + GRACE_MS) } },
+    data: { expires_at: new Date(Date.now() + GRACE_MS) },
   });
 
   const expires_at = new Date(Date.now() + REFRESH_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
@@ -162,6 +172,8 @@ export async function validerRefreshToken(token: string) {
     include: { utilisateur: { include: { role: true } } },
   });
   if (!rt || rt.revoked || rt.expires_at < new Date()) return null;
+  // Un compte désactivé ne peut plus renouveler sa session.
+  if (!rt.utilisateur.actif) return null;
   // On renvoie le token complet (device_id inclus) pour rotation par appareil.
   return rt;
 }
