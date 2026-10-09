@@ -87,7 +87,7 @@ beforeAll(async () => {
   await prisma.anneeScolaire.create({
     data: {
       id: anneeId, etablissement_id: etabId, libelle: '2025-2026', active: true,
-      date_debut: new Date('2025-10-01'), date_fin: new Date('2026-07-31'),
+      date_debut: new Date(Date.now() - 90 * 86_400_000), date_fin: new Date(Date.now() + 200 * 86_400_000),
     },
   });
 

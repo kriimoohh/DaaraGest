@@ -36,7 +36,7 @@ async function nettoyer() {
 beforeEach(async () => {
   await nettoyer();
   await prisma.etablissement.create({ data: { id: etabId, nom_fr: 'Sup Test', code: `SUP${RUN.slice(0, 3).toUpperCase()}` } });
-  await prisma.anneeScolaire.create({ data: { id: anneeId, etablissement_id: etabId, libelle: '2025-2026', active: true, date_debut: new Date('2025-10-01'), date_fin: new Date('2026-07-31') } });
+  await prisma.anneeScolaire.create({ data: { id: anneeId, etablissement_id: etabId, libelle: '2025-2026', active: true, date_debut: new Date(Date.now() - 90 * 86_400_000), date_fin: new Date(Date.now() + 200 * 86_400_000) } });
   await prisma.filiere.create({ data: { id: filFrId, etablissement_id: etabId, code: 'FR', nom_fr: 'Filière française', langue: 'fr', sens_ecriture: 'LTR' } });
   await prisma.classe.create({ data: { id: classeId, etablissement_id: etabId, annee_scolaire_id: anneeId, nom_fr: 'CM1', filiere_id: filFrId } });
   await prisma.matiere.create({ data: { id: matId, etablissement_id: etabId, nom_fr: 'Maths', filiere_id: filFrId, coeff_defaut: 2, ordre_bulletin: 1 } });
