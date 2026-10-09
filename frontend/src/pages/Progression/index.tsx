@@ -39,7 +39,7 @@ export function ProgressionPage() {
   const decisionLabel = (d: string) => t(`progression.decisions.${d}`, { defaultValue: d });
   const api = useApi();
   const { actives: filieresActives } = useFilieres();
-  const canWrite = useAuthStore(s => ['admin', 'directeur'].includes(s.user?.role ?? ''));
+  const canWrite = useAuthStore(s => ['admin', 'directeur', 'conseiller pédagogique'].includes(s.user?.role ?? ''));
 
   const [annees,       setAnnees]       = useState<AnneeScolaire[]>([]);
   const [anneeId,      setAnneeId]      = useAnneeScolaire();

@@ -179,7 +179,7 @@ export async function bulkUpsertAbsences(
       if (eleve) {
         await notifierRoles(
           etablissement_id,
-          ['admin', 'directeur', 'gestionnaire'],
+          ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire'],
           'absence_eleve',
           `Absences répétées — ${eleve.prenom_fr} ${eleve.nom_fr}`,
           `L'élève ${eleve.prenom_fr} ${eleve.nom_fr} (${eleve.matricule}) a cumulé ${count} absences non justifiées.`,

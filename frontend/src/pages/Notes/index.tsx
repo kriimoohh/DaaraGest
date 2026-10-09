@@ -16,7 +16,7 @@ export function NotesPage() {
   const { t } = useTranslation();
   const api = useApi();
   const userRole = useAuthStore(s => s.user?.role ?? '');
-  const canEdit = ['admin', 'directeur', 'gestionnaire'].includes(userRole);
+  const canEdit = ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire'].includes(userRole);
   const isProfesseur = userRole === 'professeur';
 
   const [mode, setMode] = useState<Mode>('tableau');

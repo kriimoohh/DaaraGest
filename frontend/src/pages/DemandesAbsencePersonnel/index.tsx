@@ -62,7 +62,7 @@ export function DemandesAbsencePersonnelPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const role = user?.role ?? '';
-  const isDirection = ['admin', 'directeur', 'gestionnaire'].includes(role);
+  const isDirection = ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire'].includes(role);
 
   const api = useApi();
   const [demandes, setDemandes] = useState<Demande[]>([]);

@@ -340,7 +340,7 @@ function TemplateEditor({ type, templates, onSaved }: {
 }) {
   const { t } = useTranslation();
   const api = useApi();
-  const canEdit = useAuthStore(s => ['admin', 'directeur'].includes(s.user?.role ?? ''));
+  const canEdit = useAuthStore(s => ['admin', 'directeur', 'conseiller pédagogique'].includes(s.user?.role ?? ''));
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [html, setHtml]         = useState('');
   const [dirty, setDirty]       = useState(false);

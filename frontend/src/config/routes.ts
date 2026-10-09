@@ -7,6 +7,7 @@
 export type Role =
   | 'admin'
   | 'directeur'
+  | 'conseiller pédagogique'
   | 'gestionnaire'
   | 'agent de scolarité'
   | 'professeur'
@@ -24,42 +25,42 @@ export interface AppRoute {
 }
 
 const ALL_ROLES: Role[] = [
-  'admin', 'directeur', 'gestionnaire', 'agent de scolarité', 'professeur', 'pointeur',
+  'admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'agent de scolarité', 'professeur', 'pointeur',
 ];
 
 const ALL_EXCEPT_POINTEUR: Role[] = [
-  'admin', 'directeur', 'gestionnaire', 'agent de scolarité', 'professeur',
+  'admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'agent de scolarité', 'professeur',
 ];
 
-const DIRECTION_LIKE: Role[] = ['admin', 'directeur', 'gestionnaire'];
+const DIRECTION_LIKE: Role[] = ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire'];
 
 export const APP_ROUTES: AppRoute[] = [
   { path: '/dashboard',                   key: 'dashboard',          roles: ALL_ROLES,                       inNav: true },
-  { path: '/eleves',                      key: 'eleves',             roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'], inNav: true },
+  { path: '/eleves',                      key: 'eleves',             roles: ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'agent de scolarité'], inNav: true },
   { path: '/personnel',                   key: 'personnel',          roles: DIRECTION_LIKE,                  inNav: true },
-  { path: '/classes',                     key: 'classes',            roles: ['admin', 'directeur', 'gestionnaire', 'professeur'], inNav: true },
+  { path: '/classes',                     key: 'classes',            roles: ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'professeur'], inNav: true },
   { path: '/annees-scolaires',            key: 'annees_scolaires',   roles: DIRECTION_LIKE,                  inNav: true },
   { path: '/matieres',                    key: 'matieres',           roles: DIRECTION_LIKE,                  inNav: true },
   { path: '/domaines',                    key: 'domaines',           roles: DIRECTION_LIKE,                  inNav: true },
-  { path: '/notes',                       key: 'notes',              roles: ['admin', 'directeur', 'gestionnaire', 'professeur'], inNav: true },
-  { path: '/evaluations',                 key: 'evaluations',        roles: ['admin', 'directeur', 'gestionnaire', 'professeur'], inNav: true },
-  { path: '/cahier-texte',                key: 'cahier_texte',       roles: ['admin', 'directeur', 'gestionnaire', 'professeur'], inNav: true },
-  { path: '/bulletins',                   key: 'bulletins',          roles: ['admin', 'directeur', 'gestionnaire', 'professeur'], inNav: true },
+  { path: '/notes',                       key: 'notes',              roles: ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'professeur'], inNav: true },
+  { path: '/evaluations',                 key: 'evaluations',        roles: ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'professeur'], inNav: true },
+  { path: '/cahier-texte',                key: 'cahier_texte',       roles: ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'professeur'], inNav: true },
+  { path: '/bulletins',                   key: 'bulletins',          roles: ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'professeur'], inNav: true },
   { path: '/progression',                 key: 'progression',        roles: DIRECTION_LIKE,                  inNav: true },
-  { path: '/activites',                   key: 'activites',          roles: ['admin', 'directeur', 'gestionnaire', 'professeur'], inNav: true },
+  { path: '/activites',                   key: 'activites',          roles: ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'professeur'], inNav: true },
   { path: '/absences',                    key: 'absences',           roles: ALL_ROLES,                       inNav: true },
-  { path: '/pointage',                    key: 'pointage',           roles: ['admin', 'directeur', 'gestionnaire', 'pointeur'], inNav: true },
+  { path: '/pointage',                    key: 'pointage',           roles: ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'pointeur'], inNav: true },
   { path: '/finances',                    key: 'finances',           roles: ['admin', 'gestionnaire', 'agent de scolarité'], inNav: true },
   { path: '/documents',                   key: 'documents',          roles: DIRECTION_LIKE,                  inNav: true },
   { path: '/emploi-du-temps',             key: 'emploi_du_temps',    roles: ALL_EXCEPT_POINTEUR.concat('pointeur'),  inNav: true },
   { path: '/calendrier',                  key: 'calendrier',         roles: ALL_EXCEPT_POINTEUR.concat('pointeur'),  inNav: true },
   { path: '/messagerie',                  key: 'messagerie',         roles: ALL_EXCEPT_POINTEUR.concat('pointeur'),  inNav: true },
   { path: '/rapports',                    key: 'rapports',           roles: DIRECTION_LIKE,                  inNav: true },
-  { path: '/bibliotheque',                key: 'bibliotheque',       roles: ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'], inNav: true },
+  { path: '/bibliotheque',                key: 'bibliotheque',       roles: ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'agent de scolarité'], inNav: true },
   { path: '/demandes-absence-personnel',  key: 'demandes_absence_personnel', roles: DIRECTION_LIKE,         inNav: true },
   { path: '/utilisateurs',                key: 'utilisateurs',       roles: ['admin'],                       inNav: true },
-  { path: '/audit',                       key: 'audit',              roles: ['admin', 'directeur'],          inNav: true },
-  { path: '/liens-portail',               key: 'liens_portail',      roles: ['admin', 'directeur', 'gestionnaire'], inNav: true },
+  { path: '/audit',                       key: 'audit',              roles: ['admin', 'directeur', 'conseiller pédagogique'],          inNav: true },
+  { path: '/liens-portail',               key: 'liens_portail',      roles: ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire'], inNav: true },
   { path: '/parametres',                  key: 'parametres',         roles: ['admin'],                       inNav: true },
 ];
 

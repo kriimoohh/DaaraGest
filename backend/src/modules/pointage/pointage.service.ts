@@ -106,7 +106,7 @@ export async function upsertPresence(etablissement_id: string, data: PresenceInp
     if (prof) {
       await notifierRoles(
         etablissement_id,
-        ['admin', 'directeur'],
+        ['admin', 'directeur', 'conseiller pédagogique'],
         'absence_professeur',
         `Absence professeur — ${prof.utilisateur.prenom_fr} ${prof.utilisateur.nom_fr}`,
         `Le professeur ${prof.utilisateur.prenom_fr} ${prof.utilisateur.nom_fr} est absent le ${data.date}.`,

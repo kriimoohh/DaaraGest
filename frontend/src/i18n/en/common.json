@@ -1530,7 +1530,8 @@
     "role_professeur": "Teacher",
     "role_pointeur": "Attendance clerk",
     "chargement": "Loading…",
-    "ecrire_ph": "Write a message… (Ctrl+Enter to send)"
+    "ecrire_ph": "Write a message… (Ctrl+Enter to send)",
+    "role_conseiller": "Educational advisor"
   },
   "emploi_du_temps": {
     "titre": "Timetable",

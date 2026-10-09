@@ -384,7 +384,7 @@ export function PersonnelPage() {
   const api = useApi();
   const isAdmin = useAuthStore(s => s.user?.role === 'admin');
   const role = useAuthStore(s => s.user?.role);
-  const canGererAffectations = ['admin', 'directeur', 'gestionnaire'].includes(role ?? '');
+  const canGererAffectations = ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire'].includes(role ?? '');
 
   const [profs, setProfs] = useState<PersonnelRow[]>([]);
   const [total, setTotal] = useState(0);

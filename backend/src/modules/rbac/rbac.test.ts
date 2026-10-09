@@ -440,3 +440,17 @@ describe('RBAC — Endpoints critiques sécurité', () => {
     expect(hasAccess(ROLES.GESTIONNAIRE, ep!.groupe)).toBe(false);
   });
 });
+
+// ── Conseiller pédagogique : mêmes droits que le directeur ───────────────────
+describe('Rôle « conseiller pédagogique » = directeur', () => {
+  for (const [nom, groupe] of Object.entries(ROLE_GROUPS)) {
+    it(`groupe ${nom} : même accès que le directeur`, () => {
+      expect(hasAccess(ROLES.CONSEILLER_PEDAGOGIQUE, groupe)).toBe(hasAccess(ROLES.DIRECTEUR, groupe));
+    });
+  }
+  it('n\'a pas accès aux finances (comme le directeur) mais a accès à la direction', () => {
+    expect(hasAccess(ROLES.CONSEILLER_PEDAGOGIQUE, ROLE_GROUPS.FINANCES)).toBe(false);
+    expect(hasAccess(ROLES.CONSEILLER_PEDAGOGIQUE, ROLE_GROUPS.DIRECTION)).toBe(true);
+    expect(hasAccess(ROLES.CONSEILLER_PEDAGOGIQUE, ROLE_GROUPS.ADMIN_ONLY)).toBe(false);
+  });
+});

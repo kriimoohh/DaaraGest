@@ -42,7 +42,7 @@ const TYPE_LABELS: Record<string, string> = {
   reunion:   'calendrier.reunion',
 };
 
-const GESTION_ROLES = ['admin', 'directeur', 'gestionnaire'];
+const GESTION_ROLES = ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire'];
 
 function formatTypeBadge(type: string): 'success' | 'warning' | 'info' | 'error' | 'neutral' {
   const map: Record<string, 'success' | 'warning' | 'info' | 'error' | 'neutral'> = {
