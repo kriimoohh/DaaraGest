@@ -8,22 +8,20 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 
+type Params = Record<string, string | number | boolean | null>;
 interface AuditLog {
   id: string;
   created_at: string;
   action: string;
   entite: string;
-  entite_id: string;
-  resume: string;
-  description: string | null;
-  details: unknown;
   acteur: string;
   acteur_role: string | null;
+  phrase: { cle: string; params: Params };
 }
 interface AuditResponse { total: number; page: number; limit: number; data: AuditLog[]; }
+interface Acteur { id: string; nom: string; role: string | null }
 
-// Couleur du badge par action. Les actions sémantiques héritent d'une teinte
-// selon leur nature (création/suppression/sécurité) ; défaut neutre sinon.
+// Teinte du badge selon la nature de l'action (création / suppression / sécurité).
 const ACTION_VARIANT: Record<string, 'success' | 'info' | 'danger' | 'neutral'> = {
   CREATE: 'success', UPDATE: 'info', DELETE: 'danger',
   PASSWORD_RESET: 'info', USER_REACTIVATE: 'success',
@@ -36,24 +34,34 @@ const FILTER_ACTIONS = [
   'PROGRESSION_VALIDATE', 'PORTAIL_GENERATE', 'PORTAIL_REVOKE', 'BULLETIN_DEVERROUILLAGE',
 ];
 
+const jourIso = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const ilYa = (jours: number) => { const d = new Date(); d.setDate(d.getDate() - jours); return jourIso(d); };
+
+type Periode = 'tout' | 'aujourdhui' | '7j' | '30j' | 'perso';
+
 export function AuditPage() {
   const { t, i18n } = useTranslation();
   const api = useApi();
-  const locale = i18n.language === 'ar' ? 'ar-SN' : 'fr-FR';
+  const locale = i18n.language === 'ar' ? 'ar-SN' : i18n.language === 'en' ? 'en-GB' : 'fr-FR';
 
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [entites, setEntites] = useState<string[]>([]);
+  const [acteurs, setActeurs] = useState<Acteur[]>([]);
   const [fAction, setFAction] = useState('');
   const [fEntite, setFEntite] = useState('');
+  const [fActeur, setFActeur] = useState('');
   const [fDebut, setFDebut] = useState('');
   const [fFin, setFFin] = useState('');
+  const [periode, setPeriode] = useState<Periode>('tout');
   const limit = 50;
 
   useEffect(() => {
     api.get<string[]>('/api/v1/audit/entites').then(setEntites).catch(() => {});
+    api.get<Acteur[]>('/api/v1/audit/acteurs').then(setActeurs).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const charger = () => {
@@ -61,6 +69,7 @@ export function AuditPage() {
     const params = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (fAction) params.set('action', fAction);
     if (fEntite) params.set('entite', fEntite);
+    if (fActeur) params.set('utilisateur_id', fActeur);
     if (fDebut) params.set('date_debut', fDebut);
     if (fFin) params.set('date_fin', fFin);
     api.get<AuditResponse>(`/api/v1/audit?${params}`)
@@ -69,74 +78,152 @@ export function AuditPage() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { charger(); }, [page, fAction, fEntite, fDebut, fFin]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { setPage(1); }, [fAction, fEntite, fDebut, fFin]);
+  useEffect(() => { charger(); }, [page, fAction, fEntite, fActeur, fDebut, fFin]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setPage(1); }, [fAction, fEntite, fActeur, fDebut, fFin]);
 
+  const choisirPeriode = (p: Exclude<Periode, 'perso'>) => {
+    setPeriode(p);
+    if (p === 'tout') { setFDebut(''); setFFin(''); }
+    else if (p === 'aujourdhui') { setFDebut(ilYa(0)); setFFin(ilYa(0)); }
+    else if (p === '7j') { setFDebut(ilYa(6)); setFFin(ilYa(0)); }
+    else { setFDebut(ilYa(29)); setFFin(ilYa(0)); }
+  };
+  const filtresActifs = !!(fAction || fEntite || fActeur || fDebut || fFin);
+  const resetFiltres = () => { setFAction(''); setFEntite(''); setFActeur(''); setFDebut(''); setFFin(''); setPeriode('tout'); };
   const totalPages = Math.max(1, Math.ceil(total / limit));
-  const resetFiltres = () => { setFAction(''); setFEntite(''); setFDebut(''); setFFin(''); };
+
+  // ── Mise en mots ─────────────────────────────────────────────────────────────
+  const nombre = (v: number) => v.toLocaleString(locale);
+  const dateCourte = (iso: string) => {
+    const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T00:00:00` : iso);
+    return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
+  };
+  const libellePeriode = (n: number) => (n === 0 ? t('audit.periode_annuelle') : t('audit.periode_n', { n }));
+  const libelleType = (code: string) => {
+    const map: Record<string, string> = {
+      mensualite: t('finance.mensualite'), inscription: t('finance.inscription_fee'),
+      blouse: t('finance.blouse'), autre: t('finance.autre'),
+    };
+    return map[code] ?? code;
+  };
+
+  // Valeurs → texte lisible dans la langue de l'utilisateur ; `null` = donnée supprimée depuis.
+  const phraseDe = (l: AuditLog): string => {
+    const inconnu = t('audit.inconnu');
+    const out: Record<string, string | number> = {};
+    for (const [k, v] of Object.entries(l.phrase.params)) {
+      if (v === null || v === undefined) { out[k] = inconnu; continue; }
+      if (typeof v === 'boolean') continue;
+      if ((k === 'montant' || k === 'net') && typeof v === 'number') out[k] = nombre(v);
+      else if ((k === 'date' || k === 'pour_le' || k === 'du' || k === 'au') && typeof v === 'string') out[k] = dateCourte(v);
+      else if (k === 'periode' && typeof v === 'number') out[k] = libellePeriode(v);
+      else if (k === 'decision' && typeof v === 'string') out[k] = t(`progression.decisions.${v}`, { defaultValue: v });
+      else if (k === 'type' && typeof v === 'string') out[k] = libelleType(v);
+      else out[k] = v;
+    }
+    if (typeof l.phrase.params.avec_matieres === 'boolean') {
+      out.contenu = t(l.phrase.params.avec_matieres ? 'audit.reconduction_avec' : 'audit.reconduction_sans');
+    }
+    if (l.phrase.cle === 'defaut') {
+      out.action = t(`audit.actions.${l.action}`, { defaultValue: l.action });
+      out.entite = t(`audit.entites.${l.entite}`, { defaultValue: l.entite });
+    }
+    return t(`audit.phrases.${l.phrase.cle}`, out);
+  };
+
+  const quand = (iso: string) => {
+    const d = new Date(iso);
+    const heure = d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+    const auj = jourIso(new Date());
+    const hier = ilYa(1);
+    const j = jourIso(d);
+    const jour = j === auj ? t('audit.periodes.aujourdhui') : j === hier ? t('audit.hier')
+      : d.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
+    return { jour, heure };
+  };
+
+  const pilules: { cle: Exclude<Periode, 'perso'>; label: string }[] = [
+    { cle: 'tout', label: t('audit.periodes.tout') },
+    { cle: 'aujourdhui', label: t('audit.periodes.aujourdhui') },
+    { cle: '7j', label: t('audit.periodes.7j') },
+    { cle: '30j', label: t('audit.periodes.30j') },
+  ];
 
   return (
     <>
       <PageHeader
         eyebrow={t('nav.securite', 'Sécurité')}
         title={t('nav.audit', 'Journal d\'audit')}
-        subtitle={t('audit.subtitle', 'Qui a fait quoi — création, modification et suppression sur les données.')}
+        subtitle={t('audit.subtitle')}
       />
 
-      <div className="card card-pad" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 16 }}>
-        <div style={{ minWidth: 160 }}>
-          <Select label={t('audit.action', 'Action')} value={fAction} onChange={e => setFAction(e.target.value)}
-            options={[{ value: '', label: t('common.tous', 'Toutes') }, ...FILTER_ACTIONS.map(a => ({ value: a, label: t(`audit.actions.${a}`, { defaultValue: a }) }))]} />
+      <div className="card card-pad" style={{ marginBottom: 16, background: 'var(--paper-2)' }}>
+        <div style={{ fontWeight: 600, marginBottom: 4 }}>{t('audit.aide_titre')}</div>
+        <div style={{ fontSize: 13, color: 'var(--ink-3)', lineHeight: 1.55 }}>{t('audit.aide')}</div>
+      </div>
+
+      <div className="card card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 16 }}>
+        <div className="seg seg-accent seg-sm" role="group">
+          {pilules.map(p => (
+            <button key={p.cle} type="button" className={`seg-pill${periode === p.cle ? ' active' : ''}`} onClick={() => choisirPeriode(p.cle)}>
+              {p.label}
+            </button>
+          ))}
         </div>
-        <div style={{ minWidth: 180 }}>
-          <Select label={t('audit.entite', 'Type de donnée')} value={fEntite} onChange={e => setFEntite(e.target.value)}
-            options={[{ value: '', label: t('common.tous', 'Tous') }, ...entites.map(e => ({ value: e, label: t(`audit.entites.${e}`, { defaultValue: e }) }))]} />
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <div style={{ minWidth: 190 }}>
+            <Select label={t('audit.acteur')} value={fActeur} onChange={e => setFActeur(e.target.value)}
+              options={[{ value: '', label: t('audit.tous_acteurs') }, ...acteurs.map(a => ({ value: a.id, label: a.role ? `${a.nom} (${a.role})` : a.nom }))]} />
+          </div>
+          <div style={{ minWidth: 190 }}>
+            <Select label={t('audit.action')} value={fAction} onChange={e => setFAction(e.target.value)}
+              options={[{ value: '', label: t('audit.toutes_actions') }, ...FILTER_ACTIONS.map(a => ({ value: a, label: t(`audit.actions.${a}`, { defaultValue: a }) }))]} />
+          </div>
+          <div style={{ minWidth: 190 }}>
+            <Select label={t('audit.entite')} value={fEntite} onChange={e => setFEntite(e.target.value)}
+              options={[{ value: '', label: t('audit.tous_types') }, ...entites.map(e => ({ value: e, label: t(`audit.entites.${e}`, { defaultValue: e }) }))]} />
+          </div>
+          <Input label={t('audit.date_debut')} type="date" value={fDebut} onChange={e => { setPeriode('perso'); setFDebut(e.target.value); }} />
+          <Input label={t('audit.date_fin')} type="date" value={fFin} onChange={e => { setPeriode('perso'); setFFin(e.target.value); }} />
+          {filtresActifs && (
+            <Button variant="ghost" size="sm" onClick={resetFiltres}>{t('audit.reinitialiser')}</Button>
+          )}
+          <div style={{ marginInlineStart: 'auto', fontSize: 13, color: 'var(--ink-3)' }}>{total} {t('audit.entrees')}</div>
         </div>
-        <Input label={t('audit.date_debut', 'Du')} type="date" value={fDebut} onChange={e => setFDebut(e.target.value)} />
-        <Input label={t('audit.date_fin', 'Au')} type="date" value={fFin} onChange={e => setFFin(e.target.value)} />
-        {(fAction || fEntite || fDebut || fFin) && (
-          <Button variant="ghost" size="sm" onClick={resetFiltres}>{t('common.reinitialiser', 'Réinitialiser')}</Button>
-        )}
-        <div style={{ marginInlineStart: 'auto', fontSize: 13, color: 'var(--ink-3)' }}>{total} {t('audit.entrees', 'entrée(s)')}</div>
       </div>
 
       <div className="card" style={{ overflow: 'hidden' }}>
-        <div className="tbl-wrap">
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>{t('audit.date', 'Date')}</th>
-                <th>{t('audit.acteur', 'Acteur')}</th>
-                <th>{t('audit.action', 'Action')}</th>
-                <th>{t('audit.entite', 'Type')}</th>
-                <th>{t('audit.details', 'Détails')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={5} className="empty">{t('common.chargement', 'Chargement…')}</td></tr>
-              ) : logs.length === 0 ? (
-                <tr><td colSpan={5} className="empty">{t('audit.aucun', 'Aucune entrée')}</td></tr>
-              ) : logs.map(l => (
-                <tr key={l.id}>
-                  <td style={{ whiteSpace: 'nowrap', fontSize: 12, color: 'var(--ink-3)' }}>
-                    {new Date(l.created_at).toLocaleString(locale, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: 600 }}>{l.acteur}</div>
-                    {l.acteur_role && <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>{l.acteur_role}</div>}
-                  </td>
-                  <td><Badge label={t(`audit.actions.${l.action}`, { defaultValue: l.action })} variant={ACTION_VARIANT[l.action] ?? 'neutral'} /></td>
-                  <td style={{ fontSize: 13 }}>{t(`audit.entites.${l.entite}`, { defaultValue: l.entite })}</td>
-                  <td style={{ fontSize: 12, color: 'var(--ink-3)', maxWidth: 340, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                      title={l.description ?? l.resume}>
-                    {l.resume || '—'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {loading ? (
+          <div className="empty">{t('common.chargement', 'Chargement…')}</div>
+        ) : logs.length === 0 ? (
+          <div className="empty">{t('audit.aucun')}</div>
+        ) : (
+          logs.map((l, i) => {
+            const q = quand(l.created_at);
+            return (
+              <div key={l.id} style={{
+                display: 'flex', flexWrap: 'wrap', gap: '6px 16px', padding: '14px 18px', alignItems: 'flex-start',
+                borderTop: i === 0 ? 'none' : '1px solid var(--rule)',
+              }}>
+                <div style={{ width: 118, flexShrink: 0, fontSize: 12, color: 'var(--ink-3)', lineHeight: 1.5 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--ink-2)' }}>{q.jour}</div>
+                  <div>{q.heure}</div>
+                </div>
+                <div style={{ flex: '1 1 260px', minWidth: 0 }}>
+                  <div style={{ fontSize: 14, lineHeight: 1.55, overflowWrap: 'anywhere' }}>
+                    <strong>{l.acteur}</strong>
+                    {l.acteur_role && <span style={{ fontSize: 12, color: 'var(--ink-4)' }}> ({l.acteur_role.charAt(0).toUpperCase() + l.acteur_role.slice(1)})</span>}
+                    {' '}{phraseDe(l)}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6, flexWrap: 'wrap' }}>
+                    <Badge label={t(`audit.actions.${l.action}`, { defaultValue: l.action })} variant={ACTION_VARIANT[l.action] ?? 'neutral'} />
+                    <span style={{ fontSize: 12, color: 'var(--ink-4)' }}>{t(`audit.entites.${l.entite}`, { defaultValue: l.entite })}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {totalPages > 1 && (
