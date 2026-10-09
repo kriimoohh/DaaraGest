@@ -142,7 +142,7 @@ export function ClassesPage() {
   const api = useApi();
   const nbPeriodes = useNbPeriodes();
   const isAdmin    = useAuthStore(s => s.user?.role === 'admin');
-  const isGestion  = useAuthStore(s => ['admin', 'directeur', 'gestionnaire'].includes(s.user?.role ?? ''));
+  const isGestion  = useAuthStore(s => ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire'].includes(s.user?.role ?? ''));
   const { filieres, actives: filieresActives } = useFilieres();
   const filiereByCode = new Map(filieres.map(f => [f.code, f]));
 

@@ -291,7 +291,7 @@ function Toggle({ checked, onChange, label, description }: {
 function BulletinTemplateEditor() {
   const { t } = useTranslation();
   const api = useApi();
-  const canEdit = useAuthStore(s => ['admin', 'directeur'].includes(s.user?.role ?? ''));
+  const canEdit = useAuthStore(s => ['admin', 'directeur', 'conseiller pédagogique'].includes(s.user?.role ?? ''));
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [html, setHtml] = useState('');
   const [placeholders, setPlaceholders] = useState<{ token: string; desc: string }[]>([]);
@@ -624,7 +624,7 @@ export function ParametresPage() {
   const { t, i18n } = useTranslation();
   const api = useApi();
   const { user, updatePreferences, updateProfile } = useAuthStore();
-  const canManageFonctions = ['admin', 'directeur', 'gestionnaire'].includes(user?.role ?? '');
+  const canManageFonctions = ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire'].includes(user?.role ?? '');
 
   const [tab, setTab] = useState<Tab>('etablissement');
   const [etab, setEtab] = useState<Etablissement | null>(null);

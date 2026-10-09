@@ -1571,7 +1571,8 @@
     "role_professeur": "Professeur",
     "role_pointeur": "Pointeur",
     "chargement": "Chargement…",
-    "ecrire_ph": "Écrire un message… (Ctrl+Entrée pour envoyer)"
+    "ecrire_ph": "Écrire un message… (Ctrl+Entrée pour envoyer)",
+    "role_conseiller": "Conseiller pédagogique"
   },
   "portail_parent": {
     "titre": "Portail parent",

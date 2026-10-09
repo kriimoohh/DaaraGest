@@ -926,7 +926,7 @@ function BulletinDetailContent({
   const [obsFr, setObsFr] = useState(detail.observation_fr ?? '');
   const [obsProf, setObsProf] = useState(detail.observation_prof ?? '');
   const [savingObs, setSavingObs] = useState(false);
-  const canEditObs = ['admin', 'directeur', 'professeur'].includes(user?.role ?? '');
+  const canEditObs = ['admin', 'directeur', 'conseiller pédagogique', 'professeur'].includes(user?.role ?? '');
 
   const saveObservations = async () => {
     setSavingObs(true);

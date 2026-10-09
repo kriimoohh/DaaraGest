@@ -59,7 +59,7 @@ export function CahierTextePage() {
   const api = useApi();
   const [anneeId] = useAnneeScolaire();
   const role = useAuthStore(s2 => s2.user?.role ?? '');
-  const estDirection = ['admin', 'directeur'].includes(role);
+  const estDirection = ['admin', 'directeur', 'conseiller pédagogique'].includes(role);
 
   const [onglet, setOnglet] = useState<'journee' | 'consultation'>('journee');
 

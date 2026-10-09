@@ -67,11 +67,11 @@ const DemandesAbsencePersonnelPage = lazyWithReload(() => import('./pages/Demand
 
 // Mêmes listes que la Sidebar — source de vérité unique côté frontend
 const ROLES = {
-  gestion:    ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'],
-  lecture:    ['admin', 'directeur', 'gestionnaire', 'agent de scolarité', 'professeur', 'pointeur'],
-  academique: ['admin', 'directeur', 'gestionnaire', 'professeur'],
+  gestion:    ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'agent de scolarité'],
+  lecture:    ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'agent de scolarité', 'professeur', 'pointeur'],
+  academique: ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'professeur'],
   finances:   ['admin', 'gestionnaire', 'agent de scolarité'],
-  pointage:   ['admin', 'directeur', 'gestionnaire', 'pointeur'],
+  pointage:   ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'pointeur'],
   adminOnly:  ['admin'],
 };
 
@@ -100,19 +100,19 @@ export default function App() {
               <ProtectedRoute roles={ROLES.gestion}><ElevesPage /></ProtectedRoute>
             } />
             <Route path="/personnel" element={
-              <ProtectedRoute roles={['admin', 'directeur', 'gestionnaire']}><PersonnelPage /></ProtectedRoute>
+              <ProtectedRoute roles={['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire']}><PersonnelPage /></ProtectedRoute>
             } />
             <Route path="/classes" element={
-              <ProtectedRoute roles={['admin', 'directeur', 'gestionnaire', 'professeur']}><ClassesPage /></ProtectedRoute>
+              <ProtectedRoute roles={['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'professeur']}><ClassesPage /></ProtectedRoute>
             } />
             <Route path="/annees-scolaires" element={
-              <ProtectedRoute roles={['admin', 'directeur', 'gestionnaire']}><AnneeScolairesPage /></ProtectedRoute>
+              <ProtectedRoute roles={['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire']}><AnneeScolairesPage /></ProtectedRoute>
             } />
             <Route path="/matieres" element={
-              <ProtectedRoute roles={['admin', 'directeur', 'gestionnaire']}><MatieresPage /></ProtectedRoute>
+              <ProtectedRoute roles={['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire']}><MatieresPage /></ProtectedRoute>
             } />
             <Route path="/domaines" element={
-              <ProtectedRoute roles={['admin', 'directeur', 'gestionnaire']}><DomainesPage /></ProtectedRoute>
+              <ProtectedRoute roles={['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire']}><DomainesPage /></ProtectedRoute>
             } />
             <Route path="/notes" element={
               <ProtectedRoute roles={ROLES.academique}><NotesPage /></ProtectedRoute>
@@ -130,7 +130,7 @@ export default function App() {
               <ProtectedRoute roles={ROLES.academique}><ActivitesPage /></ProtectedRoute>
             } />
             <Route path="/documents" element={
-              <ProtectedRoute roles={['admin', 'directeur', 'gestionnaire']}><DocumentsPage /></ProtectedRoute>
+              <ProtectedRoute roles={['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire']}><DocumentsPage /></ProtectedRoute>
             } />
             <Route path="/bulletins" element={
               <ProtectedRoute roles={ROLES.academique}><BulletinsPage /></ProtectedRoute>
@@ -154,15 +154,15 @@ export default function App() {
               <ProtectedRoute roles={ROLES.finances}><FinancesPage /></ProtectedRoute>
             } />
             <Route path="/rapports" element={
-              <ProtectedRoute roles={['admin', 'directeur', 'gestionnaire']}><RapportsPage /></ProtectedRoute>
+              <ProtectedRoute roles={['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire']}><RapportsPage /></ProtectedRoute>
             } />
             <Route path="/audit" element={
-              <ProtectedRoute roles={['admin', 'directeur']}><AuditPage /></ProtectedRoute>
+              <ProtectedRoute roles={['admin', 'directeur', 'conseiller pédagogique']}><AuditPage /></ProtectedRoute>
             } />
             {/* Rôles alignés sur le back (ROLE_GROUPS.GESTION) et la nav : PAS
                 d'agent de scolarité (ROLES.gestion l'inclut, à tort ici). */}
             <Route path="/liens-portail" element={
-              <ProtectedRoute roles={['admin', 'directeur', 'gestionnaire']}><GestionPortailPage /></ProtectedRoute>
+              <ProtectedRoute roles={['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire']}><GestionPortailPage /></ProtectedRoute>
             } />
             <Route path="/bibliotheque" element={
               <ProtectedRoute roles={ROLES.gestion}><BibliothequeePage /></ProtectedRoute>

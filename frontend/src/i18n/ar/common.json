@@ -1571,7 +1571,8 @@
     "role_professeur": "الأستاذ",
     "role_pointeur": "مسجّل الحضور",
     "chargement": "جارٍ التحميل…",
-    "ecrire_ph": "اكتب رسالة… (Ctrl+Enter للإرسال)"
+    "ecrire_ph": "اكتب رسالة… (Ctrl+Enter للإرسال)",
+    "role_conseiller": "المستشار التربوي"
   },
   "portail_parent": {
     "titre": "بوابة ولي الأمر",
