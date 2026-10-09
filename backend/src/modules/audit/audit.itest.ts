@@ -88,3 +88,40 @@ describe('Journal d\'audit — description et normalisation', () => {
     expect(ligne.description).toContain('Réinitialisation du mot de passe');
   });
 });
+
+describe('Journal d\'audit — phrases lisibles (noms résolus en base)', () => {
+  const etab3 = `audit3-etab-${RUN}`;
+  const eleveId = `audit3-eleve-${RUN}`;
+  const payId = `audit3-pay-${RUN}`;
+  beforeAll(async () => {
+    await prisma.auditLog.deleteMany({ where: { etablissement_id: etab3 } });
+    await prisma.paiementEleve.deleteMany({ where: { eleve_id: eleveId } });
+    await prisma.eleve.deleteMany({ where: { etablissement_id: etab3 } });
+    await prisma.etablissement.deleteMany({ where: { id: etab3 } });
+    await prisma.etablissement.create({ data: { id: etab3, nom_fr: 'Audit3', code: `AU3${RUN.slice(0, 3).toUpperCase()}` } });
+    await prisma.eleve.create({ data: { id: eleveId, etablissement_id: etab3, matricule: `A3-${RUN}`, nom_fr: 'Sow', prenom_fr: 'Sira', sexe: 'F', date_naissance: new Date('2014-01-01') } });
+    await prisma.paiementEleve.create({ data: { id: payId, eleve_id: eleveId, type: 'mensualite', montant: 15000, recu_numero: 'REC-T-1' } });
+    await prisma.auditLog.createMany({ data: [
+      { etablissement_id: etab3, utilisateur_id: 'u', action: 'UPDATE', entite: 'PaiementEleve', entite_id: payId, details: { changes: { montant: 20000 } } },
+      { etablissement_id: etab3, utilisateur_id: 'u', action: 'DELETE', entite: 'PaiementEleve', entite_id: 'supprime', details: { eleve_id: 'eleve-disparu', montant: '5000', recu: 'REC-X' } },
+    ] });
+  });
+  afterAll(async () => {
+    await prisma.auditLog.deleteMany({ where: { etablissement_id: etab3 } });
+    await prisma.paiementEleve.deleteMany({ where: { eleve_id: eleveId } });
+    await prisma.eleve.deleteMany({ where: { etablissement_id: etab3 } });
+    await prisma.etablissement.deleteMany({ where: { id: etab3 } });
+  });
+
+  it('retrouve le nom de l\'élève et le reçu à partir de l\'id du paiement', async () => {
+    const res = await listerAuditLogs(etab3, { action: 'UPDATE' });
+    expect(res.data[0].phrase).toEqual({ cle: 'UPDATE.PaiementEleve', params: { eleve: 'Sira Sow', recu: 'REC-T-1', montant: 20000, type: 'mensualite' } });
+  });
+  it('ne renvoie jamais d\'identifiant technique : élève supprimé depuis → nom null', async () => {
+    const res = await listerAuditLogs(etab3, { action: 'DELETE' });
+    expect(res.data[0].phrase.params.eleve).toBeNull();
+    expect(JSON.stringify(res.data[0])).not.toContain('eleve-disparu');
+    expect('details' in res.data[0]).toBe(false);
+  });
+});
+
