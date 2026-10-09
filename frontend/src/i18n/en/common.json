@@ -2280,7 +2280,10 @@
     "changement_force_titre": "Password change",
     "changement_force_msg": "For security reasons, you must change your password before continuing.",
     "ok_mdp_modifie_succes": "Password changed successfully",
-    "modifier_mdp_titre": "Change password"
+    "modifier_mdp_titre": "Change password",
+    "regles_mdp": "The password must have at least 8 characters, with an uppercase letter, a lowercase letter, a digit and a special character (for example ! or #).",
+    "err_mdp_identique": "The new password must be different from the current one.",
+    "err_mdp_faible": "Password too simple: it needs at least 8 characters, with an uppercase letter, a lowercase letter, a digit and a special character."
   },
   "photo": {
     "ajouter": "Add a photo",

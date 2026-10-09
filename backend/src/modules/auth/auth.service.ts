@@ -99,6 +99,11 @@ export async function changePassword(id: string, ancien: string, nouveau: string
   const valid = await bcrypt.compare(ancien, utilisateur.mot_de_passe);
   if (!valid) throw new Error('Mot de passe actuel incorrect');
   assertMotDePasseValide(nouveau);
+  // Le changement imposé à la première connexion doit réellement changer le mot de passe
+  // transmis par l'administrateur (sinon il reste connu de lui).
+  if (await bcrypt.compare(nouveau, utilisateur.mot_de_passe)) {
+    throw new Error("Le nouveau mot de passe doit être différent de l'ancien");
+  }
   const hash = await bcrypt.hash(nouveau, 10);
   await prisma.utilisateur.update({
     where: { id },
@@ -190,6 +195,9 @@ export async function getMe(id: string) {
     role: utilisateur.role.libelle_fr,
     etablissement_id: utilisateur.etablissement_id,
     doit_changer_mdp: utilisateur.must_change_password,
+    // Même valeur sous le nom utilisé par le store du front (le modal « changement obligatoire »
+    // en dépend : sans ce champ, le /auth/me qui suit la connexion l'effaçait).
+    must_change_password: utilisateur.must_change_password,
     etablissement: {
       id: utilisateur.etablissement.id,
       nom_fr: utilisateur.etablissement.nom_fr,
