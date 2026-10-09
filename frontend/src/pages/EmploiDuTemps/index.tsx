@@ -44,7 +44,7 @@ const TOUS_LES_JOURS = [
   { value: 'samedi',   label: 'emploi_du_temps.jour_samedi' },
 ];
 
-const ROLES_EDIT = ['admin', 'directeur', 'gestionnaire'];
+const ROLES_EDIT = ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire'];
 
 function getCreneauColor(filiere: string) {
   // Tokens daara : FR → indigo (cachet officiel), AR → sahel (or, mention)

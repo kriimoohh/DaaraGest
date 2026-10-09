@@ -52,7 +52,7 @@ async function main() {
 
   // ── Rôles ────────────────────────────────────────────────────────────────────
   const rolesData = [
-    'admin', 'directeur', 'gestionnaire', 'agent de scolarité', 'professeur', 'pointeur',
+    'admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'agent de scolarité', 'professeur', 'pointeur',
   ];
   for (const libelle_fr of rolesData) {
     await prisma.role.upsert({ where: { libelle_fr }, update: {}, create: { libelle_fr } });

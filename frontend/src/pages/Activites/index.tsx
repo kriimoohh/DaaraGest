@@ -45,8 +45,8 @@ export function ActivitesPage() {
   const { t } = useTranslation();
   const api  = useApi();
   const role = useAuthStore(s => s.user?.role ?? '');
-  const canEdit   = ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'].includes(role);
-  const canDelete = ['admin', 'directeur'].includes(role);
+  const canEdit   = ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'agent de scolarité'].includes(role);
+  const canDelete = ['admin', 'directeur', 'conseiller pédagogique'].includes(role);
   const noteMax   = useNoteMax(); // échelle de l'établissement (ex: 10)
 
   // Liste activités

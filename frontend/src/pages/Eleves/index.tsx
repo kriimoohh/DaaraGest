@@ -232,9 +232,9 @@ export function ElevesPage() {
   const locale = i18n.language === 'ar' ? 'ar-SN' : 'fr-FR';
   const { currentId: anneeCouranteId } = useAnneeCourante();
   const isAdmin = useAuthStore(s => s.user?.role === 'admin');
-  const isGestion = useAuthStore(s => ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'].includes(s.user?.role ?? ''));
-  const canInscrire = useAuthStore(s => ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'].includes(s.user?.role ?? ''));
-  const canPortail = useAuthStore(s => ['admin', 'directeur', 'gestionnaire'].includes(s.user?.role ?? ''));
+  const isGestion = useAuthStore(s => ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'agent de scolarité'].includes(s.user?.role ?? ''));
+  const canInscrire = useAuthStore(s => ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'agent de scolarité'].includes(s.user?.role ?? ''));
+  const canPortail = useAuthStore(s => ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire'].includes(s.user?.role ?? ''));
   const SEXE_OPTIONS = [
     { value: 'M', label: t('eleve.masculin') },
     { value: 'F', label: t('eleve.feminin') },

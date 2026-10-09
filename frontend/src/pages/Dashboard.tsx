@@ -12,7 +12,7 @@ import { useApi } from '../hooks/useApi';
 function dashboardCaps(role: string | undefined) {
   return {
     finances:  ['admin', 'gestionnaire', 'agent de scolarité'].includes(role ?? ''),
-    analytics: ['admin', 'directeur'].includes(role ?? ''),
+    analytics: ['admin', 'directeur', 'conseiller pédagogique'].includes(role ?? ''),
   };
 }
 

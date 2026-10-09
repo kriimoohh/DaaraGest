@@ -3,7 +3,7 @@ import { ROLES } from '../config/roles';
 import { configNotesCache } from './cache';
 import { ForbiddenError } from './errors';
 
-const ROLES_ADMIN_LIKE = new Set<string>([ROLES.ADMIN, ROLES.DIRECTEUR, ROLES.GESTIONNAIRE]);
+const ROLES_ADMIN_LIKE = new Set<string>([ROLES.ADMIN, ROLES.DIRECTEUR, ROLES.CONSEILLER_PEDAGOGIQUE, ROLES.GESTIONNAIRE]);
 
 function isProfesseur(role: string): boolean {
   return role === ROLES.PROFESSEUR;

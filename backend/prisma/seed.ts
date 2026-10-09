@@ -19,6 +19,7 @@ const ID = {
     agentScolarite: '20000000-0000-4000-a000-000000000004',
     professeur:   '20000000-0000-4000-a000-000000000005',
     pointeur:     '20000000-0000-4000-a000-000000000006',
+    conseiller:   '20000000-0000-4000-a000-000000000007',
   },
 
   users: {
@@ -114,6 +115,7 @@ async function main() {
     { id: ID.roles.agentScolarite, libelle_fr: 'agent de scolarité' },
     { id: ID.roles.professeur,   libelle_fr: 'professeur' },
     { id: ID.roles.pointeur,     libelle_fr: 'pointeur' },
+    { id: ID.roles.conseiller,   libelle_fr: 'conseiller pédagogique' },
   ];
   for (const r of roles) {
     await prisma.role.upsert({ where: { id: r.id }, update: { libelle_fr: r.libelle_fr }, create: r });

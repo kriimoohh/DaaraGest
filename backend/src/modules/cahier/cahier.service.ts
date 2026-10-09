@@ -20,7 +20,7 @@ const dateDb = (d: string) => new Date(`${d}T00:00:00Z`);
 
 // Rôles qui gèrent le cahier de toutes les classes (les professeurs sont
 // limités à leurs séances/devoirs et à leurs affectations).
-const isDirectionLike = (role: string) => ['admin', 'directeur', 'gestionnaire'].includes(role);
+const isDirectionLike = (role: string) => ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire'].includes(role);
 
 async function personnelDeUtilisateur(utilisateur_id: string) {
   return prisma.personnel.findUnique({ where: { utilisateur_id }, select: { id: true } });

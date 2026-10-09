@@ -52,8 +52,8 @@ export function EvaluationsPage() {
   const locale = i18n.language === 'ar' ? 'ar-SN' : 'fr-FR';
   const api    = useApi();
   const role   = useAuthStore(s => s.user?.role ?? '');
-  const canEdit = ['admin', 'directeur', 'gestionnaire', 'professeur'].includes(role);
-  const canDelete = ['admin', 'directeur'].includes(role);
+  const canEdit = ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'professeur'].includes(role);
+  const canDelete = ['admin', 'directeur', 'conseiller pédagogique'].includes(role);
 
   // Filtres
   const [annees,   setAnnees]   = useState<AnneeScolaire[]>([]);

@@ -32,8 +32,8 @@ export function BibliothequeePage() {
   const { t } = useTranslation();
   const api  = useApi();
   const role = useAuthStore(s => s.user?.role ?? '');
-  const canEdit   = ['admin', 'directeur', 'gestionnaire', 'agent de scolarité'].includes(role);
-  const canDelete = ['admin', 'directeur'].includes(role);
+  const canEdit   = ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire', 'agent de scolarité'].includes(role);
+  const canDelete = ['admin', 'directeur', 'conseiller pédagogique'].includes(role);
 
   const [tab, setTab]             = useState<Tab>('livres');
   const [livres, setLivres]       = useState<Livre[]>([]);

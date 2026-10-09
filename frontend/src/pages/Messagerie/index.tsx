@@ -45,13 +45,14 @@ interface ConversationDetail {
 const ROLE_LABELS: Record<string, string> = {
   'admin': 'messagerie.role_admin',
   'directeur': 'messagerie.role_directeur',
+  'conseiller pédagogique': 'messagerie.role_conseiller',
   'gestionnaire': 'messagerie.role_gestionnaire',
   'agent de scolarité': 'messagerie.role_agent',
   'professeur': 'messagerie.role_professeur',
   'pointeur': 'messagerie.role_pointeur',
 };
 
-const BROADCAST_ROLES = ['directeur', 'gestionnaire', 'agent de scolarité', 'professeur', 'pointeur'];
+const BROADCAST_ROLES = ['directeur', 'conseiller pédagogique', 'gestionnaire', 'agent de scolarité', 'professeur', 'pointeur'];
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
