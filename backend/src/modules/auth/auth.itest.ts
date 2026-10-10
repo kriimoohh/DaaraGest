@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import prisma from '../../config/database';
 import type { FastifyRequest } from 'fastify';
-import { getMe, changePassword, login, creerRefreshToken, validerRefreshToken } from './auth.service';
+import { getMe, changePassword, login, creerRefreshToken, validerRefreshToken, CompteVerrouilleError } from './auth.service';
 import { authMiddleware } from '../../middlewares/auth.middleware';
 import { revoquerSessions } from '../../utils/sessions';
 import { modifierUtilisateur, resetPassword, supprimerUtilisateur } from '../utilisateurs/utilisateurs.service';
@@ -159,6 +159,43 @@ describe('Renouvellement de session — délai de grâce (deux onglets)', () => 
     const reste = rt.expires_at.getTime() - Date.now();
     expect(reste).toBeGreaterThan(0);
     expect(reste).toBeLessThanOrEqual(61_000);
+  });
+});
+
+// ── Verrouillage progressif et déverrouillage par l'administrateur (DG-AUTH-003) ─
+describe('Verrouillage de compte — progressif, levé par un reset admin', () => {
+  const ADM = `auth-adm2-${RUN}`, U = `auth-lock-${RUN}`;
+  beforeAll(async () => {
+    const roleP = (await prisma.role.upsert({ where: { libelle_fr: 'professeur' }, update: {}, create: { libelle_fr: 'professeur' } })).id;
+    const roleA = (await prisma.role.upsert({ where: { libelle_fr: 'admin' }, update: {}, create: { libelle_fr: 'admin' } })).id;
+    await prisma.utilisateur.create({ data: { id: ADM, etablissement_id: etabId, role_id: roleA, nom_fr: 'Adm2', identifiant: `adm2-${RUN}`, mot_de_passe: 'x' } });
+    await prisma.utilisateur.create({ data: { id: U, etablissement_id: etabId, role_id: roleP, nom_fr: 'Lock', identifiant: `lock-${RUN}`, mot_de_passe: await bcrypt.hash(MDP_INITIAL, 10) } });
+  });
+
+  it('5 échecs → verrou d\'1 minute ; le compteur continue ensuite et le délai monte', async () => {
+    const ident = `lock-${RUN}`;
+    for (let i = 0; i < 4; i++) await expect(login(ident, 'faux')).rejects.toThrow('Identifiants incorrects');
+    await expect(login(ident, 'faux')).rejects.toBeInstanceOf(CompteVerrouilleError); // 5ᵉ échec
+    // même le bon mot de passe est refusé pendant le verrou
+    await expect(login(ident, MDP_INITIAL)).rejects.toBeInstanceOf(CompteVerrouilleError);
+    const u = await prisma.utilisateur.findUniqueOrThrow({ where: { id: U } });
+    expect(u.tentatives_connexion).toBe(5); // plus remis à zéro au verrouillage
+    const minutes = (u.verrouille_jusqu!.getTime() - Date.now()) / 60_000;
+    expect(minutes).toBeGreaterThan(0.5);
+    expect(minutes).toBeLessThanOrEqual(1);
+    // palier suivant : 8 échecs cumulés → 5 minutes
+    await prisma.utilisateur.update({ where: { id: U }, data: { tentatives_connexion: 7, verrouille_jusqu: null } });
+    await expect(login(ident, 'faux')).rejects.toBeInstanceOf(CompteVerrouilleError);
+    const u2 = await prisma.utilisateur.findUniqueOrThrow({ where: { id: U } });
+    expect((u2.verrouille_jusqu!.getTime() - Date.now()) / 60_000).toBeGreaterThan(4);
+  });
+
+  it('un reset du mot de passe par l\'administrateur déverrouille le compte immédiatement', async () => {
+    await resetPassword(U, etabId, { nouveau_mot_de_passe: 'Reset-Pass-2026!x' }, ADM);
+    const u = await prisma.utilisateur.findUniqueOrThrow({ where: { id: U } });
+    expect(u.verrouille_jusqu).toBeNull();
+    expect(u.tentatives_connexion).toBe(0);
+    await expect(login(`lock-${RUN}`, 'Reset-Pass-2026!x')).resolves.toBeDefined();
   });
 });
 

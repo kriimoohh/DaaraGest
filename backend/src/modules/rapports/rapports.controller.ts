@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
+import { repondreErreur } from '../../utils/errorHandler';
 import {
   rapportPresencesEleves,
   rapportPresencesPersonnel,
@@ -56,7 +57,7 @@ function buildApercuHandler<P>(schema: Schema<P>, fn: ApercuFn<P>) {
     try {
       return reply.send(await fn(etablissement_id, parsed.data));
     } catch (err) {
-      return reply.status(500).send({ error: (err as Error).message });
+      return repondreErreur(reply, err);
     }
   };
 }
@@ -75,7 +76,7 @@ export async function presencesElevesHandler(request: FastifyRequest, reply: Fas
   try {
     return sendFile(reply, await rapportPresencesEleves(etablissement_id, parsed.data));
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }
 
@@ -86,7 +87,7 @@ export async function presencesPersonnelHandler(request: FastifyRequest, reply: 
   try {
     return sendFile(reply, await rapportPresencesPersonnel(etablissement_id, parsed.data));
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }
 
@@ -97,7 +98,7 @@ export async function resultatsClasseHandler(request: FastifyRequest, reply: Fas
   try {
     return sendFile(reply, await rapportResultatsClasse(etablissement_id, parsed.data));
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }
 
@@ -108,7 +109,7 @@ export async function bilanFinancierHandler(request: FastifyRequest, reply: Fast
   try {
     return sendFile(reply, await rapportBilanFinancier(etablissement_id, parsed.data));
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }
 
@@ -121,7 +122,7 @@ export async function grilleIefHandler(request: FastifyRequest, reply: FastifyRe
   try {
     return sendFile(reply, await rapportGrilleIef(etablissement_id, parsed.data));
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }
 
@@ -132,7 +133,7 @@ export async function grillePerformanceHandler(request: FastifyRequest, reply: F
   try {
     return sendFile(reply, await rapportGrillePerformance(etablissement_id, parsed.data));
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }
 
@@ -143,7 +144,7 @@ export async function performanceDomaineHandler(request: FastifyRequest, reply: 
   try {
     return sendFile(reply, await rapportPerformanceDomaine(etablissement_id, parsed.data));
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }
 
@@ -154,7 +155,7 @@ export async function releveNotesHandler(request: FastifyRequest, reply: Fastify
   try {
     return sendFile(reply, await rapportReleveNotes(etablissement_id, parsed.data));
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }
 
@@ -165,7 +166,7 @@ export async function propositionsFinHandler(request: FastifyRequest, reply: Fas
   try {
     return sendFile(reply, await rapportPropositionsFin(etablissement_id, parsed.data));
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }
 
@@ -176,7 +177,7 @@ export async function chargesPersonnelHandler(request: FastifyRequest, reply: Fa
   try {
     return sendFile(reply, await rapportChargesPersonnel(etablissement_id, parsed.data));
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }
 

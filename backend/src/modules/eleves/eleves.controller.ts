@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
+import { repondreErreur } from '../../utils/errorHandler';
 import { porteeDe, eleveVisible } from '../../utils/portee';
 import { eleveSchema, inscriptionSchema, transfertSchema } from './eleves.schema';
 import {
@@ -72,7 +73,7 @@ export async function exportExcelHandler(request: FastifyRequest, reply: Fastify
       .header('Content-Disposition', 'attachment; filename="eleves.xlsx"')
       .send(buffer);
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }
 
@@ -190,7 +191,7 @@ export async function bulkDesactiverHandler(request: FastifyRequest, reply: Fast
     const result = await bulkDesactiverEleves(body.ids, etablissement_id);
     return reply.send({ count: result.count });
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }
 
@@ -204,7 +205,7 @@ export async function bulkSupprimerHandler(request: FastifyRequest, reply: Fasti
     const result = await bulkSupprimerEleves(body.ids, etablissement_id, acteurId);
     return reply.send({ count: result.count });
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }
 
@@ -222,7 +223,7 @@ export async function bulkInscrireHandler(request: FastifyRequest, reply: Fastif
     const result = await bulkInscrireEleves(ids, etablissement_id, parsed.data);
     return reply.status(201).send({ count: result.count });
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }
 
@@ -238,7 +239,7 @@ export async function importHandler(request: FastifyRequest, reply: FastifyReply
   try {
     return reply.status(201).send(await importerEleves(etablissement_id, body.rows, acteurId));
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }
 

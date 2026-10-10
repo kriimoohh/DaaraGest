@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
+import { repondreErreur } from '../../utils/errorHandler';
 import { porteeDe, classeVisible, bulletinVisible } from '../../utils/portee';
 import { genererBulletinSchema, genererBulletinAnnuelSchema, observationSchema, preflightSchema, etatGenerationsQuerySchema, deverrouillerPeriodeSchema, bulletinTemplateSchema, bulletinTemplateTypeSchema } from './bulletins.schema';
 import {
@@ -68,7 +69,7 @@ export async function pdfHandler(request: FastifyRequest, reply: FastifyReply) {
          .header('Content-Disposition', `attachment; filename="bulletin-${id}.pdf"`)
          .send(pdf);
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }
 
@@ -173,6 +174,6 @@ export async function pdfClasseHandler(request: FastifyRequest, reply: FastifyRe
          .header('Content-Disposition', `attachment; filename="bulletins-classe-T${periode}-${filiere}.pdf"`)
          .send(pdf);
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }

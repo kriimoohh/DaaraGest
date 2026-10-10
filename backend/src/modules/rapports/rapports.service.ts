@@ -5,7 +5,7 @@ import { renderPdfHtml as _renderPdfHtmlReal } from '../../utils/browserPool';
 import { calculerMoyennesClasse, getBaremesClasseCohorte, filieresActivesCodes, resolveMentions, echelleNiveau } from '../bulletins/bulletins.service';
 import { DEFAULT_NOTE_MAX, mentionPour, classer, contexteAffichage } from '../../utils/notes';
 import { codeFiliere, selectFiliereRef } from '../../utils/filiere';
-import { NotFoundError } from '../../utils/errors';
+import { NotFoundError, ValidationError } from '../../utils/errors';
 
 // Mode aperçu : on intercepte renderPdfHtml pour capturer le HTML sans
 // passer par Puppeteer. AsyncLocalStorage isole les appels concurrents.
@@ -25,7 +25,7 @@ async function capturePreviewHtml(fn: () => Promise<unknown>): Promise<string> {
   } catch (err) {
     if (err !== PREVIEW_SIGNAL) throw err;
   }
-  if (!store.html) throw new Error('Aperçu indisponible pour ce rapport');
+  if (!store.html) throw new ValidationError('Aperçu indisponible pour ce rapport');
   return store.html;
 }
 
