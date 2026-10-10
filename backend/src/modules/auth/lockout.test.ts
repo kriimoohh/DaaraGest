@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { estVerrouille, calculerVerrou, MAX_TENTATIVES, DUREE_VERROU_MS } from './auth.service';
+import { estVerrouille, calculerVerrou, MAX_TENTATIVES, PALIERS_VERROU, CompteVerrouilleError } from './auth.service';
 
 describe('Auth — verrouillage de compte (anti brute-force)', () => {
   const t0 = new Date('2026-06-05T12:00:00.000Z');
@@ -24,25 +24,34 @@ describe('Auth — verrouillage de compte (anti brute-force)', () => {
     });
   });
 
-  describe('calculerVerrou', () => {
-    it('pas de verrou en dessous du seuil', () => {
-      for (let n = 1; n < MAX_TENTATIVES; n++) {
-        expect(calculerVerrou(n, t0)).toBeNull();
-      }
+  describe('calculerVerrou — verrouillage progressif', () => {
+    const minutes = (n: number) => { const v = calculerVerrou(n, t0); return v ? (v.getTime() - t0.getTime()) / 60_000 : null; };
+
+    it('pas de verrou sous le seuil', () => {
+      for (let n = 1; n < MAX_TENTATIVES; n++) expect(calculerVerrou(n, t0)).toBeNull();
     });
 
-    it('verrou exactement au seuil', () => {
-      const verrou = calculerVerrou(MAX_TENTATIVES, t0);
-      expect(verrou).not.toBeNull();
-      expect(verrou!.getTime()).toBe(t0.getTime() + DUREE_VERROU_MS);
+    it('le délai croît avec les échecs consécutifs (1 → 5 → 15 → 60 min)', () => {
+      expect([5, 6, 7].map(minutes)).toEqual([1, 1, 1]);
+      expect([8, 9, 10].map(minutes)).toEqual([5, 5, 5]);
+      expect([11, 12, 14].map(minutes)).toEqual([15, 15, 15]);
+      expect([15, 20, 500].map(minutes)).toEqual([60, 60, 60]); // plafonné à 1 h
     });
 
-    it('verrou au delà du seuil', () => {
-      expect(calculerVerrou(MAX_TENTATIVES + 3, t0)).not.toBeNull();
+    it('premier palier court : un tiers qui échoue 5 fois ne bloque l\'utilisateur qu\'1 minute', () => {
+      expect(minutes(MAX_TENTATIVES)).toBe(1);
     });
 
-    it('durée de verrou de 15 minutes', () => {
-      expect(DUREE_VERROU_MS).toBe(15 * 60 * 1000);
+    it('paliers strictement croissants', () => {
+      const m = PALIERS_VERROU.map(p => p.minutes);
+      expect([...m].sort((x, y) => x - y)).toEqual(m);
+    });
+  });
+
+  describe('CompteVerrouilleError', () => {
+    it('annonce la durée restante', () => {
+      expect(new CompteVerrouilleError(1).message).toContain('1 minute.');
+      expect(new CompteVerrouilleError(15).message).toContain('15 minutes.');
     });
   });
 });

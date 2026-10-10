@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
+import { repondreErreur } from '../../utils/errorHandler';
 import { getTableauDeBord } from './stats.service';
 
 export async function tableauDeBordHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -8,6 +9,6 @@ export async function tableauDeBordHandler(request: FastifyRequest, reply: Fasti
   try {
     return reply.send(await getTableauDeBord(etablissement_id, annee_scolaire_id));
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }

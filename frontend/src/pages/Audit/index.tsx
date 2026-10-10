@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useApi } from '../../hooks/useApi';
-import { toast } from '../../store/toastStore';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Select } from '../../components/ui/Select';
 import { Input } from '../../components/ui/Input';
@@ -49,6 +48,7 @@ export function AuditPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
   const [entites, setEntites] = useState<string[]>([]);
   const [acteurs, setActeurs] = useState<Acteur[]>([]);
   const [fAction, setFAction] = useState('');
@@ -66,6 +66,7 @@ export function AuditPage() {
 
   const charger = () => {
     setLoading(true);
+    setErreur(null);
     const params = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (fAction) params.set('action', fAction);
     if (fEntite) params.set('entite', fEntite);
@@ -74,7 +75,8 @@ export function AuditPage() {
     if (fFin) params.set('date_fin', fFin);
     api.get<AuditResponse>(`/api/v1/audit?${params}`)
       .then(r => { setLogs(r.data); setTotal(r.total); })
-      .catch(() => toast.error(t('common.erreur', 'Erreur de chargement')))
+      // Une erreur ne doit JAMAIS s'afficher comme « aucune action trouvée » : on le dit clairement.
+      .catch(err => { setLogs([]); setTotal(0); setErreur((err as Error).message || t('audit.erreur_chargement')); })
       .finally(() => setLoading(false));
   };
 
@@ -195,6 +197,12 @@ export function AuditPage() {
       <div className="card" style={{ overflow: 'hidden' }}>
         {loading ? (
           <div className="empty">{t('common.chargement', 'Chargement…')}</div>
+        ) : erreur ? (
+          <div className="empty" style={{ flexDirection: 'column', gap: 12 }} role="alert">
+            <p style={{ color: 'var(--danger-text)' }}>{t('audit.erreur_chargement')}</p>
+            <p className="muted" style={{ fontSize: 12 }}>{erreur}</p>
+            <Button variant="secondary" size="sm" onClick={charger}>{t('audit.reessayer')}</Button>
+          </div>
         ) : logs.length === 0 ? (
           <div className="empty">{t('audit.aucun')}</div>
         ) : (

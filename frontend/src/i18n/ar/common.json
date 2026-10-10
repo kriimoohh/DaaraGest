@@ -2232,7 +2232,9 @@
       "PORTAIL_REVOKE": "عطّل رابط دخول أولياء {{nom}}",
       "PROGRESSION_VALIDATE": "صادق على قرار انتقال {{nom}} : {{decision}}"
     },
-    "hier": "أمس"
+    "hier": "أمس",
+    "erreur_chargement": "تعذّر تحميل السجل. أعد المحاولة؛ وإن استمرت المشكلة فسجّل الخروج ثم ادخل من جديد.",
+    "reessayer": "إعادة المحاولة"
   },
   "gestion_portail": {
     "titre": "روابط بوابة الأولياء",

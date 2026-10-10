@@ -11,11 +11,18 @@ import { revoquerSessions } from '../../utils/sessions';
 // mémoire du rate-limit s'éparpille alors sur plusieurs buckets et ne plafonne
 // jamais réellement les tentatives. Le compteur en base est partagé par tous.
 export const MAX_TENTATIVES = 5;
-export const DUREE_VERROU_MS = 15 * 60 * 1000;
+
+// Verrouillage PROGRESSIF (DG-AUTH-003) : avant, 5 échecs = 15 min de blocage dur, ce qui permettait à
+// n'importe qui de bloquer le compte d'un autre (dont l'admin) en répétant des échecs. Le délai croît
+// maintenant avec les échecs CONSÉCUTIFS (remis à zéro à la première connexion réussie ou quand
+// l'administrateur réinitialise le mot de passe) et plafonne à 1 h.
+export const PALIERS_VERROU: ReadonlyArray<{ echecs: number; minutes: number }> = [
+  { echecs: 5, minutes: 1 }, { echecs: 8, minutes: 5 }, { echecs: 11, minutes: 15 }, { echecs: 15, minutes: 60 },
+];
 
 export class CompteVerrouilleError extends Error {
   constructor(public minutesRestantes: number) {
-    super('Trop de tentatives de connexion. Réessayez dans quelques minutes.');
+    super(`Trop de tentatives de connexion. Réessayez dans ${minutesRestantes} minute${minutesRestantes > 1 ? 's' : ''}.`);
     this.name = 'CompteVerrouilleError';
   }
 }
@@ -27,7 +34,9 @@ export function estVerrouille(verrouille_jusqu: Date | null, maintenant: Date = 
 
 /** Date de fin de verrou si le seuil est atteint après cet échec, sinon null. */
 export function calculerVerrou(tentativesApresEchec: number, maintenant: Date = new Date()): Date | null {
-  return tentativesApresEchec >= MAX_TENTATIVES ? new Date(maintenant.getTime() + DUREE_VERROU_MS) : null;
+  let minutes = 0;
+  for (const p of PALIERS_VERROU) if (tentativesApresEchec >= p.echecs) minutes = p.minutes;
+  return minutes > 0 ? new Date(maintenant.getTime() + minutes * 60_000) : null;
 }
 
 export async function login(identifiant: string, mot_de_passe: string) {
@@ -51,13 +60,11 @@ export async function login(identifiant: string, mot_de_passe: string) {
     const verrou = calculerVerrou(tentatives);
     await prisma.utilisateur.update({
       where: { id: utilisateur.id },
-      // Au déclenchement du verrou on repart de zéro : la fenêtre de temps
-      // (verrouille_jusqu) prend le relais comme garde-fou.
-      data: verrou
-        ? { tentatives_connexion: 0, verrouille_jusqu: verrou }
-        : { tentatives_connexion: tentatives },
+      // Le compteur n'est PAS remis à zéro au verrouillage : il continue de croître et fait monter
+      // le délai (paliers). Seule une connexion réussie ou un reset admin le remet à zéro.
+      data: { tentatives_connexion: tentatives, verrouille_jusqu: verrou },
     });
-    if (verrou) throw new CompteVerrouilleError(Math.ceil(DUREE_VERROU_MS / 60000));
+    if (verrou) throw new CompteVerrouilleError(Math.max(1, Math.ceil((verrou.getTime() - Date.now()) / 60000)));
     throw new Error('Identifiants incorrects');
   }
 

@@ -4,7 +4,11 @@
  * Ces tests exercent la couche HTTP complète (routes → middlewares → controllers)
  * sans base de données réelle. Les services sont mockés au niveau du module Prisma.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { reinitialiserEchecs } from '../../utils/echecsConnexion';
+
+// Les échecs de connexion par IP sont comptés en mémoire de processus : on repart de zéro à chaque test.
+beforeEach(() => reinitialiserEchecs());
 import Fastify, { FastifyInstance } from 'fastify';
 import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
@@ -64,6 +68,9 @@ async function buildApp() {
   const { noteRoutes } = await import('../notes/notes.routes');
   const { financesRoutes } = await import('../finances/finances.routes');
   const { absencesRoutes } = await import('../absences/absences.routes');
+  const { fonctionsRoutes } = await import('../fonctions/fonctions.routes');
+  const { gestionnaireErreurs } = await import('../../utils/errorHandler');
+  app.setErrorHandler(gestionnaireErreurs);
 
   await app.register(async (api) => {
     await api.register(authRoutes, { prefix: '/auth' });
@@ -72,6 +79,7 @@ async function buildApp() {
     await api.register(noteRoutes, { prefix: '/notes' });
     await api.register(financesRoutes, { prefix: '/finances' });
     await api.register(absencesRoutes, { prefix: '/absences' });
+    await api.register(fonctionsRoutes, { prefix: '/fonctions' });
   }, { prefix: '/api/v1' });
 
   return app;
@@ -426,6 +434,61 @@ describe('Intégration — Sessions révoquées', () => {
   });
   it('compte supprimé → 401', async () => {
     expect(await appel(null, makePayload('professeur'))).toBe(401);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// ENTRÉE INVALIDE → 400 (DG-QUAL-001)
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('Intégration — Entrée invalide dans une route à schema.parse()', () => {
+  it('POST /fonctions avec un corps vide → 400 clair (avant : 500 avec le JSON de l\'exception)', async () => {
+    const app = await buildApp();
+    const token = await signToken(app, makePayload('admin'));
+    const res = await app.inject({ method: 'POST', url: '/api/v1/fonctions', cookies: { daaragest_token: token }, payload: {} });
+    await app.close();
+    expect(res.statusCode).toBe(400);
+    const body = res.json();
+    expect(Object.keys(body)).toEqual(['error']);
+    expect(body.error).not.toContain('[\n');
+    expect(body.error.length).toBeLessThan(200);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// LIMITE DE CONNEXION PAR (IP, IDENTIFIANT) — DG-AUTH-004
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('Intégration — Limite de connexion par (IP, identifiant)', () => {
+  const tenter = (app: FastifyInstance, identifiant: string) =>
+    app.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { identifiant, mot_de_passe: 'Mauvais-mdp-1!' } });
+
+  it('le personnel d\'une même IP ne se bloque pas : 25 comptes différents, aucun 429', async () => {
+    const app = await buildApp();
+    const codes: number[] = [];
+    for (let i = 0; i < 25; i++) codes.push((await tenter(app, `prof${i}`)).statusCode);
+    await app.close();
+    expect(codes.every(c => c === 401)).toBe(true); // 401 = identifiants faux, pas 429
+  });
+
+  it('acharnement sur UN compte depuis une IP : bloqué après 10 essais dans la minute, les autres comptes restent libres', async () => {
+    const app = await buildApp();
+    const codes: number[] = [];
+    for (let i = 0; i < 12; i++) codes.push((await tenter(app, 'victime')).statusCode);
+    const autre = (await tenter(app, 'collegue')).statusCode;
+    await app.close();
+    expect(codes.slice(0, 10).every(c => c === 401)).toBe(true);
+    expect(codes.slice(10)).toEqual([429, 429]);
+    expect(autre).toBe(401);
+  });
+
+  it('pulvérisation : au-delà de 30 échecs depuis une même IP, la connexion est coupée (429) même pour un compte neuf', async () => {
+    const app = await buildApp();
+    for (let i = 0; i < 31; i++) await tenter(app, `cible${i}`);
+    const res = await tenter(app, 'nouveau');
+    await app.close();
+    expect(res.statusCode).toBe(429);
+    expect(res.json().error).toContain('réseau');
   });
 });
 

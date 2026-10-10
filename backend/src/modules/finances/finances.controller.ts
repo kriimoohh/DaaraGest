@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { JwtPayload } from '../../utils/jwt';
+import { repondreErreur } from '../../utils/errorHandler';
 import { NotFoundError } from '../../utils/errors';
 import { paiementEleveSchema, bulkPaiementEleveSchema, updatePaiementEleveSchema, paiementPersonnelSchema } from './finances.schema';
 import {
@@ -33,7 +34,7 @@ export async function exportExcelHandler(request: FastifyRequest, reply: Fastify
       .header('Content-Disposition', 'attachment; filename="paiements.xlsx"')
       .send(buffer);
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }
 
@@ -52,7 +53,7 @@ export async function exportPdfHandler(request: FastifyRequest, reply: FastifyRe
       .header('Content-Disposition', 'attachment; filename="paiements.pdf"')
       .send(buffer);
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }
 
@@ -166,7 +167,7 @@ export async function exportReliquatsExcelHandler(request: FastifyRequest, reply
       .header('Content-Disposition', 'attachment; filename="reliquats.xlsx"')
       .send(buffer);
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }
 
@@ -182,7 +183,7 @@ export async function exportReliquatsPdfHandler(request: FastifyRequest, reply: 
       .header('Content-Disposition', 'attachment; filename="reliquats.pdf"')
       .send(buffer);
   } catch (err) {
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }
 
@@ -197,6 +198,6 @@ export async function recuPaiementHandler(request: FastifyRequest, reply: Fastif
       .send(buffer);
   } catch (err) {
     if (err instanceof NotFoundError) return reply.status(404).send({ error: err.message });
-    return reply.status(500).send({ error: (err as Error).message });
+    return repondreErreur(reply, err);
   }
 }

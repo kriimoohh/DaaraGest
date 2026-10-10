@@ -2232,7 +2232,9 @@
       "PORTAIL_REVOKE": "disabled the parent access link of {{nom}}",
       "PROGRESSION_VALIDATE": "confirmed the promotion decision for {{nom}}: {{decision}}"
     },
-    "hier": "Yesterday"
+    "hier": "Yesterday",
+    "erreur_chargement": "Unable to load the log. Try again; if the problem continues, sign out and sign back in.",
+    "reessayer": "Try again"
   },
   "gestion_portail": {
     "titre": "Parent portal links",

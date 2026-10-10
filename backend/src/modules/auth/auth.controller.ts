@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { login, getMe, changePassword, updateProfil, creerRefreshToken, validerRefreshToken, revoquerRefreshToken, CompteVerrouilleError } from './auth.service';
 import { revoquerSessions } from '../../utils/sessions';
+import { ipBloquee, noterEchec } from '../../utils/echecsConnexion';
 import { loginSchema } from './auth.schema';
 import { JwtPayload } from '../../utils/jwt';
 import { env, isProd } from '../../config/env';
@@ -25,6 +26,11 @@ export async function loginHandler(request: FastifyRequest, reply: FastifyReply)
     return reply.status(400).send({ error: parsed.error.errors[0].message });
   }
 
+  // Trop d'ÉCHECS récents depuis ce réseau (pulvérisation d'identifiants) : on coupe avant tout calcul.
+  if (ipBloquee(request.ip)) {
+    return reply.status(429).send({ error: 'Trop d\'échecs de connexion depuis ce réseau. Réessayez dans quelques minutes.' });
+  }
+
   try {
     const { payload, user } = await login(parsed.data.identifiant, parsed.data.mot_de_passe);
     const token = await reply.jwtSign(payload, { expiresIn: TOKEN_EXPIRY });
@@ -35,6 +41,7 @@ export async function loginHandler(request: FastifyRequest, reply: FastifyReply)
     // cookie httpOnly. Aucun chemin javascript n'a besoin d'y accéder.
     return reply.send({ user });
   } catch (err) {
+    noterEchec(request.ip);
     if (err instanceof CompteVerrouilleError) {
       return reply.status(429).send({ error: err.message });
     }
