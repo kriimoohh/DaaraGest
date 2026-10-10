@@ -2232,7 +2232,9 @@
       "PORTAIL_REVOKE": "a désactivé le lien d'accès des parents de {{nom}}",
       "PROGRESSION_VALIDATE": "a validé la décision de passage de {{nom}} : {{decision}}"
     },
-    "hier": "Hier"
+    "hier": "Hier",
+    "erreur_chargement": "Impossible de charger le journal. Réessayez ; si le problème continue, déconnectez-vous puis reconnectez-vous.",
+    "reessayer": "Réessayer"
   },
   "gestion_portail": {
     "titre": "Liens portail parent",

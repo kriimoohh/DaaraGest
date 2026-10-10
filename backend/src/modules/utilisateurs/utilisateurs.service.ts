@@ -268,7 +268,8 @@ export async function resetPassword(id: string, etablissement_id: string, data: 
 
   await prisma.utilisateur.update({
     where: { id },
-    data: { mot_de_passe: hashedPassword, must_change_password: true },
+    // Le reset admin déverrouille aussi le compte (verrou et compteur d'échecs remis à zéro).
+    data: { mot_de_passe: hashedPassword, must_change_password: true, tentatives_connexion: 0, verrouille_jusqu: null },
   });
 
   // Mot de passe réinitialisé (souvent après un doute de compromission) : plus aucune ancienne session.

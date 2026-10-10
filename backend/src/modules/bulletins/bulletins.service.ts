@@ -451,7 +451,7 @@ export type PreflightResult = {
 export async function preflightBulletins(etablissement_id: string, data: PreflightInput): Promise<PreflightResult> {
   const { classe_id, annee_scolaire_id, periode, filiere } = data;
   const classe = await prisma.classe.findFirst({ where: { id: classe_id, etablissement_id } });
-  if (!classe) throw new Error('Classe introuvable');
+  if (!classe) throw new NotFoundError('Classe introuvable');
 
   const config = await prisma.configNotes.findUnique({ where: { etablissement_id } });
   const baseNote = Number(config?.note_max ?? DEFAULT_NOTE_MAX);
@@ -1384,7 +1384,7 @@ export async function genererPdfClasse(
     include: { eleve: true, annee_scolaire: true },
     orderBy: [{ rang: 'asc' }, { eleve: { nom_fr: 'asc' } }],
   });
-  if (bulletins.length === 0) throw new Error('Aucun bulletin trouvé');
+  if (bulletins.length === 0) throw new NotFoundError('Aucun bulletin trouvé');
 
   // Absences cumulées (année) par élève — une seule requête groupée.
   const absRows = await prisma.absenceEleve.groupBy({

@@ -1,14 +1,14 @@
-import Fastify, { FastifyError } from 'fastify';
+import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import crypto from 'crypto';
-import { Prisma } from '@prisma/client';
 import prisma from './config/database';
 import { env, isProd } from './config/env';
-import { initSentry, captureError } from './config/sentry';
+import { initSentry } from './config/sentry';
 import { isOriginBlocked } from './utils/csrf';
+import { gestionnaireErreurs } from './utils/errorHandler';
 import { checkBrowser } from './utils/browserPool';
 import { authRoutes } from './modules/auth/auth.routes';
 import { anneeScolaireRoutes } from './modules/annees-scolaires/annees-scolaires.routes';
@@ -217,30 +217,7 @@ async function build() {
     { prefix: '/api/v1' }
   );
 
-  fastify.setErrorHandler((error: FastifyError, request, reply) => {
-    fastify.log.error({ err: error, url: request.url }, 'request error');
-
-    if (error.validation) {
-      return reply.status(400).send({ error: error.message });
-    }
-
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      const status = error.code === 'P2025' ? 404 : 400;
-      return reply.status(status).send({
-        error: status === 404 ? 'Ressource introuvable' : 'Données invalides',
-      });
-    }
-    if (error instanceof Prisma.PrismaClientValidationError) {
-      return reply.status(400).send({ error: 'Données invalides' });
-    }
-
-    const statusCode = error.statusCode ?? 500;
-    if (statusCode < 500) {
-      return reply.status(statusCode).send({ error: error.message ?? 'Requête invalide' });
-    }
-    captureError(error);
-    return reply.status(500).send({ error: 'Erreur interne du serveur' });
-  });
+  fastify.setErrorHandler(gestionnaireErreurs);
 
   return fastify;
 }
