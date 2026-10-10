@@ -107,7 +107,10 @@ export async function renderPdfHtml(
 ): Promise<Buffer> {
   const page = await acquirePage();
   try {
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    // networkidle0 : attend la fin des chargements (polices Google Fonts des documents). Les types de
+    // puppeteer ≥ 24.43.1 le retirent de setContent, mais il reste honoré à l'exécution (vérifié : la page
+    // attend une requête de 2 s) — d'où le cast. À revérifier à chaque montée de version de puppeteer.
+    await page.setContent(html, { waitUntil: 'networkidle0' } as unknown as Parameters<typeof page.setContent>[1]);
     if (opts.fitToA4) await page.evaluate(FIT_A4_SCRIPT);
     const pdf = await page.pdf(pdfOptions);
     return Buffer.from(pdf);
