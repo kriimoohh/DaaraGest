@@ -85,6 +85,23 @@ jobs:
       - name: Apply migrations (replay depuis zéro)
         working-directory: backend
         run: npx prisma migrate deploy
+      # Chemin « installation à neuf » (audit SenInit DG-CONF-001) : sur une base VIERGE, migrations puis seed
+      # de production, deux fois (le second passage doit être un no-op). Avant, le seed plantait faute de
+      # `code` d'établissement et le conteneur ne démarrait pas — sans qu'aucun test ne le voie.
+      - name: Installation à neuf (migrations + seed de production sur base vierge)
+        working-directory: backend
+        env:
+          PGPASSWORD: test
+          FRESH_URL: postgresql://test:test@localhost:5432/daaragest_fresh
+          ETABLISSEMENT_CODE: CIF
+          ADMIN_INITIAL_PASSWORD: Ci-Admin-2026!x
+        run: |
+          psql -h localhost -U test -d postgres -c 'CREATE DATABASE daaragest_fresh'
+          DATABASE_URL=$FRESH_URL npx prisma migrate deploy
+          DATABASE_URL=$FRESH_URL node prisma/seed-prod.cjs
+          DATABASE_URL=$FRESH_URL node prisma/seed-prod.cjs
+          test "$(psql -h localhost -U test -d daaragest_fresh -tAc "select count(*) from \"Utilisateur\" where identifiant='admin'")" = "1"
+          test "$(psql -h localhost -U test -d daaragest_fresh -tAc "select count(*) from \"Role\"")" -ge 7
       - name: Integration tests
         working-directory: backend
         run: npm run test:integration
