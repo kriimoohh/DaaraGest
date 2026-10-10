@@ -252,6 +252,7 @@ model PresencePersonnel {
   personnel Personnel @relation(fields: [personnel_id], references: [id])
 
   @@unique([personnel_id, date])
+  @@index([date])
 }
 
 model PaiementPersonnel {
@@ -552,6 +553,8 @@ model PersonnelMatiereClasse {
   classe         Classe        @relation(fields: [classe_id], references: [id])
   matiere        Matiere       @relation(fields: [matiere_id], references: [id])
   annee_scolaire AnneeScolaire @relation(fields: [annee_scolaire_id], references: [id])
+  @@index([personnel_id])
+  @@index([classe_id])
 }
 
 model Eleve {
@@ -612,6 +615,8 @@ model Inscription {
   paiements      PaiementEleve[]
   // Rattachement classe↔filière (remplace classe_fr_id/classe_ar_id, retirés en Phase 2d).
   classes        InscriptionClasse[]
+  @@index([eleve_id])
+  @@index([annee_scolaire_id, statut])
 }
 
 // Rattachement d'une inscription à UNE classe PAR filière. Remplace à terme les
@@ -671,6 +676,7 @@ model Note {
   eleve          Eleve         @relation(fields: [eleve_id], references: [id])
 
   @@unique([eleve_id, matiere_id, periode, annee_scolaire_id])
+  @@index([annee_scolaire_id, periode, matiere_id])
 }
 
 model AuditLog {
@@ -715,6 +721,7 @@ model Bulletin {
   annee_scolaire AnneeScolaire @relation(fields: [annee_scolaire_id], references: [id])
 
   @@unique([eleve_id, annee_scolaire_id, filiere, periode])
+  @@index([annee_scolaire_id, periode, filiere])
 }
 
 model AbsenceEleve {
@@ -740,6 +747,7 @@ model AbsenceEleve {
   @@unique([eleve_id, classe_id, date])
   @@index([etablissement_id, date])
   @@index([eleve_id, date])
+  @@index([classe_id, date])
 }
 
 model Creneau {
