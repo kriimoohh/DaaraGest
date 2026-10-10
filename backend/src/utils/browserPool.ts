@@ -1,26 +1,29 @@
 import type { Browser, Page, PDFOptions } from 'puppeteer';
+import { FileAttente } from './fileAttente';
 
 const LAUNCH_ARGS = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'];
 const MAX_CONCURRENT = 3;
 
 let browser: Browser | null = null;
-let pending = 0;
-const queue: Array<() => void> = [];
+const file = new FileAttente(MAX_CONCURRENT);
+
+// Attente maximale d'une place : 60 s par défaut (PDF_ATTENTE_MAX_MS pour ajuster), puis 503.
+const attenteMaxMs = () => Number(process.env.PDF_ATTENTE_MAX_MS) || 60_000;
 
 async function acquirePage(): Promise<Page> {
-  if (pending >= MAX_CONCURRENT) {
-    await new Promise<void>(resolve => queue.push(resolve));
+  await file.acquerir(attenteMaxMs());
+  try {
+    const b = await getBrowser();
+    return await b.newPage();
+  } catch (err) {
+    file.liberer(); // échec de lancement : ne pas perdre la place
+    throw err;
   }
-  pending++;
-
-  const b = await getBrowser();
-  return b.newPage();
 }
 
 function releasePage(page: Page): void {
   page.close().catch(() => undefined);
-  pending--;
-  queue.shift()?.();
+  file.liberer();
 }
 
 async function getBrowser(): Promise<Browser> {

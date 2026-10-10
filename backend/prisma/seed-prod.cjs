@@ -41,9 +41,12 @@ async function main() {
   if (!etab) {
     etab = await prisma.etablissement.create({
       data: {
-        nom_fr: 'F.I.C.A.A.M. — École Franco-Arabe Cheikh Abdoul Ahad Mbacké',
-        adresse: 'Cité AKF Guédiawaye',
-        telephone: '33 877 76 30',
+        nom_fr: process.env.ETABLISSEMENT_NOM || 'F.I.C.A.A.M. — École Franco-Arabe Cheikh Abdoul Ahad Mbacké',
+        // `code` est obligatoire et unique dans le schéma (préfixe des matricules). Son absence faisait
+        // échouer le seed — donc le démarrage du conteneur — sur toute base vierge (DG-CONF-001).
+        code: process.env.ETABLISSEMENT_CODE || 'FIC',
+        adresse: process.env.ETABLISSEMENT_ADRESSE || 'Cité AKF Guédiawaye',
+        telephone: process.env.ETABLISSEMENT_TELEPHONE || '33 877 76 30',
         devise: 'FCFA',
       },
     });
