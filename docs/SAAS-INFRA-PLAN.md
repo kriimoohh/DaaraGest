@@ -1,7 +1,7 @@
 # Plan SaaS & Infrastructure — DaaraGest
 
 > **Statut : plan / backlog — non implémenté.** Document de référence à exploiter plus tard.
-> **Dernière MAJ : 2026-07-16.** Voir aussi [`PRODUCT.md`](../PRODUCT.md), et en mémoire projet la note *backlog priorisé* (« Phase 4 multi-établissement »).
+> **Dernière MAJ : 2026-10-10.** Voir aussi [`PRODUCT.md`](../PRODUCT.md), et en mémoire projet la note *backlog priorisé* (« Phase 4 multi-établissement »).
 >
 > Objectif : passer de **mono-établissement** (aujourd'hui `etablissement-default` en prod) à un **SaaS multi-tenant** propre, isolé et scalable, avec un choix d'infrastructure plus stable et maîtrisé en coût que l'hébergement actuel (Railway).
 
@@ -16,14 +16,14 @@ Le socle multi-tenant existe déjà à ~80 %. Ce n'est **pas une réécriture**,
 | Modèle de données | 57 modèles Prisma, **100+ références `etablissement_id`** — tout est clé par tenant | ✅ Prêt |
 | Résolution du tenant | `etablissement_id` **dans le JWT** → `request.user.etablissement_id` → passé aux services | ✅ Prêt |
 | Hardcoding mono-tenant | **0** `etablissement-default` dans `src/` (uniquement seed/tests) | ✅ Prêt |
-| Scoping des requêtes | `where: { id, etablissement_id }` **manuel, à chaque requête** | ⚠️ Fragile |
+| Scoping des requêtes | `where: { id, etablissement_id }` **manuel, à chaque requête** ; verrouillé par des tests d'intégration (documents, notes, scans) et des gardes `etablissement_id` | ⚠️ Fragile (mais testé) |
 | Isolation centralisée | **Aucune** (pas de RLS Postgres, pas de middleware Prisma `$extends`/`$use`) | ❌ À faire |
 | Onboarding / création d'établissement | **Inexistant** (établissement créé par seed uniquement) | ❌ À faire |
 | Facturation / abonnements / quotas | Inexistant | ❌ À faire |
 | Stockage fichiers | Photos/logos en **base64 (data URL) dans la base** (`src/utils/photoUrl.ts`) | ❌ À changer |
-| Génération PDF | **Puppeteer synchrone** par requête (`renderPdfHtml`) | ⚠️ Goulot à isoler |
-| Infra | 1 service Docker + 1 Postgres (Railway), `prisma migrate deploy` au boot | ⚠️ À faire évoluer |
-| Rate-limiting | Par utilisateur + IP (1 école = 1 IP publique) | ⚠️ Passer par tenant |
+| Génération PDF | **Puppeteer synchrone** par requête (`renderPdfHtml`), file de 3 rendus simultanés, `503` après 60 s d'attente | ⚠️ Goulot à isoler |
+| Infra | 1 service Docker + 1 Postgres 18 (Railway, réseau privé), `prisma migrate deploy` + seed idempotent au boot | ⚠️ À faire évoluer |
+| Rate-limiting | Par utilisateur (global) et par (IP, identifiant) pour la connexion ; 1 école = 1 IP publique | ⚠️ Passer par tenant |
 | Observabilité | Sentry actif (back+front), ne capte que les 5xx | ✅ Base OK |
 
 **Conclusion :** apte. L'effort porte sur (a) rendre l'isolation **étanche**, (b) **industrialiser** (onboarding/facturation), (c) **mettre à l'échelle** (stockage objets, pooling, worker PDF).
