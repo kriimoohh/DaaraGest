@@ -4,10 +4,10 @@ import { requireRole } from '../../middlewares/role.middleware';
 import { ROLE_GROUPS } from '../../config/roles';
 import { listerAuditHandler, listerEntitesAuditHandler, listerActeursAuditHandler } from './audit.controller';
 
-// Journal d'audit — réservé à la direction (admin/directeur).
+// Journal d'audit — réservé à l'administration (admin + gestionnaire, ROLE_GROUPS.AUDIT).
 export async function auditRoutes(fastify: FastifyInstance) {
-  const direction = requireRole(...ROLE_GROUPS.DIRECTION);
-  fastify.get('/', { preHandler: [authMiddleware, direction] }, listerAuditHandler);
-  fastify.get('/acteurs', { preHandler: [authMiddleware, direction] }, listerActeursAuditHandler);
-  fastify.get('/entites', { preHandler: [authMiddleware, direction] }, listerEntitesAuditHandler);
+  const acces = requireRole(...ROLE_GROUPS.AUDIT);
+  fastify.get('/', { preHandler: [authMiddleware, acces] }, listerAuditHandler);
+  fastify.get('/acteurs', { preHandler: [authMiddleware, acces] }, listerActeursAuditHandler);
+  fastify.get('/entites', { preHandler: [authMiddleware, acces] }, listerEntitesAuditHandler);
 }
