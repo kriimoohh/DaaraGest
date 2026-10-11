@@ -63,7 +63,7 @@ const NAV_SECTIONS = [
       { key: 'rapports',     path: '/rapports',     roles: ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire'] },
       { key: 'finances',     path: '/finances',     roles: ['admin', 'gestionnaire', 'agent de scolarité'] },
       { key: 'liens_portail', path: '/liens-portail', roles: ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire'] },
-      { key: 'audit',        path: '/audit',        roles: ['admin', 'directeur', 'conseiller pédagogique'] },
+      { key: 'audit',        path: '/audit',        roles: ['admin', 'gestionnaire'] },
       { key: 'utilisateurs', path: '/utilisateurs', roles: ['admin'] },
       { key: 'parametres',   path: '/parametres',   roles: ['admin'] },
     ],
