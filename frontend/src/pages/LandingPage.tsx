@@ -57,7 +57,7 @@ const T = {
           </svg>
         ),
         title: 'Cahier de texte',
-        desc: 'Séances faites, devoirs à faire et visa de la direction : le journal pédagogique quotidien de chaque classe, aligné sur l\'emploi du temps.',
+        desc: 'Séances faites, devoirs à faire et visa de la direction : le journal pédagogique quotidien de chaque classe, aligné sur l\'emploi du temps, avec rapport journalier ou hebdomadaire imprimable en PDF.',
       },
       {
         icon: (
@@ -305,7 +305,7 @@ const T = {
           </svg>
         ),
         title: 'دفتر النصوص',
-        desc: 'الحصص المنجزة، الواجبات المطلوبة وتأشير الإدارة — السجل التربوي اليومي لكل قسم، متوافق مع جدول الحصص.',
+        desc: 'الحصص المنجزة، الواجبات المطلوبة وتأشير الإدارة — السجل التربوي اليومي لكل قسم، متوافق مع جدول الحصص، مع تقرير يومي أو أسبوعي قابل للطباعة بصيغة PDF.',
       },
       {
         icon: (
@@ -538,7 +538,7 @@ const EN: LandingContent = {
     { icon: T.fr.features[0].icon, title: 'Students & Enrollment', desc: 'Complete student records, class enrollment management and guardian information, with an integrated parent portal.' },
     { icon: T.fr.features[1].icon, title: 'Teachers & Classes', desc: 'Teacher directory, assignment to classes and tracks, contract management and teaching-staff records.' },
     { icon: T.fr.features[2].icon, title: 'Grades & Report Cards', desc: 'Grade entry by term, automatic average calculation and generation of PDF report cards in French, Arabic or English.' },
-    { icon: T.fr.features[3].icon, title: 'Class Journal', desc: "Sessions taught, homework assigned and the school's sign-off — the daily pedagogical log for every class, aligned with the timetable." },
+    { icon: T.fr.features[3].icon, title: 'Class Journal', desc: "Sessions taught, homework assigned and the school's sign-off — the daily pedagogical log for every class, aligned with the timetable, plus a printable daily or weekly PDF report." },
     { icon: T.fr.features[4].icon, title: 'Finances', desc: 'Track student and teacher payments, manage outstanding balances, numbered PDF receipts (A5) and monthly reports.' },
     { icon: T.fr.features[5].icon, title: 'Timetable', desc: 'Weekly scheduling by class, French and Arabic tracks, with automatic conflict detection.' },
     { icon: T.fr.features[6].icon, title: 'Messaging & Calendar', desc: 'Internal staff messaging, shared school calendar and a parent portal to follow up on results.' },
