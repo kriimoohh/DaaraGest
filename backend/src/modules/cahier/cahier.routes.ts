@@ -6,6 +6,7 @@ import {
   journeeHandler, upsertSeanceHandler, modifierSeanceHandler, supprimerSeanceHandler, listerSeancesHandler,
   creerDevoirHandler, modifierDevoirHandler, supprimerDevoirHandler, listerDevoirsHandler,
   viserHandler, listerVisasHandler, supprimerVisaHandler, completudeHandler, exporterPdfHandler,
+  rapportHandler, rapportPdfHandler,
 } from './cahier.controller';
 
 const acces = requireRole(...ROLE_GROUPS.ACADEMIQUE);
@@ -26,6 +27,8 @@ export async function cahierRoutes(fastify: FastifyInstance) {
   fastify.delete('/devoirs/:id', { preHandler: [authMiddleware, acces] }, supprimerDevoirHandler);
   fastify.get('/completude',     { preHandler: [authMiddleware, acces] }, completudeHandler);
   fastify.get('/export-pdf',     { preHandler: [authMiddleware, acces] }, exporterPdfHandler);
+  fastify.get('/rapport',        { preHandler: [authMiddleware, acces] }, rapportHandler);
+  fastify.get('/rapport-pdf',    { preHandler: [authMiddleware, acces] }, rapportPdfHandler);
   fastify.get('/visas',          { preHandler: [authMiddleware, acces] }, listerVisasHandler);
   fastify.post('/visas',         { preHandler: [authMiddleware, direction] }, viserHandler);
   fastify.delete('/visas/:id',   { preHandler: [authMiddleware, direction] }, supprimerVisaHandler);

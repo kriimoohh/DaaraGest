@@ -2352,7 +2352,25 @@
     "ok_devisa": "أُلغي التأشير — الفترة مفتوحة",
     "exporter_pdf": "تصدير PDF",
     "ok_export": "تم تصدير الدفتر",
-    "err_export": "خطأ في تصدير PDF"
+    "err_export": "خطأ في تصدير PDF",
+    "rapport": "التقرير",
+    "rapport_periode": "الفترة",
+    "rapport_jour": "يومي",
+    "rapport_semaine": "أسبوعي",
+    "rapport_date": "تاريخ المرجع",
+    "rapport_toutes_classes": "جميع الأقسام",
+    "rapport_telecharger": "تنزيل PDF",
+    "rapport_imprimer": "طباعة",
+    "rapport_vide": "لا توجد حصص مبرمجة أو مسجلة في هذه الفترة.",
+    "rapport_non_renseignee": "غير مسجلة",
+    "rapport_prevues": "حصص مبرمجة",
+    "rapport_renseignees": "مسجلة",
+    "rapport_manquantes": "غير مسجلة",
+    "rapport_hors_edt": "خارج جدول الحصص",
+    "rapport_pour_le": "ليوم",
+    "rapport_objectif": "الهدف",
+    "rapport_semaine_du": "أسبوع من {{du}} إلى {{au}}",
+    "err_rapport": "تعذر إنشاء التقرير"
   },
   "aide": {
     "titre": "مساعدة"

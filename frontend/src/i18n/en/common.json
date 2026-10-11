@@ -2352,7 +2352,25 @@
     "ok_devisa": "Sign-off removed — period reopened",
     "exporter_pdf": "Export PDF",
     "ok_export": "Journal exported",
-    "err_export": "PDF export error"
+    "err_export": "PDF export error",
+    "rapport": "Report",
+    "rapport_periode": "Period",
+    "rapport_jour": "Daily",
+    "rapport_semaine": "Weekly",
+    "rapport_date": "Reference date",
+    "rapport_toutes_classes": "All classes",
+    "rapport_telecharger": "Download PDF",
+    "rapport_imprimer": "Print",
+    "rapport_vide": "No session scheduled or logged in this period.",
+    "rapport_non_renseignee": "Not logged",
+    "rapport_prevues": "scheduled sessions",
+    "rapport_renseignees": "logged",
+    "rapport_manquantes": "not logged",
+    "rapport_hors_edt": "outside timetable",
+    "rapport_pour_le": "due",
+    "rapport_objectif": "Objective",
+    "rapport_semaine_du": "Week of {{du}} to {{au}}",
+    "err_rapport": "Could not generate the report"
   },
   "aide": {
     "titre": "Help"

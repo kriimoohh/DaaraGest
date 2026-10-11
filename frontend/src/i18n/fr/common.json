@@ -2352,7 +2352,25 @@
     "ok_devisa": "Visa retiré — période rouverte",
     "exporter_pdf": "Exporter PDF",
     "ok_export": "Cahier exporté",
-    "err_export": "Erreur d'export du PDF"
+    "err_export": "Erreur d'export du PDF",
+    "rapport": "Rapport",
+    "rapport_periode": "Période",
+    "rapport_jour": "Journalier",
+    "rapport_semaine": "Hebdomadaire",
+    "rapport_date": "Date de référence",
+    "rapport_toutes_classes": "Toutes les classes",
+    "rapport_telecharger": "Télécharger le PDF",
+    "rapport_imprimer": "Imprimer",
+    "rapport_vide": "Aucune séance prévue ni renseignée sur cette période.",
+    "rapport_non_renseignee": "Non renseignée",
+    "rapport_prevues": "séances prévues",
+    "rapport_renseignees": "renseignées",
+    "rapport_manquantes": "non renseignées",
+    "rapport_hors_edt": "hors emploi du temps",
+    "rapport_pour_le": "pour le",
+    "rapport_objectif": "Objectif",
+    "rapport_semaine_du": "Semaine du {{du}} au {{au}}",
+    "err_rapport": "Impossible de générer le rapport"
   },
   "aide": {
     "titre": "Aide"
