@@ -48,7 +48,7 @@ const T = {
           </svg>
         ),
         title: 'Notes & Bulletins',
-        desc: 'Saisie des notes par période, calcul automatique des moyennes et génération de bulletins PDF bilingues.',
+        desc: 'Saisie des notes par période, calcul automatique des moyennes et génération de bulletins PDF en français, arabe ou anglais.',
       },
       {
         icon: (
@@ -57,7 +57,7 @@ const T = {
           </svg>
         ),
         title: 'Cahier de texte',
-        desc: 'Séances faites, devoirs à faire et visa de la direction : le journal pédagogique quotidien de chaque classe, aligné sur l\'emploi du temps.',
+        desc: 'Séances faites, devoirs à faire et visa de la direction : le journal pédagogique quotidien de chaque classe, aligné sur l\'emploi du temps, avec rapport journalier ou hebdomadaire imprimable en PDF.',
       },
       {
         icon: (
@@ -66,7 +66,7 @@ const T = {
           </svg>
         ),
         title: 'Finances',
-        desc: 'Suivi des paiements élèves et professeurs, gestion des reliquats, reçus automatiques et rapports mensuels.',
+        desc: 'Suivi des paiements élèves et professeurs, gestion des reliquats, reçus PDF numérotés (format A5) et rapports mensuels.',
       },
       {
         icon: (
@@ -117,6 +117,7 @@ const T = {
     roles: [
       { id: 'admin', label: 'Administrateur' },
       { id: 'directeur', label: 'Directeur' },
+      { id: 'conseiller', label: 'Conseiller pédagogique' },
       { id: 'gestionnaire', label: 'Gestionnaire' },
       { id: 'agent', label: 'Agent de scolarité' },
       { id: 'professeur', label: 'Professeur' },
@@ -132,8 +133,8 @@ const T = {
           { label: 'Paramètres système', detail: 'Configurer les informations de l\'établissement, le barème de notation, les périodes scolaires, les tarifs de scolarité et les préférences d\'affichage.' },
           { label: 'Élèves & Inscriptions', detail: 'Accès complet aux dossiers élèves, inscriptions dans les classes, et génération des liens d\'accès au portail parent.' },
           { label: 'Professeurs', detail: 'Gestion complète des dossiers enseignants : spécialités, types de contrat, salaires et affectations aux classes.' },
-          { label: 'Classes, Matières & Années', detail: 'Création et gestion des classes par filière (FR/AR), niveaux, matières, et configuration des années scolaires.' },
-          { label: 'Notes & Évaluations', detail: 'Supervision de la saisie des notes, accès à toutes les évaluations par période et génération des bulletins PDF bilingues.' },
+          { label: 'Classes, Matières & Années', detail: 'Création et gestion des classes par filière, niveaux, matières ; configuration des années scolaires et reconduction des classes d\'une année à l\'autre (sans reprendre les affectations des enseignants).' },
+          { label: 'Notes & Évaluations', detail: 'Supervision de la saisie des notes, accès à toutes les évaluations par période et génération des bulletins PDF (français, arabe ou anglais).' },
           { label: 'Cahier de texte', detail: 'Consultation et supervision du cahier de texte de toutes les classes : séances faites, devoirs donnés, visa de verrouillage des périodes.' },
           { label: 'Finances', detail: 'Accès complet : paiements élèves, versements professeurs, retenues, reliquats et rapports financiers mensuels.' },
           { label: 'Documents officiels', detail: 'Génération de tous les documents officiels : certificats de scolarité, attestations et tout autre document en PDF.' },
@@ -143,14 +144,15 @@ const T = {
           { label: 'Activités parascolaires', detail: 'Gestion complète des activités, inscriptions, séances et évaluations des élèves participants.' },
           { label: 'Rapports', detail: 'Rapports synthétiques : présences élèves et professeurs, résultats par classe, bilan financier mensuel.' },
           { label: 'Messagerie & Calendrier', detail: 'Messagerie avec tous les membres du personnel et gestion complète du calendrier scolaire.' },
+          { label: 'Journal d\'audit', detail: 'Historique lisible de qui a fait quoi : phrases en clair, filtres par personne, action, type de donnée et période.' },
           { label: 'Pointage & Absences', detail: 'Supervision du pointage des professeurs et suivi complet des absences des élèves avec statistiques.' },
         ],
       },
       directeur: {
         title: 'Directeur',
-        desc: 'Le directeur dispose d\'une vue globale sur toutes les activités de l\'établissement. Il pilote les équipes, suit les indicateurs pédagogiques et coordonne les opérations au quotidien.',
+        desc: 'Le directeur dispose d\'une vue globale sur les activités pédagogiques et administratives de l\'établissement. Il pilote les équipes, suit les indicateurs pédagogiques et coordonne les opérations au quotidien. Les finances ne font pas partie de son périmètre.',
         access: [
-          { label: 'Tableau de bord', detail: 'Statistiques de l\'établissement, évolution des paiements sur 6 mois et indicateurs de performance.' },
+          { label: 'Tableau de bord', detail: 'Statistiques de l\'établissement : effectifs, présences et indicateurs de performance pédagogique.' },
           { label: 'Élèves & Inscriptions', detail: 'Consultation et gestion complète des dossiers élèves, inscriptions dans les classes et suivi des effectifs.' },
           { label: 'Professeurs', detail: 'Gestion des dossiers enseignants, suivi des affectations, spécialités et informations contractuelles.' },
           { label: 'Classes, Matières & Années scolaires', detail: 'Configuration des classes, niveaux, filières, matières et gestion des années scolaires actives.' },
@@ -160,10 +162,34 @@ const T = {
           { label: 'Pointage des professeurs', detail: 'Suivi quotidien de la présence, du retard ou de l\'absence des enseignants.' },
           { label: 'Absences des élèves', detail: 'Consultation et gestion du suivi des absences, taux de présence et alertes par classe.' },
           { label: 'Statistiques analytiques', detail: 'Tableau de bord analytique : taux de présence, moyennes par classe et filière, top élèves et alertes actives.' },
-          { label: 'Rapports', detail: 'Rapports de présences élèves et professeurs, résultats par classe et bilan financier.' },
+          { label: 'Rapports', detail: 'Rapports de présences élèves et professeurs et résultats par classe (les finances sont réservées à l\'administrateur, au gestionnaire et à l\'agent de scolarité).' },
           { label: 'Progression des élèves', detail: 'Validation et suivi de la progression académique pluriannuelle des élèves, historique par élève.' },
           { label: 'Activités parascolaires', detail: 'Consultation et gestion des activités parascolaires, séances et évaluations.' },
           { label: 'Messagerie & Calendrier', detail: 'Messagerie interne avec l\'équipe et gestion des événements du calendrier scolaire.' },
+          { label: 'Journal d\'audit', detail: 'Historique lisible de qui a fait quoi : phrases en clair, filtres par personne, action, type de donnée et période.' },
+          { label: 'Documents officiels', detail: 'Génération et consultation des certificats, attestations et documents officiels.' },
+          { label: 'Bibliothèque', detail: 'Consultation du catalogue et des prêts en cours dans la bibliothèque de l\'établissement.' },
+        ],
+      },
+      conseiller: {
+        title: 'Conseiller pédagogique',
+        desc: 'Le conseiller pédagogique dispose des mêmes droits que le directeur : suivi pédagogique de toutes les classes, cahier de texte, bulletins, progression et journal d\'audit. Les finances ne font pas partie de son périmètre.',
+        access: [
+          { label: 'Tableau de bord', detail: 'Statistiques de l\'établissement : effectifs, présences et indicateurs de performance pédagogique.' },
+          { label: 'Élèves & Inscriptions', detail: 'Consultation et gestion complète des dossiers élèves, inscriptions dans les classes et suivi des effectifs.' },
+          { label: 'Professeurs', detail: 'Gestion des dossiers enseignants, suivi des affectations, spécialités et informations contractuelles.' },
+          { label: 'Classes, Matières & Années scolaires', detail: 'Configuration des classes, niveaux, filières, matières et gestion des années scolaires actives.' },
+          { label: 'Notes, Évaluations & Bulletins', detail: 'Consultation des notes, accès à toutes les évaluations et génération des bulletins PDF par classe et période.' },
+          { label: 'Cahier de texte', detail: 'Visa (verrouillage) du cahier de texte par période et suivi de la complétude des séances saisies par classe.' },
+          { label: 'Emploi du temps', detail: 'Consultation et modification des emplois du temps de toutes les classes.' },
+          { label: 'Pointage des professeurs', detail: 'Suivi quotidien de la présence, du retard ou de l\'absence des enseignants.' },
+          { label: 'Absences des élèves', detail: 'Consultation et gestion du suivi des absences, taux de présence et alertes par classe.' },
+          { label: 'Statistiques analytiques', detail: 'Tableau de bord analytique : taux de présence, moyennes par classe et filière, top élèves et alertes actives.' },
+          { label: 'Rapports', detail: 'Rapports de présences élèves et professeurs et résultats par classe (les finances sont réservées à l\'administrateur, au gestionnaire et à l\'agent de scolarité).' },
+          { label: 'Progression des élèves', detail: 'Validation et suivi de la progression académique pluriannuelle des élèves, historique par élève.' },
+          { label: 'Activités parascolaires', detail: 'Consultation et gestion des activités parascolaires, séances et évaluations.' },
+          { label: 'Messagerie & Calendrier', detail: 'Messagerie interne avec l\'équipe et gestion des événements du calendrier scolaire.' },
+          { label: 'Journal d\'audit', detail: 'Historique lisible de qui a fait quoi : phrases en clair, filtres par personne, action, type de donnée et période.' },
           { label: 'Documents officiels', detail: 'Génération et consultation des certificats, attestations et documents officiels.' },
           { label: 'Bibliothèque', detail: 'Consultation du catalogue et des prêts en cours dans la bibliothèque de l\'établissement.' },
         ],
@@ -210,7 +236,6 @@ const T = {
           { label: 'Cahier de texte', detail: 'Saisie quotidienne des séances faites et des devoirs donnés pour ses classes, alignée sur son emploi du temps.' },
           { label: 'Bulletins de notes', detail: 'Génération et consultation des bulletins de notes. Visualisation des moyennes par élève et par matière.' },
           { label: 'Activités pédagogiques', detail: 'Planification et suivi des activités scolaires et projets pour les classes assignées.' },
-          { label: 'Progression des élèves', detail: 'Suivi de la progression académique des élèves au fil des périodes dans ses classes.' },
           { label: 'Emploi du temps', detail: 'Consultation de son emploi du temps personnel et des plannings de ses classes.' },
           { label: 'Absences (lecture)', detail: 'Consultation du suivi des absences de ses élèves pour ajuster son enseignement.' },
           { label: 'Messagerie & Calendrier', detail: 'Messagerie interne avec l\'équipe et consultation du calendrier des événements scolaires.' },
@@ -271,7 +296,7 @@ const T = {
           </svg>
         ),
         title: 'الدرجات وشهادات النتائج',
-        desc: 'إدخال الدرجات حسب الفصل، الحساب التلقائي للمعدلات وإنشاء شهادات النتائج PDF ثنائية اللغة.',
+        desc: 'إدخال الدرجات حسب الفصل، الحساب التلقائي للمعدلات وإنشاء شهادات النتائج PDF بالفرنسية أو العربية أو الإنجليزية.',
       },
       {
         icon: (
@@ -280,7 +305,7 @@ const T = {
           </svg>
         ),
         title: 'دفتر النصوص',
-        desc: 'الحصص المنجزة، الواجبات المطلوبة وتأشير الإدارة — السجل التربوي اليومي لكل قسم، متوافق مع جدول الحصص.',
+        desc: 'الحصص المنجزة، الواجبات المطلوبة وتأشير الإدارة — السجل التربوي اليومي لكل قسم، متوافق مع جدول الحصص، مع تقرير يومي أو أسبوعي قابل للطباعة بصيغة PDF.',
       },
       {
         icon: (
@@ -289,7 +314,7 @@ const T = {
           </svg>
         ),
         title: 'المالية',
-        desc: 'متابعة مدفوعات التلاميذ والأساتذة، إدارة المتأخرات، الوصولات التلقائية والتقارير الشهرية.',
+        desc: 'متابعة مدفوعات التلاميذ والأساتذة، إدارة المتأخرات، وصولات PDF مرقّمة (A5) والتقارير الشهرية.',
       },
       {
         icon: (
@@ -340,6 +365,7 @@ const T = {
     roles: [
       { id: 'admin', label: 'المدير العام' },
       { id: 'directeur', label: 'المدير' },
+      { id: 'conseiller', label: 'المستشار التربوي' },
       { id: 'gestionnaire', label: 'المسير' },
       { id: 'agent', label: 'عون التمدرس' },
       { id: 'professeur', label: 'الأستاذ' },
@@ -355,8 +381,8 @@ const T = {
           { label: 'إعدادات النظام', detail: 'ضبط معلومات المؤسسة، سلم التقييم، الفصول الدراسية، التعريفات وتفضيلات العرض.' },
           { label: 'التلاميذ والتسجيل', detail: 'وصول كامل لملفات التلاميذ، التسجيل في الأقسام وإنشاء روابط بوابة الأولياء.' },
           { label: 'الأساتذة', detail: 'الإدارة الكاملة لملفات الأساتذة: التخصصات، أنواع العقود، الرواتب والتعيينات في الأقسام.' },
-          { label: 'الأقسام والمواد والسنوات', detail: 'إنشاء وإدارة الأقسام حسب الشعبة (فرنسي/عربي)، المستويات، المواد وإعداد السنوات الدراسية.' },
-          { label: 'الدرجات والتقييمات', detail: 'الإشراف على إدخال الدرجات، الوصول لجميع التقييمات حسب الفصل وإنشاء شهادات النتائج ثنائية اللغة.' },
+          { label: 'الأقسام والمواد والسنوات', detail: 'إنشاء وإدارة الأقسام حسب الشعبة، المستويات، المواد وإعداد السنوات الدراسية وإعادة تجديد الأقسام من سنة إلى أخرى (دون نقل تعيينات الأساتذة).' },
+          { label: 'الدرجات والتقييمات', detail: 'الإشراف على إدخال الدرجات، الوصول لجميع التقييمات حسب الفصل وإنشاء شهادات النتائج بالفرنسية أو العربية أو الإنجليزية.' },
           { label: 'دفتر النصوص', detail: 'الاطلاع على دفتر النصوص لجميع الأقسام والإشراف عليه: الحصص المنجزة، الواجبات المعطاة، والتأشير لقفل الفترات.' },
           { label: 'المالية', detail: 'وصول كامل: مدفوعات التلاميذ، مدفوعات الأساتذة، الاستقطاعات، المتأخرات والتقارير المالية الشهرية.' },
           { label: 'الوثائق الرسمية', detail: 'إنشاء جميع الوثائق الرسمية: شهادات التمدرس، الاعترافات وكل الوثائق الإدارية بصيغة PDF.' },
@@ -366,14 +392,15 @@ const T = {
           { label: 'الأنشطة اللاصفية', detail: 'الإدارة الكاملة للأنشطة، التسجيلات، الحصص وتقييم التلاميذ المشاركين.' },
           { label: 'التقارير', detail: 'تقارير شاملة: حضور التلاميذ والأساتذة، نتائج الأقسام، البيان المالي الشهري.' },
           { label: 'المراسلة والتقويم', detail: 'المراسلة مع جميع أعضاء الهيئة وإدارة التقويم المدرسي بالكامل.' },
+          { label: 'سجل التدقيق', detail: 'سجل مقروء لمن فعل ماذا: جمل واضحة ومرشحات حسب الشخص والإجراء ونوع البيانات والفترة.' },
           { label: 'الحضور والغيابات', detail: 'الإشراف على سجل حضور الأساتذة والمتابعة الكاملة لغيابات التلاميذ مع الإحصاءات.' },
         ],
       },
       directeur: {
         title: 'المدير',
-        desc: 'يتمتع المدير بنظرة شاملة على جميع أنشطة المؤسسة. يقود الفرق ويتابع المؤشرات التربوية والمالية ويشرف على سير العمل اليومي.',
+        desc: 'يتمتع المدير بنظرة شاملة على الأنشطة التربوية والإدارية للمؤسسة. يقود الفرق ويتابع المؤشرات التربوية ويشرف على سير العمل اليومي. المالية خارج نطاق صلاحياته.',
         access: [
-          { label: 'لوحة التحكم', detail: 'إحصاءات المؤسسة، تطور المدفوعات خلال 6 أشهر ومؤشرات الأداء الرئيسية.' },
+          { label: 'لوحة التحكم', detail: 'إحصاءات المؤسسة: الأعداد والحضور ومؤشرات الأداء التربوي.' },
           { label: 'التلاميذ والتسجيل', detail: 'الاستشارة والإدارة الكاملة لملفات التلاميذ والتسجيل في الأقسام ومتابعة الأعداد.' },
           { label: 'الأساتذة', detail: 'إدارة ملفات الأساتذة، متابعة التعيينات، التخصصات والمعلومات التعاقدية.' },
           { label: 'الأقسام والمواد والسنوات', detail: 'إعداد الأقسام، المستويات، الشعب، المواد وإدارة السنوات الدراسية النشطة.' },
@@ -383,10 +410,34 @@ const T = {
           { label: 'سجل حضور الأساتذة', detail: 'المتابعة اليومية لحضور وغياب وتأخر الأساتذة.' },
           { label: 'غيابات التلاميذ', detail: 'الاطلاع وإدارة سجلات الغياب ونسب الحضور والتنبيهات حسب القسم.' },
           { label: 'الإحصاءات التحليلية', detail: 'لوحة تحكم تحليلية: نسب الحضور، المعدلات حسب القسم والشعبة، أفضل التلاميذ والتنبيهات النشطة.' },
-          { label: 'التقارير', detail: 'تقارير الحضور والنتائج حسب القسم وبيان المالية الشهري.' },
+          { label: 'التقارير', detail: 'تقارير الحضور والنتائج حسب القسم (المالية مخصصة للمدير العام والمسير وعون التمدرس).' },
           { label: 'التقدم الدراسي', detail: 'التحقق من صحة ومتابعة التقدم الأكاديمي متعدد السنوات للتلاميذ والاطلاع على السجل التاريخي.' },
           { label: 'الأنشطة اللاصفية', detail: 'الاطلاع وإدارة الأنشطة اللاصفية والحصص والتقييمات.' },
           { label: 'المراسلة والتقويم', detail: 'المراسلة الداخلية مع الفريق وإدارة أحداث التقويم المدرسي.' },
+          { label: 'سجل التدقيق', detail: 'سجل مقروء لمن فعل ماذا: جمل واضحة ومرشحات حسب الشخص والإجراء ونوع البيانات والفترة.' },
+          { label: 'الوثائق الرسمية', detail: 'إنشاء والاطلاع على شهادات التمدرس والاعترافات والوثائق الرسمية.' },
+          { label: 'المكتبة', detail: 'الاطلاع على الفهرس والإعارات الجارية في مكتبة المؤسسة.' },
+        ],
+      },
+      conseiller: {
+        title: 'المستشار التربوي',
+        desc: 'يتمتع المستشار التربوي بنفس صلاحيات المدير: المتابعة التربوية لجميع الأقسام ودفتر النصوص وشهادات النتائج والتقدم الدراسي وسجل التدقيق. المالية خارج نطاق صلاحياته.',
+        access: [
+          { label: 'لوحة التحكم', detail: 'إحصاءات المؤسسة: الأعداد والحضور ومؤشرات الأداء التربوي.' },
+          { label: 'التلاميذ والتسجيل', detail: 'الاستشارة والإدارة الكاملة لملفات التلاميذ والتسجيل في الأقسام ومتابعة الأعداد.' },
+          { label: 'الأساتذة', detail: 'إدارة ملفات الأساتذة، متابعة التعيينات، التخصصات والمعلومات التعاقدية.' },
+          { label: 'الأقسام والمواد والسنوات', detail: 'إعداد الأقسام، المستويات، الشعب، المواد وإدارة السنوات الدراسية النشطة.' },
+          { label: 'الدرجات وشهادات النتائج', detail: 'الاطلاع على الدرجات، الوصول لجميع التقييمات وإنشاء شهادات النتائج حسب القسم والفصل.' },
+          { label: 'دفتر النصوص', detail: 'التأشير على دفتر النصوص (قفل الفترة) ومتابعة نسبة إتمام الحصص المسجلة حسب القسم.' },
+          { label: 'جدول الحصص', detail: 'الاطلاع على وتعديل جداول حصص جميع الأقسام.' },
+          { label: 'سجل حضور الأساتذة', detail: 'المتابعة اليومية لحضور وغياب وتأخر الأساتذة.' },
+          { label: 'غيابات التلاميذ', detail: 'الاطلاع وإدارة سجلات الغياب ونسب الحضور والتنبيهات حسب القسم.' },
+          { label: 'الإحصاءات التحليلية', detail: 'لوحة تحكم تحليلية: نسب الحضور، المعدلات حسب القسم والشعبة، أفضل التلاميذ والتنبيهات النشطة.' },
+          { label: 'التقارير', detail: 'تقارير الحضور والنتائج حسب القسم (المالية مخصصة للمدير العام والمسير وعون التمدرس).' },
+          { label: 'التقدم الدراسي', detail: 'التحقق من صحة ومتابعة التقدم الأكاديمي متعدد السنوات للتلاميذ والاطلاع على السجل التاريخي.' },
+          { label: 'الأنشطة اللاصفية', detail: 'الاطلاع وإدارة الأنشطة اللاصفية والحصص والتقييمات.' },
+          { label: 'المراسلة والتقويم', detail: 'المراسلة الداخلية مع الفريق وإدارة أحداث التقويم المدرسي.' },
+          { label: 'سجل التدقيق', detail: 'سجل مقروء لمن فعل ماذا: جمل واضحة ومرشحات حسب الشخص والإجراء ونوع البيانات والفترة.' },
           { label: 'الوثائق الرسمية', detail: 'إنشاء والاطلاع على شهادات التمدرس والاعترافات والوثائق الرسمية.' },
           { label: 'المكتبة', detail: 'الاطلاع على الفهرس والإعارات الجارية في مكتبة المؤسسة.' },
         ],
@@ -433,7 +484,6 @@ const T = {
           { label: 'دفتر النصوص', detail: 'التسجيل اليومي للحصص المنجزة والواجبات المعطاة لأقسامه، بالتوافق مع جدول حصصه.' },
           { label: 'شهادات النتائج', detail: 'إنشاء والاطلاع على شهادات النتائج. عرض المعدلات حسب التلميذ والمادة.' },
           { label: 'الأنشطة التربوية', detail: 'تخطيط ومتابعة الأنشطة المدرسية والمشاريع للأقسام المعيّنة.' },
-          { label: 'التقدم الدراسي', detail: 'متابعة التقدم الأكاديمي للتلاميذ عبر الفصول الدراسية في أقسامه.' },
           { label: 'جدول الحصص', detail: 'الاطلاع على جدول حصصه الخاص وجداول أقسامه.' },
           { label: 'الغيابات (قراءة)', detail: 'الاطلاع على سجل غيابات تلاميذه لتكييف تدريسه.' },
           { label: 'المراسلة والتقويم', detail: 'المراسلة الداخلية مع الفريق والاطلاع على التقويم المدرسي.' },
@@ -455,7 +505,7 @@ const T = {
 } as const;
 
 type Lang = 'fr' | 'ar' | 'en';
-type RoleId = 'admin' | 'directeur' | 'gestionnaire' | 'agent' | 'professeur' | 'pointeur';
+type RoleId = 'admin' | 'directeur' | 'conseiller' | 'gestionnaire' | 'agent' | 'professeur' | 'pointeur';
 
 interface LandingContent {
   hero_title: string; hero_sub: string;
@@ -487,9 +537,9 @@ const EN: LandingContent = {
   features: [
     { icon: T.fr.features[0].icon, title: 'Students & Enrollment', desc: 'Complete student records, class enrollment management and guardian information, with an integrated parent portal.' },
     { icon: T.fr.features[1].icon, title: 'Teachers & Classes', desc: 'Teacher directory, assignment to classes and tracks, contract management and teaching-staff records.' },
-    { icon: T.fr.features[2].icon, title: 'Grades & Report Cards', desc: 'Grade entry by term, automatic average calculation and generation of bilingual PDF report cards.' },
-    { icon: T.fr.features[3].icon, title: 'Class Journal', desc: "Sessions taught, homework assigned and the school's sign-off — the daily pedagogical log for every class, aligned with the timetable." },
-    { icon: T.fr.features[4].icon, title: 'Finances', desc: 'Track student and teacher payments, manage outstanding balances, automatic receipts and monthly reports.' },
+    { icon: T.fr.features[2].icon, title: 'Grades & Report Cards', desc: 'Grade entry by term, automatic average calculation and generation of PDF report cards in French, Arabic or English.' },
+    { icon: T.fr.features[3].icon, title: 'Class Journal', desc: "Sessions taught, homework assigned and the school's sign-off — the daily pedagogical log for every class, aligned with the timetable, plus a printable daily or weekly PDF report." },
+    { icon: T.fr.features[4].icon, title: 'Finances', desc: 'Track student and teacher payments, manage outstanding balances, numbered PDF receipts (A5) and monthly reports.' },
     { icon: T.fr.features[5].icon, title: 'Timetable', desc: 'Weekly scheduling by class, French and Arabic tracks, with automatic conflict detection.' },
     { icon: T.fr.features[6].icon, title: 'Messaging & Calendar', desc: 'Internal staff messaging, shared school calendar and a parent portal to follow up on results.' },
     { icon: T.fr.features[7].icon, title: 'Attendance & Absences', desc: 'Daily tracking of teacher and student attendance, justifications and per-class statistics.' },
@@ -499,6 +549,7 @@ const EN: LandingContent = {
   roles: [
     { id: 'admin', label: 'Administrator' },
     { id: 'directeur', label: 'Principal' },
+    { id: 'conseiller', label: 'Educational advisor' },
     { id: 'gestionnaire', label: 'Manager' },
     { id: 'agent', label: 'Registrar' },
     { id: 'professeur', label: 'Teacher' },
@@ -514,8 +565,8 @@ const EN: LandingContent = {
         { label: 'System settings', detail: "Configure the school's information, the grading scale, school terms, tuition fees and display preferences." },
         { label: 'Students & Enrollment', detail: 'Full access to student records, class enrollment and generation of parent-portal access links.' },
         { label: 'Teachers', detail: 'Full management of teacher records: specialties, contract types, salaries and class assignments.' },
-        { label: 'Classes, Subjects & Years', detail: 'Create and manage classes by track (FR/AR), levels, subjects and configure school years.' },
-        { label: 'Grades & Assessments', detail: 'Oversee grade entry, access all assessments by term and generate bilingual PDF report cards.' },
+        { label: 'Classes, Subjects & Years', detail: 'Create and manage classes by track, levels and subjects; configure school years and carry classes over from one year to the next (teacher assignments are not copied).' },
+        { label: 'Grades & Assessments', detail: 'Oversee grade entry, access all assessments by term and generate PDF report cards in French, Arabic or English.' },
         { label: 'Class journal', detail: 'Review and oversee the class journal for every class: sessions taught, homework assigned and the sign-off that locks a period.' },
         { label: 'Finances', detail: 'Full access: student payments, teacher disbursements, deductions, outstanding balances and monthly financial reports.' },
         { label: 'Official documents', detail: 'Generate all official documents: enrollment certificates, attestations and any other document as PDF.' },
@@ -525,14 +576,15 @@ const EN: LandingContent = {
         { label: 'Extracurricular activities', detail: 'Full management of activities, enrollment, sessions and assessment of participating students.' },
         { label: 'Reports', detail: 'Summary reports: student and teacher attendance, results by class, monthly financial summary.' },
         { label: 'Messaging & Calendar', detail: 'Messaging with all staff members and full management of the school calendar.' },
+        { label: 'Audit log', detail: 'A readable history of who did what: plain sentences, filters by person, action, data type and period.' },
         { label: 'Attendance & Absences', detail: 'Oversee teacher attendance and full tracking of student absences with statistics.' },
       ],
     },
     directeur: {
       title: 'Principal',
-      desc: 'The principal has an overall view of every activity in the school. They lead the teams, monitor pedagogical indicators and coordinate day-to-day operations.',
+      desc: 'The principal has an overall view of the school\'s pedagogical and administrative activity. They lead the teams, monitor pedagogical indicators and coordinate day-to-day operations. Finances are outside their scope.',
       access: [
-        { label: 'Dashboard', detail: "School statistics, payment trends over 6 months and performance indicators." },
+        { label: 'Dashboard', detail: 'School statistics: headcount, attendance and pedagogical performance indicators.' },
         { label: 'Students & Enrollment', detail: 'Review and full management of student records, class enrollment and headcount tracking.' },
         { label: 'Teachers', detail: 'Manage teacher records, track assignments, specialties and contractual details.' },
         { label: 'Classes, Subjects & School Years', detail: 'Configure classes, levels, tracks, subjects and manage active school years.' },
@@ -542,10 +594,34 @@ const EN: LandingContent = {
         { label: 'Teacher attendance', detail: 'Daily tracking of teacher presence, lateness or absence.' },
         { label: 'Student absences', detail: 'Review and manage absence tracking, attendance rates and per-class alerts.' },
         { label: 'Analytics', detail: 'Analytics dashboard: attendance rate, averages by class and track, top students and active alerts.' },
-        { label: 'Reports', detail: 'Student and teacher attendance reports, results by class and financial summary.' },
+        { label: 'Reports', detail: 'Student and teacher attendance reports and results by class (finances are reserved for the administrator, manager and registrar).' },
         { label: 'Student progress', detail: "Validate and track students' multi-year academic progress, per-student history." },
         { label: 'Extracurricular activities', detail: 'Review and manage extracurricular activities, sessions and assessments.' },
         { label: 'Messaging & Calendar', detail: 'Internal messaging with the team and management of school-calendar events.' },
+        { label: 'Audit log', detail: 'A readable history of who did what: plain sentences, filters by person, action, data type and period.' },
+        { label: 'Official documents', detail: 'Generate and review certificates, attestations and official documents.' },
+        { label: 'Library', detail: "Review the catalog and ongoing loans in the school's library." },
+      ],
+    },
+    conseiller: {
+      title: 'Educational advisor',
+      desc: "The educational advisor has the same rights as the principal: pedagogical follow-up of every class, class journal, report cards, student progress and the audit log. Finances are outside their scope.",
+      access: [
+        { label: 'Dashboard', detail: 'School statistics: headcount, attendance and pedagogical performance indicators.' },
+        { label: 'Students & Enrollment', detail: 'Review and full management of student records, class enrollment and headcount tracking.' },
+        { label: 'Teachers', detail: 'Manage teacher records, track assignments, specialties and contractual details.' },
+        { label: 'Classes, Subjects & School Years', detail: 'Configure classes, levels, tracks, subjects and manage active school years.' },
+        { label: 'Grades, Assessments & Report Cards', detail: 'Review grades, access all assessments and generate PDF report cards by class and term.' },
+        { label: 'Class journal', detail: 'Sign off (lock) the class journal by period and track how completely sessions have been logged, per class.' },
+        { label: 'Timetable', detail: 'Review and edit the timetables of every class.' },
+        { label: 'Teacher attendance', detail: 'Daily tracking of teacher presence, lateness or absence.' },
+        { label: 'Student absences', detail: 'Review and manage absence tracking, attendance rates and per-class alerts.' },
+        { label: 'Analytics', detail: 'Analytics dashboard: attendance rate, averages by class and track, top students and active alerts.' },
+        { label: 'Reports', detail: 'Student and teacher attendance reports and results by class (finances are reserved for the administrator, manager and registrar).' },
+        { label: 'Student progress', detail: "Validate and track students' multi-year academic progress, per-student history." },
+        { label: 'Extracurricular activities', detail: 'Review and manage extracurricular activities, sessions and assessments.' },
+        { label: 'Messaging & Calendar', detail: 'Internal messaging with the team and management of school-calendar events.' },
+        { label: 'Audit log', detail: 'A readable history of who did what: plain sentences, filters by person, action, data type and period.' },
         { label: 'Official documents', detail: 'Generate and review certificates, attestations and official documents.' },
         { label: 'Library', detail: "Review the catalog and ongoing loans in the school's library." },
       ],
@@ -592,7 +668,6 @@ const EN: LandingContent = {
         { label: 'Class journal', detail: 'Daily logging of sessions taught and homework assigned for their classes, aligned with their timetable.' },
         { label: 'Report cards', detail: 'Generate and review report cards. View averages by student and by subject.' },
         { label: 'Pedagogical activities', detail: 'Plan and track school activities and projects for assigned classes.' },
-        { label: 'Student progress', detail: "Track students' academic progress across terms in their classes." },
         { label: 'Timetable', detail: 'Review their personal timetable and the schedules of their classes.' },
         { label: 'Absences (read-only)', detail: 'Review their students’ absence tracking to adjust their teaching.' },
         { label: 'Messaging & Calendar', detail: 'Internal messaging with the team and review of the school-events calendar.' },
@@ -651,8 +726,8 @@ export function LandingPage() {
   const t = LANGS[lang];
   const guide = t.role_guides[activeRole];
 
-  // Page vitrine : contenu FR/AR uniquement (dictionnaire local T), donc sélecteur
-  // à deux langues — distinct du sélecteur d'interface fr/ar/en de l'application.
+  // Page vitrine : contenu FR/AR/EN dans des dictionnaires locaux (T et EN), distincts
+  // des fichiers i18n de l'application ; le choix de langue est partagé avec l'interface.
   const setLangTo = (next: Lang) => {
     setLang(next);
     i18n.changeLanguage(next);
