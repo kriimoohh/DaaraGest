@@ -59,7 +59,7 @@ Application web de gestion scolaire multi-filières, conçue pour tout établiss
 | **Finances** | Paiements élèves (mensualités, inscriptions, saisie en masse), reliquats, paiements du personnel, numéros de reçu auto, **reçu de paiement individuel en PDF A5** (aux couleurs du site), **exports Excel/PDF**, **catalogue de tarifs configurable** — jamais accessible au directeur ni au conseiller pédagogique |
 | **Documents officiels** | 25 types de documents (certificats, attestations, cartes élève/professeur avec QR, fiches de paie, convocations…) générés en PDF à partir de templates personnalisables, aperçu et génération par lot |
 | **Rapports** | Présences (élèves/personnel), résultats par classe, bilan financier, **grilles IEF**, performance par domaine, relevés de notes, propositions de fin d'année, charges du personnel — avec aperçus HTML |
-| **Audit** | Journal d'audit **lisible par un non-informaticien** : chaque entrée est une phrase avec les noms réels (« X a enregistré un paiement de 25 000 FCFA pour Sira Sow — reçu REC-… »), traduite FR/AR/EN ; filtres par personne, type d'action, type de donnée et période ; accès direction |
+| **Audit** | Journal d'audit **lisible par un non-informaticien** : chaque entrée est une phrase avec les noms réels (« X a enregistré un paiement de 25 000 FCFA pour Sira Sow — reçu REC-… »), traduite FR/AR/EN ; filtres par personne, type d'action, type de donnée et période ; accès administrateur et gestionnaire |
 | **Utilisateurs** | Sept rôles depuis la DB (dont **conseiller pédagogique**, aux droits du directeur) ; réinitialisation de mot de passe (déverrouille le compte et coupe toutes ses sessions), désactivation/réactivation, suppression définitive ; changement de mot de passe **obligatoire** à la première connexion |
 | **Paramètres** | Établissement (code matricule, devise, en-têtes de bulletin FR/AR, logo/signature/cachet), config des notes (échelle, **périodes configurables** : nombre + noms FR/AR trimestres/semestres), niveaux, tarifs, fonctions, mentions, jours de cours, préférences de notifications, rendu des bulletins, politique de saisie des notes |
 | **Dashboard** | Statistiques clés, graphique des encaissements (Recharts) + tableau de bord analytique direction |
@@ -168,7 +168,7 @@ DaaraGest/
 │       │   ├── documents/       # templates, génération PDF, aperçu, lots, historique
 │       │   ├── stats/           # tableau de bord analytique direction
 │       │   ├── rapports/        # présences, résultats, bilan financier, grilles IEF…
-│       │   ├── audit/           # journal d'audit (direction) + phrases lisibles (audit-phrases)
+│       │   ├── audit/           # journal d'audit (admin + gestionnaire) + phrases lisibles (audit-phrases)
 │       │   ├── rbac/            # tests transverses : matrice de rôles + anti-fuite
 │       │   │                    #   de payloads (payloads.itest.ts)
 │       │   └── bibliotheque/    # catalogue livres, emprunts, retours
@@ -246,16 +246,16 @@ Sept rôles, stockés en base (`Role.libelle_fr`) et centralisés dans `backend/
 | Rôle | Pages accessibles |
 |------|------------------|
 | `admin` | Toutes |
-| `directeur` | Toutes sauf Finances, Utilisateurs et Paramètres |
-| `conseiller pédagogique` | **Mêmes droits que le directeur** (toutes sauf Finances, Utilisateurs et Paramètres) |
-| `gestionnaire` | Toutes sauf Utilisateurs, Paramètres et Audit |
+| `directeur` | Toutes sauf Finances, Utilisateurs, Paramètres et Audit |
+| `conseiller pédagogique` | **Mêmes droits que le directeur** (toutes sauf Finances, Utilisateurs, Paramètres et Audit) |
+| `gestionnaire` | Toutes sauf Utilisateurs et Paramètres (**Audit inclus**) |
 | `agent de scolarité` | Dashboard, Élèves, Emploi du temps, Calendrier, Messagerie, Bibliothèque, Absences, Finances |
 | `professeur` | Dashboard, Classes, Notes, Évaluations, Cahier de texte, Bulletins, Activités, Emploi du temps, Calendrier, Messagerie, Absences — **limité à ses classes** |
 | `pointeur` | Dashboard, Emploi du temps, Calendrier, Messagerie, Absences, Pointage |
 
 > Le module **Cahier de texte** est accessible à la direction, au conseiller pédagogique, au `gestionnaire` et au `professeur` (groupe `ACADEMIQUE`) ; le visa (verrouillage d'une période) est réservé à la direction (`admin`, `directeur`, `conseiller pédagogique`).
 
-> Le journal d'audit (`/audit`) est réservé à la direction (admin, directeur, conseiller pédagogique) côté API et côté menu.
+> Le journal d'audit (`/audit`) est réservé à l'**administration** (admin et gestionnaire, groupe `AUDIT`) côté API et côté menu — le directeur et le conseiller pédagogique n'y ont pas accès (arbitrage établissement).
 
 > Le **conseiller pédagogique** a été ajouté comme un rôle « semblable au directeur » : il figure dans chaque groupe où figure le directeur, y compris l'exclusion des finances ; un test (`rbac.test.ts`) vérifie la parité sur tous les groupes.
 
@@ -904,9 +904,9 @@ La colonne **Accès** reprend les groupes de `backend/src/config/roles.ts` (sour
 
 | Méthode | Route | Accès | Description |
 |---|---|---|---|
-| `GET` | `/audit` | Direction | Journal d'audit filtrable (action, type, personne, période) ; chaque entrée contient une **phrase** (`phrase.cle` + `phrase.params`) avec les noms résolus |
-| `GET` | `/audit/acteurs` | Direction | Personnes apparaissant dans le journal (filtre « Qui ») |
-| `GET` | `/audit/entites` | Direction | Types de données présents dans le journal |
+| `GET` | `/audit` | Admin, gestionnaire | Journal d'audit filtrable (action, type, personne, période) ; chaque entrée contient une **phrase** (`phrase.cle` + `phrase.params`) avec les noms résolus |
+| `GET` | `/audit/acteurs` | Admin, gestionnaire | Personnes apparaissant dans le journal (filtre « Qui ») |
+| `GET` | `/audit/entites` | Admin, gestionnaire | Types de données présents dans le journal |
 
 ### Bibliothèque
 
@@ -978,7 +978,7 @@ Chaque paiement élève reçoit un numéro de reçu automatique (`REC-AAAAMMJJ-N
 
 ### Journal d'audit
 
-Page réservée à la direction (menu Sécurité). Chaque ligne est une **phrase** compréhensible (« Ibrahima Ba a changé Moussa Diop de classe : CM1 A → CM1 B ») : le backend résout les noms (élève, classe, matière, année, compte…) et renvoie une clé de phrase + paramètres, traduits FR/AR/EN par le front ; un élément supprimé depuis s'affiche « (supprimé depuis) », jamais un identifiant technique. Filtres : personne, type d'action (ajout, modification, suppression, mot de passe réinitialisé, décision de passage…), type de donnée, période (raccourcis aujourd'hui / 7 / 30 jours). Une erreur de chargement est signalée clairement (avec « Réessayer »).
+Page réservée à l'administration (administrateur et gestionnaire). Chaque ligne est une **phrase** compréhensible (« Ibrahima Ba a changé Moussa Diop de classe : CM1 A → CM1 B ») : le backend résout les noms (élève, classe, matière, année, compte…) et renvoie une clé de phrase + paramètres, traduits FR/AR/EN par le front ; un élément supprimé depuis s'affiche « (supprimé depuis) », jamais un identifiant technique. Filtres : personne, type d'action (ajout, modification, suppression, mot de passe réinitialisé, décision de passage…), type de donnée, période (raccourcis aujourd'hui / 7 / 30 jours). Une erreur de chargement est signalée clairement (avec « Réessayer »).
 
 ### Import CSV élèves
 

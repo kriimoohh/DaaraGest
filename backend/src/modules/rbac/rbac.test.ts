@@ -77,6 +77,11 @@ const ENDPOINTS: Array<{
   { methode: 'GET',    path: '/finances/paiements-personnel',  groupe: ROLE_GROUPS.FINANCES_GESTION, description: 'Paiements personnel' },
   { methode: 'POST',   path: '/finances/paiements-personnel',  groupe: ROLE_GROUPS.FINANCES_GESTION, description: 'Créer paiement personnel' },
 
+  // AUDIT (administration : admin + gestionnaire — ni directeur ni conseiller)
+  { methode: 'GET',    path: '/audit',                 groupe: ROLE_GROUPS.AUDIT, description: 'Journal d\'audit' },
+  { methode: 'GET',    path: '/audit/acteurs',         groupe: ROLE_GROUPS.AUDIT, description: 'Acteurs du journal' },
+  { methode: 'GET',    path: '/audit/entites',         groupe: ROLE_GROUPS.AUDIT, description: 'Types de données du journal' },
+
   // BULLETINS
   { methode: 'GET',    path: '/bulletins',             groupe: ROLE_GROUPS.ACADEMIQUE, description: 'Lister bulletins' },
   { methode: 'POST',   path: '/bulletins/generer',     groupe: ROLE_GROUPS.ACADEMIQUE, description: 'Générer bulletins' },
@@ -442,6 +447,18 @@ describe('RBAC — Endpoints critiques sécurité', () => {
 });
 
 // ── Conseiller pédagogique : mêmes droits que le directeur ───────────────────
+describe('Journal d\'audit : administration uniquement', () => {
+  it('admin et gestionnaire y ont accès', () => {
+    expect(hasAccess(ROLES.ADMIN, ROLE_GROUPS.AUDIT)).toBe(true);
+    expect(hasAccess(ROLES.GESTIONNAIRE, ROLE_GROUPS.AUDIT)).toBe(true);
+  });
+  it('ni le directeur, ni le conseiller, ni scolarité, professeur, pointeur', () => {
+    for (const r of [ROLES.DIRECTEUR, ROLES.CONSEILLER_PEDAGOGIQUE, ROLES.AGENT_SCOLARITE, ROLES.PROFESSEUR, ROLES.POINTEUR]) {
+      expect(hasAccess(r, ROLE_GROUPS.AUDIT)).toBe(false);
+    }
+  });
+});
+
 describe('Rôle « conseiller pédagogique » = directeur', () => {
   for (const [nom, groupe] of Object.entries(ROLE_GROUPS)) {
     it(`groupe ${nom} : même accès que le directeur`, () => {

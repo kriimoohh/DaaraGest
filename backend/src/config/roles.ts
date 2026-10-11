@@ -26,6 +26,9 @@ export const ROLE_GROUPS = {
   // paiements du personnel et rapports financiers (bilan, charges).
   FINANCES:         [ROLES.ADMIN, ROLES.GESTIONNAIRE, ROLES.AGENT_SCOLARITE],
   FINANCES_GESTION: [ROLES.ADMIN, ROLES.GESTIONNAIRE],
+  // Journal d'audit : administration (admin + gestionnaire) uniquement — arbitrage établissement
+  // 2026-10-11. Le directeur et le conseiller pédagogique n'y ont PAS accès.
+  AUDIT:            [ROLES.ADMIN, ROLES.GESTIONNAIRE],
 } as const;
 
 /**
