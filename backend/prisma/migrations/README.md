@@ -17,7 +17,7 @@ migration. Conséquence : `prisma migrate deploy` sur une base vierge échouait
    (renommage de contraintes/index, suppression de défauts SQL et de la colonne
    orpheline `PersonnelMatiereClasse.coefficient`).
 2. `prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma`
-   a généré le SQL de création complet (50 tables).
+   a généré le SQL de création complet (50 tables à l'époque ; le schéma compte aujourd'hui 57 modèles).
 3. La baseline a été marquée appliquée sur la prod via
    `prisma migrate resolve --applied 00000000000000_baseline`, puis les anciennes
    lignes de `_prisma_migrations` ont été nettoyées.
@@ -33,3 +33,23 @@ baseline ↔ `schema.prisma` = vide (aucune dérive).
 Format strict `YYYYMMDDHHMMSS_libelle_snake_case` avec **heures réelles**, créées
 via `npx prisma migrate dev --name <libelle>`. Ne **jamais** éditer une migration
 déjà appliquée : ajouter une nouvelle migration à la place.
+
+## Migrations postérieures à la baseline
+
+Depuis la baseline, 32 migrations ont été ajoutées (de `20260614…` à
+`20261011000000_index_performance`). Elles sont appliquées automatiquement au
+déploiement (`prisma migrate deploy` dans `backend/entrypoint.sh`), puis le seed
+idempotent `prisma/seed-prod.cjs` s'exécute. Jalons :
+
+- filières génériques : `filiere_entite`, `inscription_classe`, puis suppression
+  des colonnes string (`filieres_drop_string`) ;
+- bulletins : modèles éditables, combinés, génération horodatée ;
+- notation : échelle par niveau, consolidation des mentions ;
+- cahier de texte et visa (`cahier_de_texte`, `cahier_visa`) ;
+- `restore_seq_recu_numero` : la séquence des numéros de reçu avait été perdue
+  par un nettoyage de schéma et est recréée (idempotente) ;
+- `role_conseiller_pedagogique` et `token_version` (révocation des sessions) ;
+- `index_performance` : index manquants sur les tables les plus consultées.
+
+Une installation neuve (base vierge) est vérifiée par la CI : migrations rejouées
+depuis zéro, puis `seed-prod.cjs` exécuté deux fois.

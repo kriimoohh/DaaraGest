@@ -6,7 +6,7 @@ product
 
 ## Users
 
-Personnel administratif et enseignant d'établissements scolaires au Sénégal — **franco-arabes, bilingues ou classiques** : la notion de « filière » (FR/AR/EN, seule ou combinée) est configurable par établissement, pas imposée par le produit (direction, gestionnaires, professeurs, surveillants), plus deux surfaces publiques : les parents d'élèves (portail sans compte via lien UUID, souvent sur mobile) et les visiteurs de la landing page. Les utilisateurs travaillent en français, en arabe (RTL) ou en anglais, souvent sur du matériel modeste et une connexion partagée (une seule IP publique pour toute l'école).
+Personnel administratif et enseignant d'établissements scolaires au Sénégal — **franco-arabes, bilingues ou classiques** : la notion de « filière » (FR/AR/EN, seule ou combinée) est configurable par établissement, pas imposée par le produit (direction et conseillers pédagogiques, gestionnaires, agents de scolarité, professeurs, surveillants), plus deux surfaces publiques : les parents d'élèves (portail sans compte via lien UUID, souvent sur mobile) et les visiteurs de la landing page. Les utilisateurs travaillent en français, en arabe (RTL) ou en anglais, souvent sur du matériel modeste et une connexion partagée (une seule IP publique pour toute l'école).
 
 ## Product Purpose
 

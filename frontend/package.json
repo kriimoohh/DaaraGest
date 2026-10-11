@@ -7,8 +7,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "start": "node server.cjs"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@sentry/react": "^10.56.0",
