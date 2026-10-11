@@ -42,7 +42,7 @@ Application web de gestion scolaire multi-filières, conçue pour tout établiss
 | **Domaines** | Domaines pédagogiques IEF (Langue & Communication, Mathématiques, ESVS, EPSA…), grilles par groupe de niveau (CI-CP / CE1-CE2 / CM1-CM2) |
 | **Notes** | Saisie en masse par classe/matière/période, validation sur le barème effectif, suppression en masse ; un **professeur ne voit et ne saisit que ses classes** (réglage « toutes les matières » : ses matières seulement ou toutes les matières de ses classes) |
 | **Évaluations** | Évaluations formatives (devoir, contrôle, test d'entrée, examen…) avec pondération |
-| **Cahier de texte** | Séances faites (contenu, objectif) et devoirs à faire (leçon/exercice/récitation/autre) par classe×matière×date, vue « Ma journée » alignée sur l'emploi du temps, **visa de la direction** avec verrouillage de la période visée, indicateur de **complétude** (prévu vs. renseigné), export PDF (inspection), devoirs visibles côté portail parent |
+| **Cahier de texte** | Séances faites (contenu, objectif) et devoirs à faire (leçon/exercice/récitation/autre) par classe×matière×date, vue « Ma journée » alignée sur l'emploi du temps, **visa de la direction** avec verrouillage de la période visée, indicateur de **complétude** (prévu vs. renseigné), **rapport journalier/hebdomadaire** imprimable et téléchargeable, export PDF (inspection), devoirs visibles côté portail parent |
 | **Bulletins** | Par filière (**FR / AR / EN** — options construites dynamiquement selon les filières actives de l'établissement) + **combiné au choix** (`filieres_combine`) + annuel ; moyennes pondérées, **mentions configurables** (par filière et/ou niveau), **échelle d'affichage par niveau** (`Niveau.note_max`), classement, **verrouillage de période** (préflight + déverrouillage direction), **templates HTML éditables** (FR/AR/COMBINE/ANNUEL), **aperçu PDF avant téléchargement**, export PDF individuel ou classe entière, **suivi de l'état de génération** (à jour / périmé / partiel — recalculé après toute saisie de notes) avec **régénération automatique** des bulletins impactés et **nettoyage des orphelins** |
 | **Mentions** | Table `Mention` configurable : libellés FR/AR, seuils, couleurs ; portée établissement / filière / niveau (résolution filière+niveau > filière > niveau > établissement) |
 | **Progression** | Suivi de la progression académique pluriannuelle des élèves |
@@ -822,6 +822,8 @@ La colonne **Accès** reprend les groupes de `backend/src/config/roles.ts` (sour
 | `DELETE` | `/cahier/devoirs/:id` | Pédagogie | Supprimer |
 | `GET` | `/cahier/completude` | Pédagogie | Indicateur prévu vs. renseigné (créneaux avec/sans séance saisie) |
 | `GET` | `/cahier/export-pdf` | Pédagogie | Export PDF du cahier (inspection) |
+| `GET` | `/cahier/rapport` | Pédagogie | Rapport journalier/hebdomadaire (`periode=jour\|semaine`, `date`, `classe_id?`) : séances, devoirs, séances non renseignées par classe |
+| `GET` | `/cahier/rapport-pdf` | Pédagogie | Même rapport en PDF A4 (téléchargement / impression) |
 | `GET` | `/cahier/visas` | Pédagogie | Liste des visas (périodes verrouillées par la direction) |
 | `POST` | `/cahier/visas` | Direction | Viser un intervalle `[du, au]` d'une classe — verrouille la saisie (direction) |
 | `DELETE` | `/cahier/visas/:id` | Direction | Retirer un visa (direction) |
@@ -1011,6 +1013,7 @@ Journal de classe quotidien, pensé pour rester au plus près du geste du profes
 3. **Complétude** — indicateur « prévu vs renseigné » : nombre de créneaux de la période effectivement couverts par une séance saisie
 4. **Visa de la direction** — la direction vise un intervalle `[du, au]` d'une classe, ce qui **verrouille la saisie** sur cette période (comme le verrouillage de période des bulletins)
 5. **Export PDF** — cahier imprimable pour l'inspection académique
+6. **Rapport journalier / hebdomadaire** — onglet **Rapport** : pour un jour ou une semaine (lundi → dimanche), toutes les classes visibles ou une seule ; pour chaque classe, ce qui a été enseigné, les devoirs donnés et les **séances prévues à l'emploi du temps mais non renseignées**, avec la complétude globale. Consultable à l'écran, **téléchargeable en PDF (A4)** et **imprimable**. Un professeur n'y voit que ses classes
 
 ### Portail parents
 

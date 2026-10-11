@@ -82,6 +82,15 @@ export const completudeQuerySchema = z.object({
   au: dateISO,
 });
 
+// Rapport journalier / hebdomadaire : toutes les classes visibles, ou une seule.
+export const rapportQuerySchema = z.object({
+  annee_scolaire_id: z.string().uuid(),
+  periode: z.enum(['jour', 'semaine']),
+  date: dateISO,
+  classe_id: z.string().uuid().optional(),
+});
+
+export type RapportQuery = z.infer<typeof rapportQuerySchema>;
 export type JourneeQuery = z.infer<typeof journeeQuerySchema>;
 export type VisaCreateInput = z.infer<typeof visaCreateSchema>;
 export type VisasQuery = z.infer<typeof visasQuerySchema>;

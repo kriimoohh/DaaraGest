@@ -10,6 +10,7 @@ import { toast } from '../../store/toastStore';
 import { useAnneeScolaire } from '../../store/anneeStore';
 import { useAuthStore } from '../../store/authStore';
 import { nomClasse, nomMatiere } from '../../lib/noms';
+import { RapportCahier } from './RapportCahier';
 
 interface Classe  { id: string; nom_fr: string; nom_ar?: string | null; filiere: string; }
 interface RefMat  { id: string; nom_fr: string; nom_ar: string | null; }
@@ -61,7 +62,7 @@ export function CahierTextePage() {
   const role = useAuthStore(s2 => s2.user?.role ?? '');
   const estDirection = ['admin', 'directeur', 'conseiller pédagogique'].includes(role);
 
-  const [onglet, setOnglet] = useState<'journee' | 'consultation'>('journee');
+  const [onglet, setOnglet] = useState<'journee' | 'consultation' | 'rapport'>('journee');
 
   // ── Ma journée ──────────────────────────────────────────────────────────────
   const [date, setDate] = useState(todayISO());
@@ -265,6 +266,7 @@ export function CahierTextePage() {
       <div style={{ display: 'flex', marginBottom: 16, border: '1px solid var(--rule)', borderRadius: 'var(--r-md)', overflow: 'hidden', width: 'fit-content' }}>
         <button style={pill(onglet === 'journee')} onClick={() => setOnglet('journee')}>{t('cahier.ma_journee')}</button>
         <button style={pill(onglet === 'consultation')} onClick={() => setOnglet('consultation')}>{t('cahier.consultation')}</button>
+        <button style={pill(onglet === 'rapport')} onClick={() => setOnglet('rapport')}>{t('cahier.rapport')}</button>
       </div>
 
       {/* ── Ma journée ── */}
@@ -369,6 +371,8 @@ export function CahierTextePage() {
       )}
 
       {/* ── Consultation ── */}
+      {onglet === 'rapport' && <RapportCahier anneeId={anneeId} classes={classes} />}
+
       {onglet === 'consultation' && (
         <>
           <div className="card-pad" style={{ marginBottom: 16, display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>

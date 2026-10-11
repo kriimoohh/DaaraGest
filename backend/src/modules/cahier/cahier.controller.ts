@@ -5,13 +5,14 @@ import { HttpError } from '../../utils/errors';
 import {
   journeeQuerySchema, seanceUpsertSchema, seanceUpdateSchema, seancesQuerySchema,
   devoirCreateSchema, devoirUpdateSchema, devoirsQuerySchema,
-  visaCreateSchema, visasQuerySchema, completudeQuerySchema,
+  visaCreateSchema, visasQuerySchema, completudeQuerySchema, rapportQuerySchema,
 } from './cahier.schema';
 import {
   journee, upsertSeance, modifierSeance, supprimerSeance, listerSeances,
   creerDevoir, modifierDevoir, supprimerDevoir, listerDevoirs,
   viserPeriode, listerVisas, supprimerVisa, completude, exporterCahierPdf,
 } from './cahier.service';
+import { construireRapport, exporterRapportPdf, calculerPeriode } from './cahier.rapport';
 
 function envoyer(reply: FastifyReply, err: unknown) {
   const status = err instanceof HttpError ? err.statusCode : 400;
@@ -149,5 +150,28 @@ export async function completudeHandler(request: FastifyRequest, reply: FastifyR
   if (!classeVisible(await porteeDe(request.user as JwtPayload), parsed.data.classe_id)) return reply.status(404).send({ error: 'Classe introuvable' });
   try {
     return reply.send(await completude(etablissement_id, parsed.data));
+  } catch (err) { return envoyer(reply, err); }
+}
+
+export async function rapportHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const parsed = rapportQuerySchema.safeParse(request.query);
+  if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  try {
+    return reply.send(await construireRapport(etablissement_id, parsed.data, await porteeDe(request.user as JwtPayload)));
+  } catch (err) { return envoyer(reply, err); }
+}
+
+export async function rapportPdfHandler(request: FastifyRequest, reply: FastifyReply) {
+  const { etablissement_id } = request.user as JwtPayload;
+  const parsed = rapportQuerySchema.safeParse(request.query);
+  if (!parsed.success) return reply.status(400).send({ error: parsed.error.errors[0].message });
+  try {
+    const { du, au } = calculerPeriode(parsed.data.periode, parsed.data.date);
+    const pdf = await exporterRapportPdf(etablissement_id, parsed.data, await porteeDe(request.user as JwtPayload));
+    return reply
+      .header('Content-Type', 'application/pdf')
+      .header('Content-Disposition', `attachment; filename="rapport-cahier-${parsed.data.periode}-${du}${du === au ? '' : `-${au}`}.pdf"`)
+      .send(pdf);
   } catch (err) { return envoyer(reply, err); }
 }
