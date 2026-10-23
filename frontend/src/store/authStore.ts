@@ -13,6 +13,10 @@ export interface AuthUser {
   etablissement_id: string;
   must_change_password?: boolean;
   last_login?: string;
+  /** Code de l'école de rattachement (saisi à la connexion). */
+  etablissement_code?: string;
+  /** Super-administrateur de la plateforme (création/suspension d'établissements). */
+  super_admin?: boolean;
 }
 
 interface AuthState {

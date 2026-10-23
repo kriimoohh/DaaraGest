@@ -41,6 +41,7 @@ import { auditRoutes } from './modules/audit/audit.routes';
 import { rapportsRoutes } from './modules/rapports/rapports.routes';
 import { bibliothequeRoutes } from './modules/bibliotheque/bibliotheque.routes';
 import { cahierRoutes } from './modules/cahier/cahier.routes';
+import { plateformeRoutes } from './modules/plateforme/plateforme.routes';
 import { fonctionsRoutes } from './modules/fonctions/fonctions.routes';
 import { tarifsRoutes } from './modules/tarifs/tarifs.routes';
 import { mentionsRoutes } from './modules/mentions/mentions.routes';
@@ -213,6 +214,7 @@ async function build() {
       await api.register(rapportsRoutes,    { prefix: '/rapports' });
       await api.register(bibliothequeRoutes,{ prefix: '/bibliotheque' });
       await api.register(cahierRoutes,      { prefix: '/cahier' });
+      await api.register(plateformeRoutes,  { prefix: '/plateforme' });
     },
     { prefix: '/api/v1' }
   );

@@ -4,6 +4,8 @@
     "tagline": "La gestion de votre école, simplifiée"
   },
   "auth": {
+    "code_ecole": "Code école",
+    "code_ecole_aide": "Facultatif si votre identifiant n'existe que dans une école",
     "login": "Connexion",
     "identifiant": "Identifiant",
     "password": "Mot de passe",
@@ -18,6 +20,7 @@
     "footer": "Gestion scolaire · Sénégal"
   },
   "nav": {
+    "plateforme": "Plateforme",
     "accueil": "Accueil",
     "dashboard": "Tableau de bord",
     "eleves": "Élèves",
@@ -2182,7 +2185,8 @@
       "Classe": "Classe",
       "CahierSeance": "Cahier de texte (séance)",
       "Devoir": "Devoir",
-      "CahierVisa": "Cahier de texte (visa)"
+      "CahierVisa": "Cahier de texte (visa)",
+      "Etablissement": "Établissement"
     },
     "phrases": {
       "defaut": "a effectué une action : {{action}} — {{entite}}",
@@ -2371,6 +2375,44 @@
     "rapport_objectif": "Objectif",
     "rapport_semaine_du": "Semaine du {{du}} au {{au}}",
     "err_rapport": "Impossible de générer le rapport"
+  },
+  "plateforme": {
+    "titre": "Plateforme",
+    "eyebrow": "Multi-établissement",
+    "nouvelle": "Nouvel établissement",
+    "nom": "Nom de l'établissement",
+    "code": "Code école",
+    "code_aide": "2 à 8 lettres ou chiffres ; sert à la connexion et aux matricules",
+    "adresse": "Adresse",
+    "telephone": "Téléphone",
+    "email": "E-mail",
+    "filieres": "Filières",
+    "referentiel": "Créer le référentiel de matières franco-arabe (76 matières)",
+    "annee": "Année scolaire (facultatif)",
+    "annee_libelle": "Libellé (ex. 2026-2027)",
+    "debut": "Début",
+    "fin": "Fin",
+    "admin": "Compte administrateur",
+    "admin_nom": "Nom",
+    "admin_prenom": "Prénom",
+    "admin_identifiant": "Identifiant",
+    "creer": "Créer l'établissement",
+    "eleves": "Élèves",
+    "comptes": "Comptes actifs",
+    "statut": "Statut",
+    "actif": "Actif",
+    "suspendu": "Suspendu",
+    "suspendre": "Suspendre",
+    "reactiver": "Réactiver",
+    "confirm_suspendre": "Suspendre {{nom}} ? Tous ses comptes seront déconnectés et ne pourront plus se connecter.",
+    "cree_titre": "Établissement créé",
+    "cree_texte": "Transmettez ces informations à l'école. Le mot de passe n'est affiché qu'une seule fois et devra être changé à la première connexion.",
+    "mdp": "Mot de passe temporaire",
+    "copier": "Copier",
+    "copie": "Copié",
+    "fermer": "Fermer",
+    "vide": "Aucun établissement.",
+    "err": "Opération impossible"
   },
   "aide": {
     "titre": "Aide"

@@ -13,8 +13,10 @@ export async function authRoutes(fastify: FastifyInstance) {
         max: 10,
         timeWindow: '1 minute',
         keyGenerator: (req) => {
-          const id = String((req.body as { identifiant?: unknown } | undefined)?.identifiant ?? '').trim().toLowerCase().slice(0, 64);
-          return `login:${req.ip}|${id}`;
+          const body = req.body as { identifiant?: unknown; code_etablissement?: unknown } | undefined;
+          const id = String(body?.identifiant ?? '').trim().toLowerCase().slice(0, 64);
+          const code = String(body?.code_etablissement ?? '').trim().toLowerCase().slice(0, 20);
+          return `login:${req.ip}|${code}|${id}`;
         },
       },
     },
