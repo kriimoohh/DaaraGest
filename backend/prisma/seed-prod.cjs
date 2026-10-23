@@ -39,7 +39,7 @@ async function main() {
   // ── Établissement ────────────────────────────────────────────────────────────
   // Multi-établissement : le seed ne concerne que l'établissement historique (le plus ancien) ;
   // les suivants sont créés par la plateforme (modules/plateforme).
-  let etab = await prisma.etablissement.findFirst({ orderBy: { created_at: 'asc' } });
+  let etab = await prisma.etablissement.findFirst({ where: { est_plateforme: false }, orderBy: { created_at: 'asc' } });
   if (!etab) {
     etab = await prisma.etablissement.create({
       data: {

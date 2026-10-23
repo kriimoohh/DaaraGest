@@ -56,7 +56,7 @@ export async function login(identifiant: string, mot_de_passe: string, code_etab
   const code = code_etablissement?.trim() || null;
   const candidats = await prisma.utilisateur.findMany({
     where: { identifiant, ...(code ? { etablissement: { code: { equals: code, mode: 'insensitive' } } } : {}) },
-    include: { role: true, etablissement: { select: { actif: true, code: true, nom_fr: true } } },
+    include: { role: true, etablissement: { select: { actif: true, code: true, nom_fr: true, est_plateforme: true } } },
     take: 2,
   });
   if (!code && candidats.length > 1) throw new CodeEtablissementRequisError();
@@ -120,6 +120,7 @@ export async function login(identifiant: string, mot_de_passe: string, code_etab
       etablissement_code: utilisateur.etablissement.code,
       must_change_password: utilisateur.must_change_password,
       super_admin: utilisateur.super_admin,
+      compte_plateforme: utilisateur.etablissement.est_plateforme,
     },
   };
 }
@@ -243,6 +244,7 @@ export async function getMe(id: string) {
     // en dépend : sans ce champ, le /auth/me qui suit la connexion l'effaçait).
     must_change_password: utilisateur.must_change_password,
     super_admin: utilisateur.super_admin,
+    compte_plateforme: utilisateur.etablissement.est_plateforme,
     etablissement: {
       id: utilisateur.etablissement.id,
       nom_fr: utilisateur.etablissement.nom_fr,
