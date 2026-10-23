@@ -83,9 +83,11 @@ export async function revoquerToken(token: string, etablissement_id: string, act
 export async function getPortailData(token: string) {
   const record = await prisma.portailParentToken.findUnique({
     where: { token },
-    include: { eleve: true, etablissement: { select: { nom_fr: true, logo_url: true } } },
+    include: { eleve: true, etablissement: { select: { nom_fr: true, logo_url: true, actif: true } } },
   });
   if (!record || !record.actif) throw new Error('Lien invalide ou désactivé');
+  // Établissement suspendu par la plateforme : le portail est fermé comme le reste de l'application.
+  if (!record.etablissement.actif) throw new Error('Portail indisponible — contactez l\'établissement');
   if (record.expires_at && record.expires_at < new Date()) throw new Error('Lien expiré — demandez un nouveau lien à l\'établissement');
 
   const eleve = record.eleve;
@@ -256,9 +258,10 @@ export async function listerTokensEtablissement(etablissement_id: string) {
 export async function getBulletinPdfViaToken(token: string, bulletin_id: string): Promise<{ buffer: Buffer; filename: string }> {
   const record = await prisma.portailParentToken.findUnique({
     where: { token },
-    select: { actif: true, expires_at: true, etablissement_id: true, eleve_id: true },
+    select: { actif: true, expires_at: true, etablissement_id: true, eleve_id: true, etablissement: { select: { actif: true } } },
   });
   if (!record || !record.actif) throw new Error('Lien invalide ou désactivé');
+  if (!record.etablissement.actif) throw new Error('Portail indisponible — contactez l\'établissement');
   if (record.expires_at && record.expires_at < new Date()) throw new Error('Lien expiré');
 
   const bulletin = await prisma.bulletin.findFirst({

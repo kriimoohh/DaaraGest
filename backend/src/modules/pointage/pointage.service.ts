@@ -1,5 +1,6 @@
 import prisma from '../../config/database';
 import { randomUUID } from 'crypto';
+import { verifierQr } from '../../utils/qrSecret';
 import QRCode from 'qrcode';
 import { PresenceInput, BulkPresenceInput } from './pointage.schema';
 import { notifierRoles } from '../notifications/notifications.service';
@@ -186,14 +187,33 @@ export async function regenererQR(etablissement_id: string, personnelId: string)
   return { token, dataUrl };
 }
 
-export async function scanQR(token: string) {
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Jeton de pointage contenu dans un QR : jeton brut (page Pointage) ou carte imprimée signée
+ * (`{ type: 'professeur', token, ets }`). Une carte dont la signature est fausse, ou qui n'est pas une
+ * carte du personnel (ex. carte élève), est refusée.
+ */
+export function jetonDuQr(contenu: string): { token: string; ets?: string } | null {
+  const brut = contenu.trim();
+  if (UUID.test(brut)) return { token: brut };
+  const p = verifierQr(brut);
+  if (!p || p.type !== 'professeur' || typeof p.token !== 'string' || !UUID.test(p.token)) return null;
+  return { token: p.token, ets: typeof p.ets === 'string' ? p.ets : undefined };
+}
+
+export async function scanQR(contenu: string) {
+  const lu = jetonDuQr(contenu);
+  if (!lu) throw new Error('QR code invalide ou inconnu');
   const prof = await prisma.personnel.findFirst({
-    where: { qr_token: token },
+    where: { qr_token: lu.token, ...(lu.ets ? { utilisateur: { etablissement_id: lu.ets } } : {}) },
     include: {
-      utilisateur: { select: { nom_fr: true, prenom_fr: true, etablissement_id: true } },
+      utilisateur: { select: { nom_fr: true, prenom_fr: true, etablissement_id: true, etablissement: { select: { actif: true } } } },
     },
   });
   if (!prof) throw new Error('QR code invalide ou inconnu');
+  // Établissement suspendu : la borne ne pointe plus (comme les connexions).
+  if (!prof.utilisateur.etablissement.actif) throw new Error('Établissement suspendu — pointage indisponible');
 
   const now = new Date();
   const dateJour = new Date(now.getFullYear(), now.getMonth(), now.getDate());

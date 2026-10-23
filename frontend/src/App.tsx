@@ -180,6 +180,8 @@ export default function App() {
 
             {/* Super-admin plateforme : contrôle par drapeau dans la page (l'API le revérifie). */}
             <Route path="/plateforme" element={<PlateformePage />} />
+            <Route path="/plateforme/ecoles" element={<PlateformePage />} />
+            <Route path="/plateforme/journal" element={<PlateformePage />} />
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>

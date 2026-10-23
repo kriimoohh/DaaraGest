@@ -26,6 +26,8 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const location = useLocation();
   const { user, updatePreferences } = useAuthStore();
   const { signOut } = useAuth();
+  // Compte de la plateforme : pas de recherche d'élèves, d'année scolaire ni de notifications d'école.
+  const plateforme = !!user?.compte_plateforme;
 
   const { currentId, annees, setCurrent } = useAnneeCourante();
   const role = user?.role ?? '';
@@ -40,7 +42,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k' && !useAuthStore.getState().user?.compte_plateforme) {
         e.preventDefault();
         setCmdOpen(true);
       }
@@ -88,7 +90,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           <span className="here">{currentTitle}</span>
         </div>
 
-        <button className="tb-search" onClick={() => setCmdOpen(true)} aria-label={t('tb.rechercher_aria')}>
+        {!plateforme && <button className="tb-search" onClick={() => setCmdOpen(true)} aria-label={t('tb.rechercher_aria')}>
           <svg width={13} height={13} viewBox="0 0 24 24" fill="currentColor">
             <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
           </svg>
@@ -96,7 +98,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             {t('tb.search', 'Rechercher…')}
           </span>
           <kbd>⌘K</kbd>
-        </button>
+        </button>}
 
         <div className="tb-spacer" />
 
@@ -130,7 +132,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         </button>
 
         <HelpButton />
-        <NotificationBell />
+        {!plateforme && <NotificationBell />}
 
         {/* Avatar / profil */}
         <button

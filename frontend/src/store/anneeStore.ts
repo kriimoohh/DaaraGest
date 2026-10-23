@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useAuthStore } from './authStore';
 import { api } from '../lib/api';
 
 // Année scolaire « courante » de travail, partagée par toute l'application.
@@ -31,6 +32,8 @@ export const useAnneeStore = create<AnneeState>((set, get) => ({
   loading: false,
   load: async () => {
     if (get().loaded || get().loading) return;
+    // Compte de la plateforme : aucune école, donc aucune année scolaire à charger.
+    if (useAuthStore.getState().user?.compte_plateforme) return;
     set({ loading: true });
     try {
       const annees = await api.get<AnneeScolaire[]>('/api/v1/annees-scolaires');

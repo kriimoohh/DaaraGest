@@ -62,6 +62,11 @@ export const APP_ROUTES: AppRoute[] = [
   { path: '/audit',                       key: 'audit',              roles: ['admin', 'gestionnaire'],          inNav: true },
   { path: '/liens-portail',               key: 'liens_portail',      roles: ['admin', 'directeur', 'conseiller pédagogique', 'gestionnaire'], inNav: true },
   { path: '/parametres',                  key: 'parametres',         roles: ['admin'],                       inNav: true },
+  // Console de plateforme : accès par le drapeau super-admin (pas un rôle) — hors palette de commandes ;
+  // déclarée ici pour le titre de page et l'aide contextuelle.
+  { path: '/plateforme',                  key: 'plateforme',         roles: [],                              inNav: false },
+  { path: '/plateforme/ecoles',           key: 'plateforme_ecoles',  roles: [],                              inNav: false },
+  { path: '/plateforme/journal',          key: 'plateforme_journal', roles: [],                              inNav: false },
 ];
 
 /** Routes consommables par la CommandPalette (toutes celles `inNav: true`). */

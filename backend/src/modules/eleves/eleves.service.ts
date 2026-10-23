@@ -2,7 +2,7 @@ import prisma from '../../config/database';
 import crypto from 'crypto';
 import QRCode from 'qrcode';
 import { logAction } from '../../utils/audit';
-import { getQrSecret } from '../../utils/qrSecret';
+import { signerQr } from '../../utils/qrSecret';
 import { EleveInput, InscriptionInput, TransfertInput } from './eleves.schema';
 import { NotFoundError, ValidationError } from '../../utils/errors';
 import { genererMatricule } from '../../utils/matricule';
@@ -473,9 +473,7 @@ export async function getEleveQR(etablissement_id: string, eleveId: string) {
   }
 
   const payload = { type: 'eleve', id: eleveId, matricule: eleve.matricule, ets: etablissement_id };
-  const data = JSON.stringify(payload);
-  const sig = crypto.createHmac('sha256', getQrSecret()).update(data).digest('hex').slice(0, 16);
-  const signed = Buffer.from(data).toString('base64url') + '.' + sig;
+  const signed = signerQr(payload);
 
   const dataUrl = await QRCode.toDataURL(signed, { width: 300, margin: 2, errorCorrectionLevel: 'M' });
   return {
