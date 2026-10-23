@@ -43,7 +43,7 @@ export function genererMotDePasseTemporaire(): string {
 
 /** Écoles de la plateforme (hors établissement technique) avec leurs indicateurs. */
 export async function listerEtablissements() {
-  const [etabs, utilisateurs, eleves, classes, connexions] = await Promise.all([
+  const [etabs, utilisateurs, eleves, classes, connexions, bloques] = await Promise.all([
     prisma.etablissement.findMany({
       where: { est_plateforme: false },
       select: { id: true, nom_fr: true, code: true, adresse: true, telephone: true, email: true, actif: true, created_at: true },
@@ -53,6 +53,12 @@ export async function listerEtablissements() {
     prisma.eleve.groupBy({ by: ['etablissement_id'], where: { actif: true }, _count: { _all: true } }),
     prisma.classe.groupBy({ by: ['etablissement_id'], where: { active: true, annee_scolaire: { active: true } }, _count: { _all: true } }),
     prisma.utilisateur.groupBy({ by: ['etablissement_id'], _max: { last_login: true } }),
+    // Administrateurs actuellement bloqués (verrouillage après échecs) : à débloquer depuis la console.
+    prisma.utilisateur.groupBy({
+      by: ['etablissement_id'],
+      where: { actif: true, role: { libelle_fr: ROLES.ADMIN }, verrouille_jusqu: { gt: new Date() } },
+      _count: { _all: true },
+    }),
   ]);
   const nb = (rows: { etablissement_id: string; _count: { _all: number } }[], id: string) =>
     rows.find(r => r.etablissement_id === id)?._count._all ?? 0;
@@ -62,6 +68,7 @@ export async function listerEtablissements() {
     nb_eleves: nb(eleves, e.id),
     nb_classes: nb(classes, e.id),
     derniere_connexion: connexions.find(c => c.etablissement_id === e.id)?._max.last_login ?? null,
+    admins_bloques: nb(bloques, e.id),
   }));
 }
 

@@ -4,6 +4,10 @@
     "tagline": "Your school management, simplified"
   },
   "nav": {
+    "groupe_plateforme": "Platform",
+    "plateforme_accueil": "Overview",
+    "plateforme_ecoles": "Schools",
+    "plateforme_journal": "Log",
     "plateforme": "Platform",
     "accueil": "Home",
     "dashboard": "Dashboard",
@@ -2377,8 +2381,22 @@
     "err_rapport": "Could not generate the report"
   },
   "plateforme": {
-    "onglet_ecoles": "Schools",
-    "onglet_journal": "Platform log",
+    "vue_eyebrow": "Platform console",
+    "bienvenue": "Hello, {{nom}}.",
+    "bienvenue_sous": "Here is the status of the schools using DaaraGest.",
+    "a_surveiller": "Needs attention",
+    "rien_a_signaler": "Nothing to report: every school is active and in use.",
+    "alerte_suspendue": "School suspended",
+    "alerte_jamais": "No sign-in yet",
+    "alerte_inactive": "No sign-in for {{n}} days",
+    "alerte_bloques": "{{n}} administrator(s) locked out",
+    "alerte_vide": "No students enrolled",
+    "dernieres_actions": "Latest actions",
+    "voir_tout": "See all",
+    "ecoles_titre": "Schools",
+    "journal_titre": "Platform log",
+    "total_suspendues": "{{n}} suspended",
+    "admins_bloques": "Locked admins",
     "total_ecoles": "Schools",
     "total_actives": "{{n}} active",
     "total_eleves": "Students",
@@ -2450,6 +2468,30 @@
     "titre": "Help"
   },
   "help": {
+    "plateforme_ecoles": {
+      "intro": "All schools on the platform, with their headcount and activity.",
+      "tips": [
+        "A school's ⋮ menu lets you edit it, manage its administrators or suspend it.",
+        "Changing a school's code changes the code all its staff type at sign-in.",
+        "An administrator locked out after too many attempts is unlocked by resetting their password."
+      ]
+    },
+    "plateforme_journal": {
+      "intro": "History of the actions taken from the platform console.",
+      "tips": [
+        "Every creation, edit, suspension and reset is recorded with its author.",
+        "Schools' own actions stay in each school's audit log."
+      ]
+    },
+    "plateforme": {
+      "intro": "Platform console: manage the schools using DaaraGest.",
+      "tips": [
+        "Each school's ⋮ menu lets you edit it, view its administrators or suspend it.",
+        "Suspending a school immediately blocks sign-ins, the parent portal and the attendance kiosk; reactivating restores everything.",
+        "A temporary password is shown only once: copy it before closing the window.",
+        "The platform log records super-administrator actions, separately from the schools' logs."
+      ]
+    },
     "dashboard": {
       "intro": "Overview of the school: enrollment, attendance, payments and alerts at a glance.",
       "tips": [

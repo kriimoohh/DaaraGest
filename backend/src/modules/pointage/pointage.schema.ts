@@ -18,8 +18,10 @@ export const bulkPresenceSchema = z.object({
   presences: z.array(presenceSchema.omit({ date: true })).min(1),
 });
 
+// Contenu lu par la borne : soit le jeton brut (QR de la page Pointage), soit le contenu SIGNÉ d'une
+// carte imprimée depuis Documents (vérifié dans scanQR).
 export const scanQRSchema = z.object({
-  token: z.string().uuid('Token QR invalide'),
+  token: z.string().trim().min(1, 'Token QR invalide').max(2000, 'Token QR invalide'),
 });
 
 export type PresenceInput = z.infer<typeof presenceSchema>;

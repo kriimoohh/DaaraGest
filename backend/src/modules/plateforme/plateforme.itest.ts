@@ -193,6 +193,7 @@ describe('Console de plateforme', () => {
     const a = (await listerEtablissements()).find(e => e.code === codeA)!;
     expect(a).toHaveProperty('nb_classes');
     expect(a).toHaveProperty('derniere_connexion');
+    expect(a.admins_bloques).toBe(0);
   });
 
   it('modifier une école : coordonnées et code (refusé s\'il est pris)', async () => {

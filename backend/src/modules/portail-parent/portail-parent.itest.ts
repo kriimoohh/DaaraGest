@@ -132,3 +132,17 @@ describe('Portail parent — devoirs (cahier de texte)', () => {
     expect(data.devoirs[0].matiere.filiere).toBe('FR');
   });
 });
+
+describe('Portail parent — établissement suspendu', () => {
+  it('un lien valide ne donne plus accès quand l\'établissement est suspendu, et revient à la réactivation', async () => {
+    const t = await regenererToken(etabId, eleveId);
+    expect((await getPortailData(t.token)).eleve).toBeTruthy();
+    await prisma.etablissement.update({ where: { id: etabId }, data: { actif: false } });
+    try {
+      await expect(getPortailData(t.token)).rejects.toThrow('indisponible');
+    } finally {
+      await prisma.etablissement.update({ where: { id: etabId }, data: { actif: true } });
+    }
+    expect((await getPortailData(t.token)).eleve).toBeTruthy();
+  });
+});
