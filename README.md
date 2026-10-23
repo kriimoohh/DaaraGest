@@ -2,7 +2,7 @@
 
 Application web de gestion scolaire multi-filières, conçue pour tout établissement au Sénégal — **franco-arabe, bilingue ou classique** — grâce à des filières entièrement configurables par établissement (FR / AR / EN et toute combinaison, sans hypothèse de bilinguisme imposée). Gestion complète des élèves, du personnel, des classes, notes, bulletins, cahier de texte, finances, pointage (manuel et QR), emploi du temps, messagerie interne, bibliothèque et portail parents — interface **trilingue Français / Arabe / Anglais** (RTL pour l'arabe) et landing page publique.
 
-> **Multi-établissement (première étape livrée).** Plusieurs écoles peuvent partager le même déploiement : chaque donnée porte son `etablissement_id`, la connexion se fait avec le **code de l'école**, et un super-administrateur de la plateforme crée et suspend les établissements (page **Plateforme**). Restent à faire avant d'ouvrir largement : la sécurité au niveau de la base (RLS PostgreSQL), la facturation et le libre-service — voir [`docs/SAAS-INFRA-PLAN.md`](docs/SAAS-INFRA-PLAN.md) et la section [Phase 4 — Multi-établissement](#phase-4--multi-établissement). En production : un service API, un service front et une base PostgreSQL sur Railway.
+> **Multi-établissement (première étape livrée).** Plusieurs écoles peuvent partager le même déploiement : chaque donnée porte son `etablissement_id`, la connexion se fait avec le **code de l'école**, et un super-administrateur de la plateforme crée et suspend les établissements (page **Plateforme**). L'isolation est assurée par le code **et** par la base (RLS PostgreSQL). Restent à faire avant d'ouvrir largement : la facturation et le libre-service — voir [`docs/SAAS-INFRA-PLAN.md`](docs/SAAS-INFRA-PLAN.md) et la section [Phase 4 — Multi-établissement](#phase-4--multi-établissement). En production : un service API, un service front et une base PostgreSQL sur Railway.
 
 ---
 
@@ -233,7 +233,12 @@ DaaraGest/
 
 ### Isolation multi-établissements
 
-Chaque requête authentifiée extrait `etablissement_id` du JWT et les services filtrent par cet identifiant : `where: { id, etablissement_id }` (manuel, à chaque requête — pas encore de RLS PostgreSQL, voir la roadmap). Les accès par identifiant à des ressources d'un autre établissement répondent « introuvable ». Des tests d'intégration verrouillent les points sensibles : génération de documents (certificats, relevés, cartes, attestations de travail), saisie et lecture des notes, liste des scans du jour, connexion et suspension par établissement.
+Deux barrières indépendantes :
+
+1. **Filtres applicatifs** : chaque requête authentifiée extrait `etablissement_id` du JWT et les services filtrent par cet identifiant (`where: { id, etablissement_id }`). Les accès par identifiant à des ressources d'un autre établissement répondent « introuvable ».
+2. **Row-Level Security PostgreSQL** (défense en profondeur) : les 32 tables portant `etablissement_id`, plus `Etablissement`, ont une politique qui limite lectures **et** écritures aux lignes de l'établissement courant. Pour toute requête HTTP authentifiée, `src/config/database.ts` exécute chaque requête Prisma dans une transaction qui fixe l'établissement (`set_config('app.etab_id', …)`) et bascule sur le rôle `daaragest_app`, soumis à la RLS. Ainsi, une requête qui **oublierait** le filtre ne voit toujours que son école, et une écriture vers une autre école est refusée par la base. Hors requête authentifiée (connexion, portail parent, scan public, seed, scripts) et pour la page Plateforme du super-admin (`horsIsolation`), le comportement est inchangé. Interrupteur d'urgence : `RLS_ACTIF=false`. Un test vérifie que toute nouvelle table portant `etablissement_id` reçoit bien sa politique.
+
+ Des tests d'intégration verrouillent les points sensibles : génération de documents (certificats, relevés, cartes, attestations de travail), saisie et lecture des notes, liste des scans du jour, connexion et suspension par établissement.
 
 **Connexion par code école.** L'identifiant est unique **par établissement** (deux écoles peuvent avoir chacune un compte `admin`). La page de connexion demande le **code de l'école** (ex. `FIC`), mémorisé sur l'appareil ; il reste facultatif tant que l'identifiant n'existe que dans une seule école (comptes existants), sinon l'API répond « Indiquez le code de votre école ».
 
@@ -407,6 +412,7 @@ Validées au démarrage par Zod (`src/config/env.ts`) — le serveur **refuse de
 | `SENTRY_TRACES_SAMPLE_RATE` | Taux d'échantillonnage des traces (0–1) | défaut `0` |
 | `PUPPETEER_EXECUTABLE_PATH` | Chemin Chrome/Chromium pour la génération PDF (défini dans l'image Docker) | — |
 | `PDF_ATTENTE_MAX_MS` | Attente maximale d'une place dans la file de génération PDF (au-delà : `503`) | défaut `60000` |
+| `RLS_ACTIF` | `false` = coupe l'isolation par la base (urgence uniquement ; les filtres applicatifs restent) | défaut actif |
 
 Variables lues uniquement par le seed (`prisma/seed-prod.cjs`) :
 
@@ -1071,7 +1077,7 @@ Le portail parent est accessible via un lien unique sans création de compte :
 | CORS | Origines configurables via `CORS_ORIGIN` (multi, séparées par virgules) |
 | Headers HTTP | `Content-Security-Policy` (report-only hors production), `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, `HSTS` (production) |
 | Logs | Redaction automatique des mots de passe, cookies et en-têtes `Authorization` |
-| Isolation établissements | Chaque requête filtre par `etablissement_id` tiré du JWT ; accès par identifiant hors établissement → « introuvable » ; documents, notes et scans du jour verrouillés par des tests d'intégration |
+| Isolation établissements | Filtres `etablissement_id` tirés du JWT **et** Row-Level Security PostgreSQL (rôle `daaragest_app`, 33 tables) pour toute requête authentifiée ; accès hors établissement → « introuvable », écriture vers une autre école refusée par la base ; verrouillé par `rbac/rls.itest.ts` |
 | Périmètre professeur | Un professeur ne voit et ne modifie que ses classes (`utils/portee.ts`), lectures **et** écritures — voir [Périmètre du professeur](#périmètre-du-professeur) |
 | Validation | Zod sur tous les body POST/PUT · `z.coerce.number()` pour les Decimal Prisma |
 | RBAC — routes | Groupes de rôles (`ROLE_GROUPS`) par route, y compris `FINANCES`/`FINANCES_GESTION` (le directeur et le conseiller pédagogique n'ont **aucun** accès finances, arbitrage établissement) — verrouillé par `rbac.test.ts` (dont la parité conseiller = directeur) |
@@ -1147,7 +1153,7 @@ Principaux domaines couverts : calculs de bulletins (moyennes pondérées, menti
 
 ### Phase 4 — Multi-établissement
 
-**Livré** : identifiants uniques par école et connexion par code école, super-admin plateforme, création d'établissement avec données de départ, suspension/réactivation (sessions coupées). **Reste** : sécurité au niveau de la base (RLS PostgreSQL + extension Prisma) avant d'accueillir une école extérieure, facturation et inscription en libre-service, personnalisation par école, stockage des images hors base, limites de requêtes par école. Plan détaillé — isolation RLS, provisioning/facturation, infra cible, coûts — dans [`docs/SAAS-INFRA-PLAN.md`](docs/SAAS-INFRA-PLAN.md).
+**Livré** : identifiants uniques par école et connexion par code école, super-admin plateforme, création d'établissement avec données de départ, suspension/réactivation (sessions coupées). **Livré aussi** : isolation par la base (RLS PostgreSQL, rôle `daaragest_app`). **Reste** : facturation et inscription en libre-service, personnalisation par école, stockage des images hors base, limites de requêtes par école. Plan détaillé — isolation RLS, provisioning/facturation, infra cible, coûts — dans [`docs/SAAS-INFRA-PLAN.md`](docs/SAAS-INFRA-PLAN.md).
 
 ### Pointage NFC
 
@@ -1183,9 +1189,9 @@ La grille officielle IEF est à colonnes fixes (LC FR / LC AR / Maths) — une m
 
 `npm audit fix` a supprimé les alertes critiques. Restent des montées majeures à traiter une par une, avec non-régression PDF : `puppeteer` 25 (rendu des bulletins), `exceljs`, `react-router` 7, `vite` 8, `tailwindcss` 4, `eslint`. Pour puppeteer, le cast de `networkidle0` dans `utils/browserPool.ts` est à revérifier à chaque montée.
 
-### 4. Isolation des établissements par filtre applicatif *(avant une 2ᵉ école)*
+### 4. Isolation des établissements *(RLS en place — limites connues)*
 
-Chaque requête filtre manuellement par `etablissement_id` (pas de Row-Level Security PostgreSQL). Des tests d'intégration verrouillent les points sensibles, mais la RLS (Phase A de [`docs/SAAS-INFRA-PLAN.md`](docs/SAAS-INFRA-PLAN.md)) est requise avant d'accueillir un second établissement.
+La RLS couvre les 32 tables portant `etablissement_id` (+ `Etablissement`). Les tables « filles » sans cette colonne (notes, inscriptions, paiements du personnel…) restent protégées par les filtres applicatifs et leurs jointures, pas par une politique propre. Les requêtes SQL brutes (`$queryRaw`) et les requêtes non authentifiées (portail parent, scan) ne passent pas par le rôle isolé.
 
 ### 5. Limites d'architecture connues *(à traiter avec le passage SaaS)*
 
