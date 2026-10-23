@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import QRCode from 'qrcode';
 import prisma from '../../config/database';
-import { getQrSecret } from '../../utils/qrSecret';
+import { signerQr } from '../../utils/qrSecret';
 import { escapeHtml } from '../../utils/escapeHtml';
 import { TypeDocument, GenererDocumentInput, GenererCartesLotInput, UpsertTemplateInput, TYPE_DOCUMENT_VALUES, CARD_TYPES } from './documents.schema';
 import { getDefaultTemplate, TYPE_DOCUMENT_LABELS, getCardTemplate } from './templates/defaults';
@@ -10,14 +10,8 @@ import { selectLiensClasse, selectLiensClasseObjet, classeIdParFiliere, classePa
 import { DEFAULT_NOTE_MAX, classer, contexteAffichage } from '../../utils/notes';
 import { NotFoundError } from '../../utils/errors';
 
-function signQrPayload(payload: object): string {
-  const data = JSON.stringify(payload);
-  const sig = crypto.createHmac('sha256', getQrSecret()).update(data).digest('hex').slice(0, 16);
-  return Buffer.from(data).toString('base64url') + '.' + sig;
-}
-
 async function generateQrDataUrl(payload: object): Promise<string> {
-  const signed = signQrPayload(payload);
+  const signed = signerQr(payload);
   return QRCode.toDataURL(signed, { width: 300, margin: 1, errorCorrectionLevel: 'M' });
 }
 

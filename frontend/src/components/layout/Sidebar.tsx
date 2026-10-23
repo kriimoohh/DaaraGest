@@ -72,6 +72,18 @@ const NAV_SECTIONS = [
   },
 ];
 
+// Menu du compte de la PLATEFORME (console) : remplace celui des écoles.
+const NAV_SECTIONS_PLATEFORME = [
+  {
+    groupKey: 'groupe_plateforme',
+    items: [
+      { key: 'plateforme_accueil', path: '/plateforme',         roles: [] as string[] },
+      { key: 'plateforme_ecoles',  path: '/plateforme/ecoles',  roles: [] as string[] },
+      { key: 'plateforme_journal', path: '/plateforme/journal', roles: [] as string[] },
+    ],
+  },
+];
+
 const NAV_ICONS: Record<string, string> = {
   accueil:          'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z',
   dashboard:        'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z',
@@ -102,6 +114,9 @@ const NAV_ICONS: Record<string, string> = {
   utilisateurs:     'M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5z',
   parametres:       'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96a7.06 7.06 0 00-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.477.477 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z',
   plateforme:       'M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z',
+  plateforme_accueil: 'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z',
+  plateforme_ecoles:  'M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z',
+  plateforme_journal: 'M13 3a9 9 0 00-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0013 21a9 9 0 000-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z',
 };
 
 function NavIcon({ path, size = 16 }: { path: string; size?: number }) {
@@ -134,7 +149,11 @@ export function Sidebar() {
     });
   };
 
+  const plateforme = !!user?.compte_plateforme;
+  const sections = plateforme ? NAV_SECTIONS_PLATEFORME : NAV_SECTIONS;
+
   useEffect(() => {
+    if (plateforme) return; // pas de compteurs d'école pour la console
     Promise.allSettled([
       api.get<{ total: number }>('/api/v1/eleves?limit=1'),
       api.get<{ total: number }>('/api/v1/personnel?limit=1'),
@@ -146,7 +165,7 @@ export function Sidebar() {
         classes: classes.status === 'fulfilled' ? (classes.value as unknown[]).length : 0,
       });
     });
-  }, []);
+  }, [plateforme]);
 
   return (
     <aside className="sidebar">
@@ -163,12 +182,12 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="sb-nav">
-        {NAV_SECTIONS.map((section) => {
+        {sections.map((section) => {
           const visible = section.items.filter(item =>
-            'superAdmin' in item && item.superAdmin ? !!user?.super_admin : item.roles.includes(role));
+            plateforme || ('superAdmin' in item && item.superAdmin ? !!user?.super_admin : item.roles.includes(role)));
           if (visible.length === 0) return null;
           const estActif = (path: string) =>
-            path === '/' ? location.pathname === '/' : location.pathname === path || location.pathname.startsWith(path + '/');
+            path === '/' || path === '/plateforme' ? location.pathname === path : location.pathname === path || location.pathname.startsWith(path + '/');
           // La section contenant la page courante reste toujours dépliée : on ne
           // « perd » jamais visuellement l'endroit où l'on se trouve.
           const contientActif = visible.some(item => estActif(item.path));

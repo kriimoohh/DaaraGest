@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, FormEvent } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Button } from '../../components/ui/Button';
@@ -11,14 +11,13 @@ import { Table, Column } from '../../components/ui/Table';
 import { useApi } from '../../hooks/useApi';
 import { useAuthStore } from '../../store/authStore';
 import { toast } from '../../store/toastStore';
-import { Segmented } from '../../components/ui/Segmented';
 import { ActionMenu } from '../../components/ui/ActionMenu';
 
 interface Etablissement {
   [k: string]: unknown;
   id: string; nom_fr: string; code: string; actif: boolean; email: string | null;
   adresse: string | null; telephone: string | null; nb_eleves: number; nb_utilisateurs: number;
-  nb_classes: number; derniere_connexion: string | null;
+  nb_classes: number; derniere_connexion: string | null; admins_bloques: number;
 }
 interface Admin { id: string; identifiant: string; nom_fr: string; prenom_fr: string | null; actif: boolean; last_login: string | null; verrouille_jusqu: string | null }
 interface LigneJournal { id: string; action: string; entite: string; details: Record<string, unknown> | null; created_at: string; acteur: string }
@@ -34,7 +33,12 @@ const vide = {
 };
 
 // Administration de la plateforme multi-établissement (super-admins uniquement).
+type Section = 'accueil' | 'ecoles' | 'journal';
+
 export function PlateformePage() {
+  // La vue (vue d'ensemble / écoles / journal) suit l'adresse, choisie depuis le menu de gauche.
+  const { pathname } = useLocation();
+  const section: Section = pathname.endsWith('/ecoles') ? 'ecoles' : pathname.endsWith('/journal') ? 'journal' : 'accueil';
   const { t } = useTranslation();
   const api = useApi();
   const superAdmin = useAuthStore(s => !!s.user?.super_admin);
@@ -46,7 +50,6 @@ export function PlateformePage() {
   const [envoi, setEnvoi] = useState(false);
   const [cree, setCree] = useState<Creation | null>(null);
   const [aSuspendre, setASuspendre] = useState<Etablissement | null>(null);
-  const [onglet, setOnglet] = useState<'ecoles' | 'journal'>('ecoles');
   const [journal, setJournal] = useState<LigneJournal[]>([]);
   const [edition, setEdition] = useState<Etablissement | null>(null);
   const [formEdit, setFormEdit] = useState({ nom_fr: '', code: '', adresse: '', telephone: '', email: '' });
@@ -58,20 +61,23 @@ export function PlateformePage() {
   const locale = i18n.language === 'ar' ? 'ar-SN' : i18n.language === 'en' ? 'en-GB' : 'fr-FR';
   const fmt = (d: string | null) => d ? new Date(d).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' }) : t('plateforme.jamais');
 
+  // Écoles + journal, rechargés ensemble après chaque action (création, modification, suspension,
+  // réinitialisation) pour que « Dernières actions » reste à jour.
   const charger = useCallback(async () => {
     setLoading(true);
-    try { setListe(await api.get<Etablissement[]>('/api/v1/plateforme/etablissements')); }
+    try {
+      const [ecoles, lignes] = await Promise.all([
+        api.get<Etablissement[]>('/api/v1/plateforme/etablissements'),
+        api.get<LigneJournal[]>('/api/v1/plateforme/journal'),
+      ]);
+      setListe(ecoles); setJournal(lignes);
+    }
     catch (err) { toast.error((err as Error).message || t('plateforme.err')); }
     finally { setLoading(false); }
     // `api` volontairement hors dépendances (référence instable → boucle de requêtes).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  useEffect(() => { if (superAdmin) void charger(); }, [superAdmin, charger]);
-  useEffect(() => {
-    if (!superAdmin || onglet !== 'journal') return;
-    api.get<LigneJournal[]>('/api/v1/plateforme/journal').then(setJournal).catch(err => toast.error((err as Error).message || t('plateforme.err')));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [superAdmin, onglet]);
+  useEffect(() => { if (superAdmin) void charger(); }, [superAdmin, charger, section]);
 
   if (!superAdmin) return <Navigate to="/dashboard" replace />;
 
@@ -134,6 +140,7 @@ export function PlateformePage() {
     try {
       const r = await api.post<Reinit>(`/api/v1/plateforme/etablissements/${adminsDe.id}/admins/${aReinit.id}/reinitialiser`, {});
       setAReinit(null); setAdminsDe(null); setReinit(r);
+      void charger();
     } catch (err) { toast.error((err as Error).message || t('plateforme.err')); }
   };
   const decrireAction = (l: LigneJournal) => {
@@ -144,6 +151,28 @@ export function PlateformePage() {
     const statut = d.actif === false ? ` — ${t('plateforme.suspendu_le')}` : d.actif === true ? ` — ${t('plateforme.reactive_le')}` : '';
     return `${t(`plateforme.act_${l.action}`, l.action)} ${ecole}${code}${statut}`;
   };
+
+  const prenom = useAuthStore.getState().user?.prenom_fr || useAuthStore.getState().user?.nom_fr || '';
+  const somme = (k: 'nb_eleves' | 'nb_classes' | 'nb_utilisateurs' | 'admins_bloques') => liste.reduce((n, e) => n + (e[k] as number ?? 0), 0);
+  const suspendues = liste.filter(e => !e.actif).length;
+  const indicateurs = [
+    { label: t('plateforme.total_ecoles'), valeur: liste.length, pied: suspendues ? t('plateforme.total_suspendues', { n: suspendues }) : t('plateforme.total_actives', { n: liste.length - suspendues }) },
+    { label: t('plateforme.total_eleves'), valeur: somme('nb_eleves'), pied: t('plateforme.classes') + ' : ' + somme('nb_classes') },
+    { label: t('plateforme.total_comptes'), valeur: somme('nb_utilisateurs'), pied: '' },
+    { label: t('plateforme.admins_bloques'), valeur: somme('admins_bloques'), pied: '' },
+  ];
+  // Écoles à surveiller : suspendue, admin bloqué, aucune connexion depuis 14 jours, aucun élève.
+  const JOURS = 14;
+  const jours = (d: string | null) => d ? Math.floor((Date.now() - new Date(d).getTime()) / 86_400_000) : null;
+  const alertes: { cle: string; ecole: Etablissement; texte: string; niveau: 'warning' | 'danger' | 'neutral'; bouton: string; action: () => void }[] = [];
+  for (const e of liste) {
+    if (!e.actif) { alertes.push({ cle: `${e.id}-s`, ecole: e, texte: t('plateforme.alerte_suspendue'), niveau: 'danger', bouton: t('plateforme.reactiver'), action: () => basculer(e, true) }); continue; }
+    if ((e.admins_bloques as number) > 0) alertes.push({ cle: `${e.id}-b`, ecole: e, texte: t('plateforme.alerte_bloques', { n: e.admins_bloques }), niveau: 'warning', bouton: t('plateforme.admins'), action: () => ouvrirAdmins(e) });
+    const j = jours(e.derniere_connexion);
+    if (j === null) alertes.push({ cle: `${e.id}-j`, ecole: e, texte: t('plateforme.alerte_jamais'), niveau: 'neutral', bouton: t('plateforme.admins'), action: () => ouvrirAdmins(e) });
+    else if (j >= JOURS) alertes.push({ cle: `${e.id}-i`, ecole: e, texte: t('plateforme.alerte_inactive', { n: j }), niveau: 'warning', bouton: t('plateforme.admins'), action: () => ouvrirAdmins(e) });
+    if (e.nb_eleves === 0) alertes.push({ cle: `${e.id}-v`, ecole: e, texte: t('plateforme.alerte_vide'), niveau: 'neutral', bouton: t('plateforme.modifier'), action: () => ouvrirEdition(e) });
+  }
 
   const copier = async (texte: string) => {
     try { await navigator.clipboard.writeText(texte); toast.success(t('plateforme.copie')); } catch { /* presse-papiers indisponible */ }
@@ -170,37 +199,82 @@ export function PlateformePage() {
 
   return (
     <>
-      <PageHeader eyebrow={t('plateforme.eyebrow')} title={t('plateforme.titre')} />
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
-        <Segmented value={onglet} onChange={v => setOnglet(v as 'ecoles' | 'journal')}
-          options={[{ value: 'ecoles', label: t('plateforme.onglet_ecoles') }, { value: 'journal', label: t('plateforme.onglet_journal') }]} />
-        <div style={{ flex: 1 }} />
-        {onglet === 'ecoles' && <Button onClick={() => setOuvert(true)}>+ {t('plateforme.nouvelle')}</Button>}
-      </div>
+      {section === 'accueil' && (
+        <PageHeader eyebrow={t('plateforme.vue_eyebrow')} title={t('plateforme.bienvenue', { nom: prenom })} />
+      )}
+      {section === 'ecoles' && <PageHeader eyebrow={t('plateforme.eyebrow')} title={t('plateforme.ecoles_titre')} />}
+      {section === 'journal' && <PageHeader eyebrow={t('plateforme.eyebrow')} title={t('plateforme.journal_titre')} />}
 
-      {onglet === 'ecoles' && (
-        <>
-          <div className="grid-4" style={{ marginBottom: 16 }}>
-            {[
-              [liste.length, t('plateforme.total_ecoles'), t('plateforme.total_actives', { n: liste.filter(e => e.actif).length })],
-              [liste.reduce((n, e) => n + e.nb_eleves, 0), t('plateforme.total_eleves'), ''],
-              [liste.reduce((n, e) => n + e.nb_classes, 0), t('plateforme.classes'), ''],
-              [liste.reduce((n, e) => n + e.nb_utilisateurs, 0), t('plateforme.total_comptes'), ''],
-            ].map(([v, l, s]) => (
-              <div key={String(l)} className="card-pad">
-                <div style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>{l}</div>
-                <div style={{ fontSize: 26, fontWeight: 700, marginTop: 4 }}>{v}</div>
-                {s && <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{s}</div>}
-              </div>
-            ))}
-          </div>
-          <div className="card">
-            <Table columns={colonnes} data={liste} loading={loading} emptyMessage={t('plateforme.vide')} />
-          </div>
-        </>
+      {section !== 'journal' && (
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
+          {section === 'accueil' && <p style={{ margin: 0, color: 'var(--ink-3)' }}>{t('plateforme.bienvenue_sous')}</p>}
+          <div style={{ flex: 1 }} />
+          <Button onClick={() => setOuvert(true)}>+ {t('plateforme.nouvelle')}</Button>
+        </div>
       )}
 
-      {onglet === 'journal' && (
+      {section !== 'journal' && (
+        <div className="grid-4 mb-4">
+          {indicateurs.map(k => (
+            <div key={k.label} className="card stat">
+              <div className="stat-label">{k.label}</div>
+              <div className="stat-value font-display">{k.valeur}</div>
+              <div className="stat-foot"><span className="muted">{k.pied}</span></div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {section === 'accueil' && (
+        <div className="grid-2 mb-4" style={{ alignItems: 'start' }}>
+          <div className="card">
+            <div className="card-hd"><h3>{t('plateforme.a_surveiller')}</h3></div>
+            {alertes.length === 0
+              ? <div className="card-pad" style={{ color: 'var(--ink-3)' }}>{t('plateforme.rien_a_signaler')}</div>
+              : [...new Set(alertes.map(a => a.ecole.id))].map(id => {
+                // Une ligne par école : ses alertes en badges, et l'action de la plus importante.
+                const siennes = alertes.filter(a => a.ecole.id === id);
+                return (
+                  <div key={id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 16px', borderTop: '1px solid var(--rule)', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 13.5, fontWeight: 600, flex: '1 1 160px' }}>{siennes[0].ecole.nom_fr}</span>
+                    <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {siennes.map(a => <Badge key={a.cle} variant={a.niveau} label={a.texte} />)}
+                    </span>
+                    <Button size="sm" variant="ghost" onClick={() => siennes[0].action()}>{siennes[0].bouton}</Button>
+                  </div>
+                );
+              })}
+          </div>
+          <div className="card">
+            <div className="card-hd" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3>{t('plateforme.dernieres_actions')}</h3>
+              <Link to="/plateforme/journal" style={{ fontSize: 13, color: 'var(--terra)' }}>{t('plateforme.voir_tout')}</Link>
+            </div>
+            {journal.length === 0
+              ? <div className="card-pad" style={{ color: 'var(--ink-3)' }}>{t('plateforme.journal_vide')}</div>
+              : journal.slice(0, 6).map(l => (
+                <div key={l.id} style={{ padding: '10px 16px', borderTop: '1px solid var(--rule)', fontSize: 13 }}>
+                  <div style={{ color: 'var(--ink-3)', fontSize: 12 }}>{fmt(l.created_at)}</div>
+                  <div><strong>{l.acteur}</strong> {decrireAction(l)}</div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {section !== 'journal' && (
+        <div className="card">
+          {section === 'accueil' && (
+            <div className="card-hd" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3>{t('plateforme.ecoles_titre')}</h3>
+              <Link to="/plateforme/ecoles" style={{ fontSize: 13, color: 'var(--terra)' }}>{t('plateforme.voir_tout')}</Link>
+            </div>
+          )}
+          <Table columns={colonnes} data={liste} loading={loading} emptyMessage={t('plateforme.vide')} />
+        </div>
+      )}
+
+      {section === 'journal' && (
         <div className="card">
           {journal.length === 0
             ? <div className="card-pad" style={{ color: 'var(--ink-3)' }}>{t('plateforme.journal_vide')}</div>

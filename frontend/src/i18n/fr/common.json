@@ -20,6 +20,10 @@
     "footer": "Gestion scolaire · Sénégal"
   },
   "nav": {
+    "groupe_plateforme": "Plateforme",
+    "plateforme_accueil": "Vue d'ensemble",
+    "plateforme_ecoles": "Écoles",
+    "plateforme_journal": "Journal",
     "plateforme": "Plateforme",
     "accueil": "Accueil",
     "dashboard": "Tableau de bord",
@@ -2377,8 +2381,22 @@
     "err_rapport": "Impossible de générer le rapport"
   },
   "plateforme": {
-    "onglet_ecoles": "Écoles",
-    "onglet_journal": "Journal de la plateforme",
+    "vue_eyebrow": "Console de la plateforme",
+    "bienvenue": "Bonjour, {{nom}}.",
+    "bienvenue_sous": "Voici l'état des écoles qui utilisent DaaraGest.",
+    "a_surveiller": "À surveiller",
+    "rien_a_signaler": "Rien à signaler : toutes les écoles sont actives et utilisées.",
+    "alerte_suspendue": "École suspendue",
+    "alerte_jamais": "Aucune connexion pour l'instant",
+    "alerte_inactive": "Aucune connexion depuis {{n}} jours",
+    "alerte_bloques": "{{n}} administrateur(s) bloqué(s)",
+    "alerte_vide": "Aucun élève inscrit",
+    "dernieres_actions": "Dernières actions",
+    "voir_tout": "Tout voir",
+    "ecoles_titre": "Écoles",
+    "journal_titre": "Journal de la plateforme",
+    "total_suspendues": "{{n}} suspendue(s)",
+    "admins_bloques": "Admins bloqués",
     "total_ecoles": "Écoles",
     "total_actives": "{{n}} en activité",
     "total_eleves": "Élèves",
@@ -2450,6 +2468,30 @@
     "titre": "Aide"
   },
   "help": {
+    "plateforme_ecoles": {
+      "intro": "Toutes les écoles de la plateforme, avec leurs effectifs et leur activité.",
+      "tips": [
+        "Le menu ⋮ d'une école permet de la modifier, de gérer ses administrateurs ou de la suspendre.",
+        "Changer le code d'une école change le code que tout son personnel saisit à la connexion.",
+        "Un administrateur bloqué après trop d'essais se débloque en réinitialisant son mot de passe."
+      ]
+    },
+    "plateforme_journal": {
+      "intro": "Historique des actions faites depuis la console de la plateforme.",
+      "tips": [
+        "Chaque création, modification, suspension et réinitialisation y est inscrite avec son auteur.",
+        "Les actions des écoles restent dans le journal d'audit de chaque école."
+      ]
+    },
+    "plateforme": {
+      "intro": "Console de la plateforme : gérez les écoles qui utilisent DaaraGest.",
+      "tips": [
+        "Le menu ⋮ de chaque école permet de la modifier, de voir ses administrateurs ou de la suspendre.",
+        "Suspendre une école coupe aussitôt les connexions, le portail des parents et la borne de pointage ; la réactivation rétablit tout.",
+        "Un mot de passe temporaire n'est affiché qu'une seule fois : copiez-le avant de fermer la fenêtre.",
+        "Le journal de la plateforme retrace les actions des super-administrateurs, séparément des journaux des écoles."
+      ]
+    },
     "dashboard": {
       "intro": "Vue d'ensemble de l'établissement : effectifs, présences, paiements et alertes en un coup d'œil.",
       "tips": [
