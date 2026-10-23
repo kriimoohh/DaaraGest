@@ -39,11 +39,28 @@ export function calculerVerrou(tentativesApresEchec: number, maintenant: Date = 
   return minutes > 0 ? new Date(maintenant.getTime() + minutes * 60_000) : null;
 }
 
-export async function login(identifiant: string, mot_de_passe: string) {
-  const utilisateur = await prisma.utilisateur.findUnique({
-    where: { identifiant },
-    include: { role: true },
+/** Le même identifiant existe dans plusieurs établissements : il faut le code de l'école. */
+export class CodeEtablissementRequisError extends Error {
+  constructor() {
+    super("Indiquez le code de votre école pour vous connecter.");
+    this.name = 'CodeEtablissementRequisError';
+  }
+}
+
+/**
+ * Connexion. L'identifiant est unique PAR établissement : l'école est désignée par son code
+ * (ex. « FIC »). Sans code, la connexion reste possible tant que l'identifiant n'existe que dans
+ * un seul établissement (comptes antérieurs au multi-établissement) ; sinon le code est exigé.
+ */
+export async function login(identifiant: string, mot_de_passe: string, code_etablissement?: string | null) {
+  const code = code_etablissement?.trim() || null;
+  const candidats = await prisma.utilisateur.findMany({
+    where: { identifiant, ...(code ? { etablissement: { code: { equals: code, mode: 'insensitive' } } } : {}) },
+    include: { role: true, etablissement: { select: { actif: true, code: true, nom_fr: true } } },
+    take: 2,
   });
+  if (!code && candidats.length > 1) throw new CodeEtablissementRequisError();
+  const utilisateur = candidats[0];
 
   if (!utilisateur || !utilisateur.actif) {
     throw new Error('Identifiants incorrects');
@@ -66,6 +83,12 @@ export async function login(identifiant: string, mot_de_passe: string) {
     });
     if (verrou) throw new CompteVerrouilleError(Math.max(1, Math.ceil((verrou.getTime() - Date.now()) / 60000)));
     throw new Error('Identifiants incorrects');
+  }
+
+  // Établissement suspendu (abonnement, fin de contrat…) : annoncé seulement APRÈS un mot de passe
+  // valide, pour ne rien révéler à qui ne connaît pas le compte.
+  if (!utilisateur.etablissement.actif) {
+    throw new Error('Cet établissement est suspendu. Contactez le support DaaraGest.');
   }
 
   await prisma.utilisateur.update({
@@ -94,7 +117,9 @@ export async function login(identifiant: string, mot_de_passe: string) {
       theme: utilisateur.theme,
       role: utilisateur.role.libelle_fr,
       etablissement_id: utilisateur.etablissement_id,
+      etablissement_code: utilisateur.etablissement.code,
       must_change_password: utilisateur.must_change_password,
+      super_admin: utilisateur.super_admin,
     },
   };
 }
@@ -176,11 +201,11 @@ export async function creerRefreshToken(
 export async function validerRefreshToken(token: string) {
   const rt = await prisma.refreshToken.findUnique({
     where: { token },
-    include: { utilisateur: { include: { role: true } } },
+    include: { utilisateur: { include: { role: true, etablissement: { select: { actif: true } } } } },
   });
   if (!rt || rt.revoked || rt.expires_at < new Date()) return null;
-  // Un compte désactivé ne peut plus renouveler sa session.
-  if (!rt.utilisateur.actif) return null;
+  // Un compte désactivé, ou d'un établissement suspendu, ne peut plus renouveler sa session.
+  if (!rt.utilisateur.actif || !rt.utilisateur.etablissement.actif) return null;
   // On renvoie le token complet (device_id inclus) pour rotation par appareil.
   return rt;
 }
@@ -217,9 +242,11 @@ export async function getMe(id: string) {
     // Même valeur sous le nom utilisé par le store du front (le modal « changement obligatoire »
     // en dépend : sans ce champ, le /auth/me qui suit la connexion l'effaçait).
     must_change_password: utilisateur.must_change_password,
+    super_admin: utilisateur.super_admin,
     etablissement: {
       id: utilisateur.etablissement.id,
       nom_fr: utilisateur.etablissement.nom_fr,
+      code: utilisateur.etablissement.code,
     },
   };
 }

@@ -110,7 +110,8 @@ model Utilisateur {
   nom_fr               String
   prenom_fr            String?
   sexe                 String? // 'M' ou 'F' — utilisé pour l'accord en genre des documents
-  identifiant          String    @unique
+  // Unique PAR ÉTABLISSEMENT (multi-établissement) : à la connexion, l'école est donnée par son code.
+  identifiant          String
   email                String?
   mot_de_passe         String
   langue               String    @default("fr")
@@ -122,6 +123,9 @@ model Utilisateur {
   verrouille_jusqu     DateTime?
   // Version de session portée par le JWT : l'incrémenter révoque aussitôt tous les jetons d'accès émis.
   token_version        Int       @default(0)
+  // Super-administrateur de la PLATEFORME : crée et suspend des établissements. Positionné
+  // uniquement en base (jamais par l'API) ; indépendant du rôle dans son propre établissement.
+  super_admin          Boolean   @default(false)
   created_at           DateTime  @default(now())
   updated_at           DateTime  @updatedAt
 
@@ -138,7 +142,7 @@ model Utilisateur {
   refresh_tokens            RefreshToken[]
   cahier_visas_signes       CahierVisa[]              @relation("CahierVisas")
 
-  @@index([etablissement_id])
+  @@unique([etablissement_id, identifiant])
   @@index([etablissement_id, actif])
 }
 

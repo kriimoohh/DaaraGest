@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { login, getMe, changePassword, updateProfil, creerRefreshToken, validerRefreshToken, revoquerRefreshToken, CompteVerrouilleError } from './auth.service';
+import { login, getMe, changePassword, updateProfil, creerRefreshToken, validerRefreshToken, revoquerRefreshToken, CompteVerrouilleError, CodeEtablissementRequisError } from './auth.service';
 import { revoquerSessions } from '../../utils/sessions';
 import { ipBloquee, noterEchec } from '../../utils/echecsConnexion';
 import { loginSchema } from './auth.schema';
@@ -32,7 +32,7 @@ export async function loginHandler(request: FastifyRequest, reply: FastifyReply)
   }
 
   try {
-    const { payload, user } = await login(parsed.data.identifiant, parsed.data.mot_de_passe);
+    const { payload, user } = await login(parsed.data.identifiant, parsed.data.mot_de_passe, parsed.data.code_etablissement);
     const token = await reply.jwtSign(payload, { expiresIn: TOKEN_EXPIRY });
     const refreshToken = await creerRefreshToken(user.id, parsed.data.device_id);
     reply.setCookie('daaragest_token', token, cookieOptions(reply));
@@ -41,6 +41,9 @@ export async function loginHandler(request: FastifyRequest, reply: FastifyReply)
     // cookie httpOnly. Aucun chemin javascript n'a besoin d'y accéder.
     return reply.send({ user });
   } catch (err) {
+    if (err instanceof CodeEtablissementRequisError) {
+      return reply.status(400).send({ error: err.message, code_etablissement_requis: true });
+    }
     noterEchec(request.ip);
     if (err instanceof CompteVerrouilleError) {
       return reply.status(429).send({ error: err.message });

@@ -89,11 +89,10 @@ export async function creerPersonnel(etablissement_id: string, data: PersonnelIn
   const roleProf = await prisma.role.findFirst({ where: { libelle_fr: 'professeur' } });
   if (!roleProf) throw new NotFoundError('Rôle professeur introuvable');
 
-  // `identifiant` est unique au niveau global (tous établissements confondus).
-  // On pré-vérifie pour renvoyer un message clair (409) au lieu du P2002 brut
-  // que le handler traduirait en un vague « Données invalides ».
+  // `identifiant` est unique par établissement. On pré-vérifie pour renvoyer un message clair (409)
+  // au lieu du P2002 brut que le handler traduirait en un vague « Données invalides ».
   const identifiantPris = await prisma.utilisateur.findFirst({
-    where: { identifiant: data.identifiant },
+    where: { identifiant: data.identifiant, etablissement_id },
     select: { id: true },
   });
   if (identifiantPris) throw new ConflictError('Cet identifiant est déjà utilisé');

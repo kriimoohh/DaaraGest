@@ -63,6 +63,7 @@ const RapportsPage       = lazyWithReload(() => import('./pages/Rapports').then(
 const AuditPage          = lazyWithReload(() => import('./pages/Audit').then(m => ({ default: m.AuditPage })));
 const GestionPortailPage = lazyWithReload(() => import('./pages/GestionPortail').then(m => ({ default: m.GestionPortailPage })));
 const BibliothequeePage  = lazyWithReload(() => import('./pages/Bibliotheque').then(m => ({ default: m.BibliothequeePage })));
+const PlateformePage     = lazyWithReload(() => import('./pages/Plateforme').then(m => ({ default: m.PlateformePage })));
 const DemandesAbsencePersonnelPage = lazyWithReload(() => import('./pages/DemandesAbsencePersonnel').then(m => ({ default: m.DemandesAbsencePersonnelPage })));
 
 // Mêmes listes que la Sidebar — source de vérité unique côté frontend
@@ -176,6 +177,9 @@ export default function App() {
             <Route path="/parametres" element={
               <ProtectedRoute roles={ROLES.adminOnly}><ParametresPage /></ProtectedRoute>
             } />
+
+            {/* Super-admin plateforme : contrôle par drapeau dans la page (l'API le revérifie). */}
+            <Route path="/plateforme" element={<PlateformePage />} />
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>

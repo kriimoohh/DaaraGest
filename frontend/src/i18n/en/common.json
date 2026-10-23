@@ -4,6 +4,7 @@
     "tagline": "Your school management, simplified"
   },
   "nav": {
+    "plateforme": "Platform",
     "accueil": "Home",
     "dashboard": "Dashboard",
     "eleves": "Students",
@@ -106,6 +107,8 @@
     "retour": "Back"
   },
   "auth": {
+    "code_ecole": "School code",
+    "code_ecole_aide": "Optional if your username exists in only one school",
     "login": "Login",
     "identifiant": "Username",
     "password": "Password",
@@ -2182,7 +2185,8 @@
       "Classe": "Class",
       "CahierSeance": "Class log (session)",
       "Devoir": "Homework",
-      "CahierVisa": "Class log (sign-off)"
+      "CahierVisa": "Class log (sign-off)",
+      "Etablissement": "School"
     },
     "phrases": {
       "defaut": "performed an action: {{action}} — {{entite}}",
@@ -2371,6 +2375,44 @@
     "rapport_objectif": "Objective",
     "rapport_semaine_du": "Week of {{du}} to {{au}}",
     "err_rapport": "Could not generate the report"
+  },
+  "plateforme": {
+    "titre": "Platform",
+    "eyebrow": "Multi-school",
+    "nouvelle": "New school",
+    "nom": "School name",
+    "code": "School code",
+    "code_aide": "2 to 8 letters or digits; used to sign in and in student IDs",
+    "adresse": "Address",
+    "telephone": "Phone",
+    "email": "Email",
+    "filieres": "Tracks",
+    "referentiel": "Create the Franco-Arabic subject catalogue (76 subjects)",
+    "annee": "School year (optional)",
+    "annee_libelle": "Label (e.g. 2026-2027)",
+    "debut": "Start",
+    "fin": "End",
+    "admin": "Administrator account",
+    "admin_nom": "Last name",
+    "admin_prenom": "First name",
+    "admin_identifiant": "Username",
+    "creer": "Create school",
+    "eleves": "Students",
+    "comptes": "Active accounts",
+    "statut": "Status",
+    "actif": "Active",
+    "suspendu": "Suspended",
+    "suspendre": "Suspend",
+    "reactiver": "Reactivate",
+    "confirm_suspendre": "Suspend {{nom}}? All its accounts will be signed out and unable to sign in.",
+    "cree_titre": "School created",
+    "cree_texte": "Send this information to the school. The password is shown only once and must be changed at first sign-in.",
+    "mdp": "Temporary password",
+    "copier": "Copy",
+    "copie": "Copied",
+    "fermer": "Close",
+    "vide": "No schools yet.",
+    "err": "Operation failed"
   },
   "aide": {
     "titre": "Help"

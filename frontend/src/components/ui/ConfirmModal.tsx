@@ -9,6 +9,8 @@ interface Props {
   title?: string;
   message?: string;
   loading?: boolean;
+  /** Libellé du bouton de confirmation (défaut : « Supprimer »). */
+  confirmLabel?: string;
 }
 
 export function ConfirmModal({
@@ -18,6 +20,7 @@ export function ConfirmModal({
   title,
   message,
   loading,
+  confirmLabel,
 }: Props) {
   const { t } = useTranslation();
   return (
@@ -28,7 +31,7 @@ export function ConfirmModal({
           {t('actions.annuler')}
         </Button>
         <Button variant="danger" onClick={onConfirm} loading={loading}>
-          {t('actions.supprimer')}
+          {confirmLabel ?? t('actions.supprimer')}
         </Button>
       </div>
     </Modal>

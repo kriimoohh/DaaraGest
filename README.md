@@ -2,7 +2,7 @@
 
 Application web de gestion scolaire multi-filières, conçue pour tout établissement au Sénégal — **franco-arabe, bilingue ou classique** — grâce à des filières entièrement configurables par établissement (FR / AR / EN et toute combinaison, sans hypothèse de bilinguisme imposée). Gestion complète des élèves, du personnel, des classes, notes, bulletins, cahier de texte, finances, pointage (manuel et QR), emploi du temps, messagerie interne, bibliothèque et portail parents — interface **trilingue Français / Arabe / Anglais** (RTL pour l'arabe) et landing page publique.
 
-> **Mono-établissement aujourd'hui, pensé pour devenir un SaaS multi-tenant.** Le socle multi-tenant existe (`etablissement_id` sur toutes les tables, JWT scopé, garde-fous d'établissement vérifiés par des tests d'intégration) ; chaque établissement est déployé séparément (en production : un service API, un service front et une base PostgreSQL sur Railway). La bascule vers une offre SaaS multi-établissement (isolation RLS, onboarding, facturation) est un plan documenté, pas encore implémenté — voir [`docs/SAAS-INFRA-PLAN.md`](docs/SAAS-INFRA-PLAN.md) et la section [Phase 4 — Multi-établissement](#phase-4--multi-établissement).
+> **Multi-établissement (première étape livrée).** Plusieurs écoles peuvent partager le même déploiement : chaque donnée porte son `etablissement_id`, la connexion se fait avec le **code de l'école**, et un super-administrateur de la plateforme crée et suspend les établissements (page **Plateforme**). Restent à faire avant d'ouvrir largement : la sécurité au niveau de la base (RLS PostgreSQL), la facturation et le libre-service — voir [`docs/SAAS-INFRA-PLAN.md`](docs/SAAS-INFRA-PLAN.md) et la section [Phase 4 — Multi-établissement](#phase-4--multi-établissement). En production : un service API, un service front et une base PostgreSQL sur Railway.
 
 ---
 
@@ -233,7 +233,15 @@ DaaraGest/
 
 ### Isolation multi-établissements
 
-Chaque requête authentifiée extrait `etablissement_id` du JWT et les services filtrent par cet identifiant : `where: { id, etablissement_id }` (manuel, à chaque requête — pas encore de RLS PostgreSQL, voir la roadmap). Les accès par identifiant à des ressources d'un autre établissement répondent « introuvable ». Des tests d'intégration verrouillent les points sensibles : génération de documents (certificats, relevés, cartes, attestations de travail), saisie et lecture des notes, liste des scans du jour.
+Chaque requête authentifiée extrait `etablissement_id` du JWT et les services filtrent par cet identifiant : `where: { id, etablissement_id }` (manuel, à chaque requête — pas encore de RLS PostgreSQL, voir la roadmap). Les accès par identifiant à des ressources d'un autre établissement répondent « introuvable ». Des tests d'intégration verrouillent les points sensibles : génération de documents (certificats, relevés, cartes, attestations de travail), saisie et lecture des notes, liste des scans du jour, connexion et suspension par établissement.
+
+**Connexion par code école.** L'identifiant est unique **par établissement** (deux écoles peuvent avoir chacune un compte `admin`). La page de connexion demande le **code de l'école** (ex. `FIC`), mémorisé sur l'appareil ; il reste facultatif tant que l'identifiant n'existe que dans une seule école (comptes existants), sinon l'API répond « Indiquez le code de votre école ».
+
+**Plateforme (super-admin).** Un compte portant le drapeau `super_admin` (positionné uniquement en base, jamais par l'API) voit la page **Plateforme** : liste des établissements (élèves, comptes actifs, statut), **création** d'une école avec ses données de départ (configuration des notes, filières FR/AR/EN au choix, 16 niveaux, année scolaire, référentiel de 76 matières en option) et son compte administrateur au mot de passe temporaire affiché une seule fois, **suspension / réactivation** (une école suspendue ne peut plus se connecter et ses sessions ouvertes sont coupées). Activer un super-admin :
+
+```sql
+UPDATE "Utilisateur" SET super_admin = true WHERE identifiant = 'admin' AND etablissement_id = (SELECT id FROM "Etablissement" WHERE code = 'FIC');
+```
 
 ### Périmètre du professeur
 
@@ -528,7 +536,7 @@ La colonne **Accès** reprend les groupes de `backend/src/config/roles.ts` (sour
 
 | Méthode | Route | Accès | Description |
 |---|---|---|---|
-| `POST` | `/auth/login` | **Public** | Connexion · limitée à 10 essais/min par couple (IP, identifiant) et 30 échecs/10 min par IP · verrouillage **progressif** du compte (1 → 5 → 15 → 60 min) · pose les cookies httpOnly |
+| `POST` | `/auth/login` | **Public** | Connexion (`identifiant`, `mot_de_passe`, `code_etablissement` facultatif tant que l'identifiant est unique sur la plateforme) · limitée à 10 essais/min par couple (IP, identifiant) et 30 échecs/10 min par IP · verrouillage **progressif** du compte (1 → 5 → 15 → 60 min) · pose les cookies httpOnly |
 | `POST` | `/auth/refresh` | **Public** | Renouveler le jeton d'accès via le refresh token (cookie) · 10 req/min · l'ancien refresh token garde 60 s de grâce (plusieurs onglets) · refusé si le compte est désactivé |
 | `POST` | `/auth/logout` | Session | Déconnexion + révocation du refresh token de l'appareil |
 | `GET` | `/auth/me` | Session | Profil connecté (dont `must_change_password`) |
@@ -824,6 +832,9 @@ La colonne **Accès** reprend les groupes de `backend/src/config/roles.ts` (sour
 | `GET` | `/cahier/export-pdf` | Pédagogie | Export PDF du cahier (inspection) |
 | `GET` | `/cahier/rapport` | Pédagogie | Rapport journalier/hebdomadaire (`periode=jour\|semaine`, `date`, `classe_id?`) : séances, devoirs, séances non renseignées par classe |
 | `GET` | `/cahier/rapport-pdf` | Pédagogie | Même rapport en PDF A4 (téléchargement / impression) |
+| `GET` | `/plateforme/etablissements` | Super-admin | Établissements de la plateforme avec élèves, comptes actifs et statut |
+| `POST` | `/plateforme/etablissements` | Super-admin | Crée une école, ses données de départ et son admin (mot de passe temporaire renvoyé une seule fois) |
+| `PATCH` | `/plateforme/etablissements/:id` | Super-admin | Renomme, suspend ou réactive une école (suspension = connexions refusées et sessions coupées) |
 | `GET` | `/cahier/visas` | Pédagogie | Liste des visas (périodes verrouillées par la direction) |
 | `POST` | `/cahier/visas` | Direction | Viser un intervalle `[du, au]` d'une classe — verrouille la saisie (direction) |
 | `DELETE` | `/cahier/visas/:id` | Direction | Retirer un visa (direction) |
@@ -1136,7 +1147,7 @@ Principaux domaines couverts : calculs de bulletins (moyennes pondérées, menti
 
 ### Phase 4 — Multi-établissement
 
-Le socle multi-tenant existe (`etablissement_id` partout, JWT scopé). Reste l'onboarding : module `etablissements`, super-admin plateforme, branding par école. C'est la trajectoire produit visée (passage d'un déploiement mono-établissement à un **SaaS multi-tenant**) ; le plan détaillé — isolation RLS, provisioning/facturation, infra cible, coûts — est dans [`docs/SAAS-INFRA-PLAN.md`](docs/SAAS-INFRA-PLAN.md). À déclencher quand une deuxième école arrivera (la Phase A « isolation » de ce plan doit être terminée avant).
+**Livré** : identifiants uniques par école et connexion par code école, super-admin plateforme, création d'établissement avec données de départ, suspension/réactivation (sessions coupées). **Reste** : sécurité au niveau de la base (RLS PostgreSQL + extension Prisma) avant d'accueillir une école extérieure, facturation et inscription en libre-service, personnalisation par école, stockage des images hors base, limites de requêtes par école. Plan détaillé — isolation RLS, provisioning/facturation, infra cible, coûts — dans [`docs/SAAS-INFRA-PLAN.md`](docs/SAAS-INFRA-PLAN.md).
 
 ### Pointage NFC
 
