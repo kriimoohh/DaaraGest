@@ -16,14 +16,23 @@ const cache = new Map<string, { etat: Etat | null; exp: number }>();
 export async function etatSession(utilisateur_id: string): Promise<Etat | null> {
   const hit = cache.get(utilisateur_id);
   if (hit && hit.exp > Date.now()) return hit.etat;
-  const u = await prisma.utilisateur.findUnique({ where: { id: utilisateur_id }, select: { actif: true, token_version: true } });
-  const etat = u ? { actif: u.actif, tv: u.token_version } : null;
+  const u = await prisma.utilisateur.findUnique({
+    where: { id: utilisateur_id },
+    select: { actif: true, token_version: true, etablissement: { select: { actif: true } } },
+  });
+  // Un établissement suspendu coupe les sessions de tous ses comptes.
+  const etat = u ? { actif: u.actif && u.etablissement.actif, tv: u.token_version } : null;
   cache.set(utilisateur_id, { etat, exp: Date.now() + TTL_MS });
   return etat;
 }
 
 export function invaliderEtatSession(utilisateur_id: string): void {
   cache.delete(utilisateur_id);
+}
+
+/** Vide tout le cache (suspension/réactivation d'un établissement : tous ses comptes sont concernés). */
+export function viderCacheSessions(): void {
+  cache.clear();
 }
 
 /**

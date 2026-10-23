@@ -66,6 +66,8 @@ const NAV_SECTIONS = [
       { key: 'audit',        path: '/audit',        roles: ['admin', 'gestionnaire'] },
       { key: 'utilisateurs', path: '/utilisateurs', roles: ['admin'] },
       { key: 'parametres',   path: '/parametres',   roles: ['admin'] },
+      // Visible des seuls super-admins plateforme (drapeau du compte, pas un rôle).
+      { key: 'plateforme',   path: '/plateforme',   roles: [] as string[], superAdmin: true },
     ],
   },
 ];
@@ -99,6 +101,7 @@ const NAV_ICONS: Record<string, string> = {
   liens_portail:    'M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z',
   utilisateurs:     'M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5z',
   parametres:       'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96a7.06 7.06 0 00-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.477.477 0 00-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z',
+  plateforme:       'M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z',
 };
 
 function NavIcon({ path, size = 16 }: { path: string; size?: number }) {
@@ -161,7 +164,8 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="sb-nav">
         {NAV_SECTIONS.map((section) => {
-          const visible = section.items.filter(item => item.roles.includes(role));
+          const visible = section.items.filter(item =>
+            'superAdmin' in item && item.superAdmin ? !!user?.super_admin : item.roles.includes(role));
           if (visible.length === 0) return null;
           const estActif = (path: string) =>
             path === '/' ? location.pathname === '/' : location.pathname === path || location.pathname.startsWith(path + '/');

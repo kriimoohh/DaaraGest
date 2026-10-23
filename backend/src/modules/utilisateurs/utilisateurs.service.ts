@@ -170,7 +170,7 @@ export async function reactiverUtilisateur(id: string, etablissement_id: string,
   const match = existing.identifiant.match(/^(.*)_deleted_\d+$/);
   if (match) {
     const original = match[1];
-    const collision = await prisma.utilisateur.findFirst({ where: { identifiant: original } });
+    const collision = await prisma.utilisateur.findFirst({ where: { identifiant: original, etablissement_id } });
     if (!collision) identifiantRestaure = original;
   }
 

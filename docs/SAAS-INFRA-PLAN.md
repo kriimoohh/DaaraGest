@@ -1,7 +1,7 @@
 # Plan SaaS & Infrastructure — DaaraGest
 
-> **Statut : plan / backlog — non implémenté.** Document de référence à exploiter plus tard.
-> **Dernière MAJ : 2026-10-10.** Voir aussi [`PRODUCT.md`](../PRODUCT.md), et en mémoire projet la note *backlog priorisé* (« Phase 4 multi-établissement »).
+> **Statut : en cours.** Phase B partiellement livrée (création et suspension d’établissements par un super-admin, connexion par code école) ; Phase A (RLS) à faire avant toute école extérieure.
+> **Dernière MAJ : 2026-10-23.** Voir aussi [`PRODUCT.md`](../PRODUCT.md), et en mémoire projet la note *backlog priorisé* (« Phase 4 multi-établissement »).
 >
 > Objectif : passer de **mono-établissement** (aujourd'hui `etablissement-default` en prod) à un **SaaS multi-tenant** propre, isolé et scalable, avec un choix d'infrastructure plus stable et maîtrisé en coût que l'hébergement actuel (Railway).
 
@@ -18,7 +18,7 @@ Le socle multi-tenant existe déjà à ~80 %. Ce n'est **pas une réécriture**,
 | Hardcoding mono-tenant | **0** `etablissement-default` dans `src/` (uniquement seed/tests) | ✅ Prêt |
 | Scoping des requêtes | `where: { id, etablissement_id }` **manuel, à chaque requête** ; verrouillé par des tests d'intégration (documents, notes, scans) et des gardes `etablissement_id` | ⚠️ Fragile (mais testé) |
 | Isolation centralisée | **Aucune** (pas de RLS Postgres, pas de middleware Prisma `$extends`/`$use`) | ❌ À faire |
-| Onboarding / création d'établissement | **Inexistant** (établissement créé par seed uniquement) | ❌ À faire |
+| Onboarding / création d'établissement | Page **Plateforme** (super-admin) : création avec données de départ, suspension/réactivation ; identifiants uniques par école + connexion par code école | ✅ Premier niveau (pas de libre-service) |
 | Facturation / abonnements / quotas | Inexistant | ❌ À faire |
 | Stockage fichiers | Photos/logos en **base64 (data URL) dans la base** (`src/utils/photoUrl.ts`) | ❌ À changer |
 | Génération PDF | **Puppeteer synchrone** par requête (`renderPdfHtml`), file de 3 rendus simultanés, `503` après 60 s d'attente | ⚠️ Goulot à isoler |

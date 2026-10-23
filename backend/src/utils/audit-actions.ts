@@ -31,7 +31,7 @@ export const AUDIT_ENTITES = [
   'Eleve', 'Inscription', 'Utilisateur', 'Filiere', 'PaiementEleve',
   'PaiementPersonnel', 'Note', 'Bulletin', 'ClasseMatiere', 'ClasseMatierePeriode',
   'ProgressionEleve', 'PortailParentToken',
-  'Classe', 'CahierSeance', 'Devoir', 'CahierVisa',
+  'Classe', 'CahierSeance', 'Devoir', 'CahierVisa', 'Etablissement',
 ] as const;
 
 // Libellés FR — servent UNIQUEMENT à composer la description stockée en base
@@ -66,6 +66,7 @@ const ENTITE_LABEL_FR: Record<string, string> = {
   CahierSeance: 'Cahier de texte (séance)',
   Devoir: 'Devoir',
   CahierVisa: 'Cahier de texte (visa)',
+  Etablissement: 'Établissement',
 };
 
 type Details = Record<string, unknown> | null | undefined;
