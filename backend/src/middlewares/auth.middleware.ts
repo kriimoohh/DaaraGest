@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { jwtPayloadSchema } from '../utils/jwt';
 import { etatSession } from '../utils/sessions';
+import { definirTenant } from '../config/database';
 
 const ROUTES_SANS_RESTRICTION_MDP = [
   '/api/v1/auth/change-password',
@@ -29,6 +30,8 @@ export async function authMiddleware(request: FastifyRequest, reply: FastifyRepl
   if (!etat || !etat.actif || (user.tv ?? 0) !== etat.tv) {
     return reply.status(401).send({ error: 'Session expirée. Veuillez vous reconnecter.' });
   }
+  // À partir d'ici, toutes les requêtes en base de cette requête HTTP sont limitées à son établissement.
+  definirTenant(user.etablissement_id);
 
   if (
     user.doit_changer_mdp &&

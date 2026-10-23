@@ -1,6 +1,6 @@
 # Plan SaaS & Infrastructure — DaaraGest
 
-> **Statut : en cours.** Phase B partiellement livrée (création et suspension d’établissements par un super-admin, connexion par code école) ; Phase A (RLS) à faire avant toute école extérieure.
+> **Statut : en cours.** Phase A livrée (RLS PostgreSQL sur 33 tables, rôle `daaragest_app`, enveloppe Prisma, tests d’isolation) ; Phase B partiellement livrée (création et suspension d’établissements par un super-admin, connexion par code école).
 > **Dernière MAJ : 2026-10-23.** Voir aussi [`PRODUCT.md`](../PRODUCT.md), et en mémoire projet la note *backlog priorisé* (« Phase 4 multi-établissement »).
 >
 > Objectif : passer de **mono-établissement** (aujourd'hui `etablissement-default` en prod) à un **SaaS multi-tenant** propre, isolé et scalable, avec un choix d'infrastructure plus stable et maîtrisé en coût que l'hébergement actuel (Railway).
@@ -17,7 +17,7 @@ Le socle multi-tenant existe déjà à ~80 %. Ce n'est **pas une réécriture**,
 | Résolution du tenant | `etablissement_id` **dans le JWT** → `request.user.etablissement_id` → passé aux services | ✅ Prêt |
 | Hardcoding mono-tenant | **0** `etablissement-default` dans `src/` (uniquement seed/tests) | ✅ Prêt |
 | Scoping des requêtes | `where: { id, etablissement_id }` **manuel, à chaque requête** ; verrouillé par des tests d'intégration (documents, notes, scans) et des gardes `etablissement_id` | ⚠️ Fragile (mais testé) |
-| Isolation centralisée | **Aucune** (pas de RLS Postgres, pas de middleware Prisma `$extends`/`$use`) | ❌ À faire |
+| Isolation centralisée | **RLS PostgreSQL** sur les 33 tables portant l'établissement + enveloppe Prisma `$extends` (contexte AsyncLocalStorage) ; tables filles sans `etablissement_id` hors RLS | ✅ Fait (défense en profondeur) |
 | Onboarding / création d'établissement | Page **Plateforme** (super-admin) : création avec données de départ, suspension/réactivation ; identifiants uniques par école + connexion par code école | ✅ Premier niveau (pas de libre-service) |
 | Facturation / abonnements / quotas | Inexistant | ❌ À faire |
 | Stockage fichiers | Photos/logos en **base64 (data URL) dans la base** (`src/utils/photoUrl.ts`) | ❌ À changer |

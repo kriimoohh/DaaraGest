@@ -29,6 +29,10 @@ vi.mock('../../config/database', () => ({
       ]),
     },
   },
+  // Contexte établissement (RLS) : sans effet ici, la base est simulée (comportement réel : rls.itest.ts).
+  definirTenant: vi.fn(),
+  brancherContexteTenant: vi.fn(),
+  horsIsolation: (fn: () => Promise<unknown>) => fn(),
 }));
 
 // État de session (actif + version) : lu en base par le middleware. Ici : compte actif, version 0 par défaut ;

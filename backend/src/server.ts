@@ -4,7 +4,7 @@ import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import crypto from 'crypto';
-import prisma from './config/database';
+import prisma, { brancherContexteTenant } from './config/database';
 import { env, isProd } from './config/env';
 import { initSentry } from './config/sentry';
 import { isOriginBlocked } from './utils/csrf';
@@ -76,6 +76,8 @@ const fastify = Fastify({
 
 async function build() {
   initSentry();
+  // Contexte établissement par requête (isolation RLS) — avant tout autre hook.
+  brancherContexteTenant(fastify);
   // Support plusieurs origines séparées par des virgules
   const corsOrigins = env.CORS_ORIGIN.split(',').map(s => s.trim()).filter(Boolean);
   await fastify.register(cors, {
