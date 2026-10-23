@@ -4,7 +4,7 @@ import { requireSuperAdmin } from '../../middlewares/superAdmin.middleware';
 import { JwtPayload } from '../../utils/jwt';
 import { HttpError } from '../../utils/errors';
 import { creerEtablissementSchema, modifierEtablissementSchema } from './plateforme.schema';
-import { listerEtablissements, creerEtablissement, modifierEtablissement } from './plateforme.service';
+import { listerEtablissements, creerEtablissement, modifierEtablissement, listerAdmins, reinitialiserAdmin, journalPlateforme } from './plateforme.service';
 import { horsIsolation } from '../../config/database';
 
 function envoyer(reply: FastifyReply, err: unknown) {
@@ -35,5 +35,24 @@ export async function plateformeRoutes(fastify: FastifyInstance) {
     try {
       return reply.send(await horsIsolation(() => modifierEtablissement((request.params as { id: string }).id, parsed.data, { id, etablissement_id })));
     } catch (err) { return envoyer(reply, err); }
+  });
+
+  fastify.get('/etablissements/:id/admins', garde, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      return reply.send(await horsIsolation(() => listerAdmins((request.params as { id: string }).id)));
+    } catch (err) { return envoyer(reply, err); }
+  });
+
+  fastify.post('/etablissements/:id/admins/:uid/reinitialiser', garde, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id: etab, uid } = request.params as { id: string; uid: string };
+    const { id, etablissement_id } = request.user as JwtPayload;
+    try {
+      return reply.send(await horsIsolation(() => reinitialiserAdmin(etab, uid, { id, etablissement_id })));
+    } catch (err) { return envoyer(reply, err); }
+  });
+
+  fastify.get('/journal', garde, async (request: FastifyRequest, reply: FastifyReply) => {
+    const { etablissement_id } = request.user as JwtPayload;
+    return reply.send(await horsIsolation(() => journalPlateforme(etablissement_id)));
   });
 }

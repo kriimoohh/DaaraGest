@@ -26,6 +26,11 @@ export const creerEtablissementSchema = z.object({
 export const modifierEtablissementSchema = z.object({
   actif: z.boolean().optional(),
   nom_fr: z.string().trim().min(2).max(200).optional(),
+  // Changer le code change le code à saisir à la connexion (les matricules existants gardent l'ancien préfixe).
+  code: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{2,8}$/, 'Code : 2 à 8 lettres ou chiffres').optional(),
+  adresse: z.string().trim().max(300).nullish(),
+  telephone: z.string().trim().max(50).nullish(),
+  email: z.string().trim().email().max(200).nullish().or(z.literal('')),
 });
 
 export type CreerEtablissementInput = z.infer<typeof creerEtablissementSchema>;

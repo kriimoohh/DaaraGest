@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import type { FastifyRequest } from 'fastify';
 import prisma from '../../config/database';
-import { creerEtablissement, modifierEtablissement, listerEtablissements } from './plateforme.service';
+import { creerEtablissement, modifierEtablissement, listerEtablissements, listerAdmins, reinitialiserAdmin, journalPlateforme } from './plateforme.service';
 import { creerEtablissementSchema } from './plateforme.schema';
 import { login, getMe, creerRefreshToken, validerRefreshToken, CodeEtablissementRequisError } from '../auth/auth.service';
 import { authMiddleware } from '../../middlewares/auth.middleware';
@@ -162,5 +162,81 @@ describe('Garde super-admin', () => {
   it('le drapeau super_admin est exigé — un simple admin d\'établissement est refusé', async () => {
     expect(await code(superAdmin)).toBe(0);
     expect(await code(simpleAdmin)).toBe(403);
+  });
+});
+
+// ── Console de plateforme (compte dédié, gestion des écoles, journal) ─────────────────────────
+describe('Console de plateforme', () => {
+  const comptePf = `pf-console-${RUN}`;
+  let etabPf = '';
+
+  beforeAll(async () => {
+    etabPf = (await prisma.etablissement.findFirstOrThrow({ where: { est_plateforme: true } })).id;
+    const roleAdmin = await prisma.role.findUniqueOrThrow({ where: { libelle_fr: 'admin' } });
+    await prisma.utilisateur.create({ data: {
+      id: comptePf, etablissement_id: etabPf, role_id: roleAdmin.id, nom_fr: 'Console', identifiant: `console-${RUN}`, mot_de_passe: 'x', super_admin: true,
+    } });
+  });
+  afterAll(async () => {
+    await prisma.auditLog.deleteMany({ where: { utilisateur_id: comptePf } });
+    await prisma.refreshToken.deleteMany({ where: { utilisateur_id: comptePf } });
+    await prisma.utilisateur.deleteMany({ where: { id: comptePf } });
+  });
+
+  it('l\'établissement technique PLATEFORME n\'apparaît pas parmi les écoles et n\'est pas modifiable', async () => {
+    expect((await listerEtablissements()).some(e => e.id === etabPf)).toBe(false);
+    await expect(modifierEtablissement(etabPf, { actif: false }, acteur)).rejects.toThrow('introuvable');
+    await expect(listerAdmins(etabPf)).rejects.toThrow('introuvable');
+  });
+
+  it('la liste donne classes et dernière connexion', async () => {
+    const a = (await listerEtablissements()).find(e => e.code === codeA)!;
+    expect(a).toHaveProperty('nb_classes');
+    expect(a).toHaveProperty('derniere_connexion');
+  });
+
+  it('modifier une école : coordonnées et code (refusé s\'il est pris)', async () => {
+    const idA = crees[0];
+    await modifierEtablissement(idA, { adresse: 'Rue 10', telephone: '33 000 00 00' }, acteur);
+    expect((await prisma.etablissement.findUnique({ where: { id: idA } }))?.adresse).toBe('Rue 10');
+    await expect(modifierEtablissement(idA, { code: codeB }, acteur)).rejects.toThrow('déjà utilisé');
+  });
+
+  it('réinitialiser l\'admin d\'une école : nouveau mot de passe, changement imposé, sessions coupées, verrou levé ; tracé au journal de la plateforme', async () => {
+    const idB = crees[1];
+    const admins = await listerAdmins(idB);
+    expect(admins.map(a => a.identifiant)).toEqual(['admin']);
+    const cible = admins[0].id;
+    await prisma.utilisateur.update({ where: { id: cible }, data: { tentatives_connexion: 9, verrouille_jusqu: new Date(Date.now() + 3_600_000) } });
+    const rt = await creerRefreshToken(cible, null);
+    const r = await reinitialiserAdmin(idB, cible, { id: comptePf, etablissement_id: etabPf });
+    expect(r.code).toBe(codeB);
+    expect(await validerRefreshToken(rt)).toBeNull();
+    const u = await prisma.utilisateur.findUniqueOrThrow({ where: { id: cible } });
+    expect(u.must_change_password).toBe(true);
+    expect(u.verrouille_jusqu).toBeNull();
+    expect((await login('admin', r.mot_de_passe_temporaire, codeB)).user.id).toBe(cible);
+    // Un utilisateur d'une AUTRE école n'est pas réinitialisable via cette école.
+    await expect(reinitialiserAdmin(crees[0], cible, { id: comptePf, etablissement_id: etabPf })).rejects.toThrow('introuvable');
+
+    const journal = await journalPlateforme(etabPf);
+    const ligne = journal.find(l => l.utilisateur_id === comptePf && l.action === 'PASSWORD_RESET');
+    expect(ligne?.acteur).toBe('Console');
+    // Le journal de la plateforme ne contient pas celui des écoles (et inversement).
+    expect(await prisma.auditLog.count({ where: { etablissement_id: idB, utilisateur_id: comptePf } })).toBe(0);
+  });
+
+  it('un compte plateforme n\'accède qu\'à la console et à ses routes de compte', async () => {
+    const payload = { id: comptePf, role: 'admin', etablissement_id: etabPf, langue: 'fr', theme: 'light', doit_changer_mdp: false, tv: 0 };
+    const code = async (url: string) => {
+      let c = 0;
+      const reply = { status(x: number) { c = x; return this; }, send() { return this; } };
+      await authMiddleware({ jwtVerify: async () => undefined, user: payload, url } as unknown as FastifyRequest, reply as never);
+      return c;
+    };
+    expect(await code('/api/v1/plateforme/etablissements')).toBe(0);
+    expect(await code('/api/v1/auth/me')).toBe(0);
+    expect(await code('/api/v1/eleves')).toBe(403);
+    expect(await code('/api/v1/finances/paiements-eleves')).toBe(403);
   });
 });

@@ -2,7 +2,7 @@
 
 Application web de gestion scolaire multi-filières, conçue pour tout établissement au Sénégal — **franco-arabe, bilingue ou classique** — grâce à des filières entièrement configurables par établissement (FR / AR / EN et toute combinaison, sans hypothèse de bilinguisme imposée). Gestion complète des élèves, du personnel, des classes, notes, bulletins, cahier de texte, finances, pointage (manuel et QR), emploi du temps, messagerie interne, bibliothèque et portail parents — interface **trilingue Français / Arabe / Anglais** (RTL pour l'arabe) et landing page publique.
 
-> **Multi-établissement (première étape livrée).** Plusieurs écoles peuvent partager le même déploiement : chaque donnée porte son `etablissement_id`, la connexion se fait avec le **code de l'école**, et un super-administrateur de la plateforme crée et suspend les établissements (page **Plateforme**). L'isolation est assurée par le code **et** par la base (RLS PostgreSQL). Restent à faire avant d'ouvrir largement : la facturation et le libre-service — voir [`docs/SAAS-INFRA-PLAN.md`](docs/SAAS-INFRA-PLAN.md) et la section [Phase 4 — Multi-établissement](#phase-4--multi-établissement). En production : un service API, un service front et une base PostgreSQL sur Railway.
+> **Multi-établissement (première étape livrée).** Plusieurs écoles peuvent partager le même déploiement : chaque donnée porte son `etablissement_id`, la connexion se fait avec le **code de l'école**, et un super-administrateur de la plateforme crée et suspend les établissements (page **Plateforme**). L'isolation est assurée par le code **et** par la base (RLS PostgreSQL). Restent à faire avant d'ouvrir largement : la facturation, le libre-service et un sous-domaine par école — voir [`docs/SAAS-INFRA-PLAN.md`](docs/SAAS-INFRA-PLAN.md) et la section [Phase 4 — Multi-établissement](#phase-4--multi-établissement). En production : un service API, un service front et une base PostgreSQL sur Railway.
 
 ---
 
@@ -242,10 +242,16 @@ Deux barrières indépendantes :
 
 **Connexion par code école.** L'identifiant est unique **par établissement** (deux écoles peuvent avoir chacune un compte `admin`). La page de connexion demande le **code de l'école** (ex. `FIC`), mémorisé sur l'appareil ; il reste facultatif tant que l'identifiant n'existe que dans une seule école (comptes existants), sinon l'API répond « Indiquez le code de votre école ».
 
-**Plateforme (super-admin).** Un compte portant le drapeau `super_admin` (positionné uniquement en base, jamais par l'API) voit la page **Plateforme** : liste des établissements (élèves, comptes actifs, statut), **création** d'une école avec ses données de départ (configuration des notes, filières FR/AR/EN au choix, 16 niveaux, année scolaire, référentiel de 76 matières en option) et son compte administrateur au mot de passe temporaire affiché une seule fois, **suspension / réactivation** (une école suspendue ne peut plus se connecter et ses sessions ouvertes sont coupées). Activer un super-admin :
+**Console de plateforme (super-admin).** Les comptes de la plateforme appartiennent à un établissement **technique** `PLATEFORME` (`Etablissement.est_plateforme`), jamais listé parmi les écoles. Ils se connectent avec le code école `PLATEFORME`, portent le drapeau `super_admin` (positionné uniquement hors API) et ne voient **que la console** — l'API leur refuse toute autre route (`403`). La console propose :
 
-```sql
-UPDATE "Utilisateur" SET super_admin = true WHERE identifiant = 'admin' AND etablissement_id = (SELECT id FROM "Etablissement" WHERE code = 'FIC');
+- **Écoles** : indicateurs de la plateforme (écoles, élèves, classes de l'année active, comptes actifs) et, par école, dernière connexion ; **création** d'une école avec ses données de départ (configuration des notes, filières FR/AR/EN, 16 niveaux, année scolaire, référentiel de 76 matières en option) et son admin au mot de passe temporaire affiché une fois ; **modification** (nom, code, coordonnées — changer le code change le code de connexion) ; **suspension / réactivation** (connexion refusée, sessions coupées).
+- **Administrateurs d'une école** : liste (dernière connexion, verrouillé, désactivé) et **réinitialisation** du mot de passe (nouveau mot de passe temporaire, changement imposé, verrou levé, sessions coupées).
+- **Journal de la plateforme** : actions des super-admins (création, modification, suspension, réinitialisation), séparé des journaux des écoles.
+
+Créer un compte plateforme (mot de passe temporaire affiché une fois) :
+
+```bash
+node prisma/creer-compte-plateforme.cjs <identifiant> "<Nom>" ["<Prénom>"]
 ```
 
 ### Périmètre du professeur
@@ -501,6 +507,7 @@ Hors de l'application, `backend/prisma/` contient des scripts ponctuels, lancés
 | `lgm/` (+ `lgm/prod/`) | Migration de l'ancienne application LGM vers DaaraGest, par phases numérotées : configuration (échelle /10, mentions, années 2024-2025 et 2025-2026, niveaux), classes, matières, programme, élèves, notes, validation. Idempotent, simulation par défaut (`--apply` pour écrire) |
 | `migrate-matieres-lgm.ts` | Applique le référentiel LGM (6 domaines, 76 matières) sur une base déployée. **L'étape 3 supprime** les matières absentes du référentiel ; simulation par défaut, `--apply` pour écrire |
 | `personnel-ficaam/` · `data/personnel-ficaam*.csv` | Import historique du personnel d'un établissement (comptes professeur + fiches, détails, validation) |
+| `creer-compte-plateforme.cjs` | Crée un compte de la console de plateforme (établissement `PLATEFORME`, super-admin) — mot de passe temporaire affiché une fois |
 | `backfill-classe-code.ts` | Renseigne `Classe.code` pour les classes créées avant la migration — simulation par défaut, `--apply` |
 | `complete-affectations-classe.ts` | Étend les affectations d'enseignants à toutes les matières de la classe — simulation par défaut, `--apply` |
 | `cleanup.ts` | **Supprime toutes les données de test** (conserve établissement, rôles, config des notes, admin, matières) — `npm run db:cleanup` ; destiné aux bases de développement/recette |
@@ -840,7 +847,10 @@ La colonne **Accès** reprend les groupes de `backend/src/config/roles.ts` (sour
 | `GET` | `/cahier/rapport-pdf` | Pédagogie | Même rapport en PDF A4 (téléchargement / impression) |
 | `GET` | `/plateforme/etablissements` | Super-admin | Établissements de la plateforme avec élèves, comptes actifs et statut |
 | `POST` | `/plateforme/etablissements` | Super-admin | Crée une école, ses données de départ et son admin (mot de passe temporaire renvoyé une seule fois) |
-| `PATCH` | `/plateforme/etablissements/:id` | Super-admin | Renomme, suspend ou réactive une école (suspension = connexions refusées et sessions coupées) |
+| `PATCH` | `/plateforme/etablissements/:id` | Super-admin | Modifie (nom, code, coordonnées), suspend ou réactive une école (suspension = connexions refusées et sessions coupées) |
+| `GET` | `/plateforme/etablissements/:id/admins` | Super-admin | Administrateurs d'une école (dernière connexion, verrouillage) |
+| `POST` | `/plateforme/etablissements/:id/admins/:uid/reinitialiser` | Super-admin | Nouveau mot de passe temporaire pour un admin d'école (changement imposé, sessions coupées) |
+| `GET` | `/plateforme/journal` | Super-admin | Journal de la plateforme (actions des super-admins) |
 | `GET` | `/cahier/visas` | Pédagogie | Liste des visas (périodes verrouillées par la direction) |
 | `POST` | `/cahier/visas` | Direction | Viser un intervalle `[du, au]` d'une classe — verrouille la saisie (direction) |
 | `DELETE` | `/cahier/visas/:id` | Direction | Retirer un visa (direction) |
@@ -1153,7 +1163,7 @@ Principaux domaines couverts : calculs de bulletins (moyennes pondérées, menti
 
 ### Phase 4 — Multi-établissement
 
-**Livré** : identifiants uniques par école et connexion par code école, super-admin plateforme, création d'établissement avec données de départ, suspension/réactivation (sessions coupées). **Livré aussi** : isolation par la base (RLS PostgreSQL, rôle `daaragest_app`). **Reste** : facturation et inscription en libre-service, personnalisation par école, stockage des images hors base, limites de requêtes par école. Plan détaillé — isolation RLS, provisioning/facturation, infra cible, coûts — dans [`docs/SAAS-INFRA-PLAN.md`](docs/SAAS-INFRA-PLAN.md).
+**Livré** : identifiants uniques par école et connexion par code école, console de plateforme séparée (compte dédié, indicateurs, modification d'école, réinitialisation des admins, journal), création d'établissement avec données de départ, suspension/réactivation (sessions coupées). **Livré aussi** : isolation par la base (RLS PostgreSQL, rôle `daaragest_app`). **Reste** : facturation et inscription en libre-service, personnalisation par école, stockage des images hors base, limites de requêtes par école. Plan détaillé — isolation RLS, provisioning/facturation, infra cible, coûts — dans [`docs/SAAS-INFRA-PLAN.md`](docs/SAAS-INFRA-PLAN.md).
 
 ### Pointage NFC
 

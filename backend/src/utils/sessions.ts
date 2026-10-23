@@ -9,7 +9,7 @@
 
 import prisma from '../config/database';
 
-interface Etat { actif: boolean; tv: number }
+interface Etat { actif: boolean; tv: number; plateforme?: boolean }
 const TTL_MS = 15_000;
 const cache = new Map<string, { etat: Etat | null; exp: number }>();
 
@@ -18,10 +18,10 @@ export async function etatSession(utilisateur_id: string): Promise<Etat | null> 
   if (hit && hit.exp > Date.now()) return hit.etat;
   const u = await prisma.utilisateur.findUnique({
     where: { id: utilisateur_id },
-    select: { actif: true, token_version: true, etablissement: { select: { actif: true } } },
+    select: { actif: true, token_version: true, etablissement: { select: { actif: true, est_plateforme: true } } },
   });
-  // Un établissement suspendu coupe les sessions de tous ses comptes.
-  const etat = u ? { actif: u.actif && u.etablissement.actif, tv: u.token_version } : null;
+  // Un établissement suspendu coupe les sessions de tous ses comptes. `plateforme` : compte de la console.
+  const etat = u ? { actif: u.actif && u.etablissement.actif, tv: u.token_version, plateforme: u.etablissement.est_plateforme } : null;
   cache.set(utilisateur_id, { etat, exp: Date.now() + TTL_MS });
   return etat;
 }

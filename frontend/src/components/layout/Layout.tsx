@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Outlet, Navigate, useNavigate } from 'react-router-dom';
+import { Outlet, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import { LogoMark } from '../ui/LogoMark';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Header';
 import { ToastContainer } from '../ui/Toast';
@@ -111,6 +113,9 @@ export function Layout() {
     return <Navigate to="/login" replace />;
   }
 
+  // Compte de la PLATEFORME : console seule, sans les écrans (ni les appels) propres à une école.
+  if (user?.compte_plateforme) return <ConsoleLayout />;
+
   const toggleMobileSidebar = () => {
     document.querySelector('.sidebar')?.classList.toggle('is-open');
     document.getElementById('sb-backdrop')?.classList.toggle('is-open');
@@ -133,6 +138,35 @@ export function Layout() {
           <Outlet />
         </main>
       </div>
+      <ToastContainer />
+      {user?.must_change_password && <MustChangePasswordModal />}
+    </div>
+  );
+}
+
+function ConsoleLayout() {
+  const { t } = useTranslation();
+  const { user } = useAuthStore();
+  const { signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const location = useLocation();
+  if (!location.pathname.startsWith('/plateforme')) return <Navigate to="/plateforme" replace />;
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--paper)' }}>
+      <header style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 clamp(16px, 4vw, 32px)', height: 60, background: 'var(--card)', borderBottom: '1px solid var(--rule)' }}>
+        <LogoMark size={28} />
+        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 17 }}>
+          Daara<span style={{ color: 'var(--terra)' }}>Gest</span>
+          <span style={{ color: 'var(--ink-3)', fontWeight: 400 }}> · {t('plateforme.titre')}</span>
+        </span>
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>{`${user?.prenom_fr ?? ''} ${user?.nom_fr ?? ''}`.trim()}</span>
+        <button className="tb-btn" onClick={toggleTheme} aria-label={t('login.theme', 'Thème')} title={t('login.theme', 'Thème')}>{theme === 'dark' ? '☀' : '☾'}</button>
+        <button className="btn btn-secondary btn-sm" onClick={() => signOut()}>{t('auth.logout')}</button>
+      </header>
+      <main className="content" style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <Outlet />
+      </main>
       <ToastContainer />
       {user?.must_change_password && <MustChangePasswordModal />}
     </div>
