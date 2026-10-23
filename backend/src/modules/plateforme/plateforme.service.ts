@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
 import prisma from '../../config/database';
 import { logAction } from '../../utils/audit';
-import { viderCacheSessions } from '../../utils/sessions';
+import { viderCacheSessions, revoquerSessions } from '../../utils/sessions';
 import { assertMotDePasseValide } from '../../utils/passwordPolicy';
 import { ConflictError, NotFoundError, ValidationError } from '../../utils/errors';
 import { ROLES } from '../../config/roles';
@@ -41,18 +41,35 @@ export function genererMotDePasseTemporaire(): string {
   return mdp;
 }
 
+/** Écoles de la plateforme (hors établissement technique) avec leurs indicateurs. */
 export async function listerEtablissements() {
-  const [etabs, utilisateurs, eleves] = await Promise.all([
+  const [etabs, utilisateurs, eleves, classes, connexions] = await Promise.all([
     prisma.etablissement.findMany({
+      where: { est_plateforme: false },
       select: { id: true, nom_fr: true, code: true, adresse: true, telephone: true, email: true, actif: true, created_at: true },
       orderBy: { created_at: 'asc' },
     }),
     prisma.utilisateur.groupBy({ by: ['etablissement_id'], where: { actif: true }, _count: { _all: true } }),
-    prisma.eleve.groupBy({ by: ['etablissement_id'], _count: { _all: true } }),
+    prisma.eleve.groupBy({ by: ['etablissement_id'], where: { actif: true }, _count: { _all: true } }),
+    prisma.classe.groupBy({ by: ['etablissement_id'], where: { active: true, annee_scolaire: { active: true } }, _count: { _all: true } }),
+    prisma.utilisateur.groupBy({ by: ['etablissement_id'], _max: { last_login: true } }),
   ]);
   const nb = (rows: { etablissement_id: string; _count: { _all: number } }[], id: string) =>
     rows.find(r => r.etablissement_id === id)?._count._all ?? 0;
-  return etabs.map(e => ({ ...e, nb_utilisateurs: nb(utilisateurs, e.id), nb_eleves: nb(eleves, e.id) }));
+  return etabs.map(e => ({
+    ...e,
+    nb_utilisateurs: nb(utilisateurs, e.id),
+    nb_eleves: nb(eleves, e.id),
+    nb_classes: nb(classes, e.id),
+    derniere_connexion: connexions.find(c => c.etablissement_id === e.id)?._max.last_login ?? null,
+  }));
+}
+
+/** École modifiable depuis la console (jamais l'établissement technique de la plateforme). */
+async function ecole(id: string) {
+  const etab = await prisma.etablissement.findUnique({ where: { id } });
+  if (!etab || etab.est_plateforme) throw new NotFoundError('Établissement introuvable');
+  return etab;
 }
 
 export async function creerEtablissement(input: CreerEtablissementInput, acteur: { id: string; etablissement_id: string }) {
@@ -130,20 +147,85 @@ export async function creerEtablissement(input: CreerEtablissementInput, acteur:
 }
 
 export async function modifierEtablissement(id: string, input: ModifierEtablissementInput, acteur: { id: string; etablissement_id: string }) {
-  const etab = await prisma.etablissement.findUnique({ where: { id } });
-  if (!etab) throw new NotFoundError('Établissement introuvable');
+  const etab = await ecole(id);
   if (input.actif === false && id === acteur.etablissement_id) {
     throw new ValidationError('Vous ne pouvez pas suspendre votre propre établissement');
   }
+  if (input.code && input.code !== etab.code &&
+      await prisma.etablissement.findFirst({ where: { code: { equals: input.code, mode: 'insensitive' }, id: { not: id } } })) {
+    throw new ConflictError(`Le code « ${input.code} » est déjà utilisé par un autre établissement`);
+  }
+  const vide = (v: string | null | undefined) => (v === undefined ? undefined : v || null);
   const maj = await prisma.etablissement.update({
     where: { id },
-    data: { ...(input.actif !== undefined ? { actif: input.actif } : {}), ...(input.nom_fr ? { nom_fr: input.nom_fr } : {}) },
+    data: {
+      ...(input.actif !== undefined ? { actif: input.actif } : {}),
+      ...(input.nom_fr ? { nom_fr: input.nom_fr } : {}),
+      ...(input.code ? { code: input.code } : {}),
+      ...(input.adresse !== undefined ? { adresse: vide(input.adresse) } : {}),
+      ...(input.telephone !== undefined ? { telephone: vide(input.telephone) } : {}),
+      ...(input.email !== undefined ? { email: vide(input.email) } : {}),
+    },
     select: { id: true, nom_fr: true, code: true, actif: true },
   });
   // Suspension / réactivation : les sessions de l'école sont réévaluées tout de suite.
   if (input.actif !== undefined && input.actif !== etab.actif) viderCacheSessions();
+  const champs = (Object.keys(input) as (keyof ModifierEtablissementInput)[]).filter(k => input[k] !== undefined);
   await logAction(acteur.etablissement_id, acteur.id, 'UPDATE', 'Etablissement', id, {
-    nom: maj.nom_fr, code: maj.code, ...(input.actif !== undefined ? { actif: input.actif } : {}),
+    nom: maj.nom_fr, code: maj.code, champs, ...(input.actif !== undefined ? { actif: input.actif } : {}),
+    ...(input.code && input.code !== etab.code ? { ancien_code: etab.code } : {}),
   });
   return maj;
+}
+
+/** Administrateurs d'une école (support : réinitialisation de mot de passe). */
+export async function listerAdmins(etablissement_id: string) {
+  await ecole(etablissement_id);
+  return prisma.utilisateur.findMany({
+    where: { etablissement_id, role: { libelle_fr: ROLES.ADMIN } },
+    select: { id: true, identifiant: true, nom_fr: true, prenom_fr: true, actif: true, last_login: true, verrouille_jusqu: true },
+    orderBy: [{ actif: 'desc' }, { last_login: { sort: 'desc', nulls: 'last' } }],
+  });
+}
+
+/**
+ * Nouveau mot de passe temporaire pour un administrateur d'école bloqué. Le changement est imposé à la
+ * prochaine connexion, le verrouillage est levé et ses sessions ouvertes sont coupées.
+ */
+export async function reinitialiserAdmin(etablissement_id: string, utilisateur_id: string, acteur: { id: string; etablissement_id: string }) {
+  const etab = await ecole(etablissement_id);
+  const u = await prisma.utilisateur.findFirst({
+    where: { id: utilisateur_id, etablissement_id, role: { libelle_fr: ROLES.ADMIN } },
+    select: { id: true, identifiant: true, nom_fr: true, prenom_fr: true },
+  });
+  if (!u) throw new NotFoundError('Administrateur introuvable');
+  const motDePasse = genererMotDePasseTemporaire();
+  await prisma.utilisateur.update({
+    where: { id: u.id },
+    data: { mot_de_passe: await bcrypt.hash(motDePasse, 10), must_change_password: true, tentatives_connexion: 0, verrouille_jusqu: null },
+  });
+  await revoquerSessions(u.id);
+  await logAction(acteur.etablissement_id, acteur.id, 'PASSWORD_RESET', 'Utilisateur', u.id, {
+    identifiant: u.identifiant, nom: `${u.prenom_fr ?? ''} ${u.nom_fr}`.trim(), etablissement: etab.nom_fr, code: etab.code,
+  });
+  return { identifiant: u.identifiant, code: etab.code, mot_de_passe_temporaire: motDePasse };
+}
+
+/** Journal de la PLATEFORME : actions des super-admins (journal de leur établissement technique). */
+export async function journalPlateforme(acteur_etablissement_id: string, limite = 200) {
+  const lignes = await prisma.auditLog.findMany({
+    where: { etablissement_id: acteur_etablissement_id },
+    orderBy: { created_at: 'desc' },
+    take: limite,
+    select: { id: true, action: true, entite: true, entite_id: true, details: true, created_at: true, utilisateur_id: true },
+  });
+  const acteurs = await prisma.utilisateur.findMany({
+    where: { id: { in: [...new Set(lignes.map(l => l.utilisateur_id))] } },
+    select: { id: true, nom_fr: true, prenom_fr: true, identifiant: true },
+  });
+  const nom = (id: string) => {
+    const a = acteurs.find(x => x.id === id);
+    return a ? `${a.prenom_fr ?? ''} ${a.nom_fr}`.trim() || a.identifiant : '—';
+  };
+  return lignes.map(l => ({ ...l, acteur: nom(l.utilisateur_id) }));
 }

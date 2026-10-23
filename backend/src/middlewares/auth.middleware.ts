@@ -3,6 +3,8 @@ import { jwtPayloadSchema } from '../utils/jwt';
 import { etatSession } from '../utils/sessions';
 import { definirTenant } from '../config/database';
 
+const ROUTES_PLATEFORME = ['/api/v1/plateforme', '/api/v1/auth/'];
+
 const ROUTES_SANS_RESTRICTION_MDP = [
   '/api/v1/auth/change-password',
   '/api/v1/auth/me',
@@ -30,6 +32,12 @@ export async function authMiddleware(request: FastifyRequest, reply: FastifyRepl
   if (!etat || !etat.actif || (user.tv ?? 0) !== etat.tv) {
     return reply.status(401).send({ error: 'Session expirée. Veuillez vous reconnecter.' });
   }
+  // Compte de la PLATEFORME : uniquement la console et ses propres routes de compte (il n'appartient à
+  // aucune école ; ses données « d'école » n'auraient aucun sens).
+  if (etat.plateforme && !ROUTES_PLATEFORME.some(r => request.url.startsWith(r))) {
+    return reply.status(403).send({ error: 'Compte de plateforme : seule la console est accessible.' });
+  }
+
   // À partir d'ici, toutes les requêtes en base de cette requête HTTP sont limitées à son établissement.
   definirTenant(user.etablissement_id);
 

@@ -17,6 +17,8 @@ export interface AuthUser {
   etablissement_code?: string;
   /** Super-administrateur de la plateforme (création/suspension d'établissements). */
   super_admin?: boolean;
+  /** Compte de la console plateforme (rattaché à aucune école). */
+  compte_plateforme?: boolean;
 }
 
 interface AuthState {

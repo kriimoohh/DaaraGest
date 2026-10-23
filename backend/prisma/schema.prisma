@@ -31,6 +31,9 @@ model Etablissement {
   code                String   @unique // Préfixe des matricules, ex: "FIC", "TBK". Configurable dans Paramètres.
   devise              String   @default("FCFA")
   actif               Boolean  @default(true)
+  // Établissement TECHNIQUE qui porte les comptes de la plateforme (console super-admin) : jamais
+  // listé parmi les écoles, ni suspendu, ni modifié depuis la console.
+  est_plateforme      Boolean  @default(false)
   created_at          DateTime @default(now())
   updated_at          DateTime @updatedAt
 
