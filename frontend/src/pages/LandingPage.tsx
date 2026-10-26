@@ -17,6 +17,7 @@ const T = {
     features_sub: 'Une suite complète de modules pour gérer chaque aspect de votre établissement',
     guides_title: 'Guides par rôle',
     guides_sub: 'Découvrez les fonctionnalités accessibles selon votre rôle dans l\'établissement',
+    connexion_aide: 'Pour vous connecter : tapez le nom de votre école et choisissez-la dans la liste, puis saisissez l\'identifiant et le mot de passe remis par votre établissement. L\'école est mémorisée pour les fois suivantes.',
     cta_title: 'Prêt à commencer ?',
     cta_sub: 'Connectez-vous à votre espace et prenez en main la gestion de votre école.',
     cta_btn: 'Accéder à la plateforme',
@@ -271,6 +272,7 @@ const T = {
     features_sub: 'مجموعة متكاملة من الوحدات لإدارة كل جانب من جوانب مؤسستك',
     guides_title: 'أدلة حسب الدور',
     guides_sub: 'اكتشف الوظائف المتاحة حسب دورك في المؤسسة',
+    connexion_aide: 'للدخول: اكتب اسم مدرستك واخترها من القائمة، ثم أدخل المعرّف وكلمة المرور اللذين سلّمتهما لك مؤسستك. تُحفظ المدرسة للمرات القادمة.',
     cta_title: 'هل أنت مستعد للبدء؟',
     cta_sub: 'سجّل الدخول إلى مساحتك وتولّ إدارة مدرستك.',
     cta_btn: 'الوصول إلى المنصة',
@@ -523,7 +525,7 @@ interface LandingContent {
   hero_title: string; hero_sub: string;
   hero_cta_login: string; hero_cta_guide: string; hero_cta_dashboard: string;
   features_title: string; features_sub: string;
-  guides_title: string; guides_sub: string;
+  guides_title: string; guides_sub: string; connexion_aide: string;
   cta_title: string; cta_sub: string; cta_btn: string;
   footer_tagline: string;
   features: readonly { icon: ReactNode; title: string; desc: string }[];
@@ -542,6 +544,7 @@ const EN: LandingContent = {
   features_sub: 'A complete suite of modules to manage every part of your school',
   guides_title: 'Guides by role',
   guides_sub: 'Discover the features available for your role in the school',
+  connexion_aide: 'To sign in: type your school\'s name and pick it from the list, then enter the username and password your school gave you. The school is remembered for next time.',
   cta_title: 'Ready to get started?',
   cta_sub: 'Sign in to your workspace and take charge of running your school.',
   cta_btn: 'Access the platform',
@@ -867,6 +870,9 @@ export function LandingPage() {
             </h2>
             <p style={{ fontSize: 16, color: 'var(--ink-3)', margin: 0 }}>
               {t.guides_sub}
+            </p>
+            <p style={{ fontSize: 14, color: 'var(--ink-2)', margin: '14px auto 0', maxWidth: 620, padding: '10px 14px', background: 'var(--card)', border: '1px solid var(--rule)', borderRadius: 'var(--r-md)', lineHeight: 1.55 }}>
+              {t.connexion_aide}
             </p>
           </div>
 

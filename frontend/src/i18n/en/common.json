@@ -111,8 +111,12 @@
     "retour": "Back"
   },
   "auth": {
-    "code_ecole": "School code",
-    "code_ecole_aide": "Optional if your username exists in only one school",
+    "ecole": "Your school",
+    "ecole_placeholder": "Type your school's name",
+    "ecole_aide": "At least 3 letters of your school's name (or its code). Optional if your username exists in only one school.",
+    "ecole_changer": "Change",
+    "ecole_recherche": "Searching…",
+    "ecole_aucune": "No school found",
     "login": "Login",
     "identifiant": "Username",
     "password": "Password",

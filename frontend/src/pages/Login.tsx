@@ -1,7 +1,8 @@
 import { useState, FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth, CLE_CODE_ECOLE } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuth';
+import { ChampEcole, ecoleMemorisee, memoriserEcole, type EcoleChoisie } from '../components/auth/ChampEcole';
 import { useTheme } from '../hooks/useTheme';
 import { useAuthStore } from '../store/authStore';
 import { LogoMark } from '../components/ui/LogoMark';
@@ -14,9 +15,9 @@ export function Login() {
   const { theme, toggleTheme } = useTheme();
   const { updatePreferences } = useAuthStore();
 
-  const [codeEcole, setCodeEcole]     = useState(() => {
-    try { return localStorage.getItem(CLE_CODE_ECOLE) ?? ''; } catch { return ''; }
-  });
+  // École : choisie dans les suggestions (mémorisée sur l'appareil) ou, à défaut, code saisi tel quel.
+  const [ecole, setEcole]             = useState<EcoleChoisie | null>(() => ecoleMemorisee());
+  const [saisieEcole, setSaisieEcole] = useState('');
   const [identifiant, setIdentifiant] = useState('');
   const [password, setPassword]       = useState('');
   const [error, setError]             = useState('');
@@ -29,7 +30,11 @@ export function Login() {
     setError('');
     setLoading(true);
     try {
-      await signIn(identifiant, password, codeEcole);
+      const code = ecole?.code ?? saisieEcole.trim();
+      const user = await signIn(identifiant, password, code);
+      if (user.etablissement_code) {
+        memoriserEcole({ code: user.etablissement_code, nom: ecole?.code === user.etablissement_code ? ecole.nom : (user.etablissement_nom ?? user.etablissement_code) });
+      }
     } catch (err) {
       // Remonter le message serveur quand il existe (ex. compte verrouillé après
       // trop de tentatives), sinon message générique traduit.
@@ -71,21 +76,7 @@ export function Login() {
         <p className="login-sub">{t('app.tagline', 'La gestion de votre école, simplifiée')}</p>
 
         <form className="login-form" onSubmit={handleSubmit}>
-          <div className="field">
-            <label className="field-label" htmlFor="code_ecole">{t('auth.code_ecole', 'Code école')}</label>
-            <input
-              id="code_ecole"
-              type="text"
-              className="input"
-              value={codeEcole}
-              onChange={e => setCodeEcole(e.target.value.toUpperCase())}
-              autoComplete="organization"
-              maxLength={20}
-              placeholder="FIC"
-              style={{ textTransform: 'uppercase' }}
-            />
-            <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 4 }}>{t('auth.code_ecole_aide')}</div>
-          </div>
+          <ChampEcole valeur={ecole} onChoix={setEcole} saisie={saisieEcole} onSaisie={setSaisieEcole} />
 
           <div className="field">
             <label className="field-label" htmlFor="identifiant">{t('auth.identifiant', 'Identifiant')}</label>

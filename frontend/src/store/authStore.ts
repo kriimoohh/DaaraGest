@@ -15,6 +15,8 @@ export interface AuthUser {
   last_login?: string;
   /** Code de l'école de rattachement (saisi à la connexion). */
   etablissement_code?: string;
+  /** Nom de l'école de rattachement (renvoyé à la connexion, mémorisé pour la page de connexion). */
+  etablissement_nom?: string;
   /** Super-administrateur de la plateforme (création/suspension d'établissements). */
   super_admin?: boolean;
   /** Compte de la console plateforme (rattaché à aucune école). */
