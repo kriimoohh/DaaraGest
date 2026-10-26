@@ -10,3 +10,7 @@ coverage/
 # Claude Code — fichiers locaux (non partagés)
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+
+# Données personnelles (PII) — jamais versionnées, conservées hors dépôt
+backend/prisma/data/*.csv
+backend/prisma/personnel-ficaam/_credentials_*.csv

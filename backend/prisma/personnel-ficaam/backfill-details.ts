@@ -3,7 +3,8 @@
  *
  * Renseigne les colonnes ajoutées par la migration personnel_etat_civil_qualifications
  * (date_naissance, lieu_naissance, cni, numero_autorisation, diplome_academique,
- * diplome_professionnel) à partir de prisma/data/personnel-ficaam-details.csv.
+ * diplome_professionnel) à partir de prisma/data/personnel-ficaam-details.csv
+ * (données personnelles : fichier NON versionné, à déposer localement).
  *
  * Match sur le personnel ACTIF par nom+prénom normalisés (insensible casse/accents).
  * Idempotent : ré-applique simplement les mêmes valeurs. N'écrase JAMAIS un champ

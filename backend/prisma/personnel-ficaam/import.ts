@@ -2,6 +2,8 @@
  * Import PROD — Personnel FICAAM (roster Français + Arabe collecté via Google Forms).
  *
  * Source : prisma/data/personnel-ficaam.csv (32 lignes déjà nettoyées/mappées).
+ *          Données personnelles : fichier NON versionné (.gitignore), à déposer
+ *          localement avant de rejouer l'import.
  * Cible  : l'établissement unique en base (DATABASE_URL=<url prod> pour la prod).
  *
  * Crée, pour chaque ligne, un Utilisateur (rôle de login « professeur ») + un
