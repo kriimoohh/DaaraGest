@@ -506,7 +506,7 @@ Hors de l'application, `backend/prisma/` contient des scripts ponctuels, lancés
 |-------------------|------|
 | `lgm/` (+ `lgm/prod/`) | Migration de l'ancienne application LGM vers DaaraGest, par phases numérotées : configuration (échelle /10, mentions, années 2024-2025 et 2025-2026, niveaux), classes, matières, programme, élèves, notes, validation. Idempotent, simulation par défaut (`--apply` pour écrire) |
 | `migrate-matieres-lgm.ts` | Applique le référentiel LGM (6 domaines, 76 matières) sur une base déployée. **L'étape 3 supprime** les matières absentes du référentiel ; simulation par défaut, `--apply` pour écrire |
-| `personnel-ficaam/` · `data/personnel-ficaam*.csv` | Import historique du personnel d'un établissement (comptes professeur + fiches, détails, validation) |
+| `personnel-ficaam/` | Import historique du personnel d'un établissement (comptes professeur + fiches, détails, validation). Les CSV sources (`data/personnel-ficaam*.csv`) contiennent des données personnelles : non versionnés, à déposer localement |
 | `creer-compte-plateforme.cjs` | Crée un compte de la console de plateforme (établissement `PLATEFORME`, super-admin) — mot de passe temporaire affiché une fois |
 | `backfill-classe-code.ts` | Renseigne `Classe.code` pour les classes créées avant la migration — simulation par défaut, `--apply` |
 | `complete-affectations-classe.ts` | Étend les affectations d'enseignants à toutes les matières de la classe — simulation par défaut, `--apply` |
