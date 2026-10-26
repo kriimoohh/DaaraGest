@@ -33,6 +33,7 @@ Application web de gestion scolaire multi-filières, conçue pour tout établiss
 
 | Module | Description |
 |--------|-------------|
+| **Multi-établissement** | Plusieurs écoles sur un même déploiement : connexion par **code école**, isolation des données par le code **et** par la base (RLS PostgreSQL), **console de plateforme** séparée (vue d'ensemble, écoles à surveiller, création, modification, suspension, réinitialisation des admins, journal) |
 | **Landing page** | Page d'accueil publique présentant la plateforme, ses modules et les guides par rôle, avec basculement thème |
 | **Élèves** | Inscription (N filières via `InscriptionClasse`), fiche complète, matricule auto par établissement `CODE-E-YY-NNN` (ex. `CAAM-E-26-001`), transfert de classe en cours d'année, import CSV en masse, export Excel, opérations bulk (inscrire / désactiver / **supprimer définitivement**, admin), QR carte élève |
 | **Personnel** | Comptes liés à un utilisateur, **fonctions configurables** (table `Fonction`), contrats CDD/CDI/stagiaire, état civil et qualifications, affectations matière×classe, QR carte professeur |
@@ -48,7 +49,7 @@ Application web de gestion scolaire multi-filières, conçue pour tout établiss
 | **Progression** | Suivi de la progression académique pluriannuelle des élèves |
 | **Activités** | Activités parascolaires : inscriptions, séances, présences, évaluation |
 | **Absences élèves** | Saisie par classe ou individuelle, justification, statistiques, alertes automatiques au-delà du seuil configurable |
-| **Pointage** | Saisie journalière présence/absence/retard/congé du personnel, durée auto, historique, statistiques + **pointage par QR code** : QR signés HMAC par personnel, page publique `/scanner`, régénération des QR |
+| **Pointage** | Saisie journalière présence/absence/retard/congé du personnel, durée auto, historique, statistiques + **pointage par QR code** : QR du personnel (jeton de la page Pointage ou carte imprimée signée HMAC, signature vérifiée par la borne), page publique `/scanner`, régénération des QR |
 | **Demandes d'absence personnel** | Demandes de congé/absence du personnel avec workflow de traitement (approbation/refus) |
 | **Emploi du temps** | Créneaux horaires par classe/professeur/matière, jours actifs flexibles par établissement, détection de conflits |
 | **Calendrier scolaire** | Événements (vacances, examens, réunions, fermetures), navigation mensuelle, vue liste |
@@ -122,15 +123,20 @@ DaaraGest/
 │       │   ├── env.ts           # validation Zod des variables d'env (fail-fast)
 │       │   ├── roles.ts         # ROLES + ROLE_GROUPS (DIRECTION, GESTION, SCOLARITE, ACADEMIQUE,
 │       │   │                    #   PRESENCE, FINANCES/FINANCES_GESTION — directeur exclu…)
+│       │   ├── database.ts      # client Prisma + contexte établissement par requête
+│       │   │                    #   (AsyncLocalStorage) → isolation RLS, horsIsolation
 │       │   └── sentry.ts        # Sentry (no-op si SENTRY_DSN absent)
-│       ├── middlewares/         # authMiddleware (jeton + état de session), requireRole
+│       ├── middlewares/         # authMiddleware (jeton + état de session + établissement),
+│       │                        #   requireRole, requireSuperAdmin (console plateforme)
 │       ├── utils/               # portee (périmètre professeur), sessions (révocation),
 │       │                        #   errorHandler (erreurs → réponses HTTP), echecsConnexion,
 │       │                        #   fileAttente + browserPool (PDF Puppeteer), csrf, microTemplate,
-│       │                        #   teachingPolicy, sanitize (payloads curés par rôle)…
-│       ├── modules/             # 34 modules API (+ dossiers de tests transverses :
+│       │                        #   teachingPolicy, sanitize (payloads curés par rôle),
+│       │                        #   qrSecret (signature/vérification des QR)…
+│       ├── modules/             # 35 modules API (+ dossiers de tests transverses :
 │       │                        #   integration, metier, rbac, security, validation)
-│       │   ├── auth/            # login, refresh, logout, me, change-password, profil
+│       │   ├── auth/            # login (code école), refresh, logout, me, change-password, profil
+│       │   ├── plateforme/      # console super-admin : écoles, admins, journal plateforme
 │       │   ├── annees-scolaires/
 │       │   ├── filieres/        # entité Filiere (FR/AR/EN…, N par établissement)
 │       │   ├── niveaux/         # + échelle d'affichage par niveau (note_max)
@@ -155,8 +161,8 @@ DaaraGest/
 │       │   ├── activites/       # activités parascolaires, séances, présences
 │       │   ├── finances/        # paiements, reliquats, reçu PDF A5, exports Excel/PDF, stats
 │       │   ├── parametres/      # établissement + configNotes + politique de saisie
-│       │   ├── pointage/        # présences manuelles + QR (scan public signé HMAC,
-│       │   │                    #   payload minimal — jamais salaire/CNI/qr_token)
+│       │   ├── pointage/        # présences manuelles + QR (scan public : jeton ou carte
+│       │   │                    #   signée vérifiée ; payload minimal — jamais salaire/CNI/qr_token)
 │       │   ├── demandes-absence-personnel/
 │       │   ├── utilisateurs/    # + réactivation, suppression définitive, GET /roles
 │       │   ├── emploi-du-temps/ # créneaux, conflits, jours actifs
@@ -169,8 +175,8 @@ DaaraGest/
 │       │   ├── stats/           # tableau de bord analytique direction
 │       │   ├── rapports/        # présences, résultats, bilan financier, grilles IEF…
 │       │   ├── audit/           # journal d'audit (admin + gestionnaire) + phrases lisibles (audit-phrases)
-│       │   ├── rbac/            # tests transverses : matrice de rôles + anti-fuite
-│       │   │                    #   de payloads (payloads.itest.ts)
+│       │   ├── rbac/            # tests transverses : matrice de rôles, anti-fuite
+│       │   │                    #   de payloads, périmètre professeur, isolation RLS (rls.itest.ts)
 │       │   └── bibliotheque/    # catalogue livres, emprunts, retours
 │       └── server.ts            # Fastify 5 + CORS + CSRF Origin + CSP + rate-limit
 │                                #   par utilisateur + gestionnaire d'erreurs central + Sentry
@@ -178,19 +184,21 @@ DaaraGest/
 └── frontend/
     └── src/
         ├── components/
-        │   ├── layout/          # Sidebar (role-based), Layout, Header (langue/thème)
+        │   ├── layout/          # Sidebar (par rôle ; menu dédié pour la console plateforme),
+        │   │                    #   Layout, Header (langue/thème)
         │   └── ui/              # Button, Badge, Table, Modal, Input, Select,
         │                        #   SearchInput, Pagination, ConfirmModal, PageHeader,
         │                        #   ProtectedRoute, NotificationBell
         ├── config/routes.ts     # routes de l'application + rôles autorisés (menu, palette, gardes)
         ├── hooks/               # useApi, useAuth, useTheme
-        ├── i18n/fr|ar|en/       # common.json (~2 560 lignes, 2 308 clés ; les trois langues sont
+        ├── i18n/fr|ar|en/       # common.json (~2 700 lignes, 2 423 clés ; les trois langues sont
         │                        #   synchronisées, garde-fou de traduction dans les tests)
-        ├── pages/               # 27 dossiers de pages (dont CahierTexte, GestionPortail, Audit)
+        ├── pages/               # 28 dossiers de pages (dont CahierTexte, GestionPortail, Audit,
+        │                        #   Plateforme)
         │                        #   + Dashboard, Login, LandingPage ; Scanner (public,
         │                        #   sous Pointage/) et PortailParent (public)
         ├── lib/api.ts           # fetch wrapper (rafraîchit la session sur 401)
-        └── store/               # authStore (Zustand + persist)
+        └── store/               # authStore (Zustand + persist), anneeStore (année de travail)
 ```
 
 ### Modèles Prisma (57)
@@ -260,7 +268,7 @@ Un **professeur ne voit et ne modifie que les classes où il est affecté** (tab
 
 ### Rôles et accès (navigation)
 
-Sept rôles, stockés en base (`Role.libelle_fr`) et centralisés dans `backend/src/config/roles.ts` (source unique pour les routes API) et `frontend/src/config/routes.ts` (menu, palette de commandes, gardes de pages).
+Sept rôles d'école, stockés en base (`Role.libelle_fr`) et centralisés dans `backend/src/config/roles.ts` (source unique pour les routes API) et `frontend/src/config/routes.ts` (menu, palette de commandes, gardes de pages).
 
 | Rôle | Pages accessibles |
 |------|------------------|
@@ -273,6 +281,8 @@ Sept rôles, stockés en base (`Role.libelle_fr`) et centralisés dans `backend/
 | `pointeur` | Dashboard, Emploi du temps, Calendrier, Messagerie, Absences, Pointage |
 
 > Le module **Cahier de texte** est accessible à la direction, au conseiller pédagogique, au `gestionnaire` et au `professeur` (groupe `ACADEMIQUE`) ; le visa (verrouillage d'une période) est réservé à la direction (`admin`, `directeur`, `conseiller pédagogique`).
+
+> **Compte de plateforme** : hors des sept rôles, un compte de l'établissement technique `PLATEFORME` (drapeau `super_admin`) ne voit que la console de plateforme (`/plateforme`, `/plateforme/ecoles`, `/plateforme/journal`) ; l'API lui refuse toute autre route.
 
 > Le journal d'audit (`/audit`) est réservé à l'**administration** (admin et gestionnaire, groupe `AUDIT`) côté API et côté menu — le directeur et le conseiller pédagogique n'y ont pas accès (arbitrage établissement).
 
@@ -438,9 +448,9 @@ Variables lues uniquement par le seed (`prisma/seed-prod.cjs`) :
 
 ## Comptes par défaut
 
-> **Production** : aucun mot de passe par défaut. Le seed de production (`seed-prod.cjs`) ne crée que le compte `admin`, avec `ADMIN_INITIAL_PASSWORD` ou un mot de passe aléatoire affiché une fois dans les logs ; le **changement de mot de passe est obligatoire** à la première connexion. Les autres comptes sont créés par l'administrateur (page Utilisateurs / Personnel), chacun avec un mot de passe temporaire **différent** à lui transmettre en privé.
+> **Production** : aucun mot de passe par défaut. Le seed de production (`seed-prod.cjs`) ne crée que le compte `admin`, avec `ADMIN_INITIAL_PASSWORD` ou un mot de passe aléatoire affiché une fois dans les logs ; le **changement de mot de passe est obligatoire** à la première connexion. Les autres comptes sont créés par l'administrateur (page Utilisateurs / Personnel), chacun avec un mot de passe temporaire **différent** à lui transmettre en privé. Connexion : **code de l'école** (facultatif tant que l'identifiant n'existe que dans une école) + identifiant + mot de passe. Les comptes de la **console de plateforme** se créent avec `node prisma/creer-compte-plateforme.cjs` (code école `PLATEFORME`) ; l'admin d'une nouvelle école est créé par la console, avec un mot de passe temporaire affiché une fois.
 
-**Développement uniquement** (`npm run db:seed`, base locale jetable — ne jamais utiliser ces mots de passe ailleurs) :
+**Développement uniquement** (`npm run db:seed`, base locale jetable, code école `FIC` — ne jamais utiliser ces mots de passe ailleurs) :
 
 | Identifiant | Mot de passe | Rôle |
 |-------------|-------------|------|
@@ -490,10 +500,11 @@ La production tourne sur **Railway** avec trois services : **PostgreSQL**, **API
 
 - **Déploiement continu** : chaque merge sur `main` déclenche le build des deux services. L'API exécute au démarrage `prisma migrate deploy` (les migrations s'appliquent donc toutes seules), puis le seed idempotent `seed-prod.cjs` (sans effet une fois les rôles et l'admin créés), puis le serveur.
 - **Image API** : Node 20 Alpine + Chromium système (`PUPPETEER_EXECUTABLE_PATH`) pour les PDF.
-- **Base de données** : l'API doit joindre PostgreSQL par le **réseau privé** (`*.railway.internal`) ; l'URL publique du proxy sert uniquement aux accès externes (sauvegarde, requêtes d'administration).
+- **Base de données** : l'API joint PostgreSQL par le **réseau privé** (`*.railway.internal`). **Aucun accès public par défaut** : le proxy TCP public de Postgres est supprimé ; pour une sauvegarde ou une intervention, le recréer le temps de l'opération (console Railway ou API `tcpProxyCreate`) puis le supprimer. Les migrations créent le rôle `daaragest_app` (RLS) et l'établissement technique `PLATEFORME`.
 - **Santé** : `GET /health` (base + moteur PDF) ; l'état des services se lit dans Railway.
-- **Variables de production** : `DATABASE_URL`, `JWT_SECRET`, `QR_SECRET`, `CORS_ORIGIN`, `COOKIE_DOMAIN`, `NODE_ENV=production`, `JWT_EXPIRES_IN=1h`, `SENTRY_DSN` (optionnel) ; côté front, `VITE_API_URL` (argument de build).
+- **Variables de production** : `DATABASE_URL`, `JWT_SECRET`, `QR_SECRET`, `CORS_ORIGIN`, `COOKIE_DOMAIN`, `NODE_ENV=production`, `JWT_EXPIRES_IN=1h`, `RLS_ACTIF` (non défini = isolation active ; `false` = coupure d'urgence), `SENTRY_DSN` (optionnel) ; côté front, `VITE_API_URL` (argument de build).
 - **Sauvegarde** : `pg_dump` avec un client de version **identique ou supérieure** à celle du serveur (PostgreSQL 18 en production — un `pg_dump` plus ancien refuse de se connecter). Faire une sauvegarde avant toute opération destructive ou toute création d'année scolaire en masse.
+- **Secrets** : `JWT_SECRET`, `QR_SECRET` et le mot de passe de la base se changent sans perte de données (rotation faite le 23/10/2026 après l'alerte de sécurité Railway) : changer `JWT_SECRET` déconnecte tout le monde une fois ; changer `QR_SECRET` invalide les cartes signées déjà imprimées (pas les QR de la page Pointage).
 - **Migrations** : ne jamais éditer une migration déjà appliquée ; en ajouter une (voir [`backend/prisma/migrations/README.md`](backend/prisma/migrations/README.md)).
 
 ---
@@ -764,7 +775,7 @@ La colonne **Accès** reprend les groupes de `backend/src/config/roles.ts` (sour
 
 | Méthode | Route | Accès | Description |
 |---|---|---|---|
-| `GET` | `/portail-parent/acces/:token` | **Public** | Données complètes de l'élève (notes, paiements, absences, devoirs) — refusé si le lien a expiré |
+| `GET` | `/portail-parent/acces/:token` | **Public** | Données complètes de l'élève (notes, paiements, absences, devoirs) — refusé si le lien a expiré ou si l'école est suspendue |
 | `GET` | `/portail-parent/acces/:token/bulletin/:bulletin_id/pdf` | **Public** | Bulletin PDF de l'élève |
 | `GET` | `/portail-parent` | Gestion | Lister tous les tokens de l'établissement (actif/révoqué/expiré) — alimente l'écran dédié « Gestion du portail » |
 | `POST` | `/portail-parent/generer` | Gestion | Générer le lien du portail d'un élève (ou le réutiliser) — expiration auto à la fin de l'année active ; tracé dans l'audit (`PORTAIL_GENERATE`) |
@@ -804,7 +815,7 @@ La colonne **Accès** reprend les groupes de `backend/src/config/roles.ts` (sour
 | `GET` | `/pointage/stats?mois&annee` | Tous | Stats par personnel (taux de présence) |
 | `GET` | `/pointage/qr/:personnelId` | Gestion | QR code signé du personnel |
 | `POST` | `/pointage/qr/:personnelId/regenerer` | Gestion | Régénérer le QR (révoque l'ancien) |
-| `POST` | `/pointage/scan` | **Public** | Scan d'un QR signé HMAC par la borne → pointage `source='qr'` (public par conception) |
+| `POST` | `/pointage/scan` | **Public** | Scan par la borne → pointage `source='qr'` (public par conception). Accepte le jeton de la page Pointage ou le contenu signé d'une carte du personnel (signature vérifiée) ; refuse carte falsifiée, carte élève, carte d'un autre établissement ou école suspendue |
 | `GET` | `/pointage/scans-jour` | Tous | Scans QR du jour pour la page Scanner — **session obligatoire**, établissement tiré du jeton, nom et prénom seulement |
 
 ### Demandes d'absence personnel
@@ -1081,7 +1092,7 @@ Le portail parent est accessible via un lien unique sans création de compte :
 | Stockage du jeton (frontend) | **Aucun** — jamais exposé au JavaScript (cookie httpOnly) ; seul le profil utilisateur est en Zustand |
 | Mots de passe | bcrypt cost 10 · politique : 8 caractères min., majuscule, minuscule, chiffre, caractère spécial · **changement obligatoire** à la première connexion (fenêtre dédiée qui reste affichée ; l'API refuse tout le reste en `403` tant qu'il n'est pas fait) · le nouveau doit différer de l'ancien |
 | Verrouillage de compte | **Progressif** : 5 échecs → 1 min, 8 → 5 min, 11 → 15 min, 15+ → 60 min ; remis à zéro à la connexion réussie ou par une réinitialisation admin ; message avec la durée restante |
-| Limites de connexion | `POST /auth/login` : 10 essais/min par couple (IP, identifiant) — tout le personnel d'une école (une seule IP publique) peut se connecter en même temps — et **30 échecs/10 min par IP** contre l'essai massif d'identifiants · refresh 10/min |
+| Limites de connexion | `POST /auth/login` : 10 essais/min par triplet (IP, code école, identifiant) — tout le personnel d'une école (une seule IP publique) peut se connecter en même temps — et **30 échecs/10 min par IP** contre l'essai massif d'identifiants · refresh 10/min |
 | Rate limiting global | **1000 req/15 min par utilisateur** (clé = hash du JWT ; repli sur l'IP pour les routes publiques) · portail parent 30/min et PDF de bulletin 10/min par IP |
 | CSRF | Validation de l'en-tête `Origin` sur toutes les mutations (POST/PUT/PATCH/DELETE) — indispensable car le cookie est `SameSite=None` en production |
 | CORS | Origines configurables via `CORS_ORIGIN` (multi, séparées par virgules) |
@@ -1104,13 +1115,16 @@ Le portail parent est accessible via un lien unique sans création de compte :
 ### Flux d'authentification
 
 ```
-1. POST /auth/login → { user } + cookies httpOnly (daaragest_token + daaragest_refresh)
+1. POST /auth/login { code_etablissement?, identifiant, mot_de_passe }
+   → { user } + cookies httpOnly (daaragest_token + daaragest_refresh)
 2. Le jeton n'apparaît jamais dans le body ni dans le JavaScript (immunisé XSS)
 3. Chaque requête : cookie envoyé automatiquement (credentials: include) ;
    Authorization: Bearer accepté en alternative pour les clients API
 4. Backend : jwtVerify() → payload validé par Zod (id, role, etablissement_id, langue,
-   theme, doit_changer_mdp, tv) → l'état du compte (actif ? version de session ?) est relu
-5. Compte désactivé ou version de session dépassée → 401 ; mot de passe à changer → 403
+   theme, doit_changer_mdp, tv) → l'état du compte (actif ? école active ? version de
+   session ?) est relu → l'établissement est fixé pour la requête (isolation RLS)
+5. Compte désactivé, école suspendue ou version de session dépassée → 401 ;
+   mot de passe à changer → 403 ; compte plateforme hors console → 403
 6. Sur 401, le front appelle POST /auth/refresh (cookie refresh) puis rejoue la requête ;
    si le refresh échoue, retour à la page de connexion
 ```
@@ -1137,11 +1151,11 @@ Trois familles de tests :
 
 | Famille | Volume | Commande | DB requise |
 |---------|--------|----------|------------|
-| Unitaires backend | 685 cas · 28 fichiers `*.test.ts` | `npm test` (backend) | Non |
-| Intégration backend | 111 cas · 15 fichiers `*.itest.ts` (audit, auth/sessions, bulletins, cahier, classes/reconduction, documents/isolation, finances/reçus, suppression élève, paramètres, portail parent, progression, rapports, **payloads anti-fuite**, **périmètre professeur**, **rôle conseiller**) | `npm run test:integration` | **Oui (Postgres)** |
+| Unitaires backend | 699 cas · 30 fichiers `*.test.ts` | `npm test` (backend) | Non |
+| Intégration backend | 143 cas · 19 fichiers `*.itest.ts` (audit, auth/sessions, bulletins, cahier + rapport, classes/reconduction, documents/isolation, finances/reçus, suppression élève, paramètres, portail parent, progression, rapports, pointage par carte signée, **payloads anti-fuite**, **périmètre professeur**, **rôle conseiller**, **plateforme multi-établissement**, **isolation RLS**) | `npm run test:integration` | **Oui (Postgres)** |
 | UI frontend | 15 cas · 5 fichiers (Button, Badge, Pagination…) — Testing Library | `npm test` (frontend) | Non |
 
-Principaux domaines couverts : calculs de bulletins (moyennes pondérées, mentions, classement, template), cycle de vie des générations, cahier de texte, pointage, matricules, reçus, validation des notes et barèmes, alertes d'absence, auth (hash, payload JWT, verrouillage progressif, révocation des sessions, délai de grâce du refresh), CSRF, documents/templates et **isolation entre établissements**, RBAC de tous les groupes (routes **et** payloads) et périmètre professeur, traduction des erreurs, plafond des échecs de connexion, file d'attente des PDF, phrases du journal d'audit (garde-fou de traduction FR/AR/EN), sécurité (injection, escapeHtml), filières, micro-templating.
+Principaux domaines couverts : calculs de bulletins (moyennes pondérées, mentions, classement, template), cycle de vie des générations, cahier de texte, pointage, matricules, reçus, validation des notes et barèmes, alertes d'absence, auth (hash, payload JWT, verrouillage progressif, révocation des sessions, délai de grâce du refresh), CSRF, documents/templates et **isolation entre établissements**, RBAC de tous les groupes (routes **et** payloads) et périmètre professeur, traduction des erreurs, plafond des échecs de connexion, file d'attente des PDF, phrases du journal d'audit (garde-fou de traduction FR/AR/EN), sécurité (injection, escapeHtml), filières, micro-templating, **isolation RLS** (requête sans filtre, écriture vers une autre école, transactions, propagation du contexte), plateforme multi-établissement (code école, suspension, console), signature et vérification des QR.
 
 > Convention de ce projet : chaque nouveau test de garde (RBAC, sécurité, règle métier) doit être prouvé par **injection de régression** — casser temporairement le code protégé, confirmer que le test échoue, puis restaurer — sinon le test peut être un faux positif qui teste une copie de la logique plutôt que le code de production.
 
@@ -1159,11 +1173,25 @@ Principaux domaines couverts : calculs de bulletins (moyennes pondérées, menti
 
 ## Roadmap — chantiers en cours
 
-> **Modules déjà implémentés** : Filières génériques (entité `Filiere`, inscriptions N-filières, **colonnes string supprimées — refonte soldée**), Bulletins FR/AR/EN + combiné au choix, **cycle de vie des générations** (état à jour/périmé/partiel, régénération automatique après saisie de notes, nettoyage des orphelins) + **aperçu PDF**, Mentions configurables (seule source des seuils, libellé arabe sur les bulletins AR), Échelle d'affichage par niveau, Domaines & grilles IEF, Tarifs, Fonctions configurables, **Cahier de texte** (séances, devoirs, visa/verrouillage, complétude, export PDF, intégration portail parent), Pointage QR, Audit log, Demandes d'absence personnel, Évaluations formatives, Progression pluriannuelle, Activités parascolaires, Bibliothèque, Portail parents (bulletins PDF, **expiration auto, rotation, écran de gestion dédié**), Documents officiels (25 types), Rapports (11 types + aperçus), Tableau de bord analytique, Refresh tokens, Verrouillage de période des bulletins, Templates de bulletins éditables, **RBAC route + payload** (finances hors périmètre direction, payloads Personnel/Utilisateur curés par rôle), i18n FR/AR/EN synchronisée, **aide contextuelle in-app** (bouton « ? » par page), Sentry, CI complète.
+> **Modules déjà implémentés** : Filières génériques (entité `Filiere`, inscriptions N-filières, **colonnes string supprimées — refonte soldée**), Bulletins FR/AR/EN + combiné au choix, **cycle de vie des générations** (état à jour/périmé/partiel, régénération automatique après saisie de notes, nettoyage des orphelins) + **aperçu PDF**, Mentions configurables (seule source des seuils, libellé arabe sur les bulletins AR), Échelle d'affichage par niveau, Domaines & grilles IEF, Tarifs, Fonctions configurables, **Cahier de texte** (séances, devoirs, visa/verrouillage, complétude, export PDF, intégration portail parent), Pointage QR, Audit log, Demandes d'absence personnel, Évaluations formatives, Progression pluriannuelle, Activités parascolaires, Bibliothèque, Portail parents (bulletins PDF, **expiration auto, rotation, écran de gestion dédié**), Documents officiels (25 types), Rapports (11 types + aperçus), Tableau de bord analytique, Refresh tokens, Verrouillage de période des bulletins, Templates de bulletins éditables, **RBAC route + payload** (finances hors périmètre direction, payloads Personnel/Utilisateur curés par rôle), i18n FR/AR/EN synchronisée, **aide contextuelle in-app** (bouton « ? » par page), Sentry, CI complète, **Multi-établissement** (code école, RLS, console de plateforme), **rapport journalier/hebdomadaire du cahier de texte**.
 
 ### Phase 4 — Multi-établissement
 
-**Livré** : identifiants uniques par école et connexion par code école, console de plateforme séparée (compte dédié, indicateurs, modification d'école, réinitialisation des admins, journal), création d'établissement avec données de départ, suspension/réactivation (sessions coupées). **Livré aussi** : isolation par la base (RLS PostgreSQL, rôle `daaragest_app`). **Reste** : facturation et inscription en libre-service, personnalisation par école, stockage des images hors base, limites de requêtes par école. Plan détaillé — isolation RLS, provisioning/facturation, infra cible, coûts — dans [`docs/SAAS-INFRA-PLAN.md`](docs/SAAS-INFRA-PLAN.md).
+**Livré (octobre 2026)** :
+- identifiants uniques par école et **connexion par code école** (PR #177) ;
+- **isolation par la base** : RLS PostgreSQL sur 33 tables, rôle `daaragest_app`, interrupteur `RLS_ACTIF` (PR #178) ;
+- **console de plateforme** séparée des écoles, avec compte dédié (`PLATEFORME`), menu propre, vue d'ensemble et écoles à surveiller, création / modification / suspension d'école, réinitialisation des admins, journal de la plateforme (PR #179, #180) ;
+- **suspension complète** d'une école : connexions, sessions, portail des parents et borne de pointage.
+
+**Reste**, par ordre suggéré :
+1. assistant de démarrage pour une nouvelle école (année, classes, import élèves, comptes) ;
+2. export des données d'une école (départ, protection des données) et sauvegardes automatiques vérifiées ;
+3. numérotation des reçus par école (séquence aujourd'hui commune à la plateforme) ;
+4. **paiement en ligne des parents** (lien Wave / Orange Money de l'école, puis agrégateur avec les clés de chaque école) ;
+5. abonnements et facturation des écoles, **sous-domaine par école** (`<code>.daaragest.sn`, DNS générique) ;
+6. montée en charge : images hors base, limites de requêtes et suivi Sentry par école, génération PDF en tâche séparée.
+
+Plan détaillé — isolation, provisioning/facturation, infra cible, coûts — dans [`docs/SAAS-INFRA-PLAN.md`](docs/SAAS-INFRA-PLAN.md).
 
 ### Pointage NFC
 
@@ -1177,7 +1205,7 @@ Expo + partage des types TypeScript, mode hors-ligne pour la saisie de notes et 
 
 | Chantier | Valeur métier | Complexité |
 |----------|--------------|------------|
-| Phase 4 multi-établissement | ★★★☆☆ | ★★★★☆ |
+| Phase 4 — suite (démarrage d'école, export, paiement en ligne, facturation) | ★★★★☆ | ★★★☆☆ |
 | Pointage NFC | ★★☆☆☆ | ★★★★☆ |
 | App mobile | ★★★★★ | ★★★★★ |
 

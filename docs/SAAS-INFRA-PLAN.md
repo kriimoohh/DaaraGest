@@ -1,9 +1,9 @@
 # Plan SaaS & Infrastructure — DaaraGest
 
-> **Statut : en cours.** Phase A livrée (RLS PostgreSQL sur 33 tables, rôle `daaragest_app`, enveloppe Prisma, tests d’isolation) ; Phase B partiellement livrée (création et suspension d’établissements par un super-admin, connexion par code école).
-> **Dernière MAJ : 2026-10-23.** Voir aussi [`PRODUCT.md`](../PRODUCT.md), et en mémoire projet la note *backlog priorisé* (« Phase 4 multi-établissement »).
+> **Statut : en cours.** Phase A livrée (RLS PostgreSQL sur 33 tables, rôle `daaragest_app`, enveloppe Prisma, tests d’isolation) ; Phase B partiellement livrée (console de plateforme avec compte dédié `PLATEFORME`, création / modification / suspension d’écoles, réinitialisation des admins, journal de la plateforme, connexion par code école). Plusieurs écoles peuvent déjà partager le déploiement de production.
+> **Dernière MAJ : 2026-10-26.** Voir aussi [`PRODUCT.md`](../PRODUCT.md), et en mémoire projet la note *backlog priorisé* (« Phase 4 multi-établissement »).
 >
-> Objectif : passer de **mono-établissement** (aujourd'hui `etablissement-default` en prod) à un **SaaS multi-tenant** propre, isolé et scalable, avec un choix d'infrastructure plus stable et maîtrisé en coût que l'hébergement actuel (Railway).
+> Objectif : passer d'un déploiement conçu pour une école (l'établissement historique, `etablissement-default`, code `CAAM`, reste en prod) à un **SaaS multi-tenant** propre, isolé et scalable, avec un choix d'infrastructure plus stable et maîtrisé en coût que l'hébergement actuel (Railway).
 
 ---
 
@@ -16,14 +16,16 @@ Le socle multi-tenant existe déjà à ~80 %. Ce n'est **pas une réécriture**,
 | Modèle de données | 57 modèles Prisma, **100+ références `etablissement_id`** — tout est clé par tenant | ✅ Prêt |
 | Résolution du tenant | `etablissement_id` **dans le JWT** → `request.user.etablissement_id` → passé aux services | ✅ Prêt |
 | Hardcoding mono-tenant | **0** `etablissement-default` dans `src/` (uniquement seed/tests) | ✅ Prêt |
-| Scoping des requêtes | `where: { id, etablissement_id }` **manuel, à chaque requête** ; verrouillé par des tests d'intégration (documents, notes, scans) et des gardes `etablissement_id` | ⚠️ Fragile (mais testé) |
+| Scoping des requêtes | `where: { id, etablissement_id }` à chaque requête, **doublé par la RLS** pour toute requête authentifiée ; tests d'intégration (documents, notes, scans, RLS) | ✅ Deux barrières |
 | Isolation centralisée | **RLS PostgreSQL** sur les 33 tables portant l'établissement + enveloppe Prisma `$extends` (contexte AsyncLocalStorage) ; tables filles sans `etablissement_id` hors RLS | ✅ Fait (défense en profondeur) |
 | Onboarding / création d'établissement | Page **Plateforme** (super-admin) : création avec données de départ, suspension/réactivation ; identifiants uniques par école + connexion par code école | ✅ Premier niveau (pas de libre-service) |
-| Facturation / abonnements / quotas | Inexistant | ❌ À faire |
+| Facturation / abonnements / quotas | Inexistant ; suspension manuelle d'une école depuis la console en cas d'impayé | ❌ À faire |
+| Paiement en ligne des parents | Inexistant (paiements saisis au guichet, reçu PDF) ; piste : lien Wave/OM de l'école puis agrégateur (PayDunya…) avec les clés de **chaque école** — l'argent ne transite pas par la plateforme | ❌ À faire |
+| Domaine par école | Code école à la connexion ; cible : `<code>.daaragest.sn` (DNS générique + domaine générique Railway) | ⚠️ Prévu |
 | Stockage fichiers | Photos/logos en **base64 (data URL) dans la base** (`src/utils/photoUrl.ts`) | ❌ À changer |
 | Génération PDF | **Puppeteer synchrone** par requête (`renderPdfHtml`), file de 3 rendus simultanés, `503` après 60 s d'attente | ⚠️ Goulot à isoler |
-| Infra | 1 service Docker + 1 Postgres 18 (Railway, réseau privé), `prisma migrate deploy` + seed idempotent au boot | ⚠️ À faire évoluer |
-| Rate-limiting | Par utilisateur (global) et par (IP, identifiant) pour la connexion ; 1 école = 1 IP publique | ⚠️ Passer par tenant |
+| Infra | 1 service Docker + 1 Postgres 18 (Railway, réseau privé, **proxy public supprimé** et secrets changés après l'alerte Railway du 21/10/2026), `prisma migrate deploy` + seed idempotent au boot | ⚠️ À faire évoluer |
+| Rate-limiting | Par utilisateur (global) et par (IP, code école, identifiant) pour la connexion ; 1 école = 1 IP publique | ⚠️ Passer par tenant |
 | Observabilité | Sentry actif (back+front), ne capte que les 5xx | ✅ Base OK |
 
 **Conclusion :** apte. L'effort porte sur (a) rendre l'isolation **étanche**, (b) **industrialiser** (onboarding/facturation), (c) **mettre à l'échelle** (stockage objets, pooling, worker PDF).
@@ -175,12 +177,12 @@ Le geste **le plus impactant pour la stabilité**, indépendamment de l'héberge
 
 | Phase | Contenu | Prérequis de |
 |---|---|---|
-| **A — Isolation** | RLS Postgres + extension Prisma + tests d'isolation CI | Ouvrir à un 2ᵉ établissement |
-| **B — Provisioning + facturation** | Signup établissement, seed auto, super-admin, plans/quotas, mobile money | Vente en libre-service |
+| **A — Isolation** ✅ | RLS Postgres + extension Prisma + tests d'isolation CI — **livré** (PR #178) | Ouvrir à un 2ᵉ établissement |
+| **B — Provisioning + facturation** 🟡 | Livré : super-admin et console dédiée, création d'école avec données de départ, suspension (PR #177, #179, #180). Reste : assistant de démarrage, export des données d'une école, plans/quotas, mobile money, sous-domaine par école, signup libre-service | Vente en libre-service |
 | **C — Données + infra** | Object storage (R2), pooling, worker PDF + queue, cache Redis, bascule hébergeur | Charge réelle multi-tenant |
 | **D — Scale / ops** | Autoscale, observabilité par tenant, option base dédiée « entreprise », conformité | Croissance / gros clients |
 
-**Ordre non négociable :** la **Phase A** doit être terminée **avant** d'accueillir un second établissement en prod (risque de fuite inter-tenant).
+**Ordre non négociable :** la **Phase A** devait être terminée **avant** d'accueillir un second établissement en prod (risque de fuite inter-tenant) — c'est fait depuis le 23/10/2026.
 
 ---
 

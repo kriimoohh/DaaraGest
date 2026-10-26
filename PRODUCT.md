@@ -12,7 +12,7 @@ Personnel administratif et enseignant d'établissements scolaires au Sénégal �
 
 DaaraGest gère la vie complète d'un établissement : élèves, personnel, classes multi-filières (FR/AR/EN et combinaisons), notes, bulletins, cahier de texte, finances, pointage QR, emploi du temps, messagerie, bibliothèque, documents officiels et rapports. Le succès, c'est qu'un gestionnaire saisisse et retrouve l'information vite, sans formation, et que les documents produits (bulletins, reçus, cartes) soient dignes d'un établissement sérieux.
 
-Aujourd'hui, chaque établissement a son propre déploiement (mono-tenant). La trajectoire produit est de devenir une offre **SaaS multi-établissement** — un seul déploiement partagé, onboarding en self-service, facturation — sans changer l'expérience pour l'utilisateur final ; voir [`docs/SAAS-INFRA-PLAN.md`](docs/SAAS-INFRA-PLAN.md) pour le plan de bascule (déjà ~80 % du socle multi-tenant en place).
+Depuis octobre 2026, plusieurs écoles peuvent partager **un même déploiement** : chacune se connecte avec son **code école**, ses données sont isolées par l'application et par la base (RLS), et une **console de plateforme** permet de créer, suivre et suspendre les écoles. Pour l'utilisateur d'une école, rien ne change hormis ce code. La suite de la trajectoire **SaaS** — démarrage guidé d'une nouvelle école, paiement en ligne des parents, facturation, sous-domaine par école — est décrite dans [`docs/SAAS-INFRA-PLAN.md`](docs/SAAS-INFRA-PLAN.md). Un troisième public s'ajoute aux deux surfaces publiques : l'**exploitant de la plateforme** (super-admin), qui n'a accès qu'à la console.
 
 ## Brand Personality
 

@@ -1270,7 +1270,7 @@ export function ParametresPage() {
                     />
                   </div>
                   <div style={{ flex: 1, fontSize: 12, color: 'var(--ink-3)', paddingTop: 28, lineHeight: 1.5 }}>
-                    Préfixe des matricules (2-4 maj). Modifier ce code n'affecte pas les matricules déjà générés.
+                    {t('parametre.code_ecole_aide')}
                   </div>
                 </div>
                 <div className="grid-2">
