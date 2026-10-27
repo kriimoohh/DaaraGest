@@ -3,6 +3,7 @@ import { login, getMe, changePassword, updateProfil, creerRefreshToken, validerR
 import { revoquerSessions } from '../../utils/sessions';
 import { ipBloquee, noterEchec } from '../../utils/echecsConnexion';
 import { loginSchema } from './auth.schema';
+import { rechercherEcoles } from './ecoles';
 import { JwtPayload } from '../../utils/jwt';
 import { env, isProd } from '../../config/env';
 
@@ -149,4 +150,9 @@ export async function revoquerSessionsHandler(request: FastifyRequest, reply: Fa
   reply.clearCookie('daaragest_token', { path: '/' });
   reply.clearCookie('daaragest_refresh', { path: '/' });
   return reply.send({ message: 'Toutes les sessions ont été révoquées' });
+}
+
+export async function rechercherEcolesHandler(request: FastifyRequest, reply: FastifyReply) {
+  const q = String((request.query as { q?: unknown }).q ?? '').slice(0, 60);
+  return reply.send(await rechercherEcoles(q));
 }

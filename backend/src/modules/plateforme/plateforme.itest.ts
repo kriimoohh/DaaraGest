@@ -241,3 +241,22 @@ describe('Console de plateforme', () => {
     expect(await code('/api/v1/finances/paiements-eleves')).toBe(403);
   });
 });
+
+// ── Recherche d'école sur la page de connexion ─────────────────────────────────────────────────
+describe('Recherche d\'école (connexion)', () => {
+  it('trouve une école active, jamais une école suspendue ni la plateforme', async () => {
+    const { rechercherEcoles } = await import('../auth/ecoles');
+    const idA = crees[0];
+    const nomA = (await prisma.etablissement.findUniqueOrThrow({ where: { id: idA } })).nom_fr;
+    expect((await rechercherEcoles(codeA)).map(e => e.code)).toContain(codeA);
+    expect((await rechercherEcoles(nomA)).map(e => e.code)).toContain(codeA);
+    expect((await rechercherEcoles('plateforme')).map(e => e.code)).not.toContain('PLATEFORME');
+    await modifierEtablissement(idA, { actif: false }, acteur);
+    try {
+      expect((await rechercherEcoles(codeA)).map(e => e.code)).not.toContain(codeA);
+    } finally {
+      await modifierEtablissement(idA, { actif: true }, acteur);
+    }
+    expect(await rechercherEcoles('ab')).toEqual([]);
+  });
+});

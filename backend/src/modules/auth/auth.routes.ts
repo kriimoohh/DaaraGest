@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { loginHandler, logoutHandler, getMeHandler, changePasswordHandler, updateProfilHandler, refreshHandler, revoquerSessionsHandler } from './auth.controller';
+import { loginHandler, logoutHandler, getMeHandler, changePasswordHandler, updateProfilHandler, refreshHandler, revoquerSessionsHandler, rechercherEcolesHandler } from './auth.controller';
 import { authMiddleware } from '../../middlewares/auth.middleware';
 
 export async function authRoutes(fastify: FastifyInstance) {
@@ -21,6 +21,8 @@ export async function authRoutes(fastify: FastifyInstance) {
       },
     },
   }, loginHandler);
+  // Recherche d'école pour la page de connexion (publique, limitée) : jamais la liste complète.
+  fastify.get('/ecoles', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, rechercherEcolesHandler);
   fastify.post('/refresh', {
     config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
   }, refreshHandler);

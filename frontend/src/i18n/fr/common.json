@@ -4,8 +4,12 @@
     "tagline": "La gestion de votre école, simplifiée"
   },
   "auth": {
-    "code_ecole": "Code école",
-    "code_ecole_aide": "Facultatif si votre identifiant n'existe que dans une école",
+    "ecole": "Votre école",
+    "ecole_placeholder": "Tapez le nom de votre école",
+    "ecole_aide": "Au moins 3 lettres du nom (ou le code) de votre école. Facultatif si votre identifiant n'existe que dans une seule école.",
+    "ecole_changer": "Changer",
+    "ecole_recherche": "Recherche…",
+    "ecole_aucune": "Aucune école trouvée",
     "login": "Connexion",
     "identifiant": "Identifiant",
     "password": "Mot de passe",

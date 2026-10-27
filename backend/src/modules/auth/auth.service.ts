@@ -42,7 +42,7 @@ export function calculerVerrou(tentativesApresEchec: number, maintenant: Date = 
 /** Le même identifiant existe dans plusieurs établissements : il faut le code de l'école. */
 export class CodeEtablissementRequisError extends Error {
   constructor() {
-    super("Indiquez le code de votre école pour vous connecter.");
+    super("Choisissez votre école pour vous connecter.");
     this.name = 'CodeEtablissementRequisError';
   }
 }
@@ -118,6 +118,7 @@ export async function login(identifiant: string, mot_de_passe: string, code_etab
       role: utilisateur.role.libelle_fr,
       etablissement_id: utilisateur.etablissement_id,
       etablissement_code: utilisateur.etablissement.code,
+      etablissement_nom: utilisateur.etablissement.nom_fr,
       must_change_password: utilisateur.must_change_password,
       super_admin: utilisateur.super_admin,
       compte_plateforme: utilisateur.etablissement.est_plateforme,
