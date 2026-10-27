@@ -1213,7 +1213,8 @@
     "tab_fonctions": "Fonctions personnel",
     "signature_label": "Signature (directeur)",
     "cachet_label": "Cachet de l'établissement",
-    "code_matricule": "Code matricule",
+    "code_matricule": "Code école",
+    "code_ecole_aide": "Code saisi à la connexion par tout le personnel, et préfixe des matricules (2 à 4 caractères). Le modifier change le code de connexion de toute l'école ; les matricules déjà générés ne changent pas.",
     "email": "Email",
     "autorisation_ph": "Autorisation d'enseigner / d'ouverture",
     "directeur_label": "Directeur / Directrice (Personnel)",
@@ -2605,7 +2606,8 @@
       "tips": [
         "Le QR de chaque personnel est régénérable à tout moment (l'ancien devient invalide).",
         "La page /scanner (accessible sans connexion) sert de borne d'entrée pour le scan.",
-        "Les statistiques calculent un taux de présence par personnel sur la période choisie."
+        "Les statistiques calculent un taux de présence par personnel sur la période choisie.",
+        "La borne accepte le QR de cette page et les cartes du personnel imprimées depuis Documents ; une carte falsifiée ou d'une autre école est refusée."
       ]
     },
     "finances": {
@@ -2668,11 +2670,12 @@
       "intro": "Comptes utilisateurs de l'établissement et leurs rôles.",
       "tips": [
         "Un compte désactivé peut être réactivé à tout moment ; la suppression définitive est irréversible.",
-        "La réinitialisation du mot de passe force un changement à la prochaine connexion."
+        "La réinitialisation du mot de passe force un changement à la prochaine connexion.",
+        "Pour se connecter, chaque compte saisit le code de l'école, son identifiant et son mot de passe."
       ]
     },
     "audit": {
-      "intro": "Journal complet des actions effectuées dans l'application (qui a fait quoi, sur quelle donnée, quand).",
+      "intro": "Journal complet des actions effectuées dans l'application (qui a fait quoi, sur quelle donnée, quand). Réservé à l'administrateur et au gestionnaire.",
       "tips": [
         "Filtrez par type d'entité pour retrouver rapidement l'historique d'un dossier précis."
       ]
@@ -2690,7 +2693,8 @@
       "tips": [
         "L'échelle et les périodes de notation définies ici s'appliquent à toute l'application.",
         "Les mentions et leurs seuils peuvent être affinés par filière et par niveau.",
-        "La politique de saisie des notes des professeurs se règle dans cette page."
+        "La politique de saisie des notes des professeurs se règle dans cette page.",
+        "Le code de l'école (onglet Établissement) sert à la connexion de tout le personnel : prévenez l'équipe avant de le modifier."
       ]
     }
   }

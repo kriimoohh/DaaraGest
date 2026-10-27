@@ -1904,7 +1904,8 @@
     "tab_fonctions": "Staff roles",
     "signature_label": "Signature (principal)",
     "cachet_label": "School stamp",
-    "code_matricule": "Student ID code",
+    "code_matricule": "School code",
+    "code_ecole_aide": "Code all staff type at sign-in, and the prefix of student/staff IDs (2 to 4 characters). Changing it changes the sign-in code for the whole school; IDs already issued stay the same.",
     "email": "Email",
     "autorisation_ph": "Teaching / opening authorization",
     "directeur_label": "Principal (Staff)",
@@ -2605,7 +2606,8 @@
       "tips": [
         "Each staff member's QR can be regenerated at any time (the old one becomes invalid).",
         "The /scanner page (no login required) acts as the entry kiosk for scanning.",
-        "Statistics compute an attendance rate per staff member over the chosen period."
+        "Statistics compute an attendance rate per staff member over the chosen period.",
+        "The kiosk accepts this page's QR code and staff cards printed from Documents; a forged card or one from another school is rejected."
       ]
     },
     "finances": {
@@ -2668,11 +2670,12 @@
       "intro": "The school's user accounts and their roles.",
       "tips": [
         "A deactivated account can be reactivated at any time; permanent deletion cannot be undone.",
-        "Resetting a password forces a change at next login."
+        "Resetting a password forces a change at next login.",
+        "To sign in, each account enters the school code, its username and its password."
       ]
     },
     "audit": {
-      "intro": "Full log of actions taken in the app (who did what, on which record, when).",
+      "intro": "Full log of actions taken in the app (who did what, on which record, when). Restricted to the administrator and the manager.",
       "tips": [
         "Filter by entity type to quickly find the history of a specific record."
       ]
@@ -2690,7 +2693,8 @@
       "tips": [
         "The grading scale and terms defined here apply across the whole app.",
         "Honors and their thresholds can be refined by track and by level.",
-        "Teachers' grade-entry policy is set on this page."
+        "Teachers' grade-entry policy is set on this page.",
+        "The school code (School tab) is used by all staff to sign in: warn the team before changing it."
       ]
     }
   }

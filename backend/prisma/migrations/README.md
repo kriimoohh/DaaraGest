@@ -36,8 +36,8 @@ déjà appliquée : ajouter une nouvelle migration à la place.
 
 ## Migrations postérieures à la baseline
 
-Depuis la baseline, 32 migrations ont été ajoutées (de `20260614…` à
-`20261011000000_index_performance`). Elles sont appliquées automatiquement au
+Depuis la baseline, 35 migrations ont été ajoutées (de `20260614…` à
+`20261025000000_etablissement_plateforme`). Elles sont appliquées automatiquement au
 déploiement (`prisma migrate deploy` dans `backend/entrypoint.sh`), puis le seed
 idempotent `prisma/seed-prod.cjs` s'exécute. Jalons :
 
@@ -49,7 +49,16 @@ idempotent `prisma/seed-prod.cjs` s'exécute. Jalons :
 - `restore_seq_recu_numero` : la séquence des numéros de reçu avait été perdue
   par un nettoyage de schéma et est recréée (idempotente) ;
 - `role_conseiller_pedagogique` et `token_version` (révocation des sessions) ;
-- `index_performance` : index manquants sur les tables les plus consultées.
+- `index_performance` : index manquants sur les tables les plus consultées ;
+- multi-établissement : `multi_etablissement` (identifiant unique **par école**,
+  drapeau `super_admin`), `rls_isolation` (rôle `daaragest_app` + politique
+  `isolation_etablissement` sur les 32 tables portant `etablissement_id` et sur
+  `Etablissement`), `etablissement_plateforme` (colonne `est_plateforme` +
+  établissement technique `PLATEFORME`).
+
+**Règle RLS** : toute nouvelle table portant `etablissement_id` doit, dans sa
+migration, activer la RLS et recevoir la politique `isolation_etablissement`
+(voir `20261024000000_rls_isolation`). Le test `rbac/rls.itest.ts` échoue sinon.
 
 Une installation neuve (base vierge) est vérifiée par la CI : migrations rejouées
 depuis zéro, puis `seed-prod.cjs` exécuté deux fois.

@@ -113,6 +113,13 @@ const T = {
         title: 'Bibliothèque',
         desc: 'Gestion du fonds documentaire de l\'école : catalogue des livres, prêts aux élèves et enseignants, suivi des retours et inventaire du stock.',
       },
+      {
+        icon: (
+          <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="M9 12l2 2 4-4" /></svg>
+        ),
+        title: 'Plusieurs écoles, données protégées',
+        desc: 'Chaque école se connecte avec son propre code et ne voit que ses données, cloisonnées jusque dans la base. Idéal pour un réseau d\'établissements.',
+      },
     ],
     roles: [
       { id: 'admin', label: 'Administrateur' },
@@ -130,7 +137,7 @@ const T = {
         access: [
           { label: 'Tableau de bord', detail: 'Vue globale sur les statistiques de l\'école : élèves inscrits, professeurs actifs, classes ouvertes, et bilan financier du mois.' },
           { label: 'Gestion des utilisateurs', detail: 'Créer, modifier et désactiver les comptes du personnel. Attribuer les rôles (directeur, gestionnaire, professeur, etc.) et gérer les accès.' },
-          { label: 'Paramètres système', detail: 'Configurer les informations de l\'établissement, le barème de notation, les périodes scolaires, les tarifs de scolarité et les préférences d\'affichage.' },
+          { label: 'Paramètres système', detail: 'Configurer les informations de l\'établissement (dont le code école saisi à la connexion), le barème de notation, les périodes scolaires, les tarifs de scolarité et les préférences d\'affichage.' },
           { label: 'Élèves & Inscriptions', detail: 'Accès complet aux dossiers élèves, inscriptions dans les classes, et génération des liens d\'accès au portail parent.' },
           { label: 'Professeurs', detail: 'Gestion complète des dossiers enseignants : spécialités, types de contrat, salaires et affectations aux classes.' },
           { label: 'Classes, Matières & Années', detail: 'Création et gestion des classes par filière, niveaux, matières ; configuration des années scolaires et reconduction des classes d\'une année à l\'autre (sans reprendre les affectations des enseignants).' },
@@ -360,6 +367,13 @@ const T = {
         title: 'المكتبة',
         desc: 'إدارة الرصيد الوثائقي للمدرسة: فهرس الكتب، إعارة الكتب للتلاميذ والأساتذة، متابعة الإرجاع وجرد المخزون.',
       },
+      {
+        icon: (
+          <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="M9 12l2 2 4-4" /></svg>
+        ),
+        title: 'مدارس متعددة وبيانات محمية',
+        desc: 'تدخل كل مدرسة برمزها الخاص ولا ترى إلا بياناتها، المعزولة حتى في قاعدة البيانات. مثالي لشبكة من المؤسسات.',
+      },
     ],
     roles: [
       { id: 'admin', label: 'المدير العام' },
@@ -377,7 +391,7 @@ const T = {
         access: [
           { label: 'لوحة التحكم', detail: 'نظرة شاملة على إحصاءات المؤسسة: التلاميذ المسجلون، الأساتذة النشطون، الأقسام المفتوحة والبيانات المالية الشهرية.' },
           { label: 'إدارة المستخدمين', detail: 'إنشاء وتعديل وتعطيل حسابات الموظفين. تعيين الأدوار (مدير، مسير، أستاذ...) وإدارة صلاحيات الوصول.' },
-          { label: 'إعدادات النظام', detail: 'ضبط معلومات المؤسسة، سلم التقييم، الفصول الدراسية، التعريفات وتفضيلات العرض.' },
+          { label: 'إعدادات النظام', detail: 'ضبط معلومات المؤسسة (ومنها رمز المدرسة المستعمل عند الدخول)، سلم التقييم، الفصول الدراسية، التعريفات وتفضيلات العرض.' },
           { label: 'التلاميذ والتسجيل', detail: 'وصول كامل لملفات التلاميذ، التسجيل في الأقسام وإنشاء روابط بوابة الأولياء.' },
           { label: 'الأساتذة', detail: 'الإدارة الكاملة لملفات الأساتذة: التخصصات، أنواع العقود، الرواتب والتعيينات في الأقسام.' },
           { label: 'الأقسام والمواد والسنوات', detail: 'إنشاء وإدارة الأقسام حسب الشعبة، المستويات، المواد وإعداد السنوات الدراسية وإعادة تجديد الأقسام من سنة إلى أخرى (دون نقل تعيينات الأساتذة).' },
@@ -543,6 +557,7 @@ const EN: LandingContent = {
     { icon: T.fr.features[7].icon, title: 'Attendance & Absences', desc: 'Daily tracking of teacher and student attendance, justifications and per-class statistics.' },
     { icon: T.fr.features[8].icon, title: 'Official Documents', desc: 'Automatic generation of enrollment certificates, attestations, registrations and other official documents as print-ready PDFs.' },
     { icon: T.fr.features[9].icon, title: 'Library', desc: "Manage the school's collection: book catalog, loans to students and teachers, return tracking and stock inventory." },
+    { icon: T.fr.features[10].icon, title: 'Several schools, protected data', desc: 'Each school signs in with its own code and sees only its own data, isolated right down to the database. Ideal for a network of schools.' },
   ],
   roles: [
     { id: 'admin', label: 'Administrator' },
@@ -560,7 +575,7 @@ const EN: LandingContent = {
       access: [
         { label: 'Dashboard', detail: "Overview of the school's statistics: enrolled students, active teachers, open classes and the month's financial summary." },
         { label: 'User management', detail: 'Create, edit and deactivate staff accounts. Assign roles (principal, manager, teacher, etc.) and manage access.' },
-        { label: 'System settings', detail: "Configure the school's information, the grading scale, school terms, tuition fees and display preferences." },
+        { label: 'System settings', detail: "Configure the school's information (including the school code used to sign in), the grading scale, school terms, tuition fees and display preferences." },
         { label: 'Students & Enrollment', detail: 'Full access to student records, class enrollment and generation of parent-portal access links.' },
         { label: 'Teachers', detail: 'Full management of teacher records: specialties, contract types, salaries and class assignments.' },
         { label: 'Classes, Subjects & Years', detail: 'Create and manage classes by track, levels and subjects; configure school years and carry classes over from one year to the next (teacher assignments are not copied).' },
